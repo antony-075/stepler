@@ -13,6 +13,10 @@ export interface UserLimits {
   storageBytes: bigint;
 }
 
+export interface CollectionLimits {
+  storageBytes: bigint;
+}
+
 /**
  * Single source of limits. Values are config-backed today; plans and entitlements plug in
  * behind `forUser` later without changing callers (ADR 0010).
@@ -27,6 +31,10 @@ export class LimitsService {
       perIpPerHour: this.env.LIMIT_MAGIC_LINK_PER_IP_PER_HOUR,
       previewPerIpPerHour: this.env.LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR,
     };
+  }
+
+  forCollection(_collection: { id: string }): CollectionLimits {
+    return { storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION };
   }
 
   forUser(_user: { id: string }): UserLimits {

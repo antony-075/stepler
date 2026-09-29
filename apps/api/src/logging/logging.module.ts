@@ -11,11 +11,19 @@ import { REDACTED, redactUrl } from './redact.js';
 export const REQUEST_ID_HEADER = 'x-request-id';
 const VALID_REQUEST_ID = /^[A-Za-z0-9._-]{8,128}$/;
 
-/** Reuses a well-formed incoming request id (from the web proxy or an edge), else a new UUID. */
-function requestId(req: IncomingMessage, res: ServerResponse): string {
+type RequestWithId = IncomingMessage & { id?: unknown };
+
+/**
+ * Reuses a well-formed incoming request id (from the web proxy or an edge), else a new UUID,
+ * and echoes it. `configureApp` calls this before body parsing, so parser errors carry it too;
+ * pino-http then reuses the same id.
+ */
+export function assignRequestId(req: RequestWithId, res: ServerResponse): string {
+  if (typeof req.id === 'string') return req.id;
   const incoming = req.headers[REQUEST_ID_HEADER];
   const id =
     typeof incoming === 'string' && VALID_REQUEST_ID.test(incoming) ? incoming : randomUUID();
+  req.id = id;
   res.setHeader(REQUEST_ID_HEADER, id);
   return id;
 }
@@ -23,13 +31,14 @@ function requestId(req: IncomingMessage, res: ServerResponse): string {
 interface SerializedRequest {
   url?: string;
   query?: unknown;
+  headers?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
 function httpOptions(env: ApiEnv, pretty: boolean): Options {
   return {
     level: env.LOG_LEVEL,
-    genReqId: requestId,
+    genReqId: assignRequestId,
     // Header values are credentials; request bodies are never logged.
     redact: {
       paths: [
@@ -47,6 +56,11 @@ function httpOptions(env: ApiEnv, pretty: boolean): Options {
         const serialized: SerializedRequest = { ...req };
         delete serialized.query;
         if (serialized.url !== undefined) serialized.url = redactUrl(serialized.url);
+        // The verify page's URL carries the magic-link token; browsers may send it as Referer.
+        const referer = serialized.headers?.referer;
+        if (typeof referer === 'string') {
+          serialized.headers = { ...serialized.headers, referer: redactUrl(referer) };
+        }
         return serialized;
       },
     },

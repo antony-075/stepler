@@ -47,6 +47,15 @@ describe('request logging', () => {
     }
   });
 
+  test('never logs a token carried in the Referer header', async () => {
+    const res = await request(server())
+      .get('/api/v1/health/live')
+      .set('Referer', 'http://localhost:3000/auth/verify?token=referer-token-1')
+      .expect(200);
+    expect(logs.output).toContain(res.headers['x-request-id']);
+    expect(logs.output).not.toContain('referer-token-1');
+  });
+
   test('echoes a valid incoming x-request-id', async () => {
     const res = await request(server())
       .get('/api/v1/health/live')
@@ -62,6 +71,7 @@ describe('request logging', () => {
       .expect(200);
     expect(res.headers['x-request-id']).not.toBe('<script>');
     expect(res.headers['x-request-id']).toMatch(/^[A-Za-z0-9._-]{8,128}$/);
+    expect(logs.output).toContain(res.headers['x-request-id']);
     expect(logs.output).not.toContain('<script>');
   });
 

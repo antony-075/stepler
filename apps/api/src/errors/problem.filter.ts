@@ -5,6 +5,7 @@ import {
   type ExceptionFilter,
   HttpException,
   Inject,
+  Logger,
 } from '@nestjs/common';
 import type { ErrorCode, ProblemDetails } from '@stepler/contracts';
 import { redactUrl } from '../logging/redact.js';
@@ -25,12 +26,35 @@ const CODE_BY_STATUS: Readonly<Record<number, ErrorCode>> = {
 
 type RequestWithId = IncomingMessage & { id?: unknown };
 
+/** Name and message only: causes from HTTP clients never include request bodies or secrets. */
+function describeCause(cause: unknown): string | undefined {
+  if (cause instanceof Error) return `${cause.name}: ${cause.message}`;
+  return cause === undefined ? undefined : 'non-error cause';
+}
+
+/**
+ * The 4xx status of framework errors: Nest `HttpException`s, and body-parser errors (malformed
+ * JSON, payload too large), which are plain errors with `status` and a string `type`.
+ */
+function clientErrorStatus(exception: unknown): number | undefined {
+  if (exception instanceof HttpException) return exception.getStatus();
+  if (exception instanceof Error && 'status' in exception && 'type' in exception) {
+    const { status, type } = exception as { status: unknown; type: unknown };
+    if (typeof status === 'number' && status >= 400 && status < 500 && typeof type === 'string') {
+      return status;
+    }
+  }
+  return undefined;
+}
+
 /**
  * Renders every error as RFC 9457 problem+json. Unexpected errors become a generic 500 and
  * are reported; their message never reaches the client.
  */
 @Catch()
 export class ProblemFilter implements ExceptionFilter {
+  private readonly logger = new Logger(ProblemFilter.name);
+
   constructor(@Inject(ERROR_REPORTER) private readonly reporter: ErrorReporter) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
@@ -42,6 +66,14 @@ export class ProblemFilter implements ExceptionFilter {
 
     if (problem.code === 'INTERNAL') {
       this.reporter.capture(exception, { requestId, path: redactUrl(req.url ?? '') });
+    } else if (exception instanceof AppError && exception.status >= 500) {
+      // Expected dependency failures (e.g. DEPENDENCY_UNAVAILABLE) stay diagnosable (rule 13).
+      this.logger.warn({
+        msg: 'Dependency failure',
+        code: exception.code,
+        requestId,
+        cause: describeCause(exception.cause),
+      });
     }
     if (res.headersSent) return;
     res.statusCode = problem.status;
@@ -66,8 +98,8 @@ export class ProblemFilter implements ExceptionFilter {
         ...(exception.errors === undefined ? {} : { errors: exception.errors }),
       };
     }
-    if (exception instanceof HttpException) {
-      const status = exception.getStatus();
+    const status = clientErrorStatus(exception);
+    if (status !== undefined) {
       const code = CODE_BY_STATUS[status];
       if (code !== undefined) return base(status, code, status === 429);
     }

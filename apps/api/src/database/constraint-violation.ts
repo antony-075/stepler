@@ -30,6 +30,8 @@ export function constraintViolation(error: unknown): ConstraintViolation | null 
     const index = cause?.constraint?.index;
     return typeof index === 'string' ? { kind: 'unique', constraint: index } : null;
   }
+  // The adapter exposes no constraint field for CHECK violations, so the name comes from the
+  // server message; this assumes English `lc_messages` (the PostgreSQL image default).
   if (cause?.originalCode === CHECK_VIOLATION && typeof cause.originalMessage === 'string') {
     const name = /violates check constraint "([^"]+)"/.exec(cause.originalMessage)?.[1];
     return name === undefined ? null : { kind: 'check', constraint: name };

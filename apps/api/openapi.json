@@ -1,6 +1,87 @@
 {
   "components": {
-    "schemas": {},
+    "schemas": {
+      "ProblemDetails": {
+        "additionalProperties": {},
+        "properties": {
+          "code": {
+            "enum": [
+              "VALIDATION_FAILED",
+              "UNAUTHENTICATED",
+              "FORBIDDEN",
+              "NOT_FOUND",
+              "CSRF_ORIGIN_MISMATCH",
+              "RATE_LIMITED",
+              "TURNSTILE_FAILED",
+              "MAGIC_LINK_INVALID",
+              "OAUTH_FAILED",
+              "ACCOUNT_BLOCKED",
+              "UPSTREAM_UNAVAILABLE",
+              "DEPENDENCY_UNAVAILABLE",
+              "INTERNAL"
+            ],
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "path": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "path",
+                "message"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "status": {
+            "maximum": 9007199254740991,
+            "minimum": -9007199254740991,
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "retryable"
+        ],
+        "type": "object"
+      }
+    },
     "securitySchemes": {
       "st_session": {
         "in": "cookie",
@@ -43,6 +124,16 @@
               }
             },
             "description": ""
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
           }
         },
         "tags": [
@@ -150,6 +241,16 @@
               }
             },
             "description": "A dependency failed"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
           }
         },
         "tags": [

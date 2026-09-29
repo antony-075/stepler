@@ -14,6 +14,7 @@ describe('LimitsService', () => {
       activeCollections: 3,
       storageBytes: 20n * 1024n ** 3n,
     });
+    expect(limits.forCollection({ id: 'c1' })).toEqual({ storageBytes: 10n * 1024n ** 3n });
   });
 
   test('applies env overrides', () => {

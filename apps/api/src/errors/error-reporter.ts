@@ -18,7 +18,7 @@ export class LoggingErrorReporter implements ErrorReporter {
   private readonly logger = new Logger('ErrorReporter');
 
   capture(error: unknown, context: ErrorContext): void {
-    const stack = error instanceof Error ? error.stack : String(error);
-    this.logger.error({ msg: 'Unhandled error', ...context }, stack);
+    // `err` goes through pino's error serializer (type, message, stack).
+    this.logger.error({ msg: 'Unhandled error', err: error, ...context });
   }
 }

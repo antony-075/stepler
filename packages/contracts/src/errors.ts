@@ -22,8 +22,11 @@ export const ERROR_CODES = [
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
-/** RFC 9457 `application/problem+json` body returned by every API error. */
-export const problemDetailsSchema = z.object({
+/**
+ * RFC 9457 `application/problem+json` body returned by every API error. Loose: RFC 9457 allows
+ * extension members, so clients must accept fields they don't know.
+ */
+export const problemDetailsSchema = z.looseObject({
   type: z.string(),
   title: z.string(),
   status: z.number().int(),

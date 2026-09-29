@@ -78,6 +78,7 @@ describe('problem+json errors', () => {
     const body = problemDetailsSchema.parse(res.body);
     expect(body.code).toBe(code);
     expect(body.status).toBe(status);
+    expect(body.requestId).toBeDefined();
     expect(body.requestId).toBe(res.headers['x-request-id']);
     return body;
   }
@@ -100,6 +101,23 @@ describe('problem+json errors', () => {
       .set('content-type', 'application/json')
       .send('{"name":');
     expectProblem(res, 400, 'VALIDATION_FAILED');
+  });
+
+  test('malformed JSON keeps the incoming request id', async () => {
+    const res = await request(server())
+      .post('/api/v1/test-errors/things')
+      .set('content-type', 'application/json')
+      .set('x-request-id', 'abcd1234')
+      .send('{"name":');
+    expect(expectProblem(res, 400, 'VALIDATION_FAILED').requestId).toBe('abcd1234');
+  });
+
+  test('oversized body → 413 VALIDATION_FAILED, not reported', async () => {
+    const res = await request(server())
+      .post('/api/v1/test-errors/things')
+      .send({ name: 'x'.repeat(200_000) });
+    expectProblem(res, 413, 'VALIDATION_FAILED');
+    expect(reporter.calls).toHaveLength(0);
   });
 
   test('unknown route → 404 NOT_FOUND', async () => {

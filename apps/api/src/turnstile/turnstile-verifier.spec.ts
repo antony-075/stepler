@@ -24,6 +24,8 @@ describe('CloudflareTurnstileVerifier', () => {
     expect(await verifier.verify('tok', '203.0.113.7')).toBe(true);
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe(SITEVERIFY_URL);
+    // The 5 s timeout is enforced by the request's abort signal.
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
     const sent = init?.body as URLSearchParams;
     expect(Object.fromEntries(sent)).toEqual({
       secret: 'secret-key',

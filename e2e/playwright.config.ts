@@ -1,4 +1,22 @@
+import { readFileSync } from 'node:fs';
+import { parseEnv } from 'node:util';
 import { defineConfig, devices } from '@playwright/test';
+
+/** Local compose credentials: `docker/.env` if present, else the committed example (CI). */
+function composeEnv(): Record<string, string | undefined> {
+  for (const file of ['../docker/.env', '../docker/.env.example']) {
+    try {
+      return parseEnv(readFileSync(new URL(file, import.meta.url), 'utf8'));
+    } catch {
+      // Try the next file.
+    }
+  }
+  return {};
+}
+
+const compose = composeEnv();
+const pgAuth = `${compose.POSTGRES_USER ?? 'stepler'}:${compose.POSTGRES_PASSWORD ?? ''}`;
+const pgHost = `127.0.0.1:${compose.POSTGRES_PORT ?? '5433'}`;
 
 // Dedicated ports so e2e never collides with `pnpm dev` (3000/4000).
 const API_PORT = 4100;
@@ -28,7 +46,7 @@ export default defineConfig({
         APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
         COOKIE_SECURE: 'false',
         // Local compose services; e2e never uses real credentials.
-        DATABASE_URL: 'postgresql://stepler:stepler-local@127.0.0.1:5433/stepler_test',
+        DATABASE_URL: `postgresql://${pgAuth}@${pgHost}/stepler_test`,
         SMTP_URL: 'smtp://127.0.0.1:1025',
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
         // Cloudflare's documented always-pass test keys.
@@ -38,8 +56,8 @@ export default defineConfig({
         S3_ENDPOINT: 'http://127.0.0.1:8333',
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'stepler-test',
-        S3_ACCESS_KEY_ID: 'stepler',
-        S3_SECRET_ACCESS_KEY: 'stepler-local-secret',
+        S3_ACCESS_KEY_ID: compose.S3_ACCESS_KEY_ID ?? 'stepler',
+        S3_SECRET_ACCESS_KEY: compose.S3_SECRET_ACCESS_KEY ?? '',
         S3_FORCE_PATH_STYLE: 'true',
       },
       reuseExistingServer: false,

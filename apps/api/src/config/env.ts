@@ -25,6 +25,8 @@ const appSecret = z
 const trustProxy = z
   .string()
   .min(1)
+  // `true` would trust every hop, so any client could spoof its IP via X-Forwarded-For.
+  .refine((value) => value !== 'true')
   .transform((value): boolean | number | string => {
     if (value === 'false') return false;
     if (/^\d+$/.test(value)) return Number(value);

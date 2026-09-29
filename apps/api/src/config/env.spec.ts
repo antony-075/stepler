@@ -92,6 +92,7 @@ describe('loadApiEnv', () => {
     expect(loadApiEnv({ ...base, API_TRUST_PROXY: 'false' }).API_TRUST_PROXY).toBe(false);
     expect(loadApiEnv({ ...base, API_TRUST_PROXY: '1' }).API_TRUST_PROXY).toBe(1);
     expect(loadApiEnv({ ...base, API_TRUST_PROXY: 'loopback' }).API_TRUST_PROXY).toBe('loopback');
+    expect(() => loadApiEnv({ ...base, API_TRUST_PROXY: 'true' })).toThrow(/API_TRUST_PROXY/);
   });
 
   test('GOOGLE_CLIENT_ID without the secret fails naming both', () => {

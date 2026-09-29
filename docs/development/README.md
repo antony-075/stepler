@@ -79,7 +79,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
 | `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |
 | `OPERATOR_EMAILS` | api | no | Comma-separated operator emails (ADR 0013), default empty |
-| `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback` |
+| `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback`. `true` is rejected (it would trust any client's `X-Forwarded-For`) |
 | `APP_SECRET` | api | yes | Base64 of ≥ 32 random bytes; root key for HKDF-derived keys. Distinct per environment |
 | `SMTP_URL` | api | yes | `smtp://` or `smtps://` URL of the mail server (Mailpit locally) |
 | `MAIL_FROM` | api | yes | Sender, `Name <address>` |

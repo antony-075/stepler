@@ -9,6 +9,7 @@ import type { DestinationStream } from 'pino';
 import { AppModule } from './app.module.js';
 import type { ApiEnv } from './config/env.js';
 import { createValidationPipe } from './errors/validation.js';
+import { assignRequestId } from './logging/logging.module.js';
 import { buildOpenApiDocument } from './openapi/openapi.js';
 
 export interface CreateAppOptions {
@@ -21,7 +22,9 @@ export function configureApp(app: INestApplication, env: ApiEnv): void {
   const express = app as NestExpressApplication;
   express.useLogger(express.get(Logger));
   express.set('trust proxy', env.API_TRUST_PROXY);
-  express.use((_req: IncomingMessage, res: ServerResponse, next: () => void) => {
+  // Registered before Nest's body parser (added at init), so it also covers parser errors.
+  express.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
+    assignRequestId(req, res);
     // API responses are never sniffed as another type or cached by browsers and proxies.
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'no-store');
