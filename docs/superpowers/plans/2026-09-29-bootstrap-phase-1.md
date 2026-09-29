@@ -375,7 +375,7 @@ Expected: tests PASS; curl prints `{"status":"ok"}`. Starting with `NODE_ENV=bad
   - `LOCALES = ['uk', 'en'] as const`; `type Locale = (typeof LOCALES)[number]`; `DEFAULT_LOCALE: Locale = 'uk'`; `LOCALE_COOKIE = 'ed_locale'`.
   - `resolveLocale(input: { cookieLocale?: string; acceptLanguage?: string }): Locale`. Order: valid cookie, then the first supported language in `Accept-Language` by q-weight (region stripped), then `uk`. The profile locale is added with auth in Phase 2.
   - `loadWebEnv(source): WebEnv = { API_INTERNAL_URL: string }` (a URL). Same no-values error rule as in Task 6.
-  - `src/proxy.ts` (Next 16 proxy, matcher `/api/:path*`) forwards to `${API_INTERNAL_URL}` read **at runtime**; `src/instrumentation.ts` validates env at server start. (Build-time `rewrites` were rejected: they bake the URL into the image.)
+  - `src/app/api/[...path]/route.ts` streams `/api/*` to `${API_INTERNAL_URL}` read **at runtime**, with header filtering in `src/api-proxy/forward.ts`; `src/instrumentation.ts` exits on invalid env at server start. (Rejected: build-time `rewrites` bake the URL into the image; middleware rewrites leak the internal URL and buffer bodies at 10 MB — found in checkpoint 2 review.)
   - `start` runs the standalone server (`node .next/standalone/apps/web/server.js`); `build` copies static assets next to it. Display time zone `Europe/Kyiv` is set explicitly.
   - The home page renders translated `home.title` (`"EventDrop"`) and `home.tagline` (uk: `"Збирайте фото, відео та історії з події в одному місці"`, en: `"Collect photos, videos and stories from your event in one place"`). This placeholder copy is replaced in Phase 3/4.
 

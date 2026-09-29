@@ -1,7 +1,15 @@
 import { z } from 'zod';
 
 const webEnvSchema = z.object({
-  API_INTERNAL_URL: z.url(),
+  API_INTERNAL_URL: z.url({ protocol: /^https?$/ }),
+  /**
+   * Set to "true" only behind an edge that overwrites X-Forwarded-* / Forwarded headers.
+   * Otherwise they are client-controlled and are dropped before reaching the API.
+   */
+  TRUST_PROXY_HEADERS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type WebEnv = z.infer<typeof webEnvSchema>;
@@ -14,4 +22,12 @@ export function loadWebEnv(source: Record<string, string | undefined>): WebEnv {
     throw new Error(`Invalid or missing environment variables: ${names.join(', ')}`);
   }
   return result.data;
+}
+
+let cached: WebEnv | undefined;
+
+/** Validated server env, parsed once per process. */
+export function getWebEnv(): WebEnv {
+  cached ??= loadWebEnv(process.env);
+  return cached;
 }
