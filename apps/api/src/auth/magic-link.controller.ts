@@ -46,7 +46,6 @@ export class MagicLinkController {
 
   /** Emails a sign-in link. Always 202 with the same body after a valid Turnstile token. */
   @Post()
-  @RateLimit('magic-link')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiResponse({ status: 202, standardSchema: magicLinkRequestResponseSchema })
   async request(

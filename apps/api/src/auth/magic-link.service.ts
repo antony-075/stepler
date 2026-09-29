@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectThrottlerStorage, type ThrottlerStorage } from '@nestjs/throttler';
 import type { Locale, MagicLinkPreviewResponse, MagicLinkRequest } from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
@@ -30,6 +31,7 @@ export class MagicLinkService {
     @Inject(MAILER) private readonly mailer: Mailer,
     @Inject(TURNSTILE_VERIFIER) private readonly turnstile: TurnstileVerifier,
     @Inject(API_ENV) private readonly env: ApiEnv,
+    @InjectThrottlerStorage() private readonly throttle: ThrottlerStorage,
   ) {
     this.ipKey = deriveKey(env.APP_SECRET, 'ip-hash');
   }
@@ -42,6 +44,7 @@ export class MagicLinkService {
     if (!(await this.turnstile.verify(input.turnstileToken, ip))) {
       throw new AppError('TURNSTILE_FAILED', 400);
     }
+    await this.countIpRequest(ip);
     const { email } = input;
     const recent = await this.prisma.magicLinkToken.count({
       where: { email, createdAt: { gte: new Date(Date.now() - HOUR_MS) } },
@@ -66,6 +69,24 @@ export class MagicLinkService {
       },
     });
     void this.sendLink(email, token, locale);
+  }
+
+  /** Per-IP hourly limit, counted only for requests that passed Turnstile. */
+  private async countIpRequest(ip: string | undefined): Promise<void> {
+    if (ip === undefined) return;
+    const record = await this.throttle.increment(
+      `magic-link:${hashIp(this.ipKey, ip)}`,
+      HOUR_MS,
+      this.limits.magicLink().perIpPerHour,
+      HOUR_MS,
+      'magic-link',
+    );
+    if (record.isBlocked) {
+      throw new AppError('RATE_LIMITED', 429, {
+        retryable: true,
+        retryAfterSeconds: Math.max(1, Math.ceil(record.timeToBlockExpire)),
+      });
+    }
   }
 
   /** Read-only: shows whose account the link signs in to (owner decision, 2026-09-29). */
@@ -130,9 +151,26 @@ export class MagicLinkService {
         ...renderMagicLinkEmail({ url, locale, expiresInMinutes: this.env.MAGIC_LINK_TTL_MINUTES }),
       });
     } catch (error) {
-      // Never log the address or the link; the error name/message is enough to diagnose SMTP.
-      const reason = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown';
-      this.logger.error({ msg: 'Magic link email failed', reason });
+      this.logger.error({ msg: 'Magic link email failed', ...smtpErrorFields(error) });
     }
   }
+}
+
+/**
+ * Diagnosable SMTP failure fields without the message: nodemailer appends the server's reply
+ * to it, and replies usually quote the recipient address (rule 09).
+ */
+export function smtpErrorFields(error: unknown): Record<string, string | number> {
+  if (!(error instanceof Error)) return { error: 'non-error' };
+  const { code, responseCode, command } = error as {
+    code?: unknown;
+    responseCode?: unknown;
+    command?: unknown;
+  };
+  return {
+    error: error.name,
+    ...(typeof code === 'string' ? { code } : {}),
+    ...(typeof responseCode === 'number' ? { responseCode } : {}),
+    ...(typeof command === 'string' ? { command } : {}),
+  };
 }

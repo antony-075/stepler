@@ -4,6 +4,7 @@ import { meResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { SessionService } from '../src/auth/session.service.js';
+import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
@@ -71,8 +72,7 @@ describe('auth core', () => {
     const { cookie } = await signedIn();
     const token = cookie.split('=')[1] ?? '';
     const [row] = await prisma.authSession.findMany();
-    expect(row?.tokenHash).toBeDefined();
-    expect(row?.tokenHash).not.toBe(token);
+    expect(row?.tokenHash).toBe(hashToken(token));
     expect(row?.tokenHash).not.toContain(token);
   });
 

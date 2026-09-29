@@ -34,11 +34,13 @@ interface TurnstileProps {
   siteKey: string;
   locale: string;
   onToken: (token: string | null) => void;
+  /** The challenge could not run (script blocked, offline, failed challenge). */
+  onError: () => void;
   ref?: Ref<TurnstileHandle>;
 }
 
 /** Cloudflare Turnstile, loaded only on this page (ADR 0012). The API verifies the token. */
-export function Turnstile({ siteKey, locale, onToken, ref }: TurnstileProps) {
+export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileProps) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -52,9 +54,12 @@ export function Turnstile({ siteKey, locale, onToken, ref }: TurnstileProps) {
       size: 'flexible',
       callback: (token) => onToken(token),
       'expired-callback': () => onToken(null),
-      'error-callback': () => onToken(null),
+      'error-callback': () => {
+        onToken(null);
+        onError();
+      },
     });
-  }, [siteKey, locale, onToken]);
+  }, [siteKey, locale, onToken, onError]);
 
   useEffect(() => {
     if (loaded || window.turnstile !== undefined) render();
@@ -77,6 +82,7 @@ export function Turnstile({ siteKey, locale, onToken, ref }: TurnstileProps) {
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onLoad={() => setLoaded(true)}
+        onError={onError}
       />
       <div ref={container} className="min-h-[65px]" />
     </>

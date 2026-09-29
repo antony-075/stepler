@@ -34,7 +34,9 @@
     "sentText": "We sent a sign-in link to {email}.",
     "sentHint": "Open the email and press the sign-in button. No email? Check your spam folder.",
     "useAnother": "Use a different email",
-    "unavailable": "Sign-in is temporarily unavailable. Try again later."
+    "unavailable": "Sign-in is temporarily unavailable. Try again later.",
+    "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
+    "turnstileRetry": "Try again"
   },
   "verify": {
     "pageTitle": "Confirm sign-in",

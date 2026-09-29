@@ -31,7 +31,12 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   const turnstile = useRef<TurnstileHandle>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const onToken = useCallback((token: string | null) => setTurnstileToken(token), []);
+  const [turnstileFailed, setTurnstileFailed] = useState(false);
+  const onToken = useCallback((token: string | null) => {
+    setTurnstileToken(token);
+    if (token !== null) setTurnstileFailed(false);
+  }, []);
+  const onTurnstileError = useCallback(() => setTurnstileFailed(true), []);
 
   const form = useForm<EmailForm>({ resolver: zodResolver(emailFormSchema), mode: 'onSubmit' });
   const request = useMutation({
@@ -75,7 +80,7 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   return (
     <div className="grid gap-5">
       <div className="grid gap-1">
-        <h2 className="text-xl font-semibold">{t('login.title')}</h2>
+        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
         <p className="text-muted-foreground">{t('login.hint')}</p>
       </div>
 
@@ -114,7 +119,29 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
           )}
         </div>
 
-        <Turnstile ref={turnstile} siteKey={turnstileSiteKey} locale={locale} onToken={onToken} />
+        <Turnstile
+          ref={turnstile}
+          siteKey={turnstileSiteKey}
+          locale={locale}
+          onToken={onToken}
+          onError={onTurnstileError}
+        />
+        {turnstileFailed && (
+          <div role="alert" className="grid gap-2 text-sm">
+            <p>{t('login.turnstileFailed')}</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="justify-self-start"
+              onClick={() => {
+                setTurnstileFailed(false);
+                turnstile.current?.reset();
+              }}
+            >
+              {t('login.turnstileRetry')}
+            </Button>
+          </div>
+        )}
 
         <Button type="submit" size="lg" disabled={request.isPending || turnstileToken === null}>
           {request.isPending

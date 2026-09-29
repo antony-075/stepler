@@ -8,8 +8,12 @@ import {
 import { AppError } from '../errors/app-error.js';
 import type { LimitsService } from '../limits/limits.service.js';
 
-/** Named per-IP limits. A route opts into exactly one with `@RateLimit(name)`. */
-export type RateLimitName = 'magic-link' | 'magic-link-preview';
+/**
+ * Named per-IP limits enforced by `RateLimitGuard`; a route opts into one with `@RateLimit`.
+ * The magic-link request limit is not here: it is counted only after Turnstile passes
+ * (`MagicLinkService`), so junk requests cannot use it up for everyone behind one IP.
+ */
+export type RateLimitName = 'magic-link-preview';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const HOUR_MS = 3600_000;
@@ -25,7 +29,7 @@ function routeLimit(context: ExecutionContext): unknown {
  * storage is an open decision for multi-instance deployments (spec §21).
  */
 export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions {
-  const { perIpPerHour, previewPerIpPerHour } = limits.magicLink();
+  const { previewPerIpPerHour } = limits.magicLink();
   const named = (name: RateLimitName, limit: number) => ({
     name,
     ttl: HOUR_MS,
@@ -33,10 +37,7 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
     skipIf: (context: ExecutionContext) => routeLimit(context) !== name,
   });
   return {
-    throttlers: [
-      named('magic-link', perIpPerHour),
-      named('magic-link-preview', previewPerIpPerHour),
-    ],
+    throttlers: [named('magic-link-preview', previewPerIpPerHour)],
     setHeaders: false,
   };
 }

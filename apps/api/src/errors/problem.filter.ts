@@ -77,6 +77,9 @@ export class ProblemFilter implements ExceptionFilter {
     }
     if (res.headersSent) return;
     res.statusCode = problem.status;
+    if (exception instanceof AppError && exception.retryAfterSeconds !== undefined) {
+      res.setHeader('Retry-After', String(exception.retryAfterSeconds));
+    }
     res.setHeader('Content-Type', 'application/problem+json; charset=utf-8');
     res.end(JSON.stringify(problem));
   }

@@ -59,9 +59,9 @@ Every error is RFC 9457 `application/problem+json`:
 | Method and path | Auth | Notes |
 | --- | --- | --- |
 | `GET /api/v1/auth/methods` | public | `{ magicLink, google, turnstileSiteKey }` |
-| `POST /api/v1/auth/magic-link` | public, per-IP limit | `{ email, turnstileToken, locale? }` → `202 { status: "sent" }` for every address |
-| `POST /api/v1/auth/magic-link/preview` | public, per-IP limit | `{ token }` → `{ email }`; does not consume |
-| `POST /api/v1/auth/magic-link/verify` | public, per-IP limit | `{ token }` → `{ status: "signed-in" }` + `st_session` cookie |
+| `POST /api/v1/auth/magic-link` | public; per-IP limit counted after Turnstile passes | `{ email, turnstileToken, locale? }` → `202 { status: "sent" }` for every address |
+| `POST /api/v1/auth/magic-link/preview` | public, per-IP limit (own bucket) | `{ token }` → `{ email }`; does not consume |
+| `POST /api/v1/auth/magic-link/verify` | public, per-IP limit (own bucket) | `{ token }` → `{ status: "signed-in" }` + `st_session` cookie |
 | `GET /api/v1/auth/google/start` | public | 302 to Google; 404 when Google is not configured |
 | `GET /api/v1/auth/google/callback` | public | 302 to `returnTo` (an `/app` path) or `/login?error=…` |
 | `POST /api/v1/auth/logout` | public | 204, clears the cookie, idempotent |

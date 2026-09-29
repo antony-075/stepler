@@ -7,6 +7,8 @@ export interface AppErrorOptions {
   detail?: string;
   retryable?: boolean;
   errors?: IssueList;
+  /** Sets `Retry-After` on the response (seconds). */
+  retryAfterSeconds?: number;
   cause?: unknown;
 }
 
@@ -15,6 +17,7 @@ export class AppError extends Error {
   readonly detail: string | undefined;
   readonly retryable: boolean;
   readonly errors: IssueList | undefined;
+  readonly retryAfterSeconds: number | undefined;
 
   constructor(
     readonly code: ErrorCode,
@@ -26,5 +29,6 @@ export class AppError extends Error {
     this.detail = options.detail;
     this.retryable = options.retryable ?? false;
     this.errors = options.errors;
+    this.retryAfterSeconds = options.retryAfterSeconds;
   }
 }

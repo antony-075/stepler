@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module.js';
+import { hashToken } from '../src/auth/tokens.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { configureApp } from '../src/create-app.js';
 import { TURNSTILE_VERIFIER, type TurnstileVerifier } from '../src/turnstile/turnstile-verifier.js';
@@ -107,7 +108,7 @@ describe('magic link sign-in', () => {
     const email = newEmail();
     const token = await linkFor(email);
     const row = await prisma.magicLinkToken.findFirstOrThrow({ where: { email } });
-    expect(row.tokenHash).not.toContain(token);
+    expect(row.tokenHash).toBe(hashToken(token));
     expect(row.requestIpHash).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(row.requestIpHash).not.toContain('127.0.0.1');
   });
@@ -271,6 +272,27 @@ describe('magic link per-IP limits', () => {
     const res = await send().expect(429);
     expect(res.body).toMatchObject({ code: 'RATE_LIMITED', retryable: true });
     expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
+  });
+
+  test('requests with a failed Turnstile check do not use up the IP limit', async () => {
+    // Fresh counters: the previous test filled this IP's bucket.
+    await app.close();
+    app = await buildApp(
+      testEnv({
+        LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '2',
+        LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '2',
+      }),
+    );
+    const send = (turnstileToken: string) =>
+      request(server())
+        .post('/api/v1/auth/magic-link')
+        .set('Origin', ORIGIN)
+        .send({ email: newEmail(), turnstileToken });
+    // Anyone can send junk tokens; they must not lock out real users behind the same IP.
+    for (let i = 0; i < 5; i++) await send('junk').expect(400);
+    await send('pass').expect(202);
+    await send('pass').expect(202);
+    await send('pass').expect(429);
   });
 
   test('the preview limit is separate from the request limit', async () => {

@@ -1,6 +1,10 @@
 'use client';
 
-import { magicLinkPreviewResponseSchema, magicLinkVerifyResponseSchema } from '@stepler/contracts';
+import {
+  magicLinkPreviewResponseSchema,
+  magicLinkVerifyResponseSchema,
+  meResponseSchema,
+} from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -41,6 +45,25 @@ export function VerifyPanel({ token }: { token: string | null }) {
     },
   });
 
+  /**
+   * If a verify response was lost after the server used the link, the session may already
+   * exist: go to the app instead of showing "link invalid".
+   */
+  async function retry(): Promise<void> {
+    if (verify.isError) {
+      const signedIn = await apiRequest('/me', { schema: meResponseSchema }).then(
+        () => true,
+        () => false,
+      );
+      if (signedIn) {
+        router.replace('/app');
+        return;
+      }
+    }
+    verify.reset();
+    await preview.refetch();
+  }
+
   const failure =
     token === null ? 'MAGIC_LINK_INVALID' : failureCode(preview.error ?? verify.error);
   if (failure !== null) {
@@ -51,8 +74,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
         {retryable ? (
           <Button
             onClick={() => {
-              verify.reset();
-              void preview.refetch();
+              void retry();
             }}
           >
             {t('verify.retry')}
