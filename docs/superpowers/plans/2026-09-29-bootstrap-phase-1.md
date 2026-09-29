@@ -14,7 +14,7 @@
 
 - Node `>=24` LTS, pinned in `.nvmrc` and root `engines`. The local machine currently has Node 23.11, so the developer must install Node 24 before Task 1.
 - pnpm through corepack; the root `packageManager` field pins the exact version.
-- Every dependency: latest stable at install time, locked by `pnpm-lock.yaml`. Record the resolved major versions in `docs/development/README.md`. Add no dependency outside this plan without justification (rule 14).
+- Every dependency: latest stable release that is at least 1 day old (pnpm 11 `minimumReleaseAge` default), locked by `pnpm-lock.yaml`. Never add `minimumReleaseAgeExclude` entries. TypeScript stays on 6.0.x (typescript-eslint does not support 7). Prisma stays on the latest stable 7.x (npm `latest` is an 8.0 RC). NestJS is 12 (ESM-only). Record the resolved major versions in `docs/development/README.md`. Add no dependency outside this plan without justification (rule 14).
 - Package scope `@eventdrop/*`: `@eventdrop/config`, `@eventdrop/contracts`, `@eventdrop/ui`, `@eventdrop/api`, `@eventdrop/web`, `@eventdrop/e2e`.
 - TypeScript: `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`. `any` only with a justification comment.
 - API: global prefix `api`, URI versioning, default version `1`, so routes are `/api/v1/...` (ADR 0004).
@@ -25,6 +25,7 @@
 - Ports: web `3000`, api `4000`, Postgres `5432` (overridable via `POSTGRES_PORT`), Mailpit SMTP `1025` / UI `8025`.
 - Commits: small and focused. Messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 - Spike code is throwaway: it lives in `$TMPDIR/eventdrop-spikes/` and never enters the repo.
+- pnpm 11 blocks dependency build scripts: every dependency that needs one is listed explicitly in `allowBuilds` in `pnpm-workspace.yaml` (true or false). Install telemetry (`@scarf/scarf`) is denied.
 
 ## Review Focus
 

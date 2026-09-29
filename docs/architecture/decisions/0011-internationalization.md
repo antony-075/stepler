@@ -21,3 +21,22 @@ Ukrainian (default) and English. Guest links and QR codes must be identical for 
 ## Consequences
 
 - Marketing/SEO pages, if added later, may use prefixed routes separately.
+
+## Spike S8 result (2026-09-29)
+
+next-intl 4.14 works in "without i18n routing" mode with Next.js 16.3 App Router. All pass criteria were met:
+- `next build` succeeds;
+- `/g/abc` without a cookie renders Ukrainian, and the URL stays `/g/abc` (200, no redirect);
+- `Accept-Language: en-US` renders English;
+- the `ed_locale=uk` cookie beats `Accept-Language: en`;
+- client components are translated through `NextIntlClientProvider`.
+
+Setup:
+- `next-intl/plugin` in `next.config.ts` pointing to `src/i18n/request.ts`;
+- `getRequestConfig` reads the `ed_locale` cookie and the `accept-language` header and loads `messages/<locale>.json`;
+- the root layout sets `<html lang>` from `getLocale()` and wraps children in `NextIntlClientProvider`;
+- no middleware, no `[locale]` segment.
+
+Caveats:
+- Every route that reads the locale is dynamic (`ƒ`), because locale depends on cookies/headers. Legal pages are therefore server-rendered on demand; acceptable for MVP.
+- next-intl depends on `@swc/core` and `@parcel/watcher` (message extractor tooling). Their install scripts are not needed for runtime or build and are denied in `allowBuilds`.

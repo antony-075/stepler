@@ -522,7 +522,7 @@ Decision details: ADR 0011.
 
 - Languages: Ukrainian (default) and English.
 - **No locale segment in URLs**: QR/guest links must be identical for everyone. Resolution order: admin profile locale → locale cookie → `Accept-Language` → `uk`.
-- Web: message catalogs per locale; library next-intl **[verify S8]** (no-prefix mode with App Router); lint rule against literal JSX strings.
+- Web: message catalogs per locale; next-intl in "without i18n routing" mode (verified in spike S8, ADR 0011); lint rule against literal JSX strings.
 - API: returns error codes, not localized prose. Emails (magic link) are rendered by the API in the recipient's locale.
 
 ---
