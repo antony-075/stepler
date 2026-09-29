@@ -16,7 +16,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "dev": "tsc -w -p tsconfig.build.json --preserveWatchOutput"
   },
   "dependencies": {
     "zod": "catalog:"

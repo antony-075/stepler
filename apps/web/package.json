@@ -13,20 +13,20 @@
   },
   "dependencies": {
     "@eventdrop/ui": "workspace:*",
-    "next": "16.3.6",
+    "next": "catalog:",
     "next-intl": "4.14.7",
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@eventdrop/config": "workspace:*",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "catalog:",
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "eslint": "catalog:",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

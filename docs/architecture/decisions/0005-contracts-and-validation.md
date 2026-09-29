@@ -68,4 +68,4 @@ Test configuration (not preserved elsewhere since the spike is deleted):
 
 ESM + decorators pitfalls to guard with lint (Task 4 of the bootstrap plan):
 - circular imports fail with a TDZ `ReferenceError` at class definition → `import-x/no-cycle`;
-- `import type` of an injected class yields `Object` metadata and DI fails at runtime → `@typescript-eslint/consistent-type-imports` must run with type information (projectService) so it respects decorator metadata.
+- `import type` of an injected class yields `Object` metadata and DI fails at runtime. Lint does **not** catch a hand-written `import type` (verified in checkpoint 2 review): `consistent-type-imports` with type information only prevents its auto-fix from creating such imports. The guard is a boot test per app — `createApp()` + `init()` resolves every module's providers — which `apps/api/test/health.e2e.spec.ts` performs for the whole `AppModule`; every new module is imported there and therefore covered.

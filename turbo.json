@@ -16,11 +16,29 @@
     },
     "e2e": {
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "NODE_ENV",
+        "API_PORT",
+        "LOG_LEVEL",
+        "PORT",
+        "API_INTERNAL_URL",
+        "TRUST_PROXY_HEADERS",
+        "CI"
+      ]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "persistent": true,
-      "cache": false
+      "cache": false,
+      "passThroughEnv": [
+        "NODE_ENV",
+        "API_PORT",
+        "LOG_LEVEL",
+        "PORT",
+        "API_INTERNAL_URL",
+        "TRUST_PROXY_HEADERS"
+      ]
     },
     "build-storybook": {
       "dependsOn": ["^build"],
