@@ -9,6 +9,7 @@ import { LimitsModule } from './limits/limits.module.js';
 import { LoggingModule } from './logging/logging.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { TurnstileModule } from './turnstile/turnstile.module.js';
 
 export interface AppModuleOptions {
   env: ApiEnv;
@@ -27,6 +28,7 @@ export class AppModule {
         DatabaseModule,
         StorageModule,
         MailModule,
+        TurnstileModule,
         LimitsModule,
         HealthModule,
       ],
