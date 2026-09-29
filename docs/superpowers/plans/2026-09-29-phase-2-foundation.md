@@ -633,6 +633,13 @@ interface ObjectStorage {
 - **After Task 11 (foundation without auth):** independent review of config, logging, errors, database, the ports and health.
 - **After Task 17:** whole-branch review, then fixes, then a fresh-clone verification.
 
+### Deferred from the Task 11 review (2026-09-29)
+
+- Task 16: the e2e job must run `db:deploy` against `stepler_test` before Playwright.
+- Task 17: document how deployed environments run migrations (the production image has no Prisma CLI or migrations; spec §19 says a separate deploy step).
+- Task 13: throttle `/health/ready` or cache its result for a few seconds; each call costs an R2 `HeadBucket`, and it is public through the web proxy.
+- Phase 4 (guest links): if a capability token is ever carried in a URL path, redact it in request logs (`req.url` and `params` are logged today).
+
 ## Out of scope for Phase 2
 
 Collections, guest links, uploads (multipart, Jobs/pg-boss, worker), legal pages and acceptance, audit events, error-monitoring provider (Sentry etc.), hosting/CD, real R2 and a real email provider, and design system polish (Phase 3).
