@@ -6,9 +6,13 @@ packages:
 # Shared versions. Keep in sync with docs/development/README.md.
 catalog:
   typescript: 6.0.3
+  # Vitest packages move together.
   vitest: 4.1.11
+  '@vitest/browser-playwright': 4.1.11
   '@types/node': 24.19.0
+  # eslint and @eslint/js move together.
   eslint: 9.39.5
+  '@eslint/js': 9.39.5
   zod: 4.6.5
   react: 19.3.0
   react-dom: 19.3.0
@@ -17,7 +21,10 @@ catalog:
   # next and @next/eslint-plugin-next must move together.
   next: 16.3.6
   '@next/eslint-plugin-next': 16.3.6
+  # Tailwind packages move together.
   tailwindcss: 4.3.3
+  '@tailwindcss/postcss': 4.3.3
+  '@tailwindcss/vite': 4.3.3
   playwright: 1.63.0
   '@playwright/test': 1.63.0
 

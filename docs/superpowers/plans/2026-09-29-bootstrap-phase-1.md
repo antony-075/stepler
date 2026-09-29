@@ -430,7 +430,7 @@ Expected: PASS; lint clean (no literal strings); build succeeds.
 - Create:
   - `packages/ui/package.json`, `packages/ui/tsconfig.json`, `packages/ui/eslint.config.js`, `packages/ui/components.json`
   - `packages/ui/src/styles/globals.css`
-  - `packages/ui/src/lib/cn.ts`
+  - `packages/ui/src/lib/utils.ts` (shadcn convention; exports `cn`)
   - `packages/ui/src/components/button.tsx`, `packages/ui/src/components/button.stories.tsx`
   - `packages/ui/.storybook/main.ts`, `packages/ui/.storybook/preview.ts`
   - the Storybook Vitest config per the installed Storybook version
@@ -480,7 +480,7 @@ Expected: story tests PASS with no a11y violations; Storybook builds; web still 
 - Consumes: built `@eventdrop/api` (Task 6) and `@eventdrop/web` (Task 7).
 - Produces: the `e2e` task.
   - Playwright projects: `mobile-safari` (iPhone 15), `mobile-chrome` (Pixel 7), `desktop-chrome`.
-  - `webServer` starts the api (`node apps/api/dist/main.js`, port 4000) and the web app (`next start`, port 3000, `API_INTERNAL_URL=http://localhost:4000`).
+  - `webServer` starts the production builds on dedicated ports: api (`node apps/api/dist/main.js`, port 4100) and web (standalone `server.js`, port 3100, `API_INTERNAL_URL=http://127.0.0.1:4100`).
 
 - [ ] **Step 1: Write the tests**
 

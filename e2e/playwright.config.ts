@@ -10,7 +10,7 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
-  use: { baseURL: `http://localhost:${WEB_PORT}`, trace: 'retain-on-failure' },
+  use: { baseURL: `http://127.0.0.1:${WEB_PORT}`, trace: 'retain-on-failure' },
   projects: [
     { name: 'mobile-safari', use: { ...devices['iPhone 15'] } },
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
@@ -20,17 +20,17 @@ export default defineConfig({
   webServer: [
     {
       command: 'node ../apps/api/dist/main.js',
-      url: `http://localhost:${API_PORT}/api/v1/health/live`,
+      url: `http://127.0.0.1:${API_PORT}/api/v1/health/live`,
       env: { NODE_ENV: 'production', API_PORT: String(API_PORT), LOG_LEVEL: 'warn' },
       reuseExistingServer: false,
     },
     {
       command: 'node ../apps/web/.next/standalone/apps/web/server.js',
-      url: `http://localhost:${WEB_PORT}`,
+      url: `http://127.0.0.1:${WEB_PORT}`,
       env: {
         PORT: String(WEB_PORT),
         HOSTNAME: '127.0.0.1',
-        API_INTERNAL_URL: `http://localhost:${API_PORT}`,
+        API_INTERNAL_URL: `http://127.0.0.1:${API_PORT}`,
       },
       reuseExistingServer: false,
     },

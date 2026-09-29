@@ -41,7 +41,7 @@ Configuration verified (all pass criteria met: build + boot, 400 with Zod issue 
 | `API_TEST_RUNNER` | Vitest + `unplugin-swc` (decorator metadata). Repo-wide Vitest **4.1.x**, because `@storybook/addon-vitest` 10.6 supports Vitest `^3 \|\| ^4` only; verified with both 4.1 and 5.0 for the API |
 | `PRISMA_CLIENT_FORMAT` | `prisma-client` generator, `moduleFormat = "esm"`, output inside `src/generated/prisma` (generated, not committed), `@prisma/adapter-pg` driver adapter, `prisma.config.ts` |
 
-Versions used: Node 24.21, pnpm 11.28.2, TypeScript 6.0.3, NestJS 12.1.1, @nestjs/swagger 12.0.2, Zod 4.6.5, Prisma 7.10.0 (pin `prisma` and `@prisma/client` exactly — npm `latest` for `prisma` is an 8.0 RC), Vitest 4.1.11 / 5.0.2, unplugin-swc 2.0.0, @swc/core 1.16.12.
+Versions used: Node 24.21, pnpm 11.28.2, TypeScript 6.0.3, NestJS 12.1.1, @nestjs/swagger 12.0.2, Zod 4.6.5, Prisma 7.10.0 (pin `prisma` and `@prisma/client` exactly — npm `latest` for `prisma` is an 8.0 RC), Vitest 4.1.11 / 5.0.2, unplugin-swc 2.0.0, @swc/core 1.16.12 in the spike. The repository pins @swc/core 1.16.2, because 1.16.12 was published less than 1 day before bootstrap (release-age policy).
 
 Caveats:
 - pnpm 11 blocks dependency build scripts by default; `allowBuilds` in `pnpm-workspace.yaml` must list `@prisma/engines`, `prisma`, `@swc/core`. `@scarf/scarf` (install telemetry pulled in via `swagger-ui-dist`) is explicitly denied.

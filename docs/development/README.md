@@ -97,4 +97,11 @@ CI (`.github/workflows/ci.yml`) runs on pull requests and on pushes to `main`:
 2. **e2e:** Playwright on iPhone 15, Pixel 7 and desktop Chrome.
 3. **images:** `docker/scripts/verify-images.sh`.
 
+The `quality` and `e2e` jobs restore the local Turborepo cache (`.turbo/cache`) with `actions/cache`. A remote cache is not configured.
+
 Before merge you also need a review.
+
+## Agent files
+
+- `CLAUDE.md` and `.claude/` hold the project rules for Claude Code.
+- `AGENTS.md` is written by Turborepo, which adds a managed block whenever it detects an AI agent. The block tells agents to read the installed Turborepo version's bundled docs. It is kept committed on purpose, so the next agent run does not leave an uncommitted change. To opt out, set `"agentGuidance": false` in `turbo.json`.

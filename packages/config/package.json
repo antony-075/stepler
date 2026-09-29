@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "catalog:",
     "@next/eslint-plugin-next": "catalog:",
     "eslint-config-prettier": "10.1.8",
     "eslint-import-resolver-typescript": "4.4.5",

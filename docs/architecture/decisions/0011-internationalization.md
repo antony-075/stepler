@@ -39,4 +39,4 @@ Setup:
 
 Caveats:
 - Every route that reads the locale is dynamic (`ƒ`), because locale depends on cookies/headers. Legal pages are therefore server-rendered on demand; acceptable for MVP.
-- next-intl depends on `@swc/core` and `@parcel/watcher` (message extractor tooling). Their install scripts are not needed for runtime or build and are denied in `allowBuilds`.
+- next-intl depends on `@parcel/watcher` and `@swc/core` (message extractor tooling). `@parcel/watcher`'s install script is denied in `allowBuilds`; `@swc/core`'s is allowed because the API's test runner needs it (ADR 0005).

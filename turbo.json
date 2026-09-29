@@ -23,8 +23,7 @@
         "LOG_LEVEL",
         "PORT",
         "API_INTERNAL_URL",
-        "TRUST_PROXY_HEADERS",
-        "CI"
+        "TRUST_PROXY_HEADERS"
       ]
     },
     "dev": {
