@@ -55,6 +55,7 @@ jobs:
       - run: pnpm format:check
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
+      - run: pnpm --filter @stepler/api storage:bootstrap
       # Storybook story tests run in a real browser.
       - run: pnpm --filter @stepler/ui exec playwright install --with-deps chromium
       - run: pnpm turbo run lint typecheck test build build-storybook
@@ -82,6 +83,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
+      - run: pnpm --filter @stepler/api storage:bootstrap
       - run: pnpm --filter @stepler/e2e exec playwright install --with-deps chromium webkit
       - run: pnpm e2e
       - if: failure()

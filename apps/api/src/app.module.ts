@@ -7,6 +7,7 @@ import { ErrorsModule } from './errors/errors.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimitsModule } from './limits/limits.module.js';
 import { LoggingModule } from './logging/logging.module.js';
+import { StorageModule } from './storage/storage.module.js';
 
 export interface AppModuleOptions {
   env: ApiEnv;
@@ -23,6 +24,7 @@ export class AppModule {
         LoggingModule.forRoot(logDestination),
         ErrorsModule,
         DatabaseModule,
+        StorageModule,
         LimitsModule,
         HealthModule,
       ],

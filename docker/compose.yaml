@@ -30,5 +30,23 @@ services:
       timeout: 5s
       retries: 10
 
+  # S3-compatible emulator (ADR 0008, spike S4). Buckets and CORS: `pnpm --filter @stepler/api storage:bootstrap`.
+  s3:
+    image: chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d
+    command: ['server', '-dir=/data', '-s3', '-s3.port=8333']
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:?set in docker/.env}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set in docker/.env}
+    ports:
+      - '127.0.0.1:8333:8333'
+    volumes:
+      - stepler-s3:/data
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:8333/healthz']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
 volumes:
   stepler-pg:
+  stepler-s3:

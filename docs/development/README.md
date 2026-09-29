@@ -33,11 +33,12 @@ docker compose -f docker/compose.yaml --env-file docker/.env down
 | ---------- | ---------------------------------------------------- |
 | PostgreSQL | `127.0.0.1:5433` (host port, `POSTGRES_PORT`)        |
 | Mailpit    | SMTP `127.0.0.1:1025`, UI http://127.0.0.1:8025      |
+| S3 (SeaweedFS) | `http://127.0.0.1:8333`, credentials `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` from `docker/.env` |
 
 - PostgreSQL uses host port 5433 so it does not clash with a locally installed PostgreSQL.
 - On first start, `docker/postgres/init/` creates `stepler_test` (integration and e2e tests) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the two databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
-- The S3-compatible storage emulator is added in Phase 2 (spike S4).
+- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm --filter @stepler/api storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
 - The worker process arrives with the processing slice.
 
 ## Commands

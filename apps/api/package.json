@@ -7,7 +7,7 @@
     "build": "nest build -p tsconfig.build.json",
     "dev": "nest start --watch --exec \"node --env-file-if-exists=.env\"",
     "start": "node dist/main.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p scripts/tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "openapi:write": "OPENAPI_WRITE=1 vitest run test/openapi.spec.ts",
@@ -15,9 +15,12 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code"
+    "db:check": "prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code",
+    "storage:bootstrap": "node --env-file-if-exists=../../docker/.env.example --env-file-if-exists=../../docker/.env --env-file-if-exists=.env scripts/storage-bootstrap.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1141.0",
+    "@aws-sdk/s3-request-presigner": "3.1141.0",
     "@nestjs/common": "12.1.1",
     "@nestjs/core": "12.1.1",
     "@nestjs/platform-express": "12.1.1",
