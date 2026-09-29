@@ -35,7 +35,8 @@ docker compose -f docker/compose.yaml --env-file docker/.env down
 | Mailpit    | SMTP `127.0.0.1:1025`, UI http://127.0.0.1:8025      |
 
 - PostgreSQL uses host port 5433 so it does not clash with a locally installed PostgreSQL.
-- Nothing uses these services yet: Prisma and mail arrive in Phase 2.
+- On first start, `docker/postgres/init/` creates `stepler_test` (integration and e2e tests) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the two databases by hand.
+- API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - The S3-compatible storage emulator is added in Phase 2 (spike S4).
 - The worker process arrives with the processing slice.
 
@@ -54,6 +55,10 @@ Run everything from the repository root.
 | `pnpm --filter @stepler/ui storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
 | `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
+| `pnpm --filter @stepler/api db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
+| `pnpm --filter @stepler/api db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
+| `pnpm --filter @stepler/api db:check`           | Fail if migrations and schema differ; needs `SHADOW_DATABASE_URL` |
+| `pnpm --filter @stepler/api openapi:write`      | Regenerate `apps/api/openapi.json`; the API test suite fails when it is stale |
 
 Local `.env` files: copy `apps/api/.env.example` to `apps/api/.env`, and `apps/web/.env.example` to `apps/web/.env`. `pnpm dev` loads them. Turborepo runs in strict env mode, so every new runtime variable must also be added to `passThroughEnv` in `turbo.json`.
 
@@ -68,6 +73,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `LOG_LEVEL` | api | no | `fatal`…`trace`, default `info` |
 | `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Magic links, the OAuth redirect URI and the CSRF `Origin` check use it |
 | `DATABASE_URL` | api | yes | PostgreSQL connection URL |
+| `SHADOW_DATABASE_URL` | api (CLI) | for `db:check` / `db:migrate` | Disposable database Prisma resets (`stepler_shadow`); never the dev or test database |
 | `COOKIE_SECURE` | api | no | Adds `Secure` to cookies; default `true` in production, else `false` |
 | `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
 | `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |

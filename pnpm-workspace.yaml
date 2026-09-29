@@ -27,6 +27,10 @@ catalog:
   '@tailwindcss/vite': 4.3.3
   playwright: 1.63.0
   '@playwright/test': 1.63.0
+  # Prisma packages move together; npm `latest` for prisma is an 8.0 RC, pin stable exactly.
+  prisma: 7.10.0
+  '@prisma/client': 7.10.0
+  '@prisma/adapter-pg': 7.10.0
 
 # pnpm 11 blocks dependency build scripts unless listed here.
 allowBuilds:
@@ -36,3 +40,5 @@ allowBuilds:
   sharp: false
   '@parcel/watcher': false
   esbuild: true
+  prisma: true
+  '@prisma/engines': true

@@ -12,6 +12,7 @@ services:
       - '127.0.0.1:${POSTGRES_PORT:-5433}:5432'
     volumes:
       - stepler-pg:/var/lib/postgresql
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
       interval: 5s

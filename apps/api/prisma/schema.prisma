@@ -1,0 +1,84 @@
+// Identity schema (spec §7.1). Constraints the schema cannot express (citext extension, CHECKs,
+// partial indexes) live as named raw SQL in the migrations (ADR 0005, spike S6).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Locale {
+  uk
+  en
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum AuthProvider {
+  GOOGLE
+  EMAIL
+}
+
+model User {
+  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email           String        @unique @db.Citext
+  emailVerifiedAt DateTime?     @db.Timestamptz(3)
+  /// At most 80 characters (CHECK "User_displayName_length").
+  displayName     String?
+  locale          Locale        @default(uk)
+  /// BLOCKED if and only if blockedAt is set (CHECK "User_blocked_consistent").
+  status          UserStatus    @default(ACTIVE)
+  blockedAt       DateTime?     @db.Timestamptz(3)
+  blockedReason   String?
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  accounts        AuthAccount[]
+  sessions        AuthSession[]
+}
+
+model AuthAccount {
+  id                String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId            String       @db.Uuid
+  provider          AuthProvider
+  providerAccountId String
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model AuthSession {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId     String   @db.Uuid
+  /// SHA-256 of the cookie token; the raw token is never stored.
+  tokenHash  String   @unique
+  expiresAt  DateTime @db.Timestamptz(3)
+  lastUsedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model MagicLinkToken {
+  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email         String    @db.Citext
+  /// SHA-256 of the emailed token; the raw token is never stored.
+  tokenHash     String    @unique
+  expiresAt     DateTime  @db.Timestamptz(3)
+  consumedAt    DateTime? @db.Timestamptz(3)
+  locale        Locale
+  /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
+  requestIpHash String?
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([email, createdAt])
+}

@@ -1,28 +1,31 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "tasks": {
+    "db:generate": {
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["src/generated/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "db:generate"]
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build", "db:generate"]
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "passThroughEnv": [
         "TEST_DATABASE_URL",
+        "TEST_SHADOW_DATABASE_URL",
         "TEST_SMTP_URL",
-        "TEST_S3_ENDPOINT",
-        "TEST_S3_ACCESS_KEY_ID",
-        "TEST_S3_SECRET_ACCESS_KEY"
+        "TEST_S3_ENDPOINT"
       ]
     },
     "e2e": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "cache": false,
       "passThroughEnv": [
         "NODE_ENV",
@@ -60,7 +63,7 @@
       ]
     },
     "dev": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "db:generate"],
       "persistent": true,
       "cache": false,
       "passThroughEnv": [
