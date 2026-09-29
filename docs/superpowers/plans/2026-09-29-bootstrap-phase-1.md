@@ -4,7 +4,7 @@
 
 **Goal:** A clean, tested monorepo skeleton (web, api, contracts, ui, config, e2e, Docker, CI) on which Phase 2 foundation work can start. No product features.
 
-**Architecture:** pnpm + Turborepo monorepo following spec §3. The toolchain choices that are still uncertain (CJS/ESM interop, Vitest with NestJS, i18n without a locale prefix) are settled first by throwaway spikes. Their results are recorded in the ADRs before any scaffolding. The only runtime behavior shipped is `GET /api/v1/health/live`, served through the web origin. It exists to prove prefix, versioning, contracts consumption, the same-origin proxy and container health.
+**Architecture:** pnpm + Turborepo monorepo following spec §3. Toolchain choices were settled by throwaway spikes (Tasks 2–3, done) and recorded in ADR 0005 and ADR 0011: everything is ESM, NestJS 12 built-in Standard Schema validation, Vitest + SWC, next-intl without i18n routing. The only runtime behavior shipped is `GET /api/v1/health/live`, served through the web origin. It exists to prove prefix, versioning, contracts consumption, the same-origin proxy and container health.
 
 **Tech Stack:** Node 24 LTS, pnpm (corepack), Turborepo, TypeScript (strict), NestJS, Next.js App Router, next-intl, Tailwind CSS v4, shadcn/ui + Radix, Storybook, Zod, Vitest, Playwright, Docker / Docker Compose, GitHub Actions.
 
@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Node `>=24` LTS, pinned in `.nvmrc` and root `engines`. The local machine currently has Node 23.11, so the developer must install Node 24 before Task 1.
-- pnpm through corepack; the root `packageManager` field pins the exact version.
-- Every dependency: latest stable release that is at least 1 day old (pnpm 11 `minimumReleaseAge` default), locked by `pnpm-lock.yaml`. Never add `minimumReleaseAgeExclude` entries. TypeScript stays on 6.0.x (typescript-eslint does not support 7). Prisma stays on the latest stable 7.x (npm `latest` is an 8.0 RC). NestJS is 12 (ESM-only). Record the resolved major versions in `docs/development/README.md`. Add no dependency outside this plan without justification (rule 14).
+- pnpm **11.28.2** through corepack (`packageManager: "pnpm@11.28.2"`); corepack cannot run pnpm 12's native binary. Upgrade to 12 is a separate decision.
+- Every dependency: latest stable release that is at least 1 day old (pnpm 11 `minimumReleaseAge` default), locked by `pnpm-lock.yaml`. Never add `minimumReleaseAgeExclude` entries. TypeScript stays on 6.0.x (typescript-eslint does not support 7). Prisma stays on the latest stable 7.x (npm `latest` is an 8.0 RC). NestJS is 12 (ESM-only). ESLint stays on **9.x** (`eslint-plugin-react` and `jsx-a11y` do not support ESLint 10). Vitest is **4.1.x repo-wide** (Storybook's Vitest addon supports `^3 || ^4`). Pin `prisma` and `@prisma/client` to the same exact 7.10.x. Record the resolved major versions in `docs/development/README.md`. Add no dependency outside this plan without justification (rule 14).
 - Package scope `@eventdrop/*`: `@eventdrop/config`, `@eventdrop/contracts`, `@eventdrop/ui`, `@eventdrop/api`, `@eventdrop/web`, `@eventdrop/e2e`.
 - TypeScript: `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`. `any` only with a justification comment.
 - API: global prefix `api`, URI versioning, default version `1`, so routes are `/api/v1/...` (ADR 0004).
@@ -63,7 +63,7 @@ Run: `git switch -c bootstrap/phase-1`
 
 Root `package.json` contents:
 - `"private": true`;
-- `"packageManager": "pnpm@<latest>"`;
+- `"packageManager": "pnpm@11.28.2"`;
 - `"engines": { "node": ">=24" }`;
 - the scripts listed under Interfaces.
 
@@ -86,7 +86,7 @@ Expected: install succeeds; turbo reports no tasks to run, exit 0.
 
 ---
 
-### Task 2: Spike S2 + S3 — backend toolchain (throwaway)
+### Task 2: Spike S2 + S3 — backend toolchain (throwaway) — DONE, see ADR 0005
 
 **Files:** none in the repo, except the result sections in `docs/architecture/decisions/0005-contracts-and-validation.md` and `docs/architecture/mvp-architecture-spec.md` §3 and §18.
 
@@ -141,7 +141,7 @@ Fallback: Jest (with `@swc/jest`) for `apps/api` only.
 
 ---
 
-### Task 3: Spike S8 — i18n without a locale prefix (throwaway)
+### Task 3: Spike S8 — i18n without a locale prefix (throwaway) — DONE, see ADR 0011
 
 **Files:** none in the repo, except a result section in `docs/architecture/decisions/0011-internationalization.md`.
 
@@ -227,9 +227,9 @@ Expected: FAIL (presets do not exist).
   - `react/jsx-no-literals` with `{ noStrings: true, ignoreProps: true }`;
   - `no-restricted-syntax` with selector `JSXAttribute[name.name=/^(aria-label|title|alt|placeholder)$/] > Literal`, message `"User-facing attribute must use a translation"`.
 - `next.js`: react + `@next/eslint-plugin-next`.
-- `nest.js`: base + Node globals.
+- `nest.js`: base + Node globals + `import-x/no-cycle` (error) + `@typescript-eslint/consistent-type-imports` with type information, so injected classes are never type-only imports (ADR 0005).
 - Story and test files (`*.stories.tsx`, `*.test.tsx`) are exempt from the literal rules.
-- The tsconfig files hold the Global Constraints compiler options. `nest.json` uses the module format recorded in Task 2.
+- The tsconfig files hold the Global Constraints compiler options. `nest.json` and `library.json`: `module`/`moduleResolution` `nodenext`; `nest.json` adds `experimentalDecorators` and `emitDecoratorMetadata`, and must not enable `verbatimModuleSyntax`.
 
 - [ ] **Step 4: Run the test and verify it passes**
 
@@ -244,16 +244,16 @@ Expected: PASS (3 tests).
 
 **Files:**
 - Create:
-  - `packages/contracts/package.json`, `packages/contracts/tsconfig.json`, `packages/contracts/tsup.config.ts` (if Task 2 chose tsup), `packages/contracts/eslint.config.js`
+  - `packages/contracts/package.json`, `packages/contracts/tsconfig.json`, `packages/contracts/eslint.config.js`
   - `packages/contracts/src/index.ts`, `packages/contracts/src/health.ts`
 - Test: `packages/contracts/src/health.test.ts`
 
 **Interfaces:**
-- Consumes: Task 2 `CONTRACTS_BUILD`; Task 4 presets.
+- Consumes: Task 4 presets.
 - Produces:
   - `healthLiveResponseSchema: z.ZodObject<{ status: z.ZodLiteral<'ok'> }>`;
   - `type HealthLiveResponse = z.infer<typeof healthLiveResponseSchema>`, exported from `@eventdrop/contracts`;
-  - package `exports` per Task 2.
+  - ESM-only package (`"type": "module"`) built with `tsc`; `exports` has `types` and `import` conditions only.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -279,7 +279,7 @@ A strict object schema. Re-export it from `index.ts`. Add `build`, `typecheck`, 
 - [ ] **Step 4: Verify**
 
 Run: `pnpm --filter @eventdrop/contracts test && pnpm --filter @eventdrop/contracts build`
-Expected: tests PASS; `dist/` contains the formats chosen in Task 2 plus `.d.ts` files.
+Expected: tests PASS; `dist/` contains ESM `.js` and `.d.ts` files.
 
 - [ ] **Step 5: Commit** — `feat(contracts): add package with health response schema`
 
@@ -290,7 +290,7 @@ Expected: tests PASS; `dist/` contains the formats chosen in Task 2 plus `.d.ts`
 **Files:**
 - Create:
   - `apps/api/package.json`, `apps/api/tsconfig.json`, `apps/api/tsconfig.build.json`, `apps/api/nest-cli.json`, `apps/api/eslint.config.js`
-  - the test runner config chosen in Task 2
+  - `apps/api/vitest.config.ts` (`unplugin-swc`, `module: { type: 'es6' }`)
   - `apps/api/.env.example`
   - `apps/api/src/main.ts`, `apps/api/src/create-app.ts`, `apps/api/src/app.module.ts`
   - `apps/api/src/config/env.ts`
@@ -300,7 +300,7 @@ Expected: tests PASS; `dist/` contains the formats chosen in Task 2 plus `.d.ts`
   - `apps/api/test/health.e2e.spec.ts`
 
 **Interfaces:**
-- Consumes: `healthLiveResponseSchema` (Task 5); Task 2 decisions.
+- Consumes: `healthLiveResponseSchema` (Task 5); ADR 0005 configuration (ESM, `.js` import specifiers, `allowBuilds` for `@swc/core`).
 - Produces:
   - `loadApiEnv(source: Record<string, string | undefined>): ApiEnv` where `ApiEnv = { NODE_ENV: 'development' | 'test' | 'production'; API_PORT: number; LOG_LEVEL: 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' }` (defaults: `API_PORT` 4000, `LOG_LEVEL` `info`). Throws `EnvValidationError` whose message lists the invalid variable names.
   - `createApp(env: ApiEnv): Promise<INestApplication>`, which applies the `api` prefix, URI versioning with default `'1'`, and `enableShutdownHooks()`.
@@ -343,7 +343,7 @@ Expected: FAIL (modules not found).
 
 - `env.ts`: a Zod schema with coercion. The error message is built from `issue.path` values only.
 - `main.ts`: `loadApiEnv(process.env)`. On `EnvValidationError`, write the message to stderr and exit with code 1. Otherwise `createApp`, then `listen(API_PORT)`.
-- The health controller returns the contract type.
+- The health controller returns the contract type and documents it with `@ApiResponse({ status: 200, standardSchema: healthLiveResponseSchema })`; request validation via the global `StandardSchemaValidationPipe` is wired in Phase 2 together with problem+json.
 - Swagger/OpenAPI wiring is Phase 2.
 
 - [ ] **Step 4: Verify**
@@ -532,7 +532,7 @@ The script builds both images and asserts:
 2. `docker run --rm --entrypoint sh <image> -c 'ls -a /app | grep -c "^\.env"'` prints `0`.
 3. The api container started with `NODE_ENV=production` answers `GET /api/v1/health/live` with `200` within 20 s.
 4. The web container answers `GET /` with `200`.
-5. The api image has no dev-only packages: `test ! -d /app/node_modules/vitest`.
+5. The api image has no dev-only packages: `! ls /app/node_modules/.pnpm | grep -q '^vitest@'` (the runtime stage is produced with `pnpm deploy --prod`).
 
 The script exits non-zero on the first failed assertion.
 

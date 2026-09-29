@@ -551,7 +551,7 @@ Decision details: ADR 0011.
 | E2E | Playwright (mobile + desktop projects, network throttling) | admin creates collection & shares; guest uploads multiple files with a failure + retry; view-only link; revoked link; guest deletes own and cannot delete another's; report flow |
 | Contract | OpenAPI snapshot diff in CI | unintended breaking changes |
 
-Vitest with NestJS runs through `unplugin-swc` for decorator metadata (verified in spike S3, ADR 0005).
+Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator metadata (verified in spike S3, ADR 0005). Request validation uses NestJS 12 built-in Standard Schema support with Zod schemas from `contracts`.
 
 ---
 

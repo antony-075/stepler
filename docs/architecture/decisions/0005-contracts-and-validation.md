@@ -37,13 +37,35 @@ Configuration verified (all pass criteria met: build + boot, 400 with Zod issue 
 |---|---|
 | `API_MODULE_FORMAT` | `esm` (`"type": "module"`, `module`/`moduleResolution` `nodenext`, `.js` import specifiers) |
 | `CONTRACTS_BUILD` | plain `tsc` to ESM with `.d.ts`; no bundler needed |
-| `API_VALIDATION` | in-house `ZodValidationPipe` (a few lines) + Zod 4 native `z.toJSONSchema(schema, { target: 'openapi-3.0' })` fed to `@nestjs/swagger` decorators. `nestjs-zod` rejected (no NestJS 12 support) |
-| `API_TEST_RUNNER` | Vitest 5 + `unplugin-swc` (decorator metadata) |
+| `API_VALIDATION` | **built-in NestJS 12 Standard Schema support** (see re-spike below). `nestjs-zod` rejected (no NestJS 12 support) |
+| `API_TEST_RUNNER` | Vitest + `unplugin-swc` (decorator metadata). Repo-wide Vitest **4.1.x**, because `@storybook/addon-vitest` 10.6 supports Vitest `^3 \|\| ^4` only; verified with both 4.1 and 5.0 for the API |
 | `PRISMA_CLIENT_FORMAT` | `prisma-client` generator, `moduleFormat = "esm"`, output inside `src/generated/prisma` (generated, not committed), `@prisma/adapter-pg` driver adapter, `prisma.config.ts` |
 
-Versions used: Node 24.21, pnpm 11.28.2, TypeScript 6.0.3, NestJS 12.1.1, @nestjs/swagger 12.0.2, Zod 4.6.5, Prisma 7.10.0, Vitest 5.0.2, unplugin-swc 2.0.0, @swc/core 1.16.12.
+Versions used: Node 24.21, pnpm 11.28.2, TypeScript 6.0.3, NestJS 12.1.1, @nestjs/swagger 12.0.2, Zod 4.6.5, Prisma 7.10.0 (pin `prisma` and `@prisma/client` exactly — npm `latest` for `prisma` is an 8.0 RC), Vitest 4.1.11 / 5.0.2, unplugin-swc 2.0.0, @swc/core 1.16.12.
 
 Caveats:
 - pnpm 11 blocks dependency build scripts by default; `allowBuilds` in `pnpm-workspace.yaml` must list `@prisma/engines`, `prisma`, `@swc/core`. `@scarf/scarf` (install telemetry pulled in via `swagger-ui-dist`) is explicitly denied.
-- Wiring pipe + OpenAPI per endpoint is manual. Phase 2 adds a small decorator pair (for example `@ZodBody(schema)` / `@ZodResponse(schema)`) so the schema is declared once per endpoint.
 - Fallback B (NestJS 11 legacy + nestjs-zod) was not needed and was not tested.
+
+## Re-spike after independent review (2026-09-29)
+
+The review found that NestJS 12 already supports Standard Schema (Zod 4 implements it), which the first spike missed. Verified:
+- global `new StandardSchemaValidationPipe({ transform: true, exceptionFactory })` + `@Body({ schema })`, `@Query({ schema })`, `@Param({ schema })`;
+- `exceptionFactory` receives Standard Schema issues → mapped to our error body (Phase 2 maps it to RFC 9457 problem+json, code `VALIDATION_FAILED`);
+- query strings coerced with `z.coerce.*`, defaults applied, out-of-range → 400;
+- `@nestjs/swagger` 12 derives OpenAPI 3.0 request bodies and query parameters from the schemas automatically, and `@ApiResponse({ standardSchema })` documents responses. The Swagger default document version is OpenAPI 3.0, matching the converter target.
+
+Decision: use the built-in support. No in-house pipe or custom decorators.
+
+Rules for schemas used at the HTTP boundary:
+- request schemas describe the **input** form; response schemas the **output** form;
+- no `z.date()` or `.transform()` in boundary schemas (not representable in JSON Schema) — dates travel as ISO strings (`z.iso.datetime()`);
+- query and path values arrive as strings → `z.coerce.*`.
+
+Test configuration (not preserved elsewhere since the spike is deleted):
+- `vitest.config.ts`: `plugins: [swc.vite({ module: { type: 'es6' } })]` from `unplugin-swc`; the plugin reads `experimentalDecorators` / `emitDecoratorMetadata` from `tsconfig.json`.
+- `tsconfig` for Nest: `module`/`moduleResolution` `nodenext`, `experimentalDecorators`, `emitDecoratorMetadata`; **no** `verbatimModuleSyntax`; `useDefineForClassFields` left at the same value for `tsc` and SWC.
+
+ESM + decorators pitfalls to guard with lint (Task 4 of the bootstrap plan):
+- circular imports fail with a TDZ `ReferenceError` at class definition → `import-x/no-cycle`;
+- `import type` of an injected class yields `Object` metadata and DI fails at runtime → `@typescript-eslint/consistent-type-imports` must run with type information (projectService) so it respects decorator metadata.
