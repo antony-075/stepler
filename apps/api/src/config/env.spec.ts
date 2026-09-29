@@ -21,6 +21,10 @@ describe('loadApiEnv', () => {
     );
   });
 
+  test('rejects port 0 (random port) in configuration', () => {
+    expect(() => loadApiEnv({ NODE_ENV: 'production', API_PORT: '0' })).toThrow(/API_PORT/);
+  });
+
   test('requires NODE_ENV', () => {
     expect(() => loadApiEnv({})).toThrow(/NODE_ENV/);
   });

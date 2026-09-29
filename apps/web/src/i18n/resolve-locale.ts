@@ -12,7 +12,7 @@ function parseAcceptLanguage(header: string): LanguagePreference[] {
       const [tag, ...params] = part.trim().split(';');
       const base = tag?.trim().split('-')[0]?.toLowerCase();
       if (!base || !/^[a-z]{2,8}$/.test(base)) return null;
-      const qParam = params.map((p) => p.trim()).find((p) => p.startsWith('q='));
+      const qParam = params.map((p) => p.trim().toLowerCase()).find((p) => p.startsWith('q='));
       const q = qParam === undefined ? 1 : Number(qParam.slice(2));
       if (!Number.isFinite(q) || q <= 0 || q > 1) return null;
       return { base, q };
@@ -27,6 +27,8 @@ function parseAcceptLanguage(header: string): LanguagePreference[] {
  */
 export function resolveLocale(input: { cookieLocale?: string; acceptLanguage?: string }): Locale {
   if (isLocale(input.cookieLocale)) return input.cookieLocale;
-  const preferred = parseAcceptLanguage(input.acceptLanguage ?? '').find((p) => isLocale(p.base));
-  return preferred && isLocale(preferred.base) ? preferred.base : DEFAULT_LOCALE;
+  for (const { base } of parseAcceptLanguage(input.acceptLanguage ?? '')) {
+    if (isLocale(base)) return base;
+  }
+  return DEFAULT_LOCALE;
 }

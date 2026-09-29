@@ -13,6 +13,7 @@ describe('resolveLocale', () => {
     [{ acceptLanguage: 'en;q=0' }, 'uk'],
     [{ acceptLanguage: ';;;garbage' }, 'uk'],
     [{ acceptLanguage: 'EN-gb' }, 'en'],
+    [{ acceptLanguage: 'en;Q=0.5,uk;q=0.9' }, 'uk'],
     [{ cookieLocale: 'en', acceptLanguage: 'uk' }, 'en'],
     [{ cookieLocale: 'de', acceptLanguage: 'en' }, 'en'],
   ] as const)('resolveLocale(%j) → %s', (input, expected) => {
