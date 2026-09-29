@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
+import { AuthModule } from './auth/auth.module.js';
 import { ConfigModule } from './config/config.module.js';
 import type { ApiEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -10,6 +11,7 @@ import { LoggingModule } from './logging/logging.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { TurnstileModule } from './turnstile/turnstile.module.js';
+import { UsersModule } from './users/users.module.js';
 
 export interface AppModuleOptions {
   env: ApiEnv;
@@ -30,6 +32,8 @@ export class AppModule {
         MailModule,
         TurnstileModule,
         LimitsModule,
+        AuthModule,
+        UsersModule,
         HealthModule,
       ],
     };

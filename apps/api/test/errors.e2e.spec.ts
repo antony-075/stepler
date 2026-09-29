@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { z } from 'zod';
 import { AppModule } from '../src/app.module.js';
+import { Public } from '../src/auth/public.decorator.js';
 import { configureApp } from '../src/create-app.js';
 import { AppError } from '../src/errors/app-error.js';
 import { ERROR_REPORTER, type ErrorReporter } from '../src/errors/error-reporter.js';
@@ -16,6 +17,7 @@ const createThingSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+@Public()
 @Controller({ path: 'test-errors', version: '1' })
 class TestErrorsController {
   @Post('things')
@@ -84,13 +86,17 @@ describe('problem+json errors', () => {
   }
 
   test('body validation → 400 VALIDATION_FAILED with issue paths', async () => {
-    const res = await request(server()).post('/api/v1/test-errors/things').send({ name: '' });
+    const res = await request(server())
+      .post('/api/v1/test-errors/things')
+      .set('Origin', 'http://localhost:3000')
+      .send({ name: '' });
     expect(expectProblem(res, 400, 'VALIDATION_FAILED').errors?.[0]?.path).toEqual(['name']);
   });
 
   test('nested issue paths keep array indexes', async () => {
     const res = await request(server())
       .post('/api/v1/test-errors/things')
+      .set('Origin', 'http://localhost:3000')
       .send({ name: 'a', tags: ['ok', 5] });
     expect(expectProblem(res, 400, 'VALIDATION_FAILED').errors?.[0]?.path).toEqual(['tags', 1]);
   });
@@ -98,6 +104,7 @@ describe('problem+json errors', () => {
   test('malformed JSON → 400 VALIDATION_FAILED', async () => {
     const res = await request(server())
       .post('/api/v1/test-errors/things')
+      .set('Origin', 'http://localhost:3000')
       .set('content-type', 'application/json')
       .send('{"name":');
     expectProblem(res, 400, 'VALIDATION_FAILED');
@@ -106,6 +113,7 @@ describe('problem+json errors', () => {
   test('malformed JSON keeps the incoming request id', async () => {
     const res = await request(server())
       .post('/api/v1/test-errors/things')
+      .set('Origin', 'http://localhost:3000')
       .set('content-type', 'application/json')
       .set('x-request-id', 'abcd1234')
       .send('{"name":');
@@ -115,6 +123,7 @@ describe('problem+json errors', () => {
   test('oversized body → 413 VALIDATION_FAILED, not reported', async () => {
     const res = await request(server())
       .post('/api/v1/test-errors/things')
+      .set('Origin', 'http://localhost:3000')
       .send({ name: 'x'.repeat(200_000) });
     expectProblem(res, 413, 'VALIDATION_FAILED');
     expect(reporter.calls).toHaveLength(0);

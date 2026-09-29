@@ -7,8 +7,10 @@ import {
   type HealthLiveResponse,
   type HealthReadyResponse,
 } from '@stepler/contracts';
+import { Public } from '../auth/public.decorator.js';
 import { HealthService } from './health.service.js';
 
+@Public()
 @ApiTags('Health')
 @Controller({ path: 'health', version: '1' })
 export class HealthController {
