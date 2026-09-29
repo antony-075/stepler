@@ -27,6 +27,19 @@ describe('react preset', () => {
     expect(await ruleIds(config, 'react/literal-aria.tsx')).toContain('no-restricted-syntax');
   });
 
+  test.each(['react/literal-fallback.tsx', 'react/literal-conditional.tsx'])(
+    'literal strings in logical/conditional children are errors (%s)',
+    async (file) => {
+      expect(await ruleIds(config, file)).toContain('no-restricted-syntax');
+    },
+  );
+
+  test('literal strings in conditional user-facing attributes are errors', async () => {
+    expect(await ruleIds(config, 'react/literal-aria-conditional.tsx')).toContain(
+      'no-restricted-syntax',
+    );
+  });
+
   test('translated strings and className literals pass', async () => {
     expect(await ruleIds(config, 'react/translated.tsx')).toEqual([]);
   });

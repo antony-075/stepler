@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig/library.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["eslint", "prettier", "test/*.ts", "types"]
+}
