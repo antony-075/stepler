@@ -1,8 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Controller, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { authMethodsResponseSchema, type AuthMethodsResponse } from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
+import { GOOGLE_IDENTITY, type GoogleIdentity } from './google/google-identity.js';
 import { Public } from './public.decorator.js';
 import { SessionService } from './session.service.js';
 import { clearSessionCookie, readCookie, SESSION_COOKIE } from './session-cookie.js';
@@ -12,8 +14,21 @@ import { clearSessionCookie, readCookie, SESSION_COOKIE } from './session-cookie
 export class AuthController {
   constructor(
     private readonly sessions: SessionService,
+    @Inject(GOOGLE_IDENTITY) private readonly google: GoogleIdentity | null,
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
+
+  /** Sign-in options for the web app, read at runtime so it needs no provider config itself. */
+  @Public()
+  @Get('methods')
+  @ApiResponse({ status: 200, standardSchema: authMethodsResponseSchema })
+  methods(): AuthMethodsResponse {
+    return {
+      magicLink: true,
+      google: this.google !== null,
+      turnstileSiteKey: this.env.TURNSTILE_SITE_KEY,
+    };
+  }
 
   /** Ends the current session. Idempotent: succeeds without a session too. */
   @Public()

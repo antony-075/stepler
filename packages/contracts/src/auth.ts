@@ -50,3 +50,9 @@ export type MagicLinkPreviewResponse = z.infer<typeof magicLinkPreviewResponseSc
 
 export const magicLinkVerifyResponseSchema = z.object({ status: z.literal('signed-in') }).strict();
 export type MagicLinkVerifyResponse = z.infer<typeof magicLinkVerifyResponseSchema>;
+
+/** `GET /api/v1/auth/methods`: sign-in options the web app renders, read at runtime. */
+export const authMethodsResponseSchema = z
+  .object({ magicLink: z.literal(true), google: z.boolean(), turnstileSiteKey: z.string() })
+  .strict();
+export type AuthMethodsResponse = z.infer<typeof authMethodsResponseSchema>;

@@ -1,4 +1,5 @@
 export {
+  authMethodsResponseSchema,
   localeSchema,
   magicLinkPreviewResponseSchema,
   magicLinkRequestResponseSchema,
@@ -7,6 +8,7 @@ export {
   magicLinkVerifyResponseSchema,
   meResponseSchema,
   updateMeRequestSchema,
+  type AuthMethodsResponse,
   type Locale,
   type MagicLinkPreviewResponse,
   type MagicLinkRequest,
