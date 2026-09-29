@@ -126,13 +126,13 @@ Additional constraints:
 
 Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub image is gone.
 
-- [ ] **Step 1: Candidates.** All were updated on Docker Hub within the last day as of 2026-09-29:
+- [x] **Step 1: Candidates.** All were updated on Docker Hub within the last day as of 2026-09-29:
   - `chrislusf/seaweedfs` (Apache-2.0);
   - `rustfs/rustfs` (Apache-2.0);
   - `dxflrs/garage` (AGPL-3.0; acceptable as a dev-only service).
 
   Run each from compose with a bootstrap step that creates bucket `stepler-dev`.
-- [ ] **Step 2: Pass criteria**, run with a script using `@aws-sdk/client-s3` + `s3-request-presigner`:
+- [x] **Step 2: Pass criteria**, run with a script using `@aws-sdk/client-s3` + `s3-request-presigner`:
   1. `HeadBucket` succeeds.
   2. A presigned PUT with signed `Content-Type` and `Content-Length` uploads, and a mismatched `Content-Length` is rejected.
   3. A presigned GET downloads with `response-content-disposition` honoured.
@@ -141,8 +141,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   6. Container healthy in under 20 s.
 
   Prefer permissive licence, then fewer bootstrap steps.
-- [ ] **Step 3:** Record which R2 behaviours the emulator does **not** reproduce: equal part sizes, no presigned POST, EU jurisdiction endpoint. These stay staging-only checks.
-- [ ] **Step 4:** Record the result, delete the spike, and commit `docs: record S3 emulator spike result`.
+- [x] **Step 3:** Record which R2 behaviours the emulator does **not** reproduce: equal part sizes, no presigned POST, EU jurisdiction endpoint. These stay staging-only checks.
+- [x] **Step 4:** Record the result, delete the spike, and commit `docs: record S3 emulator spike result`.
 
 ### Task 3: Spike S1 — authentication implementation (throwaway)
 
@@ -330,8 +330,8 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
   - `apps/api/src/storage/object-storage.ts` (port)
   - `apps/api/src/storage/s3-object-storage.ts`, `apps/api/src/storage/storage.module.ts`
   - `apps/api/test/storage.e2e.spec.ts`
-  - `docker/s3/bootstrap.sh` (bucket + CORS)
-- Modify: `docker/compose.yaml` (emulator service from Task 2, pinned by digest, bound to 127.0.0.1), `docker/.env.example`, `apps/api/.env.example`, `docs/development/README.md`
+  - `apps/api/scripts/storage-bootstrap.ts` (dev/CI only: idempotent bucket + CORS through the SDK; `weed shell` is not idempotent, see ADR 0008 S4)
+- Modify: `docker/compose.yaml` (SeaweedFS service from ADR 0008 S4, pinned by digest, bound to 127.0.0.1), `docker/.env.example`, `apps/api/.env.example`, `apps/api/package.json` (script `storage:bootstrap`), `docs/development/README.md`
 - Dependencies: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` (same exact version).
 
 **Interfaces — produces:**
@@ -348,16 +348,17 @@ interface ObjectStorage {
 ```
 
   Multipart and range reads are added by the upload slice.
-- `S3ObjectStorage` uses a single `S3Client` configured from `ApiEnv`, and never logs presigned URLs.
+- `S3ObjectStorage` uses a single `S3Client` configured from `ApiEnv`, and never logs presigned URLs. Required settings (ADR 0008 S4): `requestChecksumCalculation` and `responseChecksumValidation` set to `'WHEN_REQUIRED'`, `forcePathStyle` from env, and `presignPut` passes `signableHeaders: new Set(['content-type'])`.
 
 - [ ] **Step 1: Failing integration tests** against the emulator:
   - `checkHealth` resolves; with a wrong bucket it rejects;
   - a presigned PUT of 11 bytes via `fetch` succeeds and `head` returns `{ size: 11 }`;
   - a PUT with a different `Content-Length` than signed is rejected;
+  - a PUT with a different `Content-Type` than signed is rejected;
   - `presignGet` with `contentDisposition: 'attachment; filename="a.txt"'` returns that header;
   - `delete` twice resolves.
 - [ ] **Step 2:** FAIL.
-- [ ] **Step 3:** Implement. The compose bootstrap creates `stepler-dev` and `stepler-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
+- [ ] **Step 3:** Implement. `storage:bootstrap` creates `stepler-dev` and `stepler-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
 - [ ] **Step 4:** PASS.
 - [ ] **Step 5:** Commit `feat(api): add object storage port with S3 adapter and local emulator`.
 

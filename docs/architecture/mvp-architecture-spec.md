@@ -377,7 +377,7 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 - `size ≤ 100 MB` → single presigned `PUT` (signed `Content-Type` and `Content-Length`), URL TTL 15 min.
 - `size > 100 MB` → S3 multipart: `CreateMultipartUpload`, fixed part size (10 MiB [assumption]), part URLs issued on demand in batches, each URL TTL 15 min; parts retried individually.
 - Upload session TTL: 24 h [assumption] (2 GB over a poor mobile link can take hours); part URLs are re-issuable while the session lives.
-- R2 specifics **[verify S4]**: no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; bucket CORS must expose `ETag`; EU-jurisdiction buckets use a distinct endpoint.
+- R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; bucket CORS must expose `ETag`; EU-jurisdiction buckets use a distinct endpoint.
 - Client: headless Uppy (`@uppy/aws-s3`) vs in-house uploader — decided in the upload slice after bundle-size check (S9). Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
 
 ### 10.3 Initiate — `POST .../uploads`
@@ -557,7 +557,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 
 ## 19. Development infrastructure
 
-- Local: `docker compose` (`docker/compose.yaml`) with PostgreSQL 18 (host port 5433 by default, to avoid clashing with a local PostgreSQL) and Mailpit. An S3-compatible emulator is added in Phase 2 (choice in S4 — MinIO's community distribution status must be checked; alternatives: Garage, SeaweedFS). Apps run natively (rule 17).
+- Local: `docker compose` (`docker/compose.yaml`) with PostgreSQL 18 (host port 5433 by default, to avoid clashing with a local PostgreSQL) and Mailpit. S3-compatible emulator: SeaweedFS on port 8333, added in Phase 2 (spike S4, ADR 0008: MinIO's repository is archived; RustFS is the fallback). A dev/CI script creates the bucket and CORS idempotently. Apps run natively (rule 17).
 - Config: per-app Zod-validated env at startup; `.env.example` documents names only.
 - Docker: multi-stage images — `web` (Next standalone), `api`, `worker` (with ffmpeg/libheif).
 - CI (GitHub Actions): install (cached) → lint → typecheck → unit → integration (PostgreSQL + S3 emulator services) → build → Prisma schema/migration check → OpenAPI diff → Playwright E2E on PRs to main.
