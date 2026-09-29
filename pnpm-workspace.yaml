@@ -19,6 +19,7 @@ catalog:
   '@next/eslint-plugin-next': 16.3.6
   tailwindcss: 4.3.3
   playwright: 1.63.0
+  '@playwright/test': 1.63.0
 
 # pnpm 11 blocks dependency build scripts unless listed here.
 allowBuilds:
