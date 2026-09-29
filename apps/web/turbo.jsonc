@@ -1,0 +1,14 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // next build wipes .next, which holds the route types that tsc and type-aware
+    // lint read. Running them in parallel with build races; run them after it.
+    "typecheck": {
+      "dependsOn": ["^build", "build"],
+    },
+    "lint": {
+      "dependsOn": ["^build", "build"],
+    },
+  },
+}
