@@ -1,0 +1,20 @@
+# Normalize line endings; scripts and configs must stay LF for Linux containers/CI.
+* text=auto eol=lf
+*.sh text eol=lf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.mp3 binary
+*.mp4 binary
+
+# Generated / lock files: collapse in diffs.
+pnpm-lock.yaml linguist-generated=true -diff
+apps/api/openapi.json linguist-generated=true

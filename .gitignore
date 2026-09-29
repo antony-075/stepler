@@ -1,32 +1,94 @@
-# dependencies
-node_modules/
+# ---------------------------------------------------------------------------
+# Secrets and credentials — never commit (CLAUDE.md §15, rule 15).
+# Only *.example templates with placeholder values are tracked.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.crt
+*.csr
+id_rsa*
+id_ed25519*
+*.gpg
+.npmrc.local
+.secrets/
+secrets/
+credentials*.json
+service-account*.json
+*.tfstate
+*.tfstate.*
+.terraform/
 
-# build output
+# ---------------------------------------------------------------------------
+# User media, uploads, local databases and dumps — never commit.
+# ---------------------------------------------------------------------------
+uploads/
+tmp/
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+*.bak
+
+# ---------------------------------------------------------------------------
+# Dependencies and package manager state
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+*.tgz
+
+# ---------------------------------------------------------------------------
+# Build output and generated code
+# ---------------------------------------------------------------------------
 dist/
 .next/
 out/
 storybook-static/
 .turbo/
+*.tsbuildinfo
+next-env.d.ts
+# Prisma client (generated on install/build)
+**/src/generated/
 
-# test output
+# ---------------------------------------------------------------------------
+# Test output and caches
+# ---------------------------------------------------------------------------
 coverage/
 playwright-report/
 test-results/
 blob-report/
+.eslintcache
+.cache/
 
-# env
-.env
-.env.*
-!.env.example
+# ---------------------------------------------------------------------------
+# Logs
+# ---------------------------------------------------------------------------
+*.log
+npm-debug.log*
+pnpm-debug.log*
 
-# IDE / OS
+# ---------------------------------------------------------------------------
+# Local tool settings (per developer)
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
 .idea/
 .vscode/
+.fleet/
+.history/
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# OS files
+# ---------------------------------------------------------------------------
 .DS_Store
-
-# logs
-*.log
-
-# generated
-*.tsbuildinfo
-next-env.d.ts
+Thumbs.db
+desktop.ini

@@ -96,6 +96,9 @@ CI (`.github/workflows/ci.yml`) runs on pull requests and on pushes to `main`:
 1. **quality:** format check, lint, typecheck, unit/integration/story tests, build, Storybook build.
 2. **e2e:** Playwright on iPhone 15, Pixel 7 and desktop Chrome.
 3. **images:** `docker/scripts/verify-images.sh`.
+4. **secrets:** gitleaks scan of the full git history (see `SECURITY.md`).
+
+Dependabot (`.github/dependabot.yml`) proposes npm, GitHub Actions and Docker base-image updates weekly, with a 1-day cooldown and the deliberate holds ignored.
 
 The `quality` and `e2e` jobs restore the local Turborepo cache (`.turbo/cache`) with `actions/cache`. A remote cache is not configured.
 
