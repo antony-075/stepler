@@ -55,11 +55,11 @@ if docker run --rm --entrypoint sh "$API_IMAGE" -c 'ls /app/node_modules/.pnpm |
   fail "api image contains dev dependencies"
 fi
 
-expect_exit_on_bad_env "$API_IMAGE" -e NODE_ENV=staging
+expect_exit_on_bad_env "$API_IMAGE" --env-file docker/scripts/verify-api.env -e NODE_ENV=staging
 expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
 
 docker network create "$NET" >/dev/null
-docker run -d --name stepler-verify-api --network "$NET" -e NODE_ENV=production "$API_IMAGE" >/dev/null
+docker run -d --name stepler-verify-api --network "$NET" --env-file docker/scripts/verify-api.env "$API_IMAGE" >/dev/null
 docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
   -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null
 wait_healthy stepler-verify-api 30

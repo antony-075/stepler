@@ -4,6 +4,7 @@ import { healthLiveResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
+import { testEnv } from './support/env.js';
 
 describe('health', () => {
   let app: INestApplication;
@@ -11,7 +12,7 @@ describe('health', () => {
   const server = (): Server => app.getHttpServer() as Server;
 
   beforeAll(async () => {
-    app = await createApp({ NODE_ENV: 'test', API_PORT: 0, LOG_LEVEL: 'error' });
+    app = await createApp(testEnv());
     await app.init();
   });
 

@@ -12,7 +12,14 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": [
+        "TEST_DATABASE_URL",
+        "TEST_SMTP_URL",
+        "TEST_S3_ENDPOINT",
+        "TEST_S3_ACCESS_KEY_ID",
+        "TEST_S3_SECRET_ACCESS_KEY"
+      ]
     },
     "e2e": {
       "dependsOn": ["^build"],
@@ -23,7 +30,33 @@
         "LOG_LEVEL",
         "PORT",
         "API_INTERNAL_URL",
-        "TRUST_PROXY_HEADERS"
+        "TRUST_PROXY_HEADERS",
+        "APP_ORIGIN",
+        "DATABASE_URL",
+        "COOKIE_SECURE",
+        "SESSION_TTL_DAYS",
+        "MAGIC_LINK_TTL_MINUTES",
+        "OPERATOR_EMAILS",
+        "API_TRUST_PROXY",
+        "APP_SECRET",
+        "SMTP_URL",
+        "MAIL_FROM",
+        "TURNSTILE_SITE_KEY",
+        "TURNSTILE_SECRET_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "S3_ENDPOINT",
+        "S3_REGION",
+        "S3_BUCKET",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_FORCE_PATH_STYLE",
+        "LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR",
+        "LIMIT_MAGIC_LINK_PER_IP_PER_HOUR",
+        "LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR",
+        "LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT",
+        "LIMIT_STORAGE_BYTES_PER_ACCOUNT",
+        "LIMIT_STORAGE_BYTES_PER_COLLECTION"
       ]
     },
     "dev": {
@@ -36,7 +69,33 @@
         "LOG_LEVEL",
         "PORT",
         "API_INTERNAL_URL",
-        "TRUST_PROXY_HEADERS"
+        "TRUST_PROXY_HEADERS",
+        "APP_ORIGIN",
+        "DATABASE_URL",
+        "COOKIE_SECURE",
+        "SESSION_TTL_DAYS",
+        "MAGIC_LINK_TTL_MINUTES",
+        "OPERATOR_EMAILS",
+        "API_TRUST_PROXY",
+        "APP_SECRET",
+        "SMTP_URL",
+        "MAIL_FROM",
+        "TURNSTILE_SITE_KEY",
+        "TURNSTILE_SECRET_KEY",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "S3_ENDPOINT",
+        "S3_REGION",
+        "S3_BUCKET",
+        "S3_ACCESS_KEY_ID",
+        "S3_SECRET_ACCESS_KEY",
+        "S3_FORCE_PATH_STYLE",
+        "LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR",
+        "LIMIT_MAGIC_LINK_PER_IP_PER_HOUR",
+        "LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR",
+        "LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT",
+        "LIMIT_STORAGE_BYTES_PER_ACCOUNT",
+        "LIMIT_STORAGE_BYTES_PER_COLLECTION"
       ]
     },
     "build-storybook": {

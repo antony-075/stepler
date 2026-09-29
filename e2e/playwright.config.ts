@@ -21,7 +21,27 @@ export default defineConfig({
     {
       command: 'node ../apps/api/dist/main.js',
       url: `http://127.0.0.1:${API_PORT}/api/v1/health/live`,
-      env: { NODE_ENV: 'production', API_PORT: String(API_PORT), LOG_LEVEL: 'warn' },
+      env: {
+        NODE_ENV: 'production',
+        API_PORT: String(API_PORT),
+        LOG_LEVEL: 'warn',
+        APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
+        COOKIE_SECURE: 'false',
+        // Local compose services; e2e never uses real credentials.
+        DATABASE_URL: 'postgresql://stepler:stepler-local@127.0.0.1:5433/stepler_test',
+        SMTP_URL: 'smtp://127.0.0.1:1025',
+        MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+        // Cloudflare's documented always-pass test keys.
+        TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
+        TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
+        APP_SECRET: Buffer.alloc(32, 7).toString('base64'),
+        S3_ENDPOINT: 'http://127.0.0.1:8333',
+        S3_REGION: 'us-east-1',
+        S3_BUCKET: 'stepler-test',
+        S3_ACCESS_KEY_ID: 'stepler',
+        S3_SECRET_ACCESS_KEY: 'stepler-local-secret',
+        S3_FORCE_PATH_STYLE: 'true',
+      },
       reuseExistingServer: false,
     },
     {

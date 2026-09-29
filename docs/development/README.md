@@ -61,14 +61,40 @@ Local `.env` files: copy `apps/api/.env.example` to `apps/api/.env`, and `apps/w
 
 These are names only; real values never go into the repository. Staging and production use separate credentials.
 
-| Variable              | App | Required | Purpose                                                                                       |
-| --------------------- | --- | -------- | --------------------------------------------------------------------------------------------- |
-| `NODE_ENV`            | api | yes      | `development`, `test` or `production`                                                         |
-| `API_PORT`            | api | no       | Listen port, default `4000`                                                                   |
-| `LOG_LEVEL`           | api | no       | `fatal`…`trace`, default `info`                                                               |
-| `API_INTERNAL_URL`    | web | yes      | http(s) origin the web server forwards `/api/*` to; read at runtime                           |
-| `TRUST_PROXY_HEADERS` | web | no       | `true` only behind an edge that overwrites `X-Forwarded-*`; default `false` (headers dropped) |
-| `PORT`, `HOSTNAME`    | web | no       | Standalone Next.js server bind address                                                        |
+| Variable | App | Required | Purpose |
+| --- | --- | --- | --- |
+| `NODE_ENV` | api | yes | `development`, `test` or `production` |
+| `API_PORT` | api | no | Listen port, default `4000` |
+| `LOG_LEVEL` | api | no | `fatal`…`trace`, default `info` |
+| `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Magic links, the OAuth redirect URI and the CSRF `Origin` check use it |
+| `DATABASE_URL` | api | yes | PostgreSQL connection URL |
+| `COOKIE_SECURE` | api | no | Adds `Secure` to cookies; default `true` in production, else `false` |
+| `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
+| `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |
+| `OPERATOR_EMAILS` | api | no | Comma-separated operator emails (ADR 0013), default empty |
+| `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback` |
+| `APP_SECRET` | api | yes | Base64 of ≥ 32 random bytes; root key for HKDF-derived keys. Distinct per environment |
+| `SMTP_URL` | api | yes | `smtp://` or `smtps://` URL of the mail server (Mailpit locally) |
+| `MAIL_FROM` | api | yes | Sender, `Name <address>` |
+| `TURNSTILE_SITE_KEY` | api | yes | Cloudflare Turnstile site key (served to the web app) |
+| `TURNSTILE_SECRET_KEY` | api | yes | Cloudflare Turnstile secret key |
+| `GOOGLE_CLIENT_ID` | api | no | Google OAuth client id; set together with the secret, or neither (Google sign-in off) |
+| `GOOGLE_CLIENT_SECRET` | api | no | Google OAuth client secret |
+| `S3_ENDPOINT` | api | no | S3 endpoint; unset for the provider default. Emulator: `http://127.0.0.1:8333` |
+| `S3_REGION` | api | yes | `auto` for R2, `us-east-1` for the emulator |
+| `S3_BUCKET` | api | yes | Bucket name |
+| `S3_ACCESS_KEY_ID` | api | yes | Bucket-scoped access key |
+| `S3_SECRET_ACCESS_KEY` | api | yes | Bucket-scoped secret key |
+| `S3_FORCE_PATH_STYLE` | api | no | `true` for the emulator; default `false` |
+| `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
+| `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
+| `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |
+| `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` | api | no | Default `3` |
+| `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
+| `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
+| `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
+| `TRUST_PROXY_HEADERS` | web | no | `true` only behind an edge that overwrites `X-Forwarded-*`; default `false` (headers dropped) |
+| `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
 Both apps validate their env at startup and exit when it is invalid. Error messages name the variables but never print their values.
 
