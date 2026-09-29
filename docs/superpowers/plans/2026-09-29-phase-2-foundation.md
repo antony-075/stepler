@@ -93,18 +93,18 @@ Additional constraints:
 - whether IDs use DB-side `uuidv7()` or Prisma-side `uuid(7)`;
 - the test-database reset method.
 
-- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
+- [x] **Step 1:** In `$TMPDIR/stepler-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
   - `User(id uuid @default(dbgenerated("uuidv7()")), email citext @unique, status UserStatus @default(ACTIVE))`;
   - `Thing(id, userId, isDefault Boolean, revokedAt DateTime?)`.
-- [ ] **Step 2:** Create the first migration with `prisma migrate dev --create-only`. Add to its SQL:
+- [x] **Step 2:** Create the first migration with `prisma migrate dev --create-only`. Add to its SQL:
   - `CREATE EXTENSION IF NOT EXISTS citext`;
   - `CHECK (status IN (...))` beyond the enum, as an example CHECK;
   - `CREATE UNIQUE INDEX thing_one_default ON "Thing"("userId") WHERE "isDefault" AND "revokedAt" IS NULL`.
 
   Apply it.
-- [ ] **Step 3: Pass criteria.**
+- [x] **Step 3: Pass criteria.**
   1. A second `prisma migrate dev` reports no drift and generates no migration that drops the partial index or the CHECK.
-  2. `prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url <url> --exit-code` exits 0.
+  2. `prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code` exits 0. The shadow database comes from `datasource.shadowDatabaseUrl` in `prisma.config.ts`; 7.10 has no `--shadow-database-url` flag.
   3. Inserting two live defaults for one user fails with Prisma error `P2002`, or a raw error mapped by code.
   4. `SELECT uuidv7()` works and ids sort by creation time.
   5. `TRUNCATE ... RESTART IDENTITY CASCADE` over all model tables resets state in under 100 ms.
@@ -112,7 +112,7 @@ Additional constraints:
   If criterion 1 or 2 fails, document the workaround:
   - Prisma's `@@index(..., where: ...)` if 7.10 supports partial indexes;
   - otherwise, a CI check that diffs against migrations only.
-- [ ] **Step 4:** Record the result, delete the spike, and commit `docs: record Prisma migration spike result`.
+- [x] **Step 4:** Record the result, delete the spike, and commit `docs: record Prisma migration spike result`.
 
 ### Task 2: Spike S4 — S3-compatible emulator (throwaway)
 
@@ -312,7 +312,7 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
 - `requestIpHash` = HMAC-SHA256 of the IP with an HKDF key from `APP_SECRET` (info `ip-hash`). It is kept for abuse investigation, never displayed.
 - `PrismaService extends PrismaClient`, connects in `onModuleInit` and disconnects in `onModuleDestroy`.
 - `resetDatabase(): Promise<void>` truncates all model tables.
-- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift).
+- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift). It needs `SHADOW_DATABASE_URL` pointing at a disposable database (ADR 0005, Spike S6 result).
 
 - [ ] **Step 1: Failing integration tests** (`apps/api/test/database.e2e.spec.ts`):
   - inserting `User` emails `Anton@Example.com` then `anton@example.com` violates the unique constraint (citext);
