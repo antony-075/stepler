@@ -1,22 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { parseEnv } from 'node:util';
 import { defineConfig, devices } from '@playwright/test';
-
-/** Local compose credentials: `docker/.env` if present, else the committed example (CI). */
-function composeEnv(): Record<string, string | undefined> {
-  for (const file of ['../docker/.env', '../docker/.env.example']) {
-    try {
-      return parseEnv(readFileSync(new URL(file, import.meta.url), 'utf8'));
-    } catch {
-      // Try the next file.
-    }
-  }
-  return {};
-}
-
-const compose = composeEnv();
-const pgAuth = `${compose.POSTGRES_USER ?? 'stepler'}:${compose.POSTGRES_PASSWORD ?? ''}`;
-const pgHost = `127.0.0.1:${compose.POSTGRES_PORT ?? '5433'}`;
+import { compose, E2E_DATABASE_URL } from './support/env.js';
 
 // Dedicated ports so e2e never collides with `pnpm dev` (3000/4000).
 const API_PORT = 4100;
@@ -24,6 +7,7 @@ const WEB_PORT = 3100;
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './support/global-setup.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -46,7 +30,7 @@ export default defineConfig({
         APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
         COOKIE_SECURE: 'false',
         // Local compose services; e2e never uses real credentials.
-        DATABASE_URL: `postgresql://${pgAuth}@${pgHost}/stepler_test`,
+        DATABASE_URL: E2E_DATABASE_URL,
         SMTP_URL: 'smtp://127.0.0.1:1025',
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
         // Cloudflare's documented always-pass test keys.
@@ -59,6 +43,9 @@ export default defineConfig({
         S3_ACCESS_KEY_ID: compose.S3_ACCESS_KEY_ID ?? 'stepler',
         S3_SECRET_ACCESS_KEY: compose.S3_SECRET_ACCESS_KEY ?? '',
         S3_FORCE_PATH_STYLE: 'true',
+        // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
+        LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
+        LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
       },
       reuseExistingServer: false,
     },
