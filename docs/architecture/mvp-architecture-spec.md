@@ -131,7 +131,7 @@ Decision details: ADR 0006.
 - **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified.
 - **Operator:** users whose verified email is in `OPERATOR_EMAILS` config (ADR 0013).
 - **Legal acceptance:** recorded at registration (§15).
-- **Implementation:** Better Auth mounted in NestJS vs a small in-house implementation — decided in spike S1. The data model above is the contract either way.
+- **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verifies magic links only by GET).
 
 ---
 
@@ -165,7 +165,7 @@ LegalAcceptance
   UNIQUE (userId, document, version)
 ```
 
-(If Better Auth is adopted, its tables replace `AuthAccount/AuthSession/MagicLinkToken` with equivalent semantics.)
+(Auth is implemented in-house: spike S1 rejected Better Auth because it stores session tokens in plain text and verifies magic links only by GET, see ADR 0006.)
 
 ### 7.2 Collections and guest access
 
@@ -342,8 +342,6 @@ Health
 ```
 
 Why a separate guest namespace: different principal, different DTOs (admin fields cannot leak), and a clear surface for IDOR/BOLA review. Cost: two controller sets over shared services.
-
-If Better Auth is adopted (S1), auth routes follow its handler paths; the rest is unchanged.
 
 ### 9.1 Guest session exchange
 
@@ -588,7 +586,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 1. Hosting provider and production deployment architecture (EU).
 2. Email provider (EU preference).
 3. Error monitoring provider.
-4. Auth implementation (S1).
+4. ~~Auth implementation (S1)~~ — decided: in-house (ADR 0006).
 5. Rate-limit storage for multi-instance deployment (depends on 1).
 6. Legal: DSA/GDPR review, reporter IP storage, evidence preservation for reported illegal content.
 7. Billing provider and pricing; transcoding provider.

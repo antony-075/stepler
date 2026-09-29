@@ -152,8 +152,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
 - **If in-house wins:** those tasks run as written.
 - **If Better Auth wins:** stop after this task. Revise Tasks 12–15 against Better Auth's API before continuing, and keep their tests and Review Focus items.
 
-- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
-- [ ] **Step 2: Hard criteria.** Better Auth wins only if **all** hold:
+- [x] **Step 1:** In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
+- [x] **Step 2: Hard criteria.** Better Auth wins only if **all** hold:
   1. Session tokens are stored hashed, or can be configured to be.
   2. Table and column names map to spec §7.1 (`User`, `AuthAccount`, `AuthSession`), with UUIDv7 ids and a `citext` email.
   3. Magic-link verification can be a POST (scanner-safe).
@@ -162,8 +162,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   6. A pre-hook can require a valid Turnstile token on the magic-link request.
   7. The cookie name and attributes match the Global Constraints.
   8. It works under the web `/api` proxy (Set-Cookie and redirects).
-- [ ] **Step 3: Soft criteria.** Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
-- [ ] **Step 4:** Record the decision with evidence per criterion, delete the spike, and commit `docs: record auth implementation spike result`.
+- [x] **Step 3: Soft criteria.** Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
+- [x] **Step 4:** Record the decision with evidence per criterion, delete the spike, and commit `docs: record auth implementation spike result`.
 
 ### Task 4: Contracts — problem details, error codes, health readiness
 
