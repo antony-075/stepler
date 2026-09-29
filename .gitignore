@@ -26,3 +26,7 @@ blob-report/
 
 # logs
 *.log
+
+# generated
+*.tsbuildinfo
+next-env.d.ts
