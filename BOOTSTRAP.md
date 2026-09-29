@@ -25,7 +25,7 @@ Create:
 - ESLint/Prettier (incl. rule against literal user-facing strings);
 - Vitest;
 - Playwright;
-- Docker Compose (PostgreSQL 18, S3-compatible emulator, Mailpit);
+- Docker Compose (PostgreSQL 18, Mailpit); the S3-compatible emulator is added in Phase 2 with spike S4, when the storage adapter first needs it;
 - env validation;
 - i18n foundation (uk default, en);
 - GitHub Actions CI: lint, typecheck, test, build.
@@ -40,7 +40,7 @@ Implement:
 - Prisma, DB connection, first migration (spike S6);
 - problem+json error handling;
 - request IDs, structured logging with redaction;
-- provider ports: ObjectStorage (spike S4), Mailer, Jobs, Turnstile verifier, error monitoring;
+- provider ports: ObjectStorage (spike S4, adds the S3-compatible emulator to Docker Compose), Mailer, Jobs, Turnstile verifier, error monitoring;
 - config-driven limits (`LimitsService`);
 - auth boundary: admin sessions, magic link, Google OAuth (spike S1), principal resolution, operator resolution.
 

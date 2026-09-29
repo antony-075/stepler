@@ -557,7 +557,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 
 ## 19. Development infrastructure
 
-- Local: `docker compose` with PostgreSQL 18, an S3-compatible emulator (choice in S4 — MinIO's community distribution status must be checked; alternatives: Garage, SeaweedFS), Mailpit. Apps run natively (rule 17).
+- Local: `docker compose` (`docker/compose.yaml`) with PostgreSQL 18 (host port 5433 by default, to avoid clashing with a local PostgreSQL) and Mailpit. An S3-compatible emulator is added in Phase 2 (choice in S4 — MinIO's community distribution status must be checked; alternatives: Garage, SeaweedFS). Apps run natively (rule 17).
 - Config: per-app Zod-validated env at startup; `.env.example` documents names only.
 - Docker: multi-stage images — `web` (Next standalone), `api`, `worker` (with ffmpeg/libheif).
 - CI (GitHub Actions): install (cached) → lint → typecheck → unit → integration (PostgreSQL + S3 emulator services) → build → Prisma schema/migration check → OpenAPI diff → Playwright E2E on PRs to main.

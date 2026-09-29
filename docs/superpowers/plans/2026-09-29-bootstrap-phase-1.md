@@ -22,7 +22,7 @@
 - No hardcoded user-facing strings in `apps/web` or `packages/ui` components, including `aria-label`, `title`, `alt` and `placeholder`.
 - Env: each app validates env with Zod at startup; `.env.example` holds names only; `.env*` files are never committed. Validation errors name the variables but never print their values.
 - Local dev: apps run natively; Docker Compose runs infrastructure only (rule 17).
-- Ports: web `3000`, api `4000`, Postgres `5432` (overridable via `POSTGRES_PORT`), Mailpit SMTP `1025` / UI `8025`.
+- Ports: web `3000`, api `4000`, Postgres host port `5433` (overridable via `POSTGRES_PORT`; 5432 is often taken by a local PostgreSQL), Mailpit SMTP `1025` / UI `8025`. E2E uses web `3100` / api `4100`.
 - Commits: small and focused. Messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
 - Spike code is throwaway: it lives in `$TMPDIR/eventdrop-spikes/` and never enters the repo.
 - pnpm 11 blocks dependency build scripts: every dependency that needs one is listed explicitly in `allowBuilds` in `pnpm-workspace.yaml` (true or false). Install telemetry (`@scarf/scarf`) is denied.
