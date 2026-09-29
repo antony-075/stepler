@@ -21,3 +21,32 @@ export const updateMeRequestSchema = z
   })
   .strict();
 export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;
+
+/** A 32-byte base64url token as emailed (43 characters). */
+const magicLinkTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/);
+
+/** `POST /api/v1/auth/magic-link`. */
+export const magicLinkRequestSchema = z
+  .object({
+    // Normalize first: the format check must see the trimmed, lowercased address.
+    email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
+    turnstileToken: z.string().min(1).max(2048),
+    locale: localeSchema.optional(),
+  })
+  .strict();
+export type MagicLinkRequest = z.infer<typeof magicLinkRequestSchema>;
+
+/** Always the same body, whether or not an email was sent (no account enumeration). */
+export const magicLinkRequestResponseSchema = z.object({ status: z.literal('sent') }).strict();
+export type MagicLinkRequestResponse = z.infer<typeof magicLinkRequestResponseSchema>;
+
+/** `POST /api/v1/auth/magic-link/preview` and `/verify`. */
+export const magicLinkVerifyRequestSchema = z.object({ token: magicLinkTokenSchema }).strict();
+export type MagicLinkVerifyRequest = z.infer<typeof magicLinkVerifyRequestSchema>;
+
+/** The address a link signs in to, shown before the user confirms. */
+export const magicLinkPreviewResponseSchema = z.object({ email: z.string() }).strict();
+export type MagicLinkPreviewResponse = z.infer<typeof magicLinkPreviewResponseSchema>;
+
+export const magicLinkVerifyResponseSchema = z.object({ status: z.literal('signed-in') }).strict();
+export type MagicLinkVerifyResponse = z.infer<typeof magicLinkVerifyResponseSchema>;

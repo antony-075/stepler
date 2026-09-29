@@ -73,6 +73,20 @@ describe('health readiness failures', () => {
     await app.close();
   });
 
+  test('results are cached briefly, so repeated probes do not hit dependencies', async () => {
+    let calls = 0;
+    const app = await appWith(testEnv(), {
+      checkHealth: () => {
+        calls += 1;
+        return Promise.resolve();
+      },
+    });
+    await Promise.all([1, 2, 3].map(() => request(server(app)).get('/api/v1/health/ready')));
+    await request(server(app)).get('/api/v1/health/ready').expect(200);
+    expect(calls).toBe(1);
+    await app.close();
+  });
+
   test('unreachable database → 503 degraded with database: fail', async () => {
     const app = await appWith(
       testEnv({ DATABASE_URL: 'postgresql://stepler:x@127.0.0.1:1/stepler_test' }),

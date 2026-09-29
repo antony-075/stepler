@@ -1,8 +1,18 @@
 export {
   localeSchema,
+  magicLinkPreviewResponseSchema,
+  magicLinkRequestResponseSchema,
+  magicLinkRequestSchema,
+  magicLinkVerifyRequestSchema,
+  magicLinkVerifyResponseSchema,
   meResponseSchema,
   updateMeRequestSchema,
   type Locale,
+  type MagicLinkPreviewResponse,
+  type MagicLinkRequest,
+  type MagicLinkRequestResponse,
+  type MagicLinkVerifyRequest,
+  type MagicLinkVerifyResponse,
   type MeResponse,
   type UpdateMeRequest,
 } from './auth.js';

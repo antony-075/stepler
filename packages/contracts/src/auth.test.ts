@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { meResponseSchema, updateMeRequestSchema } from './index.js';
+import {
+  magicLinkRequestSchema,
+  magicLinkVerifyRequestSchema,
+  meResponseSchema,
+  updateMeRequestSchema,
+} from './index.js';
 
 describe('updateMeRequestSchema', () => {
   test('trims displayName and accepts null to clear it', () => {
@@ -27,5 +32,32 @@ describe('meResponseSchema', () => {
       isOperator: false,
     };
     expect(meResponseSchema.parse(me)).toEqual(me);
+  });
+});
+
+describe('magicLinkRequestSchema', () => {
+  test('normalizes the email', () => {
+    expect(
+      magicLinkRequestSchema.parse({ email: ' Anton@Example.COM ', turnstileToken: 't' }).email,
+    ).toBe('anton@example.com');
+  });
+
+  test('requires a Turnstile token and rejects extra keys', () => {
+    expect(magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: '' }).success).toBe(
+      false,
+    );
+    expect(
+      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't', x: 1 }).success,
+    ).toBe(false);
+  });
+});
+
+describe('magicLinkVerifyRequestSchema', () => {
+  test('accepts only 43-character base64url tokens', () => {
+    expect(magicLinkVerifyRequestSchema.safeParse({ token: 'A'.repeat(43) }).success).toBe(true);
+    expect(magicLinkVerifyRequestSchema.safeParse({ token: 'A'.repeat(42) }).success).toBe(false);
+    expect(magicLinkVerifyRequestSchema.safeParse({ token: `${'A'.repeat(42)}=` }).success).toBe(
+      false,
+    );
   });
 });
