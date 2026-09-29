@@ -6,47 +6,66 @@ cd "$(dirname "$0")/../.."
 API_IMAGE=eventdrop-api:verify
 WEB_IMAGE=eventdrop-web:verify
 NET=eventdrop-verify
+CONTAINERS=(eventdrop-verify-api eventdrop-verify-web eventdrop-verify-badenv)
 cleanup() {
-  docker rm -f eventdrop-verify-api eventdrop-verify-web >/dev/null 2>&1 || true
+  docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
+# Waits up to $2 seconds for container $1 to reach Docker health "healthy".
+wait_healthy() {
+  local status=""
+  for _ in $(seq 1 "$2"); do
+    status=$(docker inspect -f '{{.State.Health.Status}}' "$1")
+    [ "$status" = "healthy" ] && return 0
+    sleep 1
+  done
+  fail "$1 not healthy (status: $status)"
+}
+
+# Starts image $1 with env args, expects it to exit non-zero within 20 s (fail-fast on bad env).
+expect_exit_on_bad_env() {
+  local image=$1; shift
+  docker run -d --name eventdrop-verify-badenv "$@" "$image" >/dev/null
+  for _ in $(seq 1 20); do
+    [ "$(docker inspect -f '{{.State.Running}}' eventdrop-verify-badenv)" = "false" ] && break
+    sleep 1
+  done
+  [ "$(docker inspect -f '{{.State.Running}}' eventdrop-verify-badenv)" = "false" ] || fail "$image kept running with invalid env"
+  [ "$(docker inspect -f '{{.State.ExitCode}}' eventdrop-verify-badenv)" != "0" ] || fail "$image exited 0 with invalid env"
+  docker rm -f eventdrop-verify-badenv >/dev/null
+}
+
 docker build -f apps/api/Dockerfile -t "$API_IMAGE" .
 docker build -f apps/web/Dockerfile -t "$WEB_IMAGE" .
 
 for image in "$API_IMAGE" "$WEB_IMAGE"; do
-  uid=$(docker run --rm --entrypoint id "$image" -u)
-  [ "$uid" != "0" ] || fail "$image runs as root"
-  envs=$(docker run --rm --entrypoint sh "$image" -c 'find / -xdev -name ".env" -o -xdev -name ".env.*" ! -name ".env.example" 2>/dev/null | grep -v "^/proc" | wc -l')
+  [ "$(docker run --rm --entrypoint id "$image" -u)" != "0" ] || fail "$image runs as root"
+  # Scan as root so unreadable directories cannot hide files.
+  envs=$(docker run --rm -u 0 --entrypoint sh "$image" -c \
+    'find / -xdev \( -name ".env" -o -name ".env.*" \) ! -name ".env.example" -print 2>/dev/null | wc -l')
   [ "$envs" -eq 0 ] || fail "$image contains .env files"
+  docker run --rm --entrypoint sh "$image" -c 'touch /app/probe 2>/dev/null' && fail "$image app directory is writable by the runtime user"
 done
 
-if docker run --rm --entrypoint sh "$API_IMAGE" -c 'ls /app/node_modules/.pnpm 2>/dev/null | grep -qE "^(vitest|typescript|@nestjs\+cli)@"'; then
+docker run --rm --entrypoint sh "$API_IMAGE" -c 'test -d /app/node_modules/.pnpm' || fail "api image has no node_modules/.pnpm (layout changed?)"
+if docker run --rm --entrypoint sh "$API_IMAGE" -c 'ls /app/node_modules/.pnpm | grep -qE "^(vitest|typescript|@nestjs\+cli)@"'; then
   fail "api image contains dev dependencies"
 fi
+
+expect_exit_on_bad_env "$API_IMAGE" -e NODE_ENV=staging
+expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
 
 docker network create "$NET" >/dev/null
 docker run -d --name eventdrop-verify-api --network "$NET" -e NODE_ENV=production "$API_IMAGE" >/dev/null
 docker run -d --name eventdrop-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
   -e API_INTERNAL_URL=http://eventdrop-verify-api:4000 "$WEB_IMAGE" >/dev/null
+wait_healthy eventdrop-verify-api 30
+wait_healthy eventdrop-verify-web 30
 
-for _ in $(seq 1 30); do
-  status=$(docker inspect -f '{{.State.Health.Status}}' eventdrop-verify-api)
-  [ "$status" = "healthy" ] && break
-  sleep 1
-done
-[ "$status" = "healthy" ] || fail "api container not healthy (status: $status)"
-
-for _ in $(seq 1 20); do
-  curl -fsS -o /dev/null http://127.0.0.1:3199/ && break
-  sleep 1
-done
-curl -fsS -o /dev/null http://127.0.0.1:3199/ || fail "web did not answer GET /"
 body=$(curl -fsS http://127.0.0.1:3199/api/v1/health/live) || fail "web → api proxy failed"
 [ "$body" = '{"status":"ok"}' ] || fail "unexpected health body: $body"
-
-docker run --rm -e NODE_ENV=staging "$API_IMAGE" >/dev/null 2>&1 && fail "api started with invalid env"
 
 echo "All image checks passed."
