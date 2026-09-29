@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // Scripts run directly with Node's type stripping, which needs real `.ts` import paths.
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "rootDir": ".."
+  },
+  "include": ["."]
+}

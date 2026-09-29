@@ -54,7 +54,7 @@ Additional constraints:
 - **Cookies:**
   - `st_session`: `HttpOnly; SameSite=Lax; Path=/`, plus `Secure` when `COOKIE_SECURE=true` (default `true` in production, `false` otherwise);
   - OAuth transaction cookie `st_oauth`: `HttpOnly; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`.
-- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This also blocks login CSRF: an attacker page posting its own magic-link token so the victim signs in as the attacker. Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
+- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This blocks the cross-site form of login CSRF, where an attacker page posts its own magic-link token so the victim is signed in as the attacker. It does not block an attacker who sends the victim a real `${APP_ORIGIN}/auth/verify?token=<attacker token>` link: that POST comes from our own origin. Against that case, the verify page first shows the email the link signs in to ("Sign in as anton@…?"), read through a non-consuming preview endpoint (Task 13), so the victim sees a foreign address before clicking. The app shell also shows the signed-in email (Task 15). Owner decision, 2026-09-29. Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
 - **Public URLs** (magic links, OAuth redirect URI) are built from `APP_ORIGIN`, never from request `Host` or forwarded headers.
 - **Client IP:** `req.ip` with Express `trust proxy` from `API_TRUST_PROXY` (default `false`). Documented limitation: behind the web proxy without a trusted edge, all clients share the web server's IP, so IP limits act as global limits. This is resolved with the hosting decision.
 - **Tests:**
@@ -66,7 +66,9 @@ Additional constraints:
 
 ## Deliberate deviations from the spec (for owner review)
 
-1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page shows a "Sign in" button, which calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
+**Status: all five approved by the owner on 2026-09-29.**
+
+1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page reads the email through a non-consuming `POST /api/v1/auth/magic-link/preview` and shows "Sign in as <email>". The "Sign in" button calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
 2. **Legal acceptance (`LegalAcceptance`, acceptance gate) moves to Phase 4 slice 10 (Legal pages).** The texts do not exist yet (D15/F8). Slice 10 adds a gate that also covers users created before it, and there are no real users before launch.
 3. **The Jobs port (pg-boss) is deferred to Phase 4 slice 5 (upload),** its first consumer. A port without a consumer would be dead code (CLAUDE.md §14).
 4. **No OpenAPI client code generation for the web app.** `openapi-typescript` 7.13 declares `typescript ^5` and we use 6.0. The web app imports request/response types and schemas directly from `@stepler/contracts`, the same source the API validates with. OpenAPI stays the documented public contract and is snapshot-checked in CI. This updates spec §4 and ADR 0005.
@@ -74,7 +76,7 @@ Additional constraints:
 
 ## Review Focus
 
-1. **Email scanners prefetching the magic link.** Opening `/auth/verify?token=…` any number of times must not consume the token; only the POST does. Tested in Task 16 (e2e: load the page twice, then sign in).
+1. **Email scanners prefetching the magic link.** Opening `/auth/verify?token=…` any number of times must not consume the token: the page's preview call is read-only, and only the verify POST consumes. Tested in Task 16 (e2e: load the page twice, then sign in).
 2. **Double submission of one magic link** (double click, two tabs). Two concurrent verify POSTs must produce exactly one session and one `200`. The other returns `400 MAGIC_LINK_INVALID`. Tested in Task 13 with `Promise.all`.
 3. **Account enumeration.** Unknown, existing and blocked emails get the same `202` with the same body, and are rate-limited the same way. Only unblocked addresses receive mail. Tested in Task 13.
 4. **Secrets in logs.** A request to `/api/v1/auth/google/callback?code=abc&state=def` or with a `Cookie` header produces log lines with none of those values. Tested in Task 5.
@@ -91,18 +93,18 @@ Additional constraints:
 - whether IDs use DB-side `uuidv7()` or Prisma-side `uuid(7)`;
 - the test-database reset method.
 
-- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
+- [x] **Step 1:** In `$TMPDIR/stepler-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
   - `User(id uuid @default(dbgenerated("uuidv7()")), email citext @unique, status UserStatus @default(ACTIVE))`;
   - `Thing(id, userId, isDefault Boolean, revokedAt DateTime?)`.
-- [ ] **Step 2:** Create the first migration with `prisma migrate dev --create-only`. Add to its SQL:
+- [x] **Step 2:** Create the first migration with `prisma migrate dev --create-only`. Add to its SQL:
   - `CREATE EXTENSION IF NOT EXISTS citext`;
   - `CHECK (status IN (...))` beyond the enum, as an example CHECK;
   - `CREATE UNIQUE INDEX thing_one_default ON "Thing"("userId") WHERE "isDefault" AND "revokedAt" IS NULL`.
 
   Apply it.
-- [ ] **Step 3: Pass criteria.**
+- [x] **Step 3: Pass criteria.**
   1. A second `prisma migrate dev` reports no drift and generates no migration that drops the partial index or the CHECK.
-  2. `prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --shadow-database-url <url> --exit-code` exits 0.
+  2. `prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code` exits 0. The shadow database comes from `datasource.shadowDatabaseUrl` in `prisma.config.ts`; 7.10 has no `--shadow-database-url` flag.
   3. Inserting two live defaults for one user fails with Prisma error `P2002`, or a raw error mapped by code.
   4. `SELECT uuidv7()` works and ids sort by creation time.
   5. `TRUNCATE ... RESTART IDENTITY CASCADE` over all model tables resets state in under 100 ms.
@@ -110,7 +112,7 @@ Additional constraints:
   If criterion 1 or 2 fails, document the workaround:
   - Prisma's `@@index(..., where: ...)` if 7.10 supports partial indexes;
   - otherwise, a CI check that diffs against migrations only.
-- [ ] **Step 4:** Record the result, delete the spike, and commit `docs: record Prisma migration spike result`.
+- [x] **Step 4:** Record the result, delete the spike, and commit `docs: record Prisma migration spike result`.
 
 ### Task 2: Spike S4 — S3-compatible emulator (throwaway)
 
@@ -124,13 +126,13 @@ Additional constraints:
 
 Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub image is gone.
 
-- [ ] **Step 1: Candidates.** All were updated on Docker Hub within the last day as of 2026-09-29:
+- [x] **Step 1: Candidates.** All were updated on Docker Hub within the last day as of 2026-09-29:
   - `chrislusf/seaweedfs` (Apache-2.0);
   - `rustfs/rustfs` (Apache-2.0);
   - `dxflrs/garage` (AGPL-3.0; acceptable as a dev-only service).
 
   Run each from compose with a bootstrap step that creates bucket `stepler-dev`.
-- [ ] **Step 2: Pass criteria**, run with a script using `@aws-sdk/client-s3` + `s3-request-presigner`:
+- [x] **Step 2: Pass criteria**, run with a script using `@aws-sdk/client-s3` + `s3-request-presigner`:
   1. `HeadBucket` succeeds.
   2. A presigned PUT with signed `Content-Type` and `Content-Length` uploads, and a mismatched `Content-Length` is rejected.
   3. A presigned GET downloads with `response-content-disposition` honoured.
@@ -139,8 +141,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   6. Container healthy in under 20 s.
 
   Prefer permissive licence, then fewer bootstrap steps.
-- [ ] **Step 3:** Record which R2 behaviours the emulator does **not** reproduce: equal part sizes, no presigned POST, EU jurisdiction endpoint. These stay staging-only checks.
-- [ ] **Step 4:** Record the result, delete the spike, and commit `docs: record S3 emulator spike result`.
+- [x] **Step 3:** Record which R2 behaviours the emulator does **not** reproduce: equal part sizes, no presigned POST, EU jurisdiction endpoint. These stay staging-only checks.
+- [x] **Step 4:** Record the result, delete the spike, and commit `docs: record S3 emulator spike result`.
 
 ### Task 3: Spike S1 — authentication implementation (throwaway)
 
@@ -150,8 +152,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
 - **If in-house wins:** those tasks run as written.
 - **If Better Auth wins:** stop after this task. Revise Tasks 12–15 against Better Auth's API before continuing, and keep their tests and Review Focus items.
 
-- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
-- [ ] **Step 2: Hard criteria.** Better Auth wins only if **all** hold:
+- [x] **Step 1** (partially executed: `better-auth` 1.7.6 with the magic-link plugin on the memory adapter; the Nest module, the Prisma adapter and Google were not mounted, because criteria 1 and 3 failed at the library level): In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
+- [x] **Step 2: Hard criteria** (1 and 3 fail; 5 passes; 7 partly observed; 2, 4, 6 and 8 not evaluated, see ADR 0006). Better Auth wins only if **all** hold:
   1. Session tokens are stored hashed, or can be configured to be.
   2. Table and column names map to spec §7.1 (`User`, `AuthAccount`, `AuthSession`), with UUIDv7 ids and a `citext` email.
   3. Magic-link verification can be a POST (scanner-safe).
@@ -160,8 +162,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   6. A pre-hook can require a valid Turnstile token on the magic-link request.
   7. The cookie name and attributes match the Global Constraints.
   8. It works under the web `/api` proxy (Set-Cookie and redirects).
-- [ ] **Step 3: Soft criteria.** Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
-- [ ] **Step 4:** Record the decision with evidence per criterion, delete the spike, and commit `docs: record auth implementation spike result`.
+- [x] **Step 3: Soft criteria** (only the security advisories were reviewed). Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
+- [x] **Step 4:** Record the decision with evidence per criterion, delete the spike, and commit `docs: record auth implementation spike result`.
 
 ### Task 4: Contracts — problem details, error codes, health readiness
 
@@ -213,8 +215,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - `APP_SECRET` (base64, ≥ 32 bytes decoded; the root key for HKDF-derived keys: OAuth cookie signing, IP hashing; distinct per environment);
   - `GOOGLE_CLIENT_ID?`, `GOOGLE_CLIENT_SECRET?` (both or neither);
   - `S3_ENDPOINT?` (absent = AWS/R2 default), `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` (boolean);
-  - `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` (5), `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` (20), `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` (3), `LIMIT_STORAGE_BYTES_PER_ACCOUNT` (20 GiB), `LIMIT_STORAGE_BYTES_PER_COLLECTION` (10 GiB).
-- `LimitsService.magicLink(): { perEmailPerHour: number; perIpPerHour: number }` and `LimitsService.forUser(user: { id: string }): { activeCollections: number; storageBytes: bigint }`. The second is config-backed now; plans/entitlements plug in later (ADR 0010).
+  - `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` (5), `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` (20), `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` (60), `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` (3), `LIMIT_STORAGE_BYTES_PER_ACCOUNT` (20 GiB), `LIMIT_STORAGE_BYTES_PER_COLLECTION` (10 GiB).
+- `LimitsService.magicLink(): { perEmailPerHour: number; perIpPerHour: number; previewPerIpPerHour: number }` and `LimitsService.forUser(user: { id: string }): { activeCollections: number; storageBytes: bigint }`. The second is config-backed now; plans/entitlements plug in later (ADR 0010).
 - `redactUrl(url: string): string` replaces values of query keys `token|code|state|x-amz-*` (case-insensitive) with `[REDACTED]`.
 - `LoggingModule`:
   - pino-http;
@@ -286,7 +288,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - `apps/api/prisma/schema.prisma`, `apps/api/prisma.config.ts`, `apps/api/prisma/migrations/<ts>_identity/migration.sql`
   - `apps/api/src/database/prisma.service.ts`, `apps/api/src/database/database.module.ts`
   - `apps/api/test/support/database.ts` (global setup + `resetDatabase()`)
-  - `docker/postgres/init/01-test-database.sql`
+  - `docker/postgres/init/01-test-database.sql` (databases `stepler_test` and `stepler_shadow`)
 - Modify:
   - `apps/api/package.json` (dependencies `@prisma/client`, `@prisma/adapter-pg`, `pg`; dev dependencies `prisma`, `@types/pg`, all exact and in the catalog; scripts `db:migrate`, `db:deploy`, `db:check`, and `postinstall`/`build` running `prisma generate`)
   - `apps/api/vitest.config.ts` (projects: `unit` with parallel files, `integration` with `fileParallelism: false` and `globalSetup`)
@@ -310,14 +312,14 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
 - `requestIpHash` = HMAC-SHA256 of the IP with an HKDF key from `APP_SECRET` (info `ip-hash`). It is kept for abuse investigation, never displayed.
 - `PrismaService extends PrismaClient`, connects in `onModuleInit` and disconnects in `onModuleDestroy`.
 - `resetDatabase(): Promise<void>` truncates all model tables.
-- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift).
+- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift). It needs `SHADOW_DATABASE_URL` pointing at `stepler_shadow` (ADR 0005, Spike S6 result). Prisma resets the shadow database, so it must never point at the dev or test database. `SHADOW_DATABASE_URL` goes into `apps/api/.env.example` and CI.
 
 - [ ] **Step 1: Failing integration tests** (`apps/api/test/database.e2e.spec.ts`):
   - inserting `User` emails `Anton@Example.com` then `anton@example.com` violates the unique constraint (citext);
   - `status: BLOCKED` without `blockedAt` violates the CHECK;
-  - ids generated in sequence sort ascending.
+  - ids from sequential, awaited inserts sort ascending (`uuidv7()` is only sub-millisecond ordered across concurrent connections).
 - [ ] **Step 2:** FAIL (no schema).
-- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates database `stepler_test` owned by `stepler`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
+- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates databases `stepler_test` and `stepler_shadow` owned by `stepler`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
 - [ ] **Step 4:** Run `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait`, then `pnpm --filter @stepler/api test` → PASS, then `db:check` → exit 0.
 - [ ] **Step 5:** Commit `feat(api): add Prisma with identity schema and test database`.
 
@@ -328,8 +330,8 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
   - `apps/api/src/storage/object-storage.ts` (port)
   - `apps/api/src/storage/s3-object-storage.ts`, `apps/api/src/storage/storage.module.ts`
   - `apps/api/test/storage.e2e.spec.ts`
-  - `docker/s3/bootstrap.sh` (bucket + CORS)
-- Modify: `docker/compose.yaml` (emulator service from Task 2, pinned by digest, bound to 127.0.0.1), `docker/.env.example`, `apps/api/.env.example`, `docs/development/README.md`
+  - `apps/api/scripts/storage-bootstrap.ts` (dev/CI only: idempotent bucket + CORS through the SDK; `weed shell` is not idempotent, see ADR 0008 S4)
+- Modify: `docker/compose.yaml` (SeaweedFS service from ADR 0008 S4, pinned by digest, bound to 127.0.0.1), `docker/.env.example`, `apps/api/.env.example`, `apps/api/package.json` (script `storage:bootstrap`), `docs/development/README.md`
 - Dependencies: `@aws-sdk/client-s3`, `@aws-sdk/s3-request-presigner` (same exact version).
 
 **Interfaces — produces:**
@@ -346,16 +348,17 @@ interface ObjectStorage {
 ```
 
   Multipart and range reads are added by the upload slice.
-- `S3ObjectStorage` uses a single `S3Client` configured from `ApiEnv`, and never logs presigned URLs.
+- `S3ObjectStorage` uses a single `S3Client` configured from `ApiEnv`, and never logs presigned URLs. Required settings (ADR 0008 S4): `requestChecksumCalculation` and `responseChecksumValidation` set to `'WHEN_REQUIRED'`, `forcePathStyle` from env, and `presignPut` passes `signableHeaders: new Set(['content-type'])`.
 
 - [ ] **Step 1: Failing integration tests** against the emulator:
   - `checkHealth` resolves; with a wrong bucket it rejects;
-  - a presigned PUT of 11 bytes via `fetch` succeeds and `head` returns `{ size: 11 }`;
+  - a presigned PUT of 11 bytes via `fetch` succeeds and `head` returns `{ size: 11 }`. This also guards the checksum setting, but only on SeaweedFS: RustFS does not verify checksums on single PUTs;
   - a PUT with a different `Content-Length` than signed is rejected;
+  - a PUT with a different `Content-Type` than signed is rejected;
   - `presignGet` with `contentDisposition: 'attachment; filename="a.txt"'` returns that header;
   - `delete` twice resolves.
 - [ ] **Step 2:** FAIL.
-- [ ] **Step 3:** Implement. The compose bootstrap creates `stepler-dev` and `stepler-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
+- [ ] **Step 3:** Implement. `storage:bootstrap` creates `stepler-dev` and `stepler-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
 - [ ] **Step 4:** PASS.
 - [ ] **Step 5:** Commit `feat(api): add object storage port with S3 adapter and local emulator`.
 
@@ -468,7 +471,7 @@ interface ObjectStorage {
 
 **Files:**
 - Create: `apps/api/src/auth/magic-link.service.ts`, `apps/api/src/auth/magic-link.controller.ts`, `apps/api/test/magic-link.e2e.spec.ts`
-- Modify: `apps/api/src/auth/auth.module.ts` (throttler: `ThrottlerModule.forRoot` with an in-memory store; a `magic-link` limit from `LimitsService.magicLink().perIpPerHour`), `packages/contracts/src/auth.ts`
+- Modify: `apps/api/src/auth/auth.module.ts` (throttler: `ThrottlerModule.forRoot` with an in-memory store; a `magic-link` limit from `LimitsService.magicLink().perIpPerHour` and a `magic-link-preview` limit from `previewPerIpPerHour`), `packages/contracts/src/auth.ts`
 
 **Interfaces — produces:**
 - Contracts: `magicLinkRequestSchema = z.object({ email: z.email().trim().toLowerCase().max(254), turnstileToken: z.string().min(1), locale: z.enum(['uk','en']).optional() }).strict()`, `magicLinkVerifyRequestSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict()`.
@@ -478,6 +481,10 @@ interface ObjectStorage {
   3. create the token (TTL `MAGIC_LINK_TTL_MINUTES`);
   4. send `renderMagicLinkEmail({ url: `${APP_ORIGIN}/auth/verify?token=${token}`, locale })`, where `locale` is the existing user's locale, else the request locale, else `uk`;
   5. blocked users get no email; the response is identical.
+- `POST /api/v1/auth/magic-link/preview` (public, throttled per IP by `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR`) → `200 { email }`. The body is `magicLinkVerifyRequestSchema`; the response is `magicLinkPreviewResponseSchema = z.object({ email: z.string() })`.
+  - Read-only: `SELECT email FROM "MagicLinkToken" WHERE tokenHash = $1 AND consumedAt IS NULL AND expiresAt > now()`. It never consumes, extends or logs the token.
+  - Unknown, expired or consumed → 400 `MAGIC_LINK_INVALID`. A blocked user's token still previews; verify then returns 403.
+  - POST rather than GET, so the token stays out of URLs and access logs and the call is subject to the Origin check. It only reveals the email to whoever already holds the link that was mailed to it.
 - `POST /api/v1/auth/magic-link/verify` (public) → `200 { status: 'signed-in' }` + session cookie.
   - The token is consumed atomically: `UPDATE ... SET consumedAt = now() WHERE tokenHash = $1 AND consumedAt IS NULL AND expiresAt > now() RETURNING email, locale`.
   - Upsert the user by email (set `emailVerifiedAt` on first sign-in, `locale` from the token), plus `AuthAccount(EMAIL, email)`.
@@ -485,6 +492,7 @@ interface ObjectStorage {
 
 - [ ] **Step 1: Failing tests.** `TURNSTILE_VERIFIER` is overridden with a double; mail is read from Mailpit.
   - Happy path: request → Mailpit has one email whose link has a 43-char token → verify → 200 + `Set-Cookie: st_session` → `GET /me` 200.
+  - Preview: returns the token's email; 10 previews then verify → the verify still succeeds (preview does not consume); after verify, preview → 400; an expired token → 400; exceeding the preview limit → 429.
   - **Review Focus 2:** two concurrent verifies with the same token → exactly one 200, one 400, and one `AuthSession` row.
   - **Review Focus 3:** unknown, existing and blocked emails → identical status and body; the blocked user receives no email.
   - The 6th request for one email within an hour → 202 and no 6th email.
@@ -560,7 +568,7 @@ interface ObjectStorage {
   - renders an email form (RHF + `magicLinkRequestSchema`), the Turnstile widget with `turnstileSiteKey`, and a Google button when enabled;
   - success state: "check your email"; error states: `TURNSTILE_FAILED`, `RATE_LIMITED`, `OAUTH_FAILED` (from the query), and network failure;
   - the Turnstile script `https://challenges.cloudflare.com/turnstile/v0/api.js` loads only on this page (ADR 0012).
-- `/auth/verify`: reads `token` from the query and shows a single "Sign in" button that POSTs verify, then `router.replace('/app')`. Loading the page performs no request with the token (**Review Focus 1**). Error state: `MAGIC_LINK_INVALID` with a link back to `/login`.
+- `/auth/verify`: reads `token` from the query and calls preview. The token stays in the URL, so a reload still works. Loading state, then "Sign in as <email>" with a "Sign in" button that POSTs verify, then `router.replace('/app')`. The page sets `Referrer-Policy: no-referrer`. Loading the page never consumes the token (**Review Focus 1**). Error state (from preview or verify): `MAGIC_LINK_INVALID` with a link back to `/login`; `ACCOUNT_BLOCKED` from verify; network failure with retry.
 - `/app` layout, client side: `useQuery(['me'])` → 401 redirects to `/login`. It renders email + logout (POST logout, then clear the query cache, then `/login`). This is a placeholder dashboard until Phase 4.
 - Every string comes from `messages/{uk,en}.json`; the catalog key-parity test still passes.
 
@@ -582,9 +590,9 @@ interface ObjectStorage {
 **Interfaces — consumes:** Tasks 12–15. `latestMagicLink(to: string): Promise<string>` polls `GET http://127.0.0.1:8025/api/v1/search?query=to:<addr>` and extracts the link.
 
 - [ ] **Step 1: Tests** (all projects: iPhone 15, Pixel 7, desktop Chrome):
-  - **Magic link:** `/login` → email → Turnstile auto-passes (test key) → "check your email" → open the link **twice** (page loads only, Review Focus 1) → click Sign in → `/app` shows the email.
+  - **Magic link:** `/login` → email → Turnstile auto-passes (test key) → "check your email" → open the link **twice** (page loads only, Review Focus 1) → the page shows "Sign in as <that email>" → click Sign in → `/app` shows the email.
   - **Logout:** → `/login`; `/app` then redirects to `/login`.
-  - **Invalid link:** `/auth/verify?token=<random 43>` → Sign in → invalid message with a link to `/login`.
+  - **Invalid link:** `/auth/verify?token=<random 43>` → invalid message with a link to `/login`, shown straight after the preview call (no Sign in button).
   - **No horizontal scroll** on `/login` and `/app`.
   - **Keyboard only:** Tab to the email field, type, Tab to submit, Enter → success state.
 - [ ] **Step 2:** Run `docker compose … up -d --wait && pnpm e2e` → all pass.
@@ -605,14 +613,15 @@ interface ObjectStorage {
 
 **Interfaces — produces:**
 - CI `quality` job:
-  - `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait` before tests;
+  - `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait` before tests, then `pnpm --filter @stepler/api storage:bootstrap`;
+  - `SHADOW_DATABASE_URL` set to `stepler_shadow`;
   - `pnpm --filter @stepler/api db:check` and `openapi:check` steps.
-- CI `e2e` job: the same compose step.
+- CI `e2e` job: the same compose and `storage:bootstrap` steps.
 - `images` job: unchanged.
 - The README env table gains every Task 5 variable, with purpose and whether it is required in production.
 
 - [ ] **Step 1:** Update the workflow; run `actionlint` → clean.
-- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @stepler/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
+- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up` and `storage:bootstrap`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @stepler/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
 - [ ] **Step 3:** Update the docs listed above. Every deviation in "Deliberate deviations" is reflected, and implemented vs proposed is marked honestly (rule 16).
 - [ ] **Step 4:** Commit `ci: run integration services, migration and OpenAPI checks; document Phase 2`.
 
@@ -623,6 +632,13 @@ interface ObjectStorage {
 - **After Tasks 1–3 (spikes):** independent review of the spike conclusions, then an owner go/no-go. If S1 picks Better Auth, re-plan Tasks 12–15 here.
 - **After Task 11 (foundation without auth):** independent review of config, logging, errors, database, the ports and health.
 - **After Task 17:** whole-branch review, then fixes, then a fresh-clone verification.
+
+### Deferred from the Task 11 review (2026-09-29)
+
+- Task 16: the e2e job must run `db:deploy` against `stepler_test` before Playwright.
+- Task 17: document how deployed environments run migrations (the production image has no Prisma CLI or migrations; spec §19 says a separate deploy step).
+- Task 13: throttle `/health/ready` or cache its result for a few seconds; each call costs an R2 `HeadBucket`, and it is public through the web proxy.
+- Phase 4 (guest links): if a capability token is ever carried in a URL path, redact it in request logs (`req.url` and `params` are logged today).
 
 ## Out of scope for Phase 2
 

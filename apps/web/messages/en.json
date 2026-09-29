@@ -2,5 +2,58 @@
   "home": {
     "title": "Stepler",
     "tagline": "Collect photos, videos and stories from your event in one place"
+  },
+  "errors": {
+    "VALIDATION_FAILED": "Check what you entered.",
+    "UNAUTHENTICATED": "Sign in to continue.",
+    "FORBIDDEN": "You don't have access.",
+    "NOT_FOUND": "Not found.",
+    "CSRF_ORIGIN_MISMATCH": "The request was rejected for security reasons. Reload the page and try again.",
+    "RATE_LIMITED": "Too many attempts. Wait a little and try again.",
+    "TURNSTILE_FAILED": "We couldn't verify you're human. Try again.",
+    "MAGIC_LINK_INVALID": "This link is invalid or has already been used. Get a new one.",
+    "OAUTH_FAILED": "Signing in with Google didn't work. Try again or use your email.",
+    "ACCOUNT_BLOCKED": "This account is blocked.",
+    "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
+    "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
+    "INTERNAL": "Something went wrong. Try again."
+  },
+  "login": {
+    "pageTitle": "Sign in",
+    "title": "Sign in or create an account",
+    "hint": "We'll email you a sign-in link. No password needed.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "name@example.com",
+    "emailInvalid": "Enter an address like name@example.com",
+    "submit": "Get sign-in link",
+    "sending": "Sending…",
+    "or": "or",
+    "google": "Continue with Google",
+    "turnstilePending": "One moment, checking…",
+    "sentTitle": "Check your email",
+    "sentText": "We sent a sign-in link to {email}.",
+    "sentHint": "Open the email and press the sign-in button. No email? Check your spam folder.",
+    "useAnother": "Use a different email",
+    "unavailable": "Sign-in is temporarily unavailable. Try again later.",
+    "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
+    "turnstileRetry": "Try again"
+  },
+  "verify": {
+    "pageTitle": "Confirm sign-in",
+    "checking": "Checking your link…",
+    "title": "Sign in to Stepler",
+    "signInAs": "You're signing in as {email}",
+    "notYou": "Not you? Don't press the button, just close this page.",
+    "submit": "Sign in",
+    "signingIn": "Signing in…",
+    "backToLogin": "Get a new link",
+    "retry": "Try again"
+  },
+  "app": {
+    "loading": "Loading…",
+    "signedInAs": "Signed in as {email}",
+    "logout": "Sign out",
+    "placeholderTitle": "Your collections",
+    "placeholderText": "Your collections will appear here."
   }
 }

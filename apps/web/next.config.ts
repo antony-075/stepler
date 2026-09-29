@@ -11,6 +11,15 @@ const config: NextConfig = {
   poweredByHeader: false,
   // packages/ui ships TypeScript sources.
   transpilePackages: ['@stepler/ui'],
+  headers() {
+    return Promise.resolve([
+      {
+        // The magic-link token is in this page's URL; never leak it as a Referer.
+        source: '/auth/verify',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+    ]);
+  },
 };
 
 export default withNextIntl(config);
