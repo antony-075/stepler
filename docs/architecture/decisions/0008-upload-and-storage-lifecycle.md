@@ -49,7 +49,7 @@ Candidates, each run from Docker and tested with one script (`@aws-sdk/client-s3
 
 **Decision: SeaweedFS**, `chrislusf/seaweedfs:4.48@sha256:4e61d15fd35994cb1e43e1e553dff106794841fd9a99ade2fc8c8bfce4d7872d`, S3 API on port **8333**.
 - SeaweedFS and RustFS both pass everything and bootstrap the same way; Garage needs five CLI steps and has AGPL.
-- The tiebreaker is maturity: SeaweedFS has a long release history, while RustFS 1.0.0 went GA on 2026-09-16. RustFS stays the drop-in fallback: the client settings below work unchanged against it.
+- The tiebreaker is maturity: SeaweedFS has a long release history, while RustFS 1.0.0 went GA on 2026-09-16. RustFS stays the drop-in fallback: the client settings below work unchanged against it. Note that RustFS accepted a single PUT carrying the wrong (empty-body) checksum, so it does not verify checksums on single PUTs; SeaweedFS does.
 - The larger image only costs CI pull time.
 
 Compose service, verified (added to `docker/compose.yaml` in Task 8, with credentials taken from `docker/.env`):

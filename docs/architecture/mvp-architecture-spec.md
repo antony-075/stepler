@@ -375,7 +375,7 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 - `size ≤ 100 MB` → single presigned `PUT` (signed `Content-Type` and `Content-Length`), URL TTL 15 min.
 - `size > 100 MB` → S3 multipart: `CreateMultipartUpload`, fixed part size (10 MiB [assumption]), part URLs issued on demand in batches, each URL TTL 15 min; parts retried individually.
 - Upload session TTL: 24 h [assumption] (2 GB over a poor mobile link can take hours); part URLs are re-issuable while the session lives.
-- R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; bucket CORS must expose `ETag`; EU-jurisdiction buckets use a distinct endpoint.
+- R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; EU-jurisdiction buckets use a distinct endpoint. Bucket CORS must expose `ETag`; the emulator reproduces this, so it is tested locally too.
 - Client: headless Uppy (`@uppy/aws-s3`) vs in-house uploader — decided in the upload slice after bundle-size check (S9). Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
 
 ### 10.3 Initiate — `POST .../uploads`

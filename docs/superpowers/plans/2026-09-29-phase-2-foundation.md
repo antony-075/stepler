@@ -54,7 +54,7 @@ Additional constraints:
 - **Cookies:**
   - `st_session`: `HttpOnly; SameSite=Lax; Path=/`, plus `Secure` when `COOKIE_SECURE=true` (default `true` in production, `false` otherwise);
   - OAuth transaction cookie `st_oauth`: `HttpOnly; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`.
-- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This also blocks login CSRF: an attacker page posting its own magic-link token so the victim signs in as the attacker. Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
+- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This blocks the cross-site form of login CSRF, where an attacker page posts its own magic-link token so the victim is signed in as the attacker. It does not block an attacker who sends the victim a real `${APP_ORIGIN}/auth/verify?token=<attacker token>` link: that POST comes from our own origin. The residual risk is accepted for MVP. After sign-in the app shell shows the signed-in email, so the victim can see whose account they are in (Task 15). Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
 - **Public URLs** (magic links, OAuth redirect URI) are built from `APP_ORIGIN`, never from request `Host` or forwarded headers.
 - **Client IP:** `req.ip` with Express `trust proxy` from `API_TRUST_PROXY` (default `false`). Documented limitation: behind the web proxy without a trusted edge, all clients share the web server's IP, so IP limits act as global limits. This is resolved with the hosting decision.
 - **Tests:**
@@ -152,8 +152,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
 - **If in-house wins:** those tasks run as written.
 - **If Better Auth wins:** stop after this task. Revise Tasks 12–15 against Better Auth's API before continuing, and keep their tests and Review Focus items.
 
-- [x] **Step 1:** In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
-- [x] **Step 2: Hard criteria.** Better Auth wins only if **all** hold:
+- [x] **Step 1** (partially executed: `better-auth` 1.7.6 with the magic-link plugin on the memory adapter; the Nest module, the Prisma adapter and Google were not mounted, because criteria 1 and 3 failed at the library level): In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
+- [x] **Step 2: Hard criteria** (1 and 3 fail; 5 passes; 7 partly observed; 2, 4, 6 and 8 not evaluated, see ADR 0006). Better Auth wins only if **all** hold:
   1. Session tokens are stored hashed, or can be configured to be.
   2. Table and column names map to spec §7.1 (`User`, `AuthAccount`, `AuthSession`), with UUIDv7 ids and a `citext` email.
   3. Magic-link verification can be a POST (scanner-safe).
@@ -162,7 +162,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   6. A pre-hook can require a valid Turnstile token on the magic-link request.
   7. The cookie name and attributes match the Global Constraints.
   8. It works under the web `/api` proxy (Set-Cookie and redirects).
-- [x] **Step 3: Soft criteria.** Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
+- [x] **Step 3: Soft criteria** (only the security advisories were reviewed). Code size saved, maintenance (release cadence, open security issues), and how many of our tests it would replace.
 - [x] **Step 4:** Record the decision with evidence per criterion, delete the spike, and commit `docs: record auth implementation spike result`.
 
 ### Task 4: Contracts — problem details, error codes, health readiness
@@ -288,7 +288,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - `apps/api/prisma/schema.prisma`, `apps/api/prisma.config.ts`, `apps/api/prisma/migrations/<ts>_identity/migration.sql`
   - `apps/api/src/database/prisma.service.ts`, `apps/api/src/database/database.module.ts`
   - `apps/api/test/support/database.ts` (global setup + `resetDatabase()`)
-  - `docker/postgres/init/01-test-database.sql`
+  - `docker/postgres/init/01-test-database.sql` (databases `stepler_test` and `stepler_shadow`)
 - Modify:
   - `apps/api/package.json` (dependencies `@prisma/client`, `@prisma/adapter-pg`, `pg`; dev dependencies `prisma`, `@types/pg`, all exact and in the catalog; scripts `db:migrate`, `db:deploy`, `db:check`, and `postinstall`/`build` running `prisma generate`)
   - `apps/api/vitest.config.ts` (projects: `unit` with parallel files, `integration` with `fileParallelism: false` and `globalSetup`)
@@ -312,14 +312,14 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
 - `requestIpHash` = HMAC-SHA256 of the IP with an HKDF key from `APP_SECRET` (info `ip-hash`). It is kept for abuse investigation, never displayed.
 - `PrismaService extends PrismaClient`, connects in `onModuleInit` and disconnects in `onModuleDestroy`.
 - `resetDatabase(): Promise<void>` truncates all model tables.
-- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift). It needs `SHADOW_DATABASE_URL` pointing at a disposable database (ADR 0005, Spike S6 result).
+- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift). It needs `SHADOW_DATABASE_URL` pointing at `stepler_shadow` (ADR 0005, Spike S6 result). Prisma resets the shadow database, so it must never point at the dev or test database. `SHADOW_DATABASE_URL` goes into `apps/api/.env.example` and CI.
 
 - [ ] **Step 1: Failing integration tests** (`apps/api/test/database.e2e.spec.ts`):
   - inserting `User` emails `Anton@Example.com` then `anton@example.com` violates the unique constraint (citext);
   - `status: BLOCKED` without `blockedAt` violates the CHECK;
-  - ids generated in sequence sort ascending.
+  - ids from sequential, awaited inserts sort ascending (`uuidv7()` is only sub-millisecond ordered across concurrent connections).
 - [ ] **Step 2:** FAIL (no schema).
-- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates database `stepler_test` owned by `stepler`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
+- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates databases `stepler_test` and `stepler_shadow` owned by `stepler`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
 - [ ] **Step 4:** Run `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait`, then `pnpm --filter @stepler/api test` → PASS, then `db:check` → exit 0.
 - [ ] **Step 5:** Commit `feat(api): add Prisma with identity schema and test database`.
 
@@ -352,7 +352,7 @@ interface ObjectStorage {
 
 - [ ] **Step 1: Failing integration tests** against the emulator:
   - `checkHealth` resolves; with a wrong bucket it rejects;
-  - a presigned PUT of 11 bytes via `fetch` succeeds and `head` returns `{ size: 11 }`;
+  - a presigned PUT of 11 bytes via `fetch` succeeds and `head` returns `{ size: 11 }`. This also guards the checksum setting, but only on SeaweedFS: RustFS does not verify checksums on single PUTs;
   - a PUT with a different `Content-Length` than signed is rejected;
   - a PUT with a different `Content-Type` than signed is rejected;
   - `presignGet` with `contentDisposition: 'attachment; filename="a.txt"'` returns that header;
@@ -608,14 +608,15 @@ interface ObjectStorage {
 
 **Interfaces — produces:**
 - CI `quality` job:
-  - `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait` before tests;
+  - `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait` before tests, then `pnpm --filter @stepler/api storage:bootstrap`;
+  - `SHADOW_DATABASE_URL` set to `stepler_shadow`;
   - `pnpm --filter @stepler/api db:check` and `openapi:check` steps.
-- CI `e2e` job: the same compose step.
+- CI `e2e` job: the same compose and `storage:bootstrap` steps.
 - `images` job: unchanged.
 - The README env table gains every Task 5 variable, with purpose and whether it is required in production.
 
 - [ ] **Step 1:** Update the workflow; run `actionlint` → clean.
-- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @stepler/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
+- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up` and `storage:bootstrap`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @stepler/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
 - [ ] **Step 3:** Update the docs listed above. Every deviation in "Deliberate deviations" is reflected, and implemented vs proposed is marked honestly (rule 16).
 - [ ] **Step 4:** Commit `ci: run integration services, migration and OpenAPI checks; document Phase 2`.
 
