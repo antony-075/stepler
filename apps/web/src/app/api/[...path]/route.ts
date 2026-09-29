@@ -26,6 +26,8 @@ async function forward(request: NextRequest): Promise<Response> {
         // Stream request bodies instead of buffering them.
         duplex: 'half',
         redirect: 'manual',
+        // Abort the API request when the client disconnects.
+        signal: request.signal,
         cache: 'no-store',
       } as RequestInit & { duplex: 'half' },
     );
