@@ -6,13 +6,17 @@ import react from '../eslint/react.js';
 
 const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 
+// The first lint in a preset builds a type-aware TypeScript program, which takes
+// ~10 s on CI runners; the default 5 s test timeout is too tight for that.
+const LINT_TIMEOUT_MS = 30_000;
+
 async function ruleIds(config: Linter.Config[], file: string): Promise<(string | null)[]> {
   const eslint = new ESLint({ cwd: fixtures, overrideConfigFile: true, overrideConfig: config });
   const [result] = await eslint.lintFiles([file]);
   return (result?.messages ?? []).filter((m) => m.severity === 2).map((m) => m.ruleId);
 }
 
-describe('react preset', () => {
+describe('react preset', { timeout: LINT_TIMEOUT_MS }, () => {
   // The config package does not install react, so pin the version instead of 'detect'.
   const config = [
     ...react({ tsconfigRootDir: `${fixtures}react` }),
@@ -45,7 +49,7 @@ describe('react preset', () => {
   });
 });
 
-describe('nest preset', () => {
+describe('nest preset', { timeout: LINT_TIMEOUT_MS }, () => {
   const config = nest({ tsconfigRootDir: `${fixtures}nest` });
 
   test('circular imports are an error', async () => {
