@@ -1,8 +1,4 @@
 {
-  "home": {
-    "title": "Stepler",
-    "tagline": "Collect photos, videos and stories from your event in one place"
-  },
   "errors": {
     "VALIDATION_FAILED": "Check what you entered.",
     "UNAUTHENTICATED": "Sign in to continue.",
@@ -55,5 +51,22 @@
     "logout": "Sign out",
     "placeholderTitle": "Your collections",
     "placeholderText": "Your collections will appear here."
+  },
+  "brand": {
+    "name": "Stepler",
+    "tagline": "Collect photos, videos and stories from your event in one place",
+    "copyright": "© {year} Stepler"
+  },
+  "landing": {
+    "title": "Gather everything from your event in one collection",
+    "lede": "Send guests a link or a QR code. They add photos, videos, documents and notes without signing up.",
+    "stackLabel": "Guests' photo and video, the evening programme and a note stapled into one collection, next to a QR code",
+    "photoCaption": "Added by Marta, 21:10",
+    "videoCaption": "Added by Andrii, 22:40",
+    "videoDuration": "0:42",
+    "documentKind": "PDF",
+    "documentTitle": "Evening programme",
+    "note": "Thanks for a wonderful evening!",
+    "noteAuthor": "Olena"
   }
 }
