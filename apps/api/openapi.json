@@ -49,6 +49,113 @@
           "Health"
         ]
       }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "checks": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "database": {
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ],
+                          "type": "string"
+                        },
+                        "storage": {
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "database",
+                        "storage"
+                      ],
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "checks"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "checks": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "database": {
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ],
+                          "type": "string"
+                        },
+                        "storage": {
+                          "enum": [
+                            "ok",
+                            "fail"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "database",
+                        "storage"
+                      ],
+                      "type": "object"
+                    },
+                    "status": {
+                      "enum": [
+                        "ok",
+                        "degraded"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "checks"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "A dependency failed"
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
     }
   },
   "servers": [],
