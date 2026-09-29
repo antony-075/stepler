@@ -79,7 +79,7 @@ Trade-offs:
 
 - **Routes:** `/g/[token]` guest entry; `/app/...` admin (protected); `/login`; `/legal/terms`, `/legal/privacy`.
 - **Rendering:** mostly client components with TanStack Query. Authorization and data are owned by the API; SSR data fetching would require forwarding cookies on every server fetch and offers little for authenticated/guest app screens. RSC is used for shells, metadata and static legal pages.
-- **API client:** types generated from OpenAPI (openapi-typescript + openapi-fetch) **[verify]**; forms use Zod schemas from `contracts` with React Hook Form.
+- **API client:** a thin typed `fetch` wrapper (`apps/web/src/api/client.ts`) that validates responses with the Zod schemas from `contracts`, the same schemas the API validates with; errors surface as `ApiError(code)`. No OpenAPI code generation: `openapi-typescript` 7.13 does not support TypeScript 6 (owner decision 2026-09-29, ADR 0005). Forms use the same schemas with React Hook Form. *Implemented in Phase 2.*
 - **State:** server state in TanStack Query only. Upload queue state is local to the uploader feature (a store is introduced only if the queue must survive route changes — then Zustand, per rules).
 - **Guest pages:** `Referrer-Policy: no-referrer`; **no third-party scripts** (token is in the URL). Mobile-first.
 - **QR:** generated client-side (SVG/PNG) from the link URL — no data leaves the browser. Server-side generation can be added later for customization.
@@ -127,10 +127,11 @@ Decision details: ADR 0006.
 - **Methods:** magic link (email) + Google OAuth. No passwords.
 - **Registration:** open, protected by Turnstile on magic-link requests (ADR 0012), rate limits and account limits (§13).
 - **Sessions:** opaque random token in an `HttpOnly; Secure; SameSite=Lax; Path=/` cookie; only its SHA-256 hash is stored. Revocable server-side. No JWT.
-- **CSRF:** SameSite=Lax + `Origin` / `Sec-Fetch-Site` check on unsafe methods.
+- **CSRF:** SameSite=Lax + every unsafe method must send `Origin` equal to `APP_ORIGIN` (403 `CSRF_ORIGIN_MISMATCH`), public routes included; future signed webhooks opt out with `@SkipOriginCheck()`. *Implemented in Phase 2.*
+- **Magic link verification:** the email links to the web page `/auth/verify?token=…`. The page first calls a read-only `POST /auth/magic-link/preview` and shows "Sign in as <email>"; only the Sign in button calls `POST /auth/magic-link/verify`, which consumes the token. Email scanners that open links therefore cannot use them up, and a victim who opens an attacker's link sees a foreign address (owner decisions 2026-09-29). *Implemented in Phase 2.*
 - **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified.
 - **Operator:** users whose verified email is in `OPERATOR_EMAILS` config (ADR 0013).
-- **Legal acceptance:** recorded at registration (§15).
+- **Legal acceptance:** recorded at registration (§15). *Deferred to Phase 4 slice 10 (legal pages), with a gate that also covers users created before it (owner decision 2026-09-29).*
 - **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verifies magic links only by GET).
 
 ---
@@ -160,7 +161,7 @@ MagicLinkToken
   id, email, tokenHash (unique), expiresAt, consumedAt?, requestIpHash?, createdAt
   INDEX (email, createdAt)          -- per-email rate limit derived from rows
 
-LegalAcceptance
+LegalAcceptance            -- Phase 4 slice 10 (legal pages); not created in Phase 2
   id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt
   UNIQUE (userId, document, version)
 ```
@@ -296,12 +297,14 @@ Resource map (MVP):
 
 ```text
 Auth / me
-  POST   /auth/magic-link                      (Turnstile token required)
-  GET    /auth/magic-link/verify?token=        → sets session cookie, redirects
+  GET    /auth/methods                         {magicLink, google, turnstileSiteKey}
+  POST   /auth/magic-link                      (Turnstile token required) → 202, same body for every email
+  POST   /auth/magic-link/preview              {token} → {email}; read-only
+  POST   /auth/magic-link/verify               {token} → sets session cookie
   GET    /auth/google/start | /auth/google/callback
-  POST   /auth/logout
+  POST   /auth/logout                          → 204, idempotent
   GET    /me          PATCH /me (displayName, locale)
-  POST   /me/legal-acceptances
+  POST   /me/legal-acceptances                 (Phase 4 slice 10)
 
 Admin
   GET/POST            /collections
@@ -507,7 +510,7 @@ Decision details: ADR 0013.
 ## 15. Legal and privacy (D15, F6, F8)
 
 - Pages: Terms of Service, Privacy Policy (uk/en), versioned; texts provided by the owner/lawyer. Engineering does not write legal wording.
-- Admin registration records `LegalAcceptance(document, version, acceptedAt)`. No IP stored by default. Document updates do not force re-acceptance without a separate decision.
+- Admin registration records `LegalAcceptance(document, version, acceptedAt)` (Phase 4 slice 10; not in Phase 2). No IP stored by default. Document updates do not force re-acceptance without a separate decision.
 - Guest page shows a short notice with links (no checkbox).
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
 - Data minimization: guest name optional and per-submission; guest session holds no profile data; logs exclude personal content.
@@ -587,7 +590,8 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 2. Email provider (EU preference).
 3. Error monitoring provider.
 4. ~~Auth implementation (S1)~~ — decided: in-house (ADR 0006).
-5. Rate-limit storage for multi-instance deployment (depends on 1).
+5. Rate-limit storage for multi-instance deployment (depends on 1). Phase 2 limits are in-memory per API instance.
+5a. How deployed environments run migrations: the production API image contains neither the Prisma CLI nor the migrations (depends on 1).
 6. Legal: DSA/GDPR review, reporter IP storage, evidence preservation for reported illegal content.
 7. Billing provider and pricing; transcoding provider.
 8. Final UI texts and legal texts.

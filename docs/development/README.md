@@ -51,7 +51,7 @@ Run everything from the repository root.
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached)                            |
-| `pnpm e2e`                                      | Build, start production servers on 3100/4100, run Playwright  |
+| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `docker compose up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script) |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm --filter @stepler/ui storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |

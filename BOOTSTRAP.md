@@ -34,6 +34,8 @@ Do not implement product features. CD is out of scope until hosting is chosen.
 
 ## Phase 2 — Foundation
 
+**Status: implemented on branch `phase-2/foundation` (2026-09-30).** Plan: `docs/superpowers/plans/2026-09-29-phase-2-foundation.md`. Moved by owner decision: the Jobs port (pg-boss) to slice 5, legal acceptance to slice 10, `AuditEvent` to slice 1. The error-monitoring port exists with a logging adapter only; the provider is still open.
+
 Implement:
 - NestJS health (live/ready);
 - Swagger/OpenAPI from contracts;

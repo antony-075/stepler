@@ -11,7 +11,7 @@ Frontend forms use React Hook Form + Zod (rules). The API needs authoritative se
 
 - `packages/contracts` holds Zod schemas for request/response bodies, error codes and shared enums.
 - NestJS validates with those schemas (nestjs-zod or an equivalent pipe) and generates OpenAPI from them.
-- The web app uses generated OpenAPI types (openapi-typescript + openapi-fetch) for calls and the same Zod schemas for forms.
+- ~~The web app uses generated OpenAPI types (openapi-typescript + openapi-fetch) for calls~~ **Superseded 2026-09-29 (owner decision):** the web app imports request/response types and schemas directly from `@stepler/contracts` and validates responses with them; it uses the same Zod schemas for forms. `openapi-typescript` 7.13 declares `typescript ^5` while the repo uses 6.0. OpenAPI remains the documented public contract, snapshot-checked in CI (`apps/api/openapi.json`, `openapi:check`). Code generation can return once the tool supports TypeScript 6.
 - Server validation is always authoritative; business rules (permissions, quotas) are never in contracts.
 
 ## Alternatives considered
@@ -99,3 +99,9 @@ Error mapping (input for the error filter in Task 6):
 - A unique violation is `PrismaClientKnownRequestError` `P2002`. With the driver adapter, the constraint name is in `meta.driverAdapterError.cause.constraint.index`, **not** in `meta.target`.
 - A CHECK violation is `P2039` ("Database error") with `meta.driverAdapterError.cause.originalCode === '23514'`; the constraint name appears only in the message.
 - **`meta` and the message contain the failing row** (`detail: "Failing row contains (…, email, …)"`). The error filter must never log or return `meta` or the raw message, only the mapped code and the constraint name (rule 09).
+
+## Phase 2 implementation notes (2026-09-30)
+
+- `openapi:check` runs as a Vitest test (`apps/api/test/openapi.spec.ts`) inside the API suite, so the snapshot is checked wherever tests run; `openapi:write` regenerates it.
+- Every operation documents `ProblemDetails` (RFC 9457) as its `default` response; the problem schema is loose because RFC 9457 allows extension members.
+- Constraint violations are mapped by constraint name (`constraintViolation()`); `error.meta` is never logged or returned because it contains row data (Spike S6).
