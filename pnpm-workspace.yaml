@@ -16,3 +16,4 @@ catalog:
 allowBuilds:
   '@scarf/scarf': false
   unrs-resolver: false
+  '@swc/core': true
