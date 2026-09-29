@@ -13,12 +13,6 @@
       "skillPath": "skills/brainstorming/SKILL.md",
       "computedHash": "b95dc657c5dd79caf7340ee6dead6faf2ce2d1cc613352a027fa8993966b41b7"
     },
-    "caveman-learn": {
-      "source": "juliusbrussee/caveman",
-      "sourceType": "github",
-      "skillPath": "skills/caveman-learn/SKILL.md",
-      "computedHash": "d25fd3ece9b571e1cffd93ca2594ab1919471b27b9c1589fc1c8b7e9c7d6071b"
-    },
     "cloudflare-r2": {
       "source": "bagelhole/devops-security-agent-skills",
       "sourceType": "github",
@@ -37,12 +31,6 @@
       "skillPath": "skills/productivity/grill-me/SKILL.md",
       "computedHash": "9cdbb4b8f7a3aeaef82e6230c9e823500d4a8a1214c726cf342cf9829d34fc7d"
     },
-    "hyperframes-animation": {
-      "source": "heygen-com/hyperframes",
-      "sourceType": "github",
-      "skillPath": "skills/hyperframes-animation/SKILL.md",
-      "computedHash": "29a5ffe950a520cfab9140ce24708c886a001ee64b6caa3e6175fb9eaab04f19"
-    },
     "implement": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -54,12 +42,6 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "2449db6ab1ded9581f69fcc56c1f64818112d05e271fd4c5da23c6523f9d3d9d"
-    },
-    "media-use": {
-      "source": "heygen-com/hyperframes",
-      "sourceType": "github",
-      "skillPath": "skills/media-use/SKILL.md",
-      "computedHash": "cf4eb03bedc13b61acbcebe294b6b8559004024797698815711a460d4cbd09fe"
     },
     "nestjs-best-practices": {
       "source": "kadajett/agent-nestjs-skills",
