@@ -375,7 +375,8 @@ Expected: tests PASS; curl prints `{"status":"ok"}`. Starting with `NODE_ENV=bad
   - `LOCALES = ['uk', 'en'] as const`; `type Locale = (typeof LOCALES)[number]`; `DEFAULT_LOCALE: Locale = 'uk'`; `LOCALE_COOKIE = 'ed_locale'`.
   - `resolveLocale(input: { cookieLocale?: string; acceptLanguage?: string }): Locale`. Order: valid cookie, then the first supported language in `Accept-Language` by q-weight (region stripped), then `uk`. The profile locale is added with auth in Phase 2.
   - `loadWebEnv(source): WebEnv = { API_INTERNAL_URL: string }` (a URL). Same no-values error rule as in Task 6.
-  - Rewrites: `/api/:path*` → `${API_INTERNAL_URL}/api/:path*`.
+  - `src/proxy.ts` (Next 16 proxy, matcher `/api/:path*`) forwards to `${API_INTERNAL_URL}` read **at runtime**; `src/instrumentation.ts` validates env at server start. (Build-time `rewrites` were rejected: they bake the URL into the image.)
+  - `start` runs the standalone server (`node .next/standalone/apps/web/server.js`); `build` copies static assets next to it. Display time zone `Europe/Kyiv` is set explicitly.
   - The home page renders translated `home.title` (`"EventDrop"`) and `home.tagline` (uk: `"Збирайте фото, відео та історії з події в одному місці"`, en: `"Collect photos, videos and stories from your event in one place"`). This placeholder copy is replaced in Phase 3/4.
 
 - [ ] **Step 1: Write the failing tests**
@@ -412,7 +413,7 @@ Expected: FAIL.
 - Follow the setup recorded in Task 3; `request.ts` calls `resolveLocale` with the cookie and header values.
 - `layout.tsx` sets `<html lang={locale}>`.
 - Tailwind v4 in `globals.css`.
-- `next.config.ts` calls `loadWebEnv(process.env)` and uses `output: 'standalone'`.
+- `next.config.ts` uses `output: 'standalone'` with `outputFileTracingRoot` at the repo root.
 
 - [ ] **Step 4: Verify**
 

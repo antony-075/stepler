@@ -1,0 +1,9 @@
+{
+  "extends": "@eventdrop/config/tsconfig/next.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["next-env.d.ts", "src", "messages", "*.ts", "*.mjs", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", ".next"]
+}

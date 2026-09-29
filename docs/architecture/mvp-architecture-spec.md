@@ -45,7 +45,7 @@ Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, 
  api ──► email provider (magic link)   api ──► Turnstile verify   api/web ──► error monitoring
 ```
 
-- **Same-origin topology** [assumption]: web and api are served under one host; `/api/*` routes to NestJS (Next rewrites locally; ingress/reverse proxy in deployed environments — exact mechanism depends on the hosting decision). Removes CORS for the app, simplifies cookies. Uploads/downloads go to R2 directly, so the extra hop only carries small JSON.
+- **Same-origin topology** [assumption]: web and api are served under one host; `/api/*` routes to NestJS through the Next.js `proxy.ts` (runtime-configured `API_INTERNAL_URL`, so one image works in every environment; build-time rewrites would bake the URL in). An ingress/reverse proxy may take over this routing in deployed environments, depending on the hosting decision. Removes CORS for the app, simplifies cookies. Uploads/downloads go to R2 directly, so the extra hop only carries small JSON.
 - Direct browser → provider traffic exists only for: R2 transfer (ADR 0003) and Cloudflare Turnstile (ADR 0012).
 
 ---
