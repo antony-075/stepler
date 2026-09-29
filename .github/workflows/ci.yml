@@ -54,7 +54,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - run: pnpm format:check
       # Storybook story tests run in a real browser.
-      - run: pnpm --filter @eventdrop/ui exec playwright install --with-deps chromium
+      - run: pnpm --filter @stepler/ui exec playwright install --with-deps chromium
       - run: pnpm turbo run lint typecheck test build build-storybook
 
   e2e:
@@ -74,7 +74,7 @@ jobs:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
-      - run: pnpm --filter @eventdrop/e2e exec playwright install --with-deps chromium webkit
+      - run: pnpm --filter @stepler/e2e exec playwright install --with-deps chromium webkit
       - run: pnpm e2e
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

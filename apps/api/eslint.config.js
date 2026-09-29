@@ -1,4 +1,4 @@
-import nest from '@eventdrop/config/eslint/nest';
+import nest from '@stepler/config/eslint/nest';
 
 export default [
   ...nest({ tsconfigRootDir: import.meta.dirname }),

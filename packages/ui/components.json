@@ -11,10 +11,10 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@eventdrop/ui/components",
-    "ui": "@eventdrop/ui/components",
-    "utils": "@eventdrop/ui/lib/utils",
-    "lib": "@eventdrop/ui/lib",
-    "hooks": "@eventdrop/ui/hooks"
+    "components": "@stepler/ui/components",
+    "ui": "@stepler/ui/components",
+    "utils": "@stepler/ui/lib/utils",
+    "lib": "@stepler/ui/lib",
+    "hooks": "@stepler/ui/hooks"
   }
 }

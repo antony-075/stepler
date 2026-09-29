@@ -5,18 +5,18 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
-- Playwright browsers for UI and E2E tests: `pnpm --filter @eventdrop/ui exec playwright install chromium` and `pnpm --filter @eventdrop/e2e exec playwright install chromium webkit`.
+- Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace
 
 | Path                  | Package                | Purpose                                                                |
 | --------------------- | ---------------------- | ---------------------------------------------------------------------- |
-| `apps/api`            | `@eventdrop/api`       | NestJS 12 REST API (ESM)                                               |
-| `apps/web`            | `@eventdrop/web`       | Next.js 16 web app (guest + admin), proxies `/api/*` to the API        |
-| `packages/contracts`  | `@eventdrop/contracts` | Zod schemas shared by API and web (built with `tsc`)                   |
-| `packages/ui`         | `@eventdrop/ui`        | shadcn/Radix/Tailwind components + Storybook                           |
-| `packages/config`     | `@eventdrop/config`    | tsconfig, ESLint and Prettier presets                                  |
-| `e2e`                 | `@eventdrop/e2e`       | Playwright tests against production builds                             |
+| `apps/api`            | `@stepler/api`       | NestJS 12 REST API (ESM)                                               |
+| `apps/web`            | `@stepler/web`       | Next.js 16 web app (guest + admin), proxies `/api/*` to the API        |
+| `packages/contracts`  | `@stepler/contracts` | Zod schemas shared by API and web (built with `tsc`)                   |
+| `packages/ui`         | `@stepler/ui`        | shadcn/Radix/Tailwind components + Storybook                           |
+| `packages/config`     | `@stepler/config`    | tsconfig, ESLint and Prettier presets                                  |
+| `e2e`                 | `@stepler/e2e`       | Playwright tests against production builds                             |
 | `docker/`             |                        | Local infrastructure (`compose.yaml`) and image checks                 |
 
 ## Local services
@@ -51,7 +51,7 @@ Run everything from the repository root.
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached)                            |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100, run Playwright  |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
-| `pnpm --filter @eventdrop/ui storybook`         | Storybook dev server on 6006                                  |
+| `pnpm --filter @stepler/ui storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
 | `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
 

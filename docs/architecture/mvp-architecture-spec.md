@@ -1,4 +1,4 @@
-# EventDrop — MVP Architecture Specification
+# Stepler — MVP Architecture Specification
 
 Status: **Accepted** (2026-09-29). Items marked [verify] remain subject to their spikes.
 Date: 2026-09-29
@@ -350,7 +350,7 @@ If Better Auth is adopted (S1), auth routes follow its handler paths; the rest i
 1. Guest opens `/g/{token}`; web calls `POST /api/v1/guest/sessions {linkToken}`.
 2. API looks up the link by token hash; requires link `ACTIVE` and a valid collection.
 3. If the request carries a valid session cookie for the same collection → **re-bind** `currentLinkId` to this link (ownership preserved, permissions from the new link). Otherwise create a new `GuestSession`.
-4. Cookie: `ed_gs` with `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
+4. Cookie: `st_gs` with `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
 5. Reloading `/g/{token}` repeats the exchange idempotently.
 
 Known limitation: QR scanners and messenger in-app browsers often use a separate cookie jar; a guest who uploads in one browser cannot delete from another. Accepted for MVP (D12).
@@ -502,7 +502,7 @@ Decision details: ADR 0013.
 - The operator (config `OPERATOR_EMAILS`) sees all reports and can hide/delete content, block/unblock collections and accounts, dismiss reports or change their status. MVP surface: operator API endpoints plus a minimal protected page in the web app — no full admin panel.
 - A public abuse contact email is published in the legal documents.
 - **Open (legal):** whether reporter IP is stored, and whether reported illegal content must be preserved (evidence hold) instead of purged. Default until decided: no IP stored; normal purge.
-- The applicability of specific DSA obligations to EventDrop is not assumed; it requires legal review before public launch.
+- The applicability of specific DSA obligations to Stepler is not assumed; it requires legal review before public launch.
 
 ---
 

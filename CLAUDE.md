@@ -1,8 +1,8 @@
-# EventDrop — Claude Code Project Instructions
+# Stepler — Claude Code Project Instructions
 
 ## 1. Project
 
-EventDrop is a web-first content collection service.
+Stepler is a web-first content collection service.
 
 A collection can contain:
 - photos;

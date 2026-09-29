@@ -8,14 +8,14 @@ WORKDIR /repo
 
 FROM base AS pruner
 COPY . .
-RUN pnpm dlx turbo@2.11.5 prune @eventdrop/api --docker
+RUN pnpm dlx turbo@2.11.5 prune @stepler/api --docker
 
 FROM base AS builder
 COPY --from=pruner /repo/out/json/ .
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
-RUN pnpm turbo run build --filter @eventdrop/api \
- && pnpm deploy --filter @eventdrop/api --prod /prod/api
+RUN pnpm turbo run build --filter @stepler/api \
+ && pnpm deploy --filter @stepler/api --prod /prod/api
 
 FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS runner
 ENV NODE_ENV=production

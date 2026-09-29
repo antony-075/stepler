@@ -1,4 +1,4 @@
-import base from '@eventdrop/config/eslint/base';
+import base from '@stepler/config/eslint/base';
 
 export default [
   ...base({ tsconfigRootDir: import.meta.dirname }),

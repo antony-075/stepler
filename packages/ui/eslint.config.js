@@ -1,4 +1,4 @@
-import react from '@eventdrop/config/eslint/react';
+import react from '@stepler/config/eslint/react';
 
 export default [
   ...react({ tsconfigRootDir: import.meta.dirname }),

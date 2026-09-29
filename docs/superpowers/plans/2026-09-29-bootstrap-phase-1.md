@@ -1,4 +1,4 @@
-# EventDrop Bootstrap Phase 1 Implementation Plan
+# Stepler Bootstrap Phase 1 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -15,16 +15,16 @@
 - Node `>=24` LTS, pinned in `.nvmrc` and root `engines`. The local machine currently has Node 23.11, so the developer must install Node 24 before Task 1.
 - pnpm **11.28.2** through corepack (`packageManager: "pnpm@11.28.2"`); corepack cannot run pnpm 12's native binary. Upgrade to 12 is a separate decision.
 - Every dependency: latest stable release that is at least 1 day old (pnpm 11 `minimumReleaseAge` default), locked by `pnpm-lock.yaml`. Never add `minimumReleaseAgeExclude` entries. TypeScript stays on 6.0.x (typescript-eslint does not support 7). Prisma stays on the latest stable 7.x (npm `latest` is an 8.0 RC). NestJS is 12 (ESM-only). ESLint stays on **9.x** (`eslint-plugin-react` and `jsx-a11y` do not support ESLint 10). Vitest is **4.1.x repo-wide** (Storybook's Vitest addon supports `^3 || ^4`). Pin `prisma` and `@prisma/client` to the same exact 7.10.x. Record the resolved major versions in `docs/development/README.md`. Add no dependency outside this plan without justification (rule 14).
-- Package scope `@eventdrop/*`: `@eventdrop/config`, `@eventdrop/contracts`, `@eventdrop/ui`, `@eventdrop/api`, `@eventdrop/web`, `@eventdrop/e2e`.
+- Package scope `@stepler/*`: `@stepler/config`, `@stepler/contracts`, `@stepler/ui`, `@stepler/api`, `@stepler/web`, `@stepler/e2e`.
 - TypeScript: `strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`. `any` only with a justification comment.
 - API: global prefix `api`, URI versioning, default version `1`, so routes are `/api/v1/...` (ADR 0004).
-- Locales: `uk` (default) and `en`. No locale segment in URLs. Locale cookie name `ed_locale` (ADR 0011).
+- Locales: `uk` (default) and `en`. No locale segment in URLs. Locale cookie name `st_locale` (ADR 0011).
 - No hardcoded user-facing strings in `apps/web` or `packages/ui` components, including `aria-label`, `title`, `alt` and `placeholder`.
 - Env: each app validates env with Zod at startup; `.env.example` holds names only; `.env*` files are never committed. Validation errors name the variables but never print their values.
 - Local dev: apps run natively; Docker Compose runs infrastructure only (rule 17).
 - Ports: web `3000`, api `4000`, Postgres host port `5433` (overridable via `POSTGRES_PORT`; 5432 is often taken by a local PostgreSQL), Mailpit SMTP `1025` / UI `8025`. E2E uses web `3100` / api `4100`.
 - Commits: small and focused. Messages end with `Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>`.
-- Spike code is throwaway: it lives in `$TMPDIR/eventdrop-spikes/` and never enters the repo.
+- Spike code is throwaway: it lives in `$TMPDIR/stepler-spikes/` and never enters the repo.
 - pnpm 11 blocks dependency build scripts: every dependency that needs one is listed explicitly in `allowBuilds` in `pnpm-workspace.yaml` (true or false). Install telemetry (`@scarf/scarf`) is denied.
 
 ## Review Focus
@@ -98,7 +98,7 @@ Expected: install succeeds; turbo reports no tasks to run, exit 0.
   - `API_TEST_RUNNER`: `vitest+swc` or `jest`;
   - `PRISMA_CLIENT_FORMAT`: the generator and module format that import cleanly.
 
-- [ ] **Step 1: Build the preferred configuration A in `$TMPDIR/eventdrop-spikes/s2-backend`**
+- [ ] **Step 1: Build the preferred configuration A in `$TMPDIR/stepler-spikes/s2-backend`**
 
 A pnpm workspace with two packages:
 - **`contracts`:** Zod latest; built with tsup to ESM and CJS; `exports` has `import` / `require` / `types` conditions. Exports `echoRequestSchema = z.object({ name: z.string().min(1) })`.
@@ -148,11 +148,11 @@ Fallback: Jest (with `@swc/jest`) for `apps/api` only.
 **Interfaces:**
 - Produces a recorded decision that Task 7 follows: the i18n library (`next-intl` or the fallback) and the exact setup files it needs.
 
-- [ ] **Step 1: Build in `$TMPDIR/eventdrop-spikes/s8-web`**
+- [ ] **Step 1: Build in `$TMPDIR/stepler-spikes/s8-web`**
 
 Next.js latest (App Router) + next-intl latest, using its "without i18n routing" setup:
 - no `[locale]` segment and no locale-routing middleware;
-- `i18n/request.ts` picks the locale from the `ed_locale` cookie, then `Accept-Language`, then `uk`;
+- `i18n/request.ts` picks the locale from the `st_locale` cookie, then `Accept-Language`, then `uk`;
 - a server component page and a client component both render one message from `messages/{uk,en}.json`;
 - a dynamic route `/g/[token]` renders a translated string.
 
@@ -161,7 +161,7 @@ Next.js latest (App Router) + next-intl latest, using its "without i18n routing"
 1. `next build` succeeds.
 2. With no cookie, `/g/abc` renders Ukrainian and the URL stays `/g/abc`.
 3. With `Accept-Language: en-US`, it renders English.
-4. With `ed_locale=uk` and `Accept-Language: en`, it renders Ukrainian (the cookie wins).
+4. With `st_locale=uk` and `Accept-Language: en`, it renders Ukrainian (the cookie wins).
 5. The client component is translated as well.
 
 Record which routes become dynamic because of cookie reads.
@@ -191,10 +191,10 @@ ADR 0011: add `## Spike S8 result (date)` with the chosen setup and caveats. Del
 
 **Interfaces:**
 - Produces:
-  - `@eventdrop/config/tsconfig/{base,nest,next,library}.json`;
-  - ESLint flat-config factories `@eventdrop/config/eslint/{base,react,next,nest}`: `(options: { tsconfigRootDir: string }) => Linter.Config[]` (type-aware linting needs the consumer's tsconfig root);
+  - `@stepler/config/tsconfig/{base,nest,next,library}.json`;
+  - ESLint flat-config factories `@stepler/config/eslint/{base,react,next,nest}`: `(options: { tsconfigRootDir: string }) => Linter.Config[]` (type-aware linting needs the consumer's tsconfig root);
   - tsconfig presets also include `react-library.json` (for `packages/ui`);
-  - Prettier config `@eventdrop/config/prettier`.
+  - Prettier config `@stepler/config/prettier`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -218,7 +218,7 @@ Fixtures:
 
 - [ ] **Step 2: Run the test and verify it fails**
 
-Run: `pnpm --filter @eventdrop/config test`
+Run: `pnpm --filter @stepler/config test`
 Expected: FAIL (presets do not exist).
 
 - [ ] **Step 3: Implement the presets**
@@ -234,7 +234,7 @@ Expected: FAIL (presets do not exist).
 
 - [ ] **Step 4: Run the test and verify it passes**
 
-Run: `pnpm --filter @eventdrop/config test`
+Run: `pnpm --filter @stepler/config test`
 Expected: PASS (3 tests).
 
 - [ ] **Step 5: Commit** — `chore(config): add shared tsconfig, eslint and prettier presets`
@@ -253,7 +253,7 @@ Expected: PASS (3 tests).
 - Consumes: Task 4 presets.
 - Produces:
   - `healthLiveResponseSchema: z.ZodObject<{ status: z.ZodLiteral<'ok'> }>`;
-  - `type HealthLiveResponse = z.infer<typeof healthLiveResponseSchema>`, exported from `@eventdrop/contracts`;
+  - `type HealthLiveResponse = z.infer<typeof healthLiveResponseSchema>`, exported from `@stepler/contracts`;
   - ESM-only package (`"type": "module"`) built with `tsc`; `exports` has `types` and `import` conditions only.
 
 - [ ] **Step 1: Write the failing test**
@@ -270,7 +270,7 @@ test('rejects other statuses and extra keys', () => {
 
 - [ ] **Step 2: Run the test and verify it fails**
 
-Run: `pnpm --filter @eventdrop/contracts test`
+Run: `pnpm --filter @stepler/contracts test`
 Expected: FAIL (module not found).
 
 - [ ] **Step 3: Implement `health.ts`**
@@ -279,7 +279,7 @@ A strict object schema. Re-export it from `index.ts`. Add `build`, `typecheck`, 
 
 - [ ] **Step 4: Verify**
 
-Run: `pnpm --filter @eventdrop/contracts test && pnpm --filter @eventdrop/contracts build`
+Run: `pnpm --filter @stepler/contracts test && pnpm --filter @stepler/contracts build`
 Expected: tests PASS; `dist/` contains ESM `.js` and `.d.ts` files.
 
 - [ ] **Step 5: Commit** — `feat(contracts): add package with health response schema`
@@ -337,7 +337,7 @@ test('unversioned path is not served', async () => {
 
 - [ ] **Step 2: Run the tests and verify they fail**
 
-Run: `pnpm --filter @eventdrop/api test`
+Run: `pnpm --filter @stepler/api test`
 Expected: FAIL (modules not found).
 
 - [ ] **Step 3: Implement**
@@ -349,7 +349,7 @@ Expected: FAIL (modules not found).
 
 - [ ] **Step 4: Verify**
 
-Run: `pnpm --filter @eventdrop/api test && pnpm --filter @eventdrop/api build && NODE_ENV=production node apps/api/dist/main.js`, then in another shell `curl -s localhost:4000/api/v1/health/live`.
+Run: `pnpm --filter @stepler/api test && pnpm --filter @stepler/api build && NODE_ENV=production node apps/api/dist/main.js`, then in another shell `curl -s localhost:4000/api/v1/health/live`.
 Expected: tests PASS; curl prints `{"status":"ok"}`. Starting with `NODE_ENV=bad` exits 1 and prints the variable name only.
 
 - [ ] **Step 5: Commit** — `feat(api): add NestJS skeleton with env validation and live health`
@@ -372,12 +372,12 @@ Expected: tests PASS; curl prints `{"status":"ok"}`. Starting with `NODE_ENV=bad
 **Interfaces:**
 - Consumes: Task 3 decision; Task 4 presets.
 - Produces:
-  - `LOCALES = ['uk', 'en'] as const`; `type Locale = (typeof LOCALES)[number]`; `DEFAULT_LOCALE: Locale = 'uk'`; `LOCALE_COOKIE = 'ed_locale'`.
+  - `LOCALES = ['uk', 'en'] as const`; `type Locale = (typeof LOCALES)[number]`; `DEFAULT_LOCALE: Locale = 'uk'`; `LOCALE_COOKIE = 'st_locale'`.
   - `resolveLocale(input: { cookieLocale?: string; acceptLanguage?: string }): Locale`. Order: valid cookie, then the first supported language in `Accept-Language` by q-weight (region stripped), then `uk`. The profile locale is added with auth in Phase 2.
   - `loadWebEnv(source): WebEnv = { API_INTERNAL_URL: string }` (a URL). Same no-values error rule as in Task 6.
   - `src/app/api/[...path]/route.ts` streams `/api/*` to `${API_INTERNAL_URL}` read **at runtime**, with header filtering in `src/api-proxy/forward.ts`; `src/instrumentation.ts` exits on invalid env at server start. (Rejected: build-time `rewrites` bake the URL into the image; middleware rewrites leak the internal URL and buffer bodies at 10 MB — found in checkpoint 2 review.)
   - `start` runs the standalone server (`node .next/standalone/apps/web/server.js`); `build` copies static assets next to it. Display time zone `Europe/Kyiv` is set explicitly.
-  - The home page renders translated `home.title` (`"EventDrop"`) and `home.tagline` (uk: `"Збирайте фото, відео та історії з події в одному місці"`, en: `"Collect photos, videos and stories from your event in one place"`). This placeholder copy is replaced in Phase 3/4.
+  - The home page renders translated `home.title` (`"Stepler"`) and `home.tagline` (uk: `"Збирайте фото, відео та історії з події в одному місці"`, en: `"Collect photos, videos and stories from your event in one place"`). This placeholder copy is replaced in Phase 3/4.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -405,7 +405,7 @@ test('message catalogs have identical keys', () => {
 
 - [ ] **Step 2: Run the tests and verify they fail**
 
-Run: `pnpm --filter @eventdrop/web test`
+Run: `pnpm --filter @stepler/web test`
 Expected: FAIL.
 
 - [ ] **Step 3: Implement**
@@ -417,7 +417,7 @@ Expected: FAIL.
 
 - [ ] **Step 4: Verify**
 
-Run: `pnpm --filter @eventdrop/web test && pnpm --filter @eventdrop/web lint && pnpm --filter @eventdrop/web build`
+Run: `pnpm --filter @stepler/web test && pnpm --filter @stepler/web lint && pnpm --filter @stepler/web build`
 Expected: PASS; lint clean (no literal strings); build succeeds.
 
 - [ ] **Step 5: Commit** — `feat(web): add Next.js skeleton with uk/en i18n and API proxy`
@@ -434,14 +434,14 @@ Expected: PASS; lint clean (no literal strings); build succeeds.
   - `packages/ui/src/components/button.tsx`, `packages/ui/src/components/button.stories.tsx`
   - `packages/ui/.storybook/main.ts`, `packages/ui/.storybook/preview.ts`
   - the Storybook Vitest config per the installed Storybook version
-- Modify: `apps/web/src/app/globals.css` (import ui styles, add a Tailwind `@source` for `packages/ui/src`), `apps/web/package.json` (dependency `@eventdrop/ui`)
+- Modify: `apps/web/src/app/globals.css` (import ui styles, add a Tailwind `@source` for `packages/ui/src`), `apps/web/package.json` (dependency `@stepler/ui`)
 
 **Interfaces:**
 - Consumes: Task 4 presets.
 - Produces:
   - `cn(...inputs: ClassValue[]): string`;
-  - `Button`: the shadcn Button (variants `default | secondary | outline | ghost | destructive`, sizes `default | sm | lg | icon`, `asChild`), exported from `@eventdrop/ui/components/button`;
-  - `@eventdrop/ui/styles.css`: design tokens as CSS variables (light theme; dark tokens deferred to Phase 3).
+  - `Button`: the shadcn Button (variants `default | secondary | outline | ghost | destructive`, sizes `default | sm | lg | icon`, `asChild`), exported from `@stepler/ui/components/button`;
+  - `@stepler/ui/styles.css`: design tokens as CSS variables (light theme; dark tokens deferred to Phase 3).
 
 - [ ] **Step 1: Write the failing story tests**
 
@@ -455,16 +455,16 @@ Storybook a11y addon configured with `test: 'error'`, so axe violations fail the
 
 - [ ] **Step 2: Run the tests and verify they fail**
 
-Run: `pnpm --filter @eventdrop/ui test`
+Run: `pnpm --filter @stepler/ui test`
 Expected: FAIL (component missing).
 
 - [ ] **Step 3: Implement**
 
-Initialize shadcn for a monorepo library (`components.json` aliases pointing to `@eventdrop/ui`), add `button`, and add the `cn` helper. Touch targets: `size="default"` and `size="icon"` are at least 44 px tall (rule 05). This deviates from shadcn's stock size and is noted in a code comment.
+Initialize shadcn for a monorepo library (`components.json` aliases pointing to `@stepler/ui`), add `button`, and add the `cn` helper. Touch targets: `size="default"` and `size="icon"` are at least 44 px tall (rule 05). This deviates from shadcn's stock size and is noted in a code comment.
 
 - [ ] **Step 4: Verify**
 
-Run: `pnpm --filter @eventdrop/ui test && pnpm --filter @eventdrop/ui build-storybook && pnpm --filter @eventdrop/web build`
+Run: `pnpm --filter @stepler/ui test && pnpm --filter @stepler/ui build-storybook && pnpm --filter @stepler/web build`
 Expected: story tests PASS with no a11y violations; Storybook builds; web still builds with the ui styles imported.
 
 - [ ] **Step 5: Commit** — `feat(ui): add shared ui package with Button and Storybook`
@@ -477,7 +477,7 @@ Expected: story tests PASS with no a11y violations; Storybook builds; web still 
 - Create: `e2e/package.json`, `e2e/tsconfig.json`, `e2e/playwright.config.ts`, `e2e/tests/smoke.spec.ts`
 
 **Interfaces:**
-- Consumes: built `@eventdrop/api` (Task 6) and `@eventdrop/web` (Task 7).
+- Consumes: built `@stepler/api` (Task 6) and `@stepler/web` (Task 7).
 - Produces: the `e2e` task.
   - Playwright projects: `mobile-safari` (iPhone 15), `mobile-chrome` (Pixel 7), `desktop-chrome`.
   - `webServer` starts the production builds on dedicated ports: api (`node apps/api/dist/main.js`, port 4100) and web (standalone `server.js`, port 3100, `API_INTERNAL_URL=http://127.0.0.1:4100`).
@@ -504,7 +504,7 @@ test('API is reachable same-origin through the web app', async ({ request }) => 
 
 - [ ] **Step 2: Run the tests**
 
-Run: `pnpm turbo run build && pnpm --filter @eventdrop/e2e e2e`
+Run: `pnpm turbo run build && pnpm --filter @stepler/e2e e2e`
 Expected: 3 tests × 3 projects PASS. If a test fails, fix the owning app, not the test.
 
 - [ ] **Step 3: Commit** — `test(e2e): add Playwright smoke tests for web, i18n and API proxy`
@@ -523,9 +523,9 @@ Expected: 3 tests × 3 projects PASS. If a test fails, fix the owning app, not t
 
 **Interfaces:**
 - Produces:
-  - compose services `postgres` (image `postgres:18`, healthcheck `pg_isready`, named volume `eventdrop-pg`, credentials from `docker/.env.example` names `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`);
+  - compose services `postgres` (image `postgres:18`, healthcheck `pg_isready`, named volume `stepler-pg`, credentials from `docker/.env.example` names `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`);
   - compose service `mailpit` (ports 1025/8025, healthcheck);
-  - images `eventdrop-api` and `eventdrop-web`.
+  - images `stepler-api` and `stepler-web`.
 
 - [ ] **Step 1: Write `verify-images.sh`**
 

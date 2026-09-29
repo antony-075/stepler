@@ -1,5 +1,5 @@
 {
-  "name": "@eventdrop/web",
+  "name": "@stepler/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@eventdrop/ui": "workspace:*",
+    "@stepler/ui": "workspace:*",
     "next": "catalog:",
     "next-intl": "4.14.7",
     "react": "catalog:",
@@ -20,7 +20,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@eventdrop/config": "workspace:*",
+    "@stepler/config": "workspace:*",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

@@ -1,5 +1,5 @@
 {
-  "name": "eventdrop",
+  "name": "stepler-app",
   "private": true,
   "packageManager": "pnpm@11.28.2+sha512.755ce2fe3c05bfd7bb412b42aff3c5c55cd38c529c6eca810475497ae36746c571e4b6e1814e6e7e4b97d7ee864b8a0e44673c3b297a50e0ac28771c5ce15d27",
   "engines": {
@@ -17,7 +17,7 @@
     "build-storybook": "turbo run build-storybook"
   },
   "devDependencies": {
-    "@eventdrop/config": "workspace:*",
+    "@stepler/config": "workspace:*",
     "prettier": "3.9.9",
     "turbo": "2.11.5",
     "typescript": "catalog:"

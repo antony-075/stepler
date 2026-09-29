@@ -16,4 +16,4 @@ For a new product/UI area, prefer this sequence when applicable:
 
 The product must be responsive across mobile, tablet, laptop and wide desktop.
 
-EventDrop-specific design decisions belong in the project's design docs/tokens, not hidden inside a skill.
+Stepler-specific design decisions belong in the project's design docs/tokens, not hidden inside a skill.

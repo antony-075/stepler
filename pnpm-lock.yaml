@@ -65,7 +65,7 @@ importers:
 
   .:
     devDependencies:
-      '@eventdrop/config':
+      '@stepler/config':
         specifier: workspace:*
         version: link:packages/config
       prettier:
@@ -80,9 +80,6 @@ importers:
 
   apps/api:
     dependencies:
-      '@eventdrop/contracts':
-        specifier: workspace:*
-        version: link:../../packages/contracts
       '@nestjs/common':
         specifier: 12.1.1
         version: 12.1.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0)
@@ -95,6 +92,9 @@ importers:
       '@nestjs/swagger':
         specifier: 12.0.2
         version: 12.0.2(@nestjs/common@12.1.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.1)(reflect-metadata@0.2.2)(typescript@6.0.3)
+      '@stepler/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       reflect-metadata:
         specifier: 0.2.2
         version: 0.2.2
@@ -105,15 +105,15 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
     devDependencies:
-      '@eventdrop/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@nestjs/cli':
         specifier: 12.0.8
         version: 12.0.8(@swc/core@1.16.2(@swc/helpers@0.5.23))(@types/node@24.19.0)(prettier@3.9.9)
       '@nestjs/testing':
         specifier: 12.1.1
         version: 12.1.1(@nestjs/common@12.1.1(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@7.2.0))(@nestjs/core@12.1.1)(@nestjs/platform-express@12.1.1)
+      '@stepler/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@swc/core':
         specifier: 1.16.2
         version: 1.16.2(@swc/helpers@0.5.23)
@@ -141,7 +141,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@eventdrop/ui':
+      '@stepler/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       next:
@@ -160,7 +160,7 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
     devDependencies:
-      '@eventdrop/config':
+      '@stepler/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@tailwindcss/postcss':
@@ -190,18 +190,18 @@ importers:
 
   e2e:
     devDependencies:
-      '@eventdrop/api':
-        specifier: workspace:*
-        version: link:../apps/api
-      '@eventdrop/config':
-        specifier: workspace:*
-        version: link:../packages/config
-      '@eventdrop/web':
-        specifier: workspace:*
-        version: link:../apps/web
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.63.0
+      '@stepler/api':
+        specifier: workspace:*
+        version: link:../apps/api
+      '@stepler/config':
+        specifier: workspace:*
+        version: link:../packages/config
+      '@stepler/web':
+        specifier: workspace:*
+        version: link:../apps/web
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.0
@@ -267,7 +267,7 @@ importers:
         specifier: 'catalog:'
         version: 4.6.5
     devDependencies:
-      '@eventdrop/config':
+      '@stepler/config':
         specifier: workspace:*
         version: link:../config
       '@types/node':
@@ -301,7 +301,7 @@ importers:
         specifier: 1.4.0
         version: 1.4.0
     devDependencies:
-      '@eventdrop/config':
+      '@stepler/config':
         specifier: workspace:*
         version: link:../config
       '@storybook/addon-a11y':

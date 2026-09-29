@@ -1,4 +1,4 @@
-# EventDrop — Product Specification
+# Stepler — Product Specification
 
 **Status:** Product baseline / starting point  
 **Purpose:** Source of truth for product discovery and MVP implementation  
@@ -10,7 +10,7 @@
 
 ## 1.1 One sentence
 
-EventDrop is a simple service for collecting photos, videos, documents and text from multiple people into a shared collection through a link or QR code.
+Stepler is a simple service for collecting photos, videos, documents and text from multiple people into a shared collection through a link or QR code.
 
 ## 1.2 The problem
 

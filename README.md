@@ -1,4 +1,4 @@
-# EventDrop
+# Stepler
 
 Collect photos, videos, documents and text from an event into one shared collection via a link or QR code.
 

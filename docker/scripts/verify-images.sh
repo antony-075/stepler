@@ -3,10 +3,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
-API_IMAGE=eventdrop-api:verify
-WEB_IMAGE=eventdrop-web:verify
-NET=eventdrop-verify
-CONTAINERS=(eventdrop-verify-api eventdrop-verify-web eventdrop-verify-badenv)
+API_IMAGE=stepler-api:verify
+WEB_IMAGE=stepler-web:verify
+NET=stepler-verify
+CONTAINERS=(stepler-verify-api stepler-verify-web stepler-verify-badenv)
 cleanup() {
   docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
@@ -28,14 +28,14 @@ wait_healthy() {
 # Starts image $1 with env args, expects it to exit non-zero within 20 s (fail-fast on bad env).
 expect_exit_on_bad_env() {
   local image=$1; shift
-  docker run -d --name eventdrop-verify-badenv "$@" "$image" >/dev/null
+  docker run -d --name stepler-verify-badenv "$@" "$image" >/dev/null
   for _ in $(seq 1 20); do
-    [ "$(docker inspect -f '{{.State.Running}}' eventdrop-verify-badenv)" = "false" ] && break
+    [ "$(docker inspect -f '{{.State.Running}}' stepler-verify-badenv)" = "false" ] && break
     sleep 1
   done
-  [ "$(docker inspect -f '{{.State.Running}}' eventdrop-verify-badenv)" = "false" ] || fail "$image kept running with invalid env"
-  [ "$(docker inspect -f '{{.State.ExitCode}}' eventdrop-verify-badenv)" != "0" ] || fail "$image exited 0 with invalid env"
-  docker rm -f eventdrop-verify-badenv >/dev/null
+  [ "$(docker inspect -f '{{.State.Running}}' stepler-verify-badenv)" = "false" ] || fail "$image kept running with invalid env"
+  [ "$(docker inspect -f '{{.State.ExitCode}}' stepler-verify-badenv)" != "0" ] || fail "$image exited 0 with invalid env"
+  docker rm -f stepler-verify-badenv >/dev/null
 }
 
 docker build -f apps/api/Dockerfile -t "$API_IMAGE" .
@@ -59,11 +59,11 @@ expect_exit_on_bad_env "$API_IMAGE" -e NODE_ENV=staging
 expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
 
 docker network create "$NET" >/dev/null
-docker run -d --name eventdrop-verify-api --network "$NET" -e NODE_ENV=production "$API_IMAGE" >/dev/null
-docker run -d --name eventdrop-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
-  -e API_INTERNAL_URL=http://eventdrop-verify-api:4000 "$WEB_IMAGE" >/dev/null
-wait_healthy eventdrop-verify-api 30
-wait_healthy eventdrop-verify-web 30
+docker run -d --name stepler-verify-api --network "$NET" -e NODE_ENV=production "$API_IMAGE" >/dev/null
+docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
+  -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null
+wait_healthy stepler-verify-api 30
+wait_healthy stepler-verify-web 30
 
 body=$(curl -fsS http://127.0.0.1:3199/api/v1/health/live) || fail "web → api proxy failed"
 [ "$body" = '{"status":"ok"}' ] || fail "unexpected health body: $body"

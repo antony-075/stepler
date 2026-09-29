@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
-import { healthLiveResponseSchema, type HealthLiveResponse } from '@eventdrop/contracts';
+import { healthLiveResponseSchema, type HealthLiveResponse } from '@stepler/contracts';
 
 @Controller({ path: 'health', version: '1' })
 export class HealthController {

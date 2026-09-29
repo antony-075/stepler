@@ -1,5 +1,5 @@
 {
-  "extends": "@eventdrop/config/tsconfig/next.json",
+  "extends": "@stepler/config/tsconfig/next.json",
   "compilerOptions": {
     "types": ["node"],
     "paths": { "@/*": ["./src/*"] }

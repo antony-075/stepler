@@ -10,7 +10,7 @@ const config: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   poweredByHeader: false,
   // packages/ui ships TypeScript sources.
-  transpilePackages: ['@eventdrop/ui'],
+  transpilePackages: ['@stepler/ui'],
 };
 
 export default withNextIntl(config);

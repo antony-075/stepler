@@ -1,5 +1,5 @@
 {
-  "name": "@eventdrop/e2e",
+  "name": "@stepler/e2e",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,9 @@
     "lint": "eslint ."
   },
   "devDependencies": {
-    "@eventdrop/api": "workspace:*",
-    "@eventdrop/config": "workspace:*",
-    "@eventdrop/web": "workspace:*",
+    "@stepler/api": "workspace:*",
+    "@stepler/config": "workspace:*",
+    "@stepler/web": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "eslint": "catalog:",

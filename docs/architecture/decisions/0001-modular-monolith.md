@@ -5,7 +5,7 @@ Date: 2026-09-29
 
 ## Context
 
-EventDrop is initially a small product with a web frontend, REST API, PostgreSQL database and object storage.
+Stepler is initially a small product with a web frontend, REST API, PostgreSQL database and object storage.
 
 ## Decision
 

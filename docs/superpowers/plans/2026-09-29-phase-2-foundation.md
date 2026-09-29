@@ -1,4 +1,4 @@
-# EventDrop Phase 2 — Foundation Implementation Plan
+# Stepler Phase 2 — Foundation Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -44,7 +44,7 @@ Everything in the Phase 1 plan's Global Constraints still applies:
 
 Additional constraints:
 
-- **API errors:** RFC 9457 `application/problem+json`, body `{ type, title, status, code, detail?, retryable, requestId, errors? }`. `code` comes from `ERROR_CODES` in `@eventdrop/contracts`. The web app translates codes; the API never returns localized prose.
+- **API errors:** RFC 9457 `application/problem+json`, body `{ type, title, status, code, detail?, retryable, requestId, errors? }`. `code` comes from `ERROR_CODES` in `@stepler/contracts`. The web app translates codes; the API never returns localized prose.
 - **Authorization:** a global `AuthGuard` denies every route except `@Public()` ones. Admin data is scoped by `principal.userId`. A resource outside scope returns 404.
 - **Secrets at rest:** session tokens and magic-link tokens are random 32-byte values. Only `sha256` hashes are stored; the raw token is never logged or persisted.
 - **Logging:**
@@ -52,13 +52,13 @@ Additional constraints:
   - redacted: `cookie`, `set-cookie`, `authorization`, and query values of `token`, `code`, `state`, `X-Amz-*`;
   - request bodies are never logged.
 - **Cookies:**
-  - `ed_session`: `HttpOnly; SameSite=Lax; Path=/`, plus `Secure` when `COOKIE_SECURE=true` (default `true` in production, `false` otherwise);
-  - OAuth transaction cookie `ed_oauth`: `HttpOnly; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`.
+  - `st_session`: `HttpOnly; SameSite=Lax; Path=/`, plus `Secure` when `COOKIE_SECURE=true` (default `true` in production, `false` otherwise);
+  - OAuth transaction cookie `st_oauth`: `HttpOnly; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`.
 - **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This also blocks login CSRF: an attacker page posting its own magic-link token so the victim signs in as the attacker. Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
 - **Public URLs** (magic links, OAuth redirect URI) are built from `APP_ORIGIN`, never from request `Host` or forwarded headers.
 - **Client IP:** `req.ip` with Express `trust proxy` from `API_TRUST_PROXY` (default `false`). Documented limitation: behind the web proxy without a trusted edge, all clients share the web server's IP, so IP limits act as global limits. This is resolved with the hosting decision.
 - **Tests:**
-  - integration tests use the real PostgreSQL, S3 emulator and Mailpit from `docker/compose.yaml`, with database `eventdrop_test`;
+  - integration tests use the real PostgreSQL, S3 emulator and Mailpit from `docker/compose.yaml`, with database `stepler_test`;
   - API integration files run with `fileParallelism: false` and truncate tables between files;
   - Google and Turnstile are exercised against test doubles of their ports.
   - Turnstile additionally runs an opt-in live test with Cloudflare's documented test keys, marked `@network`.
@@ -69,7 +69,7 @@ Additional constraints:
 1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page shows a "Sign in" button, which calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
 2. **Legal acceptance (`LegalAcceptance`, acceptance gate) moves to Phase 4 slice 10 (Legal pages).** The texts do not exist yet (D15/F8). Slice 10 adds a gate that also covers users created before it, and there are no real users before launch.
 3. **The Jobs port (pg-boss) is deferred to Phase 4 slice 5 (upload),** its first consumer. A port without a consumer would be dead code (CLAUDE.md §14).
-4. **No OpenAPI client code generation for the web app.** `openapi-typescript` 7.13 declares `typescript ^5` and we use 6.0. The web app imports request/response types and schemas directly from `@eventdrop/contracts`, the same source the API validates with. OpenAPI stays the documented public contract and is snapshot-checked in CI. This updates spec §4 and ADR 0005.
+4. **No OpenAPI client code generation for the web app.** `openapi-typescript` 7.13 declares `typescript ^5` and we use 6.0. The web app imports request/response types and schemas directly from `@stepler/contracts`, the same source the API validates with. OpenAPI stays the documented public contract and is snapshot-checked in CI. This updates spec §4 and ADR 0005.
 5. **`AuditEvent` is created with its first audited action** (collections, Phase 4 slice 1), not in Phase 2.
 
 ## Review Focus
@@ -91,7 +91,7 @@ Additional constraints:
 - whether IDs use DB-side `uuidv7()` or Prisma-side `uuid(7)`;
 - the test-database reset method.
 
-- [ ] **Step 1:** In `$TMPDIR/eventdrop-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
+- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s6`, create a NestJS 12 ESM app like ADR 0005 with Prisma 7.10 (`prisma-client` generator, `moduleFormat = "esm"`, `@prisma/adapter-pg`, `prisma.config.ts`), against compose Postgres 18 on port 5433. Model:
   - `User(id uuid @default(dbgenerated("uuidv7()")), email citext @unique, status UserStatus @default(ACTIVE))`;
   - `Thing(id, userId, isDefault Boolean, revokedAt DateTime?)`.
 - [ ] **Step 2:** Create the first migration with `prisma migrate dev --create-only`. Add to its SQL:
@@ -129,7 +129,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - `rustfs/rustfs` (Apache-2.0);
   - `dxflrs/garage` (AGPL-3.0; acceptable as a dev-only service).
 
-  Run each from compose with a bootstrap step that creates bucket `eventdrop-dev`.
+  Run each from compose with a bootstrap step that creates bucket `stepler-dev`.
 - [ ] **Step 2: Pass criteria**, run with a script using `@aws-sdk/client-s3` + `s3-request-presigner`:
   1. `HeadBucket` succeeds.
   2. A presigned PUT with signed `Content-Type` and `Content-Length` uploads, and a mismatched `Content-Length` is rejected.
@@ -150,7 +150,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
 - **If in-house wins:** those tasks run as written.
 - **If Better Auth wins:** stop after this task. Revise Tasks 12–15 against Better Auth's API before continuing, and keep their tests and Review Focus items.
 
-- [ ] **Step 1:** In `$TMPDIR/eventdrop-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
+- [ ] **Step 1:** In `$TMPDIR/stepler-spikes/s1`, mount `better-auth` 1.7 with `@thallesp/nestjs-better-auth` 2.8 in a NestJS 12 ESM app with the Prisma adapter. Enable the magic-link plugin and the Google provider (Google with dummy credentials; only the authorization-URL step is exercised).
 - [ ] **Step 2: Hard criteria.** Better Auth wins only if **all** hold:
   1. Session tokens are stored hashed, or can be configured to be.
   2. Table and column names map to spec §7.1 (`User`, `AuthAccount`, `AuthSession`), with UUIDv7 ids and a `citext` email.
@@ -179,7 +179,7 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - An unknown `code` is rejected.
   - `errors[].path` accepts `['items', 0, 'name']`.
   - The readiness schema rejects extra keys.
-- [ ] **Step 2:** Run `pnpm --filter @eventdrop/contracts test` → FAIL.
+- [ ] **Step 2:** Run `pnpm --filter @stepler/contracts test` → FAIL.
 - [ ] **Step 3:** Implement and export from `index.ts`.
 - [ ] **Step 4:** Tests PASS, then `build`.
 - [ ] **Step 5:** Commit `feat(contracts): add problem details, error codes and readiness schema`.
@@ -235,11 +235,11 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - **limits:** defaults and overrides from env.
   - **redact:** `/api/v1/auth/google/callback?code=abc&state=def&x=1` → `?code=[REDACTED]&state=[REDACTED]&x=1`; `X-Amz-Signature` is redacted.
   - **logging e2e:** capture the pino destination stream in the test.
-    - A request with `Cookie: ed_session=secret` and `?token=tok123` produces log output that contains the request id but neither `secret` nor `tok123`.
+    - A request with `Cookie: st_session=secret` and `?token=tok123` produces log output that contains the request id but neither `secret` nor `tok123`.
     - A valid incoming `x-request-id: abcd1234` is echoed; an invalid `x-request-id: <script>` is replaced.
 - [ ] **Step 2:** Run the tests → FAIL.
 - [ ] **Step 3:** Implement. Add all new variables to `turbo.json` `dev`/`e2e` `passThroughEnv`.
-- [ ] **Step 4:** Run `pnpm --filter @eventdrop/api test lint typecheck` → PASS.
+- [ ] **Step 4:** Run `pnpm --filter @stepler/api test lint typecheck` → PASS.
 - [ ] **Step 5:** Commit `feat(api): add typed config, limits and structured logging with redaction`.
 
 ### Task 6: Errors, validation and OpenAPI
@@ -265,8 +265,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
 
   Every response carries `content-type: application/problem+json` and `requestId`.
 - Global `new StandardSchemaValidationPipe({ transform: true, exceptionFactory })`, where `exceptionFactory` throws `AppError('VALIDATION_FAILED', 400)` carrying the issues.
-- `buildOpenApiDocument(app): OpenAPIObject` (title `EventDrop API`, version `1`, cookie auth scheme `ed_session`). Swagger UI is served at `/api/docs` only when `NODE_ENV !== 'production'`.
-- `pnpm --filter @eventdrop/api openapi:write` writes `apps/api/openapi.json` (sorted keys, 2-space indent). `openapi:check` regenerates to a temp file and fails if it differs.
+- `buildOpenApiDocument(app): OpenAPIObject` (title `Stepler API`, version `1`, cookie auth scheme `st_session`). Swagger UI is served at `/api/docs` only when `NODE_ENV !== 'production'`.
+- `pnpm --filter @stepler/api openapi:write` writes `apps/api/openapi.json` (sorted keys, 2-space indent). `openapi:check` regenerates to a temp file and fails if it differs.
 
 - [ ] **Step 1: Failing tests** (e2e with a test-only controller registered in the testing module):
   - body validation error → 400 problem with `errors[0].path = ['name']`;
@@ -310,15 +310,15 @@ MagicLinkToken(id, email citext, tokenHash unique, expiresAt, consumedAt?, local
 - `requestIpHash` = HMAC-SHA256 of the IP with an HKDF key from `APP_SECRET` (info `ip-hash`). It is kept for abuse investigation, never displayed.
 - `PrismaService extends PrismaClient`, connects in `onModuleInit` and disconnects in `onModuleDestroy`.
 - `resetDatabase(): Promise<void>` truncates all model tables.
-- `pnpm --filter @eventdrop/api db:check` runs the Task 1 drift check (exit 0 = no drift).
+- `pnpm --filter @stepler/api db:check` runs the Task 1 drift check (exit 0 = no drift).
 
 - [ ] **Step 1: Failing integration tests** (`apps/api/test/database.e2e.spec.ts`):
   - inserting `User` emails `Anton@Example.com` then `anton@example.com` violates the unique constraint (citext);
   - `status: BLOCKED` without `blockedAt` violates the CHECK;
   - ids generated in sequence sort ascending.
 - [ ] **Step 2:** FAIL (no schema).
-- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates database `eventdrop_test` owned by `eventdrop`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
-- [ ] **Step 4:** Run `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait`, then `pnpm --filter @eventdrop/api test` → PASS, then `db:check` → exit 0.
+- [ ] **Step 3:** Write the schema and migration (raw SQL per Task 1) and the module. The init script creates database `stepler_test` owned by `stepler`. Global setup runs `prisma migrate deploy` against the test `DATABASE_URL`.
+- [ ] **Step 4:** Run `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait`, then `pnpm --filter @stepler/api test` → PASS, then `db:check` → exit 0.
 - [ ] **Step 5:** Commit `feat(api): add Prisma with identity schema and test database`.
 
 ### Task 8: Object storage port, S3 adapter, emulator
@@ -355,7 +355,7 @@ interface ObjectStorage {
   - `presignGet` with `contentDisposition: 'attachment; filename="a.txt"'` returns that header;
   - `delete` twice resolves.
 - [ ] **Step 2:** FAIL.
-- [ ] **Step 3:** Implement. The compose bootstrap creates `eventdrop-dev` and `eventdrop-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
+- [ ] **Step 3:** Implement. The compose bootstrap creates `stepler-dev` and `stepler-test` buckets with CORS for `http://localhost:3000` (`PUT`, `GET`, exposing `ETag`).
 - [ ] **Step 4:** PASS.
 - [ ] **Step 5:** Commit `feat(api): add object storage port with S3 adapter and local emulator`.
 
@@ -374,7 +374,7 @@ interface ObjectStorage {
 - `renderMagicLinkEmail(input: { url: string; locale: 'uk' | 'en'; expiresInMinutes: number }): { subject: string; text: string; html: string }`.
   - The HTML escapes the URL.
   - Copy:
-    - uk subject `Вхід до EventDrop`, en subject `Sign in to EventDrop`;
+    - uk subject `Вхід до Stepler`, en subject `Sign in to Stepler`;
     - the body states the expiry in minutes and "If you didn't request this, ignore this email" in both languages.
   - Final wording may change in Phase 3; the tests pin structure, not prose.
 
@@ -484,7 +484,7 @@ interface ObjectStorage {
   - Invalid, expired or reused tokens → 400 `MAGIC_LINK_INVALID`; blocked user → 403 `ACCOUNT_BLOCKED`.
 
 - [ ] **Step 1: Failing tests.** `TURNSTILE_VERIFIER` is overridden with a double; mail is read from Mailpit.
-  - Happy path: request → Mailpit has one email whose link has a 43-char token → verify → 200 + `Set-Cookie: ed_session` → `GET /me` 200.
+  - Happy path: request → Mailpit has one email whose link has a 43-char token → verify → 200 + `Set-Cookie: st_session` → `GET /me` 200.
   - **Review Focus 2:** two concurrent verifies with the same token → exactly one 200, one 400, and one `AuthSession` row.
   - **Review Focus 3:** unknown, existing and blocked emails → identical status and body; the blocked user receives no email.
   - The 6th request for one email within an hour → 202 and no 6th email.
@@ -513,19 +513,19 @@ interface ObjectStorage {
   - Claims come from `decodeIdToken` on the id_token returned directly by Google's token endpoint over TLS (OIDC code flow).
   - It is registered only when both Google env vars are set.
 - `GET /api/v1/auth/methods` (public) → `{ magicLink: true, google: boolean, turnstileSiteKey: string }`. The web app reads this at runtime, so it needs no Google or Turnstile env of its own.
-- `GET /api/v1/auth/google/start` (public; 404 when Google is not configured) → sets `ed_oauth` = signed JSON `{state, codeVerifier, returnTo}`, then 302 to Google. `returnTo` is limited to same-origin paths starting with `/app`, default `/app`.
+- `GET /api/v1/auth/google/start` (public; 404 when Google is not configured) → sets `st_oauth` = signed JSON `{state, codeVerifier, returnTo}`, then 302 to Google. `returnTo` is limited to same-origin paths starting with `/app`, default `/app`.
 - `GET /api/v1/auth/google/callback` (public):
-  - validates `state` against `ed_oauth` (constant-time), exchanges, then signs in:
+  - validates `state` against `st_oauth` (constant-time), exchanges, then signs in:
     - an existing `AuthAccount(GOOGLE, sub)` → that user;
     - else, when `emailVerified`, the user with that email (link a new account);
     - else create the user;
     - `emailVerified=false` with an existing email → no link; 302 to `/login?error=OAUTH_FAILED`;
-  - success: session cookie, clear `ed_oauth`, 302 to `returnTo`.
-- The `ed_oauth` HMAC key is an HKDF key from `APP_SECRET` (info `ed_oauth`). Unrelated secrets are never reused as keys.
+  - success: session cookie, clear `st_oauth`, 302 to `returnTo`.
+- The `st_oauth` HMAC key is an HKDF key from `APP_SECRET` (info `st_oauth`). Unrelated secrets are never reused as keys.
 
 - [ ] **Step 1: Failing tests** (`GOOGLE_IDENTITY` double; env with dummy Google credentials):
   - `/auth/methods` reflects the configuration;
-  - `/start` → 302 to the double's URL and sets `ed_oauth` with the Global Constraints attributes;
+  - `/start` → 302 to the double's URL and sets `st_oauth` with the Global Constraints attributes;
   - callback with a mismatched state → 302 `/login?error=OAUTH_FAILED`, no session;
   - new `sub` + new email → user created, session set, 302 `/app`;
   - existing magic-link user + verified Google email with different case → linked to the same user (**Review Focus 5**);
@@ -568,7 +568,7 @@ interface ObjectStorage {
   - `apiRequest` maps a problem body to `ApiError` and a non-JSON 502 to `UPSTREAM_UNAVAILABLE` (unit; stub `fetch`).
   - `error-message` covers every `ErrorCode` (unit: iterate `ERROR_CODES`, each has a key in both catalogs).
   - Input stories: default, invalid (`aria-invalid`), disabled; axe passes; height ≥ 44 px.
-- [ ] **Step 2:** FAIL → **Step 3:** implement → **Step 4:** run `pnpm turbo run lint typecheck test build --filter @eventdrop/web... --filter @eventdrop/ui` → PASS.
+- [ ] **Step 2:** FAIL → **Step 3:** implement → **Step 4:** run `pnpm turbo run lint typecheck test build --filter @stepler/web... --filter @stepler/ui` → PASS.
 - [ ] **Step 5:** Commit `feat(web): add login, magic link verify and protected app shell`.
 
 ### Task 16: End-to-end auth journeys
@@ -606,13 +606,13 @@ interface ObjectStorage {
 **Interfaces — produces:**
 - CI `quality` job:
   - `docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait` before tests;
-  - `pnpm --filter @eventdrop/api db:check` and `openapi:check` steps.
+  - `pnpm --filter @stepler/api db:check` and `openapi:check` steps.
 - CI `e2e` job: the same compose step.
 - `images` job: unchanged.
 - The README env table gains every Task 5 variable, with purpose and whether it is required in production.
 
 - [ ] **Step 1:** Update the workflow; run `actionlint` → clean.
-- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @eventdrop/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
+- [ ] **Step 2:** In a fresh clone (Phase 1 Task 11 procedure, plus `docker compose up`): `pnpm install --frozen-lockfile && pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm --filter @stepler/api db:check openapi:check && pnpm e2e && bash docker/scripts/verify-images.sh` → all pass.
 - [ ] **Step 3:** Update the docs listed above. Every deviation in "Deliberate deviations" is reflected, and implemented vs proposed is marked honestly (rule 16).
 - [ ] **Step 4:** Commit `ci: run integration services, migration and OpenAPI checks; document Phase 2`.
 

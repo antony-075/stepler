@@ -31,7 +31,7 @@ describe('upstreamRequestHeaders', () => {
     connection: 'keep-alive',
     expect: '100-continue',
     'transfer-encoding': 'chunked',
-    cookie: 'ed_session=abc',
+    cookie: 'st_session=abc',
     'content-type': 'application/json',
     'accept-language': 'uk',
   });
@@ -55,7 +55,7 @@ describe('upstreamRequestHeaders', () => {
 
   test('keeps end-to-end headers', () => {
     const headers = upstreamRequestHeaders(incoming, { trustForwardedHeaders: false });
-    expect(headers.get('cookie')).toBe('ed_session=abc');
+    expect(headers.get('cookie')).toBe('st_session=abc');
     expect(headers.get('content-type')).toBe('application/json');
     expect(headers.get('accept-language')).toBe('uk');
   });

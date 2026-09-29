@@ -28,12 +28,12 @@ next-intl 4.14 works in "without i18n routing" mode with Next.js 16.3 App Router
 - `next build` succeeds;
 - `/g/abc` without a cookie renders Ukrainian, and the URL stays `/g/abc` (200, no redirect);
 - `Accept-Language: en-US` renders English;
-- the `ed_locale=uk` cookie beats `Accept-Language: en`;
+- the `st_locale=uk` cookie beats `Accept-Language: en`;
 - client components are translated through `NextIntlClientProvider`.
 
 Setup:
 - `next-intl/plugin` in `next.config.ts` pointing to `src/i18n/request.ts`;
-- `getRequestConfig` reads the `ed_locale` cookie and the `accept-language` header and loads `messages/<locale>.json`;
+- `getRequestConfig` reads the `st_locale` cookie and the `accept-language` header and loads `messages/<locale>.json`;
 - the root layout sets `<html lang>` from `getLocale()` and wraps children in `NextIntlClientProvider`;
 - no middleware, no `[locale]` segment.
 

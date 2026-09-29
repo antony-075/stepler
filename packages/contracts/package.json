@@ -1,5 +1,5 @@
 {
-  "name": "@eventdrop/contracts",
+  "name": "@stepler/contracts",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -23,7 +23,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@eventdrop/config": "workspace:*",
+    "@stepler/config": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",

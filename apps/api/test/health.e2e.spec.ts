@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import { healthLiveResponseSchema } from '@eventdrop/contracts';
+import { healthLiveResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';

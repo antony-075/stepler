@@ -1,1 +1,1 @@
-export { default } from '@eventdrop/config/prettier';
+export { default } from '@stepler/config/prettier';

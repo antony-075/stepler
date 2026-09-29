@@ -34,7 +34,7 @@ Required by `.claude/rules/23-skill-source-policy.md`. Every skill in `.claude/s
 
 `webapp-testing` is listed in `skills-lock.json` but is not installed in `.claude/skills/`.
 
-Removed on 2026-09-29 as unrelated to EventDrop: `media-use` and `hyperframes-animation` (HeyGen HyperFrames video tooling; `media-use` also sent telemetry to PostHog), and `caveman-learn` (token-cost tooling).
+Removed on 2026-09-29 as unrelated to Stepler: `media-use` and `hyperframes-animation` (HeyGen HyperFrames video tooling; `media-use` also sent telemetry to PostHog), and `caveman-learn` (token-cost tooling).
 
 Notes from review:
 - `prisma-postgres` is a deprecated compatibility name upstream; prefer `prisma-postgres-setup` if a Prisma skill is needed.
