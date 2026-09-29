@@ -13,6 +13,7 @@ Owner decisions: magic link + Google OAuth, no passwords, open registration with
 - CSRF: SameSite=Lax plus `Origin` / `Sec-Fetch-Site` validation on unsafe methods.
 - Model: `User` + `AuthAccount(provider, providerAccountId)`; Google identity links to an existing user only when Google reports the email as verified.
 - Magic link tokens: single-use, short-lived, hashed; per-email and per-IP limits; Turnstile required (ADR 0012).
+- Magic link verification: the email links to a web page, which shows "Sign in as <email>" (read-only `POST /auth/magic-link/preview`) and signs in only on a button click (`POST /auth/magic-link/verify`). This is scanner-safe, and a victim who opens an attacker's link sees a foreign address before signing in.
 - Email sending through a `Mailer` port; Mailpit locally; provider chosen later.
 - Implementation: a small in-house implementation using the model above (spike S1 rejected Better Auth, see below).
 
@@ -38,7 +39,7 @@ Setup: `better-auth` 1.7.6 (latest, 2026-09-24) with the magic-link plugin and `
 | # | Hard criterion | Result |
 |---|---|---|
 | 1 | Session tokens stored hashed | **fail.** `createSession` stores `token: generateId(32)` and `findSession` looks up the raw cookie value. There is no session hashing option (session options: `expiresIn`, `updateAge`, `disableSessionRefresh`, `deferSessionRefresh`, `storeSessionInDatabase`, `cookieCache`, `freshAge`). At runtime, the cookie token equals `session.token` in the database. A `databaseHooks.session.create.before` hook that hashes the token only moves the hash into the cookie, so the database again holds exactly the value the browser presents. In addition, `GET /get-session` returns `session.token` in its JSON body, exposing the token to page JavaScript |
-| 3 | Scanner-safe magic-link verification as POST | **fail.** `/magic-link/verify` is `GET` only (`POST` → 404). A cross-site `GET` with an attacker's token (`Origin: https://evil.test`, `Sec-Fetch-Site: cross-site`) returns 200 and sets a session cookie: login CSRF. Our design verifies by POST with an Origin check, which blocks the cross-site form. An attacker can still mail the victim a genuine `/auth/verify` link carrying the attacker's token; that residual risk is accepted, and mitigated by showing the signed-in email (plan Global Constraints) |
+| 3 | Scanner-safe magic-link verification as POST | **fail.** `/magic-link/verify` is `GET` only (`POST` → 404). A cross-site `GET` with an attacker's token (`Origin: https://evil.test`, `Sec-Fetch-Site: cross-site`) returns 200 and sets a session cookie: login CSRF. Our design verifies by POST with an Origin check, which blocks the cross-site form. An attacker can still mail the victim a genuine `/auth/verify` link carrying the attacker's token; against that, the verify page first shows the email the link signs in to, read through a non-consuming preview endpoint (owner decision, 2026-09-29) |
 | 5 | Custom send-email hook | pass (`sendMagicLink` receives the token; our Mailer port could be used) |
 | 7 | Cookie name and attributes | partly observed: `st.session_token` via `cookiePrefix`, `Max-Age=604800; Path=/; HttpOnly; SameSite=Lax` |
 | 2, 4, 6, 8 | Schema mapping, principal in our guard, Turnstile pre-hook, web proxy | not evaluated (decision already made) |

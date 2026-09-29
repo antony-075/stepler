@@ -54,7 +54,7 @@ Additional constraints:
 - **Cookies:**
   - `st_session`: `HttpOnly; SameSite=Lax; Path=/`, plus `Secure` when `COOKIE_SECURE=true` (default `true` in production, `false` otherwise);
   - OAuth transaction cookie `st_oauth`: `HttpOnly; SameSite=Lax; Path=/api/v1/auth/google; Max-Age=600`.
-- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This blocks the cross-site form of login CSRF, where an attacker page posts its own magic-link token so the victim is signed in as the attacker. It does not block an attacker who sends the victim a real `${APP_ORIGIN}/auth/verify?token=<attacker token>` link: that POST comes from our own origin. The residual risk is accepted for MVP. After sign-in the app shell shows the signed-in email, so the victim can see whose account they are in (Task 15). Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
+- **CSRF:** **every** unsafe method (`POST/PUT/PATCH/DELETE`) must send `Origin` equal to `APP_ORIGIN`; otherwise `403 CSRF_ORIGIN_MISMATCH`. This blocks the cross-site form of login CSRF, where an attacker page posts its own magic-link token so the victim is signed in as the attacker. It does not block an attacker who sends the victim a real `${APP_ORIGIN}/auth/verify?token=<attacker token>` link: that POST comes from our own origin. Against that case, the verify page first shows the email the link signs in to ("Sign in as anton@…?"), read through a non-consuming preview endpoint (Task 13), so the victim sees a foreign address before clicking. The app shell also shows the signed-in email (Task 15). Owner decision, 2026-09-29. Future server-to-server endpoints (payment webhooks) opt out explicitly with `@SkipOriginCheck()` and must authenticate by signature.
 - **Public URLs** (magic links, OAuth redirect URI) are built from `APP_ORIGIN`, never from request `Host` or forwarded headers.
 - **Client IP:** `req.ip` with Express `trust proxy` from `API_TRUST_PROXY` (default `false`). Documented limitation: behind the web proxy without a trusted edge, all clients share the web server's IP, so IP limits act as global limits. This is resolved with the hosting decision.
 - **Tests:**
@@ -68,7 +68,7 @@ Additional constraints:
 
 **Status: all five approved by the owner on 2026-09-29.**
 
-1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page shows a "Sign in" button, which calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
+1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page reads the email through a non-consuming `POST /api/v1/auth/magic-link/preview` and shows "Sign in as <email>". The "Sign in" button calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
 2. **Legal acceptance (`LegalAcceptance`, acceptance gate) moves to Phase 4 slice 10 (Legal pages).** The texts do not exist yet (D15/F8). Slice 10 adds a gate that also covers users created before it, and there are no real users before launch.
 3. **The Jobs port (pg-boss) is deferred to Phase 4 slice 5 (upload),** its first consumer. A port without a consumer would be dead code (CLAUDE.md §14).
 4. **No OpenAPI client code generation for the web app.** `openapi-typescript` 7.13 declares `typescript ^5` and we use 6.0. The web app imports request/response types and schemas directly from `@stepler/contracts`, the same source the API validates with. OpenAPI stays the documented public contract and is snapshot-checked in CI. This updates spec §4 and ADR 0005.
@@ -76,7 +76,7 @@ Additional constraints:
 
 ## Review Focus
 
-1. **Email scanners prefetching the magic link.** Opening `/auth/verify?token=…` any number of times must not consume the token; only the POST does. Tested in Task 16 (e2e: load the page twice, then sign in).
+1. **Email scanners prefetching the magic link.** Opening `/auth/verify?token=…` any number of times must not consume the token: the page's preview call is read-only, and only the verify POST consumes. Tested in Task 16 (e2e: load the page twice, then sign in).
 2. **Double submission of one magic link** (double click, two tabs). Two concurrent verify POSTs must produce exactly one session and one `200`. The other returns `400 MAGIC_LINK_INVALID`. Tested in Task 13 with `Promise.all`.
 3. **Account enumeration.** Unknown, existing and blocked emails get the same `202` with the same body, and are rate-limited the same way. Only unblocked addresses receive mail. Tested in Task 13.
 4. **Secrets in logs.** A request to `/api/v1/auth/google/callback?code=abc&state=def` or with a `Cookie` header produces log lines with none of those values. Tested in Task 5.
@@ -215,8 +215,8 @@ Context: MinIO's GitHub repository is archived (2026-04) and its Docker Hub imag
   - `APP_SECRET` (base64, ≥ 32 bytes decoded; the root key for HKDF-derived keys: OAuth cookie signing, IP hashing; distinct per environment);
   - `GOOGLE_CLIENT_ID?`, `GOOGLE_CLIENT_SECRET?` (both or neither);
   - `S3_ENDPOINT?` (absent = AWS/R2 default), `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` (boolean);
-  - `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` (5), `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` (20), `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` (3), `LIMIT_STORAGE_BYTES_PER_ACCOUNT` (20 GiB), `LIMIT_STORAGE_BYTES_PER_COLLECTION` (10 GiB).
-- `LimitsService.magicLink(): { perEmailPerHour: number; perIpPerHour: number }` and `LimitsService.forUser(user: { id: string }): { activeCollections: number; storageBytes: bigint }`. The second is config-backed now; plans/entitlements plug in later (ADR 0010).
+  - `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` (5), `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` (20), `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` (60), `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` (3), `LIMIT_STORAGE_BYTES_PER_ACCOUNT` (20 GiB), `LIMIT_STORAGE_BYTES_PER_COLLECTION` (10 GiB).
+- `LimitsService.magicLink(): { perEmailPerHour: number; perIpPerHour: number; previewPerIpPerHour: number }` and `LimitsService.forUser(user: { id: string }): { activeCollections: number; storageBytes: bigint }`. The second is config-backed now; plans/entitlements plug in later (ADR 0010).
 - `redactUrl(url: string): string` replaces values of query keys `token|code|state|x-amz-*` (case-insensitive) with `[REDACTED]`.
 - `LoggingModule`:
   - pino-http;
@@ -471,7 +471,7 @@ interface ObjectStorage {
 
 **Files:**
 - Create: `apps/api/src/auth/magic-link.service.ts`, `apps/api/src/auth/magic-link.controller.ts`, `apps/api/test/magic-link.e2e.spec.ts`
-- Modify: `apps/api/src/auth/auth.module.ts` (throttler: `ThrottlerModule.forRoot` with an in-memory store; a `magic-link` limit from `LimitsService.magicLink().perIpPerHour`), `packages/contracts/src/auth.ts`
+- Modify: `apps/api/src/auth/auth.module.ts` (throttler: `ThrottlerModule.forRoot` with an in-memory store; a `magic-link` limit from `LimitsService.magicLink().perIpPerHour` and a `magic-link-preview` limit from `previewPerIpPerHour`), `packages/contracts/src/auth.ts`
 
 **Interfaces — produces:**
 - Contracts: `magicLinkRequestSchema = z.object({ email: z.email().trim().toLowerCase().max(254), turnstileToken: z.string().min(1), locale: z.enum(['uk','en']).optional() }).strict()`, `magicLinkVerifyRequestSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) }).strict()`.
@@ -481,6 +481,10 @@ interface ObjectStorage {
   3. create the token (TTL `MAGIC_LINK_TTL_MINUTES`);
   4. send `renderMagicLinkEmail({ url: `${APP_ORIGIN}/auth/verify?token=${token}`, locale })`, where `locale` is the existing user's locale, else the request locale, else `uk`;
   5. blocked users get no email; the response is identical.
+- `POST /api/v1/auth/magic-link/preview` (public, throttled per IP by `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR`) → `200 { email }`. The body is `magicLinkVerifyRequestSchema`; the response is `magicLinkPreviewResponseSchema = z.object({ email: z.string() })`.
+  - Read-only: `SELECT email FROM "MagicLinkToken" WHERE tokenHash = $1 AND consumedAt IS NULL AND expiresAt > now()`. It never consumes, extends or logs the token.
+  - Unknown, expired or consumed → 400 `MAGIC_LINK_INVALID`. A blocked user's token still previews; verify then returns 403.
+  - POST rather than GET, so the token stays out of URLs and access logs and the call is subject to the Origin check. It only reveals the email to whoever already holds the link that was mailed to it.
 - `POST /api/v1/auth/magic-link/verify` (public) → `200 { status: 'signed-in' }` + session cookie.
   - The token is consumed atomically: `UPDATE ... SET consumedAt = now() WHERE tokenHash = $1 AND consumedAt IS NULL AND expiresAt > now() RETURNING email, locale`.
   - Upsert the user by email (set `emailVerifiedAt` on first sign-in, `locale` from the token), plus `AuthAccount(EMAIL, email)`.
@@ -488,6 +492,7 @@ interface ObjectStorage {
 
 - [ ] **Step 1: Failing tests.** `TURNSTILE_VERIFIER` is overridden with a double; mail is read from Mailpit.
   - Happy path: request → Mailpit has one email whose link has a 43-char token → verify → 200 + `Set-Cookie: st_session` → `GET /me` 200.
+  - Preview: returns the token's email; 10 previews then verify → the verify still succeeds (preview does not consume); after verify, preview → 400; an expired token → 400; exceeding the preview limit → 429.
   - **Review Focus 2:** two concurrent verifies with the same token → exactly one 200, one 400, and one `AuthSession` row.
   - **Review Focus 3:** unknown, existing and blocked emails → identical status and body; the blocked user receives no email.
   - The 6th request for one email within an hour → 202 and no 6th email.
@@ -563,7 +568,7 @@ interface ObjectStorage {
   - renders an email form (RHF + `magicLinkRequestSchema`), the Turnstile widget with `turnstileSiteKey`, and a Google button when enabled;
   - success state: "check your email"; error states: `TURNSTILE_FAILED`, `RATE_LIMITED`, `OAUTH_FAILED` (from the query), and network failure;
   - the Turnstile script `https://challenges.cloudflare.com/turnstile/v0/api.js` loads only on this page (ADR 0012).
-- `/auth/verify`: reads `token` from the query and shows a single "Sign in" button that POSTs verify, then `router.replace('/app')`. Loading the page performs no request with the token (**Review Focus 1**). Error state: `MAGIC_LINK_INVALID` with a link back to `/login`.
+- `/auth/verify`: reads `token` from the query and calls preview. The token stays in the URL, so a reload still works. Loading state, then "Sign in as <email>" with a "Sign in" button that POSTs verify, then `router.replace('/app')`. The page sets `Referrer-Policy: no-referrer`. Loading the page never consumes the token (**Review Focus 1**). Error state (from preview or verify): `MAGIC_LINK_INVALID` with a link back to `/login`; `ACCOUNT_BLOCKED` from verify; network failure with retry.
 - `/app` layout, client side: `useQuery(['me'])` → 401 redirects to `/login`. It renders email + logout (POST logout, then clear the query cache, then `/login`). This is a placeholder dashboard until Phase 4.
 - Every string comes from `messages/{uk,en}.json`; the catalog key-parity test still passes.
 
@@ -585,9 +590,9 @@ interface ObjectStorage {
 **Interfaces — consumes:** Tasks 12–15. `latestMagicLink(to: string): Promise<string>` polls `GET http://127.0.0.1:8025/api/v1/search?query=to:<addr>` and extracts the link.
 
 - [ ] **Step 1: Tests** (all projects: iPhone 15, Pixel 7, desktop Chrome):
-  - **Magic link:** `/login` → email → Turnstile auto-passes (test key) → "check your email" → open the link **twice** (page loads only, Review Focus 1) → click Sign in → `/app` shows the email.
+  - **Magic link:** `/login` → email → Turnstile auto-passes (test key) → "check your email" → open the link **twice** (page loads only, Review Focus 1) → the page shows "Sign in as <that email>" → click Sign in → `/app` shows the email.
   - **Logout:** → `/login`; `/app` then redirects to `/login`.
-  - **Invalid link:** `/auth/verify?token=<random 43>` → Sign in → invalid message with a link to `/login`.
+  - **Invalid link:** `/auth/verify?token=<random 43>` → invalid message with a link to `/login`, shown straight after the preview call (no Sign in button).
   - **No horizontal scroll** on `/login` and `/app`.
   - **Keyboard only:** Tab to the email field, type, Tab to submit, Enter → success state.
 - [ ] **Step 2:** Run `docker compose … up -d --wait && pnpm e2e` → all pass.
