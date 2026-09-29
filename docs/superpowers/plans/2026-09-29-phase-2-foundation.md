@@ -66,6 +66,8 @@ Additional constraints:
 
 ## Deliberate deviations from the spec (for owner review)
 
+**Status: all five approved by the owner on 2026-09-29.**
+
 1. **Magic link verification is a POST from a web page, not `GET /auth/magic-link/verify`.** Email security scanners (for example Outlook Safe Links) fetch GET links and would burn single-use tokens. The email links to `${APP_ORIGIN}/auth/verify?token=…`. That page shows a "Sign in" button, which calls `POST /api/v1/auth/magic-link/verify`. This updates spec §9.
 2. **Legal acceptance (`LegalAcceptance`, acceptance gate) moves to Phase 4 slice 10 (Legal pages).** The texts do not exist yet (D15/F8). Slice 10 adds a gate that also covers users created before it, and there are no real users before launch.
 3. **The Jobs port (pg-boss) is deferred to Phase 4 slice 5 (upload),** its first consumer. A port without a consumer would be dead code (CLAUDE.md §14).
