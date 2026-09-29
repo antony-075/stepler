@@ -13,7 +13,11 @@ async function ruleIds(config: Linter.Config[], file: string): Promise<(string |
 }
 
 describe('react preset', () => {
-  const config = react({ tsconfigRootDir: `${fixtures}react` });
+  // The config package does not install react, so pin the version instead of 'detect'.
+  const config = [
+    ...react({ tsconfigRootDir: `${fixtures}react` }),
+    { settings: { react: { version: '19.3' } } },
+  ];
 
   test('literal JSX text is an error', async () => {
     expect(await ruleIds(config, 'react/literal-text.tsx')).toContain('react/jsx-no-literals');
