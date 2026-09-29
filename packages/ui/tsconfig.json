@@ -1,0 +1,8 @@
+{
+  "extends": "@eventdrop/config/tsconfig/react-library.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": { "@eventdrop/ui/*": ["./src/*"] }
+  },
+  "include": ["src", ".storybook/*.ts", "*.ts"]
+}

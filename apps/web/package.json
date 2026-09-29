@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@eventdrop/ui": "workspace:*",
     "next": "16.3.6",
     "next-intl": "4.14.7",
     "react": "19.3.0",

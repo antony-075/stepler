@@ -9,6 +9,8 @@ const config: NextConfig = {
   // Monorepo root, so the standalone output traces workspace packages.
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   poweredByHeader: false,
+  // packages/ui ships TypeScript sources.
+  transpilePackages: ['@eventdrop/ui'],
 };
 
 export default withNextIntl(config);
