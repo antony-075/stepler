@@ -7,6 +7,7 @@ import { ErrorsModule } from './errors/errors.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LimitsModule } from './limits/limits.module.js';
 import { LoggingModule } from './logging/logging.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
 
 export interface AppModuleOptions {
@@ -25,6 +26,7 @@ export class AppModule {
         ErrorsModule,
         DatabaseModule,
         StorageModule,
+        MailModule,
         LimitsModule,
         HealthModule,
       ],
