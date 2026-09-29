@@ -71,7 +71,7 @@ Trade-offs:
 - `contracts` merges the previously planned `types` + `validation`: schemas and types always change together; splitting them creates a false boundary.
 - Storybook lives in `packages/ui` next to the components. If page-level stories are needed later, move it to `apps/storybook`.
 - `apps/worker` shares the Prisma client and domain modules with `api` through workspace code, not through HTTP. It is a second entrypoint of the same modular monolith, not a microservice.
-- **[verify]** NestJS (CJS by default) consuming ESM packages (`contracts`, Prisma client). Options: build `contracts` with tsup (dual output) or run `api` as ESM. Decided in spike S2.
+- Module format (spike S2, see ADR 0005): NestJS 12 is ESM-only, so `api`, `worker` and `contracts` are ESM. `contracts` is built with plain `tsc`. Prisma client uses the `prisma-client` generator with ESM output.
 
 ---
 
@@ -290,7 +290,7 @@ Decision details: ADR 0004.
 - Errors: RFC 9457 `application/problem+json` with a stable `code` (e.g. `LINK_INACTIVE`, `QUOTA_EXCEEDED`, `FILE_TYPE_NOT_ALLOWED`) and `retryable` flag. The web app translates codes; the API does not return localized prose.
 - Pagination: opaque cursor over `(createdAt, id)`, `limit` ≤ 100.
 - Idempotency: uploads via `clientUploadId`; text submissions and reports via `Idempotency-Key` header; completion is idempotent by upload session.
-- Swagger/OpenAPI generated from the `contracts` schemas; the OpenAPI document is snapshotted and diffed in CI.
+- Swagger/OpenAPI generated from the `contracts` schemas (Zod 4 `z.toJSONSchema`, see ADR 0005); the OpenAPI document is snapshotted and diffed in CI.
 
 Resource map (MVP):
 
@@ -551,7 +551,7 @@ Decision details: ADR 0011.
 | E2E | Playwright (mobile + desktop projects, network throttling) | admin creates collection & shares; guest uploads multiple files with a failure + retry; view-only link; revoked link; guest deletes own and cannot delete another's; report flow |
 | Contract | OpenAPI snapshot diff in CI | unintended breaking changes |
 
-**[verify S3]** Vitest with NestJS needs SWC (decorator metadata); fallback is Jest for `apps/api` only.
+Vitest with NestJS runs through `unplugin-swc` for decorator metadata (verified in spike S3, ADR 0005).
 
 ---
 
