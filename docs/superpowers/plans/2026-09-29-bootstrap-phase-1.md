@@ -192,7 +192,8 @@ ADR 0011: add `## Spike S8 result (date)` with the chosen setup and caveats. Del
 **Interfaces:**
 - Produces:
   - `@eventdrop/config/tsconfig/{base,nest,next,library}.json`;
-  - ESLint flat-config arrays `@eventdrop/config/eslint/{base,react,next,nest}`;
+  - ESLint flat-config factories `@eventdrop/config/eslint/{base,react,next,nest}`: `(options: { tsconfigRootDir: string }) => Linter.Config[]` (type-aware linting needs the consumer's tsconfig root);
+  - tsconfig presets also include `react-library.json` (for `packages/ui`);
   - Prettier config `@eventdrop/config/prettier`.
 
 - [ ] **Step 1: Write the failing test**

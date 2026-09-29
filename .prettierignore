@@ -1,0 +1,13 @@
+# Markdown and agent/skill files are not auto-formatted (avoids format-only diffs in docs).
+*.md
+.claude/
+docs/
+skills-lock.json
+pnpm-lock.yaml
+dist/
+.next/
+coverage/
+storybook-static/
+playwright-report/
+test-results/
+**/generated/

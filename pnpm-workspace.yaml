@@ -2,3 +2,17 @@ packages:
   - apps/*
   - packages/*
   - e2e
+
+# Shared versions. Keep in sync with docs/development/README.md.
+catalog:
+  typescript: 6.0.3
+  vitest: 4.1.11
+  '@vitest/coverage-v8': 4.1.11
+  '@types/node': 24.19.0
+  eslint: 9.39.5
+  zod: 4.6.5
+
+# pnpm 11 blocks dependency build scripts unless listed here.
+allowBuilds:
+  '@scarf/scarf': false
+  unrs-resolver: false

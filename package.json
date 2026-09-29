@@ -16,6 +16,7 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@eventdrop/config": "workspace:*",
     "prettier": "3.9.9",
     "turbo": "2.11.5",
     "typescript": "6.0.3"
