@@ -54,6 +54,16 @@ export const CheckedDark: Story = {
   },
 };
 
+/** A colour token as `getComputedStyle` reports it (`rgb(r, g, b)`). */
+function tokenColor(token: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${token})`;
+  document.body.append(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 export const Disabled: Story = {
   args: { disabled: true },
   play: async ({ canvas }) => {
@@ -61,8 +71,10 @@ export const Disabled: Story = {
     await expect(control).toBeDisabled();
     await userEvent.click(canvas.getByText('Accept uploads'), { pointerEventsCheck: 0 });
     await expect(control).toHaveAttribute('aria-checked', 'false');
-    await expect(canvas.getByTestId('row').getBoundingClientRect().height).toBeGreaterThanOrEqual(
-      44,
-    );
+    const row = canvas.getByTestId('row');
+    await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    // The label dims with its control.
+    await expect(getComputedStyle(row).cursor).toBe('not-allowed');
+    await expect(getComputedStyle(row).color).toBe(tokenColor('--muted-foreground'));
   },
 };
