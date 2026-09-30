@@ -31,7 +31,7 @@ export function AdminNav({ items }: { items: AdminNavItem[] }) {
             <Link
               href={item.href}
               aria-current={current(item.href)}
-              className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-muted-foreground no-underline outline-none hover:bg-foreground/[0.06] hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70 aria-[current=page]:text-foreground aria-[current=page]:underline aria-[current=page]:decoration-primary aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
+              className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-muted-foreground no-underline outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70 aria-[current=page]:text-foreground aria-[current=page]:underline aria-[current=page]:decoration-primary aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
             >
               {item.label}
             </Link>
