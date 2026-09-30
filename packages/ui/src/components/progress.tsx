@@ -27,7 +27,7 @@ function Progress({ value, label, valueText, className }: ProgressProps) {
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
         className={cn(
-          'h-full w-full flex-1 bg-primary transition-transform duration-300 motion-reduce:transition-none',
+          'h-full w-full bg-primary transition-transform duration-300 motion-reduce:transition-none',
           clamped === null && 'animate-pulse motion-reduce:animate-none',
         )}
         style={{ transform: `translateX(-${100 - (clamped ?? 100)}%)` }}

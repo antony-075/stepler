@@ -1,3 +1,4 @@
+import { Card, CardContent } from '@stepler/ui/components/card';
 import { StapledStack } from '@stepler/ui/components/stapled-stack';
 import { getTranslations } from 'next-intl/server';
 import { fetchAuthMethods } from '@/api/server';
@@ -35,17 +36,19 @@ export async function SignInLanding({ error }: { error?: unknown }) {
           </section>
 
           <section className="[grid-area:auth] lg:self-center">
-            <div className="animate-in fade-in slide-in-from-bottom-2 rounded-[20px] border bg-card p-5 shadow-card duration-300 sm:p-7 lg:p-8">
-              {methods === null ? (
-                <p role="alert">{tl('unavailable')}</p>
-              ) : (
-                <LoginForm
-                  turnstileSiteKey={methods.turnstileSiteKey}
-                  googleEnabled={methods.google}
-                  initialError={callbackError(error)}
-                />
-              )}
-            </div>
+            <Card className="animate-in duration-300 fade-in slide-in-from-bottom-2">
+              <CardContent>
+                {methods === null ? (
+                  <p role="alert">{tl('unavailable')}</p>
+                ) : (
+                  <LoginForm
+                    turnstileSiteKey={methods.turnstileSiteKey}
+                    googleEnabled={methods.google}
+                    initialError={callbackError(error)}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </section>
 
           <StapledStack
