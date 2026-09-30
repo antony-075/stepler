@@ -24,11 +24,17 @@ function PageHeader({ title, description, actions, back, className }: PageHeader
             {back}
           </div>
         ) : null}
-        <h1 className="font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)] leading-tight font-medium tracking-tight [overflow-wrap:anywhere]">
+        <h1
+          data-slot="page-header-title"
+          className="font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)] leading-tight font-medium tracking-tight [overflow-wrap:anywhere]"
+        >
           {title}
         </h1>
         {description ? (
-          <p className="max-w-prose text-muted-foreground [overflow-wrap:anywhere]">
+          <p
+            data-slot="page-header-description"
+            className="max-w-prose text-muted-foreground [overflow-wrap:anywhere]"
+          >
             {description}
           </p>
         ) : null}

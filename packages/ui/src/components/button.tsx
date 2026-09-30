@@ -33,6 +33,10 @@ const buttonVariants = cva(
   },
 );
 
+/** The 44px icon-only close button of dialogs and toasts (muted, not a primary action). */
+const closeButtonClassName =
+  'inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70';
+
 type ButtonProps = ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
@@ -58,4 +62,4 @@ function Button({
   );
 }
 
-export { Button, buttonVariants, type ButtonProps };
+export { Button, buttonVariants, closeButtonClassName, type ButtonProps };

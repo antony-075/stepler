@@ -5,7 +5,14 @@ import { type MouseEvent, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
 import { Alert } from './alert';
 import { Button } from './button';
-import { DialogFooter, DialogHeader, dialogContentClassName } from './dialog';
+import {
+  DialogFooter,
+  DialogHeader,
+  dialogContentClassName,
+  dialogDescriptionClassName,
+  dialogOverlayClassName,
+  dialogTitleClassName,
+} from './dialog';
 import { Spinner } from './spinner';
 
 type ConfirmDialogProps = {
@@ -94,7 +101,7 @@ function ConfirmDialog({
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay
           data-slot="confirm-dialog-overlay"
-          className="fixed inset-0 z-50 bg-black/50 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0"
+          className={dialogOverlayClassName}
         />
         <AlertDialogPrimitive.Content
           data-slot="confirm-dialog"
@@ -122,13 +129,13 @@ function ConfirmDialog({
           <DialogHeader>
             <AlertDialogPrimitive.Title
               data-slot="confirm-dialog-title"
-              className="text-lg leading-6 font-bold"
+              className={dialogTitleClassName}
             >
               {title}
             </AlertDialogPrimitive.Title>
             <AlertDialogPrimitive.Description
               data-slot="confirm-dialog-description"
-              className="text-sm text-muted-foreground"
+              className={dialogDescriptionClassName}
             >
               {description}
             </AlertDialogPrimitive.Description>

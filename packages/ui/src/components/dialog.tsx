@@ -1,9 +1,10 @@
 'use client';
 
-import { XIcon } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
+import { closeButtonClassName } from './button';
 
 function Dialog(props: ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -21,21 +22,27 @@ function DialogClose(props: ComponentProps<typeof DialogPrimitive.Close>) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
+// Overlay, panel, title and description classes are shared with `ConfirmDialog` (Radix
+// AlertDialog) so both dialogs match.
+const dialogOverlayClassName = cn(
+  'fixed inset-0 z-50 bg-black/50',
+  'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
+);
+
+const dialogTitleClassName = 'text-lg leading-6 font-bold';
+
+const dialogDescriptionClassName = 'text-sm text-muted-foreground';
+
 function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn(
-        'fixed inset-0 z-50 bg-black/50',
-        'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
-        className,
-      )}
+      className={cn(dialogOverlayClassName, className)}
       {...props}
     />
   );
 }
 
-/** Panel classes shared with `ConfirmDialog` (Radix AlertDialog) so both overlays match. */
 const dialogContentClassName = cn(
   'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-card p-6 text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] sm:max-w-md',
   'duration-200 motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
@@ -71,9 +78,9 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             aria-label={closeLabel}
-            className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
+            className={cn(closeButtonClassName, 'absolute top-2 right-2')}
           >
-            <XIcon aria-hidden="true" className="size-4" />
+            <X aria-hidden="true" className="size-4" />
           </DialogPrimitive.Close>
         ) : null}
       </DialogPrimitive.Content>
@@ -106,7 +113,7 @@ function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimit
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn('text-lg leading-6 font-bold', className)}
+      className={cn(dialogTitleClassName, className)}
       {...props}
     />
   );
@@ -119,7 +126,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn('text-sm text-muted-foreground', className)}
+      className={cn(dialogDescriptionClassName, className)}
       {...props}
     />
   );
@@ -131,11 +138,14 @@ export {
   DialogContent,
   dialogContentClassName,
   DialogDescription,
+  dialogDescriptionClassName,
   DialogFooter,
   DialogHeader,
   DialogOverlay,
+  dialogOverlayClassName,
   DialogPortal,
   DialogTitle,
+  dialogTitleClassName,
   DialogTrigger,
   type DialogContentProps,
 };

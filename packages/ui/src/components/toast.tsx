@@ -13,6 +13,7 @@ import {
   useState,
 } from 'react';
 import { cn } from '../lib/utils';
+import { closeButtonClassName } from './button';
 
 type ToastVariant = 'info' | 'success' | 'error';
 
@@ -220,7 +221,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
             </div>
             <ToastPrimitive.Close
               aria-label={closeLabel}
-              className="-my-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
+              className={cn(closeButtonClassName, '-my-3')}
             >
               <X aria-hidden="true" className="size-4" />
             </ToastPrimitive.Close>

@@ -40,10 +40,17 @@ function EmptyState({
           {icon}
         </div>
       ) : null}
-      <Heading className="font-display text-lg leading-tight font-medium tracking-tight">
+      <Heading
+        data-slot="empty-state-title"
+        className="font-display text-lg leading-tight font-medium tracking-tight"
+      >
         {title}
       </Heading>
-      {description ? <p className="text-muted-foreground">{description}</p> : null}
+      {description ? (
+        <p data-slot="empty-state-description" className="text-muted-foreground">
+          {description}
+        </p>
+      ) : null}
       {action ? (
         <div data-slot="empty-state-action" className="mt-2 flex flex-wrap justify-center gap-2">
           {action}
