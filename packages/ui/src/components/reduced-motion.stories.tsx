@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './dropdown-menu';
+import { Input } from './input';
 import { Toaster, ToastProvider, useToast } from './toast';
 
 /**
@@ -108,5 +109,24 @@ export const Toast: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     await waitFor(() => expect(document.querySelector('[data-slot="toast"]')).not.toBeNull());
     await expectStill(document.querySelector('[data-slot="toast"]')!);
+  },
+};
+
+/**
+ * Button and Input drop their colour/ring transitions. (The press offset, `motion-reduce:active:
+ * translate-y-0`, is not asserted: synthetic events do not set `:active`.)
+ */
+export const Controls: Story = {
+  render: () => (
+    <div className="grid gap-2">
+      <Button>Save</Button>
+      <Input aria-label="Name" />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expectReducedMotion();
+    const button = canvas.getByRole('button', { name: 'Save' });
+    await expect(getComputedStyle(button).transitionProperty).toBe('none');
+    await expect(getComputedStyle(canvas.getByRole('textbox')).transitionProperty).toBe('none');
   },
 };
