@@ -59,7 +59,7 @@ What we keep from the spike:
 
 ### Accepted risks and follow-ups (final Phase 2 review, 2026-09-30)
 
-- **Client IP before launch.** Behind the web proxy without a trusted edge, every client shares the web server's IP, so per-IP limits act as global limits. Setting `API_TRUST_PROXY` (and `TRUST_PROXY_HEADERS` on the web) correctly for the chosen hosting is a launch gate.
+- **Client IP before launch.** Behind the web proxy without a trusted edge, every client shares the web server's IP, so per-IP limits act as global limits. Setting `API_TRUST_PROXY` (and `CLIENT_IP_HEADER` on the web) correctly for the chosen hosting is a launch gate. Staging on Render uses `CLIENT_IP_HEADER=cf-connecting-ip` (ADR 0014).
 - **Linking by a verified Google email trusts Google's verification.** For non-Gmail addresses that verification may be old (e.g. a former employee keeping a Google account on a company address). Accepted for MVP; revisit (e.g. only gmail.com or `hd`-verified domains) if it matters. The same applies to `OPERATOR_EMAILS`.
 - **`__Host-` cookie prefix.** When `COOKIE_SECURE` is on, `__Host-st_session` would stop a sibling subdomain from planting a session cookie. Decide with the hosting/domain setup.
 

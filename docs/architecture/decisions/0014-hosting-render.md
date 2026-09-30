@@ -14,7 +14,7 @@ Stepler needs EU hosting for the web app (Next.js), the API (NestJS) and Postgre
 - **API** is a private service (`pserv`, `0.5c-512mb`). It is reachable only by the web service over Render's private network (`API_INTERNAL_HOSTPORT` from `fromService … hostport`). The same-origin topology (spec §2) is unchanged.
 - **PostgreSQL 18** is managed by Render (`0.1c-256mb`, 1 GB) with no public access (`ipAllowList: []`).
 - **Migrations:** `preDeployCommand: node_modules/.bin/prisma migrate deploy` runs from the new API image before it serves. The API image therefore ships the Prisma CLI and `prisma/` (the CLI is a runtime dependency). `verify-images.sh` checks that the command applies migrations and is idempotent.
-- **Client IP:** Render, via Cloudflare, puts the client IP first in `X-Forwarded-For`. With `TRUST_PROXY_HEADERS=true`, the web server forwards only that first entry, validated as an IP, and drops every other forwarding header. The API trusts one proxy (`API_TRUST_PROXY=1`). That spoofed headers cannot change the bucket is checked on staging (runbook step 7).
+- **Client IP:** with `CLIENT_IP_HEADER=cf-connecting-ip`, the web server forwards only the IP from Cloudflare's `CF-Connecting-IP`, validated as one IP address, as a single `X-Forwarded-For`; it drops every other forwarding header. Cloudflare, in front of every Render service, sets that header from the connection it received and overwrites client-sent values. The API trusts one proxy (`API_TRUST_PROXY=1`). The spoofing check on staging is runbook step 7.
 - **Other providers for staging:**
   - Cloudflare R2 bucket in the EU jurisdiction (ADR 0008);
   - Cloudflare Turnstile widget for the staging host;
@@ -36,3 +36,9 @@ Stepler needs EU hosting for the web app (Next.js), the API (NestJS) and Postgre
 - The API image is larger because it contains the Prisma CLI and its engines.
 - Per-IP limits stay in memory and are correct only with a single API instance; shared storage is still open (spec §21).
 - Production needs its own services, database, bucket and credentials. It is a separate Blueprint or environment with branch `main`, decided when production is set up.
+
+## Staging finding: X-Forwarded-For is forgeable on Render (2026-09-30)
+
+The first design trusted the first `X-Forwarded-For` entry, based on Render guidance that it is the real client IP. The runbook check disproved this. With the preview limit set to 3, five requests carrying different forged `X-Forwarded-For` values all got 400 and never reached 429. Five plain requests from the same machine hit 429 on the fourth. Render keeps the client-sent value in front of the entries its proxies append.
+
+The fix is `CLIENT_IP_HEADER=cf-connecting-ip`, as described above. The same spoofing check is repeated after deploy.

@@ -19,6 +19,8 @@ const HOP_BY_HOP = new Set([
 
 /** Client-controlled claims about the original request; spoofable unless a trusted edge overwrites them. */
 const FORWARDING = new Set([
+  'cf-connecting-ip',
+  'true-client-ip',
   'forwarded',
   'x-forwarded-for',
   'x-forwarded-host',
@@ -36,31 +38,32 @@ export function upstreamUrl(pathname: string, search: string, base: string): URL
   return url;
 }
 
-/**
- * The client IP a trusted edge put first in X-Forwarded-For (Render/Cloudflare do this), or
- * `undefined` when it is not a plain IP address.
- */
-function trustedClientIp(incoming: Headers): string | undefined {
-  const first = incoming.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
-  return isIP(first) === 0 ? undefined : first;
+/** The single IP address in the edge's client-IP header, or `undefined`. */
+function edgeClientIp(incoming: Headers, header: string): string | undefined {
+  const value = incoming.get(header)?.trim() ?? '';
+  return isIP(value) === 0 ? undefined : value;
 }
 
 /**
- * Request headers for the API. Client-supplied forwarding headers never pass. Behind a trusted
- * edge, the API gets exactly one `X-Forwarded-For: <client IP>`, and trusts this web server as
- * its only proxy (`API_TRUST_PROXY=1`), so per-IP limits see the real client.
+ * Request headers for the API. Client-supplied forwarding headers never pass. When the edge
+ * sets the client IP in a header it overwrites (`CLIENT_IP_HEADER`, e.g. Cloudflare's
+ * `cf-connecting-ip` on Render), the API gets exactly one `X-Forwarded-For: <that IP>` and
+ * trusts this web server as its only proxy (`API_TRUST_PROXY=1`).
+ *
+ * Never X-Forwarded-For itself: Render keeps the client-sent value in front of what its
+ * proxies append, so its first entry is forgeable (verified on staging, ADR 0014).
  */
 export function upstreamRequestHeaders(
   incoming: Headers,
-  options: { trustForwardedHeaders: boolean },
+  options: { clientIpHeader: string | undefined },
 ): Headers {
   const headers = new Headers();
   incoming.forEach((value, name) => {
     if (name === 'host' || HOP_BY_HOP.has(name) || FORWARDING.has(name)) return;
     headers.append(name, value);
   });
-  if (options.trustForwardedHeaders) {
-    const clientIp = trustedClientIp(incoming);
+  if (options.clientIpHeader !== undefined) {
+    const clientIp = edgeClientIp(incoming, options.clientIpHeader);
     if (clientIp !== undefined) headers.set('x-forwarded-for', clientIp);
   }
   return headers;

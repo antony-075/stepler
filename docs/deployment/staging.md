@@ -2,12 +2,12 @@
 
 Architecture and reasons: ADR 0014. Staging deploys the `stage` branch (docs/development/README.md → Branches and environments). All secrets live in the Render dashboard; never commit or paste them into chat or issues.
 
-The steps below are done once, in this order. `<staging-host>` means the web service's address, `stepler-staging.onrender.com` (Render may add a suffix if the name is taken; the actual host is shown on the service page after step 5).
+The steps below are done once, in this order. `<staging-host>` means the web service's address. Use `stepler-staging.onrender.com` from the start: Render derives it from the service name and adds a suffix only if that name is taken. After step 5 the real host is shown on the service page. If it differs, update `APP_ORIGIN` in Render, the Turnstile hostname and the Google redirect URI; all three can be edited later.
 
 ## 1. Cloudflare R2: bucket and key
 
 1. Cloudflare dashboard → R2 → **Create bucket**: name `stepler-staging`, location **Jurisdiction: European Union**.
-2. Bucket → Settings → **CORS policy**, paste this and replace the origin once the host is known (step 5):
+2. **No CORS policy yet.** CORS only matters when browsers upload straight to the bucket, which arrives with the upload slice (Phase 4). Today only the API talks to R2 (the readiness check), and CORS does not apply to server requests. The rule to add then (with the real staging host):
    ```json
    [
      {
@@ -57,7 +57,7 @@ While the app is in Testing mode, only the listed test users can sign in.
    | `S3_BUCKET` | `stepler-staging` |
    | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | from step 1 |
 
-   If Render assigns a different host than expected, update `APP_ORIGIN`, the R2 CORS origin, the Turnstile hostname and the Google redirect URI to the real one.
+   If Render assigns a different host than expected, update `APP_ORIGIN`, the Turnstile hostname and the Google redirect URI to the real one.
 3. Apply. The first deploy builds both images, runs the migrations (the API's pre-deploy command) and starts the services.
 
 ## 6. Deploy flow afterwards
@@ -71,7 +71,7 @@ A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `sta
 - Google sign-in with a test user.
 - **Client IP check** (ADR 0014): temporarily set `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR=3` on the API and redeploy.
   1. Send 4 preview requests from one machine, each with a different spoofed header:
-     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/magic-link/preview`
+     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -H 'CF-Connecting-IP: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/magic-link/preview`
   2. The 4th request must return 429: spoofing does not create new buckets.
   3. The same test from another network must still get 400, not 429: clients do not share one bucket.
   4. Remove the override afterwards.

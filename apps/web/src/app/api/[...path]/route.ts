@@ -20,7 +20,7 @@ async function forward(request: NextRequest): Promise<Response> {
       {
         method: request.method,
         headers: upstreamRequestHeaders(request.headers, {
-          trustForwardedHeaders: env.TRUST_PROXY_HEADERS,
+          clientIpHeader: env.CLIENT_IP_HEADER,
         }),
         body: hasBody ? request.body : undefined,
         // Stream request bodies instead of buffering them.
