@@ -39,7 +39,7 @@
 - **Interaction:**
   - touch targets ≥ 44px for anything tappable;
   - no hover-only behaviour;
-  - visible focus (`focus-visible:ring-[3px] ring-ring/50`);
+  - visible focus (`focus-visible:ring-[3px] ring-ring/70`; the invalid state uses `ring-destructive/70`). Measured against card / page background: ring 3.49 / 3.31 light, 4.60 / 4.85 dark; destructive 3.19 / 3.03 light, 4.25 / 4.49 dark (WCAG 1.4.11 ≥ 3:1; `/50` was 2.33:1 on the card in light);
   - motion ≤ 300ms and disabled under `prefers-reduced-motion`.
 - **Layout:** mobile-first; stories are checked at the 360, 768 and 1280 viewports (Task 1).
 - **Copy:** web copy is in `apps/web/messages/{uk,en}.json` with key parity (existing test). Ukrainian is the default.

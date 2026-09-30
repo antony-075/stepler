@@ -38,10 +38,10 @@ function RadioGroupItem({
         data-slot="radio-group-item"
         className={cn(
           'aspect-square size-5 shrink-0 rounded-full border border-input bg-card shadow-xs transition-[border-color,box-shadow] outline-none motion-reduce:transition-none',
-          'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+          'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70',
           'data-[state=checked]:border-primary',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          'aria-invalid:border-destructive aria-invalid:ring-destructive/20',
+          'aria-invalid:border-destructive aria-invalid:ring-destructive/70',
         )}
         {...props}
       >

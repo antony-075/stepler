@@ -192,7 +192,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
               if (!next) dismiss(id);
             }}
             className={cn(
-              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border bg-card p-4 pr-2 text-sm text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] focus-visible:ring-[3px] focus-visible:ring-ring/50',
+              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border bg-card p-4 pr-2 text-sm text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] focus-visible:ring-[3px] focus-visible:ring-ring/70',
               'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:duration-200 motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
               'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:duration-150 motion-safe:data-[state=closed]:fade-out',
               // The swipe itself follows the finger; only the snap-back and the exit are animated.
@@ -220,7 +220,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
             </div>
             <ToastPrimitive.Close
               aria-label={closeLabel}
-              className="-my-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              className="-my-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
             >
               <X aria-hidden="true" className="size-4" />
             </ToastPrimitive.Close>

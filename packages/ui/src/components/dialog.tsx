@@ -71,7 +71,7 @@ function DialogContent({
           <DialogPrimitive.Close
             data-slot="dialog-close"
             aria-label={closeLabel}
-            className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
           >
             <XIcon aria-hidden="true" className="size-4" />
           </DialogPrimitive.Close>

@@ -72,7 +72,7 @@ function ToggleGroupItem({ className, icon, hideLabel, children, ...props }: Tog
       data-slot="toggle-group-item"
       className={cn(
         'inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-semibold whitespace-nowrap text-muted-foreground transition-[color,background-color,box-shadow] outline-none motion-reduce:transition-none sm:px-3',
-        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
         'data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm',
         'disabled:pointer-events-none disabled:opacity-50',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",

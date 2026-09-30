@@ -37,7 +37,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
       data-slot="tabs-trigger"
       className={cn(
         'inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] outline-none motion-reduce:transition-none',
-        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
         'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm',
         'disabled:pointer-events-none disabled:opacity-50',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -53,7 +53,7 @@ function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitiv
     <TabsPrimitive.Content
       data-slot="tabs-content"
       className={cn(
-        'min-w-0 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'min-w-0 rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring/70',
         className,
       )}
       {...props}
