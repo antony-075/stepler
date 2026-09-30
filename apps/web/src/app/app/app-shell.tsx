@@ -1,30 +1,23 @@
 'use client';
 
 import { Button } from '@stepler/ui/components/button';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useRef } from 'react';
-import { apiRequest, isApiError } from '@/api/client';
+import { isApiError } from '@/api/client';
 import { fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { SiteHeader } from '@/components/site-header';
 import { errorMessageKey } from '@/errors/error-message';
-import { LanguageSwitch } from '@/i18n/language-switch';
 import { setLocaleCookie } from '@/i18n/set-locale';
+import { AccountMenu } from './account-menu';
+import { AdminNav } from './admin-nav';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const locale = useLocale();
   const me = useQuery({ queryKey: ME_QUERY_KEY, queryFn: fetchMe });
-  const logout = useMutation({
-    mutationFn: () => apiRequest('/auth/logout', { method: 'POST' }),
-    onSuccess: () => {
-      queryClient.clear();
-      router.replace('/login');
-    },
-  });
 
   // ADR 0011: the profile locale comes before the cookie. The server only sees the cookie, so
   // when the profile disagrees (set on another device) the cookie follows it and the page is
@@ -65,15 +58,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="stepler-atmosphere flex min-h-dvh flex-col">
       <SiteHeader>
-        {/* Wraps under the brand on narrow phones until the account menu replaces it. */}
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
-          <LanguageSwitch />
-          <p className="max-w-[40vw] min-w-0 truncate text-sm text-muted-foreground sm:max-w-xs">
-            {t('app.signedInAs', { email: me.data.email })}
-          </p>
-          <Button variant="outline" disabled={logout.isPending} onClick={() => logout.mutate()}>
-            {t('app.logout')}
-          </Button>
+        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+          <AdminNav items={[{ href: '/app', label: t('app.nav.collections') }]} />
+          <AccountMenu email={me.data.email} />
         </div>
       </SiteHeader>
       <div className="flex-1">{children}</div>

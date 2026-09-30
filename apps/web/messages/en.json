@@ -50,7 +50,13 @@
     "signedInAs": "Signed in as {email}",
     "logout": "Sign out",
     "placeholderTitle": "Your collections",
-    "placeholderText": "Your collections will appear here."
+    "placeholderText": "Your collections will appear here.",
+    "nav": {
+      "label": "Sections",
+      "collections": "Collections"
+    },
+    "menu": "Menu",
+    "logoutFailed": "Couldn't sign out. Try again."
   },
   "brand": {
     "name": "Stepler",
@@ -78,7 +84,8 @@
     "label": "Theme",
     "system": "System",
     "light": "Light",
-    "dark": "Dark"
+    "dark": "Dark",
+    "cycle": "Theme: {current}. Press to switch to {next}"
   },
   "language": {
     "label": "Language",

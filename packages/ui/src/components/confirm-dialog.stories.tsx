@@ -3,6 +3,12 @@ import { useState } from 'react';
 import { expect, fn, screen, userEvent, waitFor } from 'storybook/test';
 import { Button } from './button';
 import { ConfirmDialog } from './confirm-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './dropdown-menu';
 
 type DemoProps = {
   onConfirm: () => Promise<void>;
@@ -182,4 +188,86 @@ export const Phone: Story = {
       await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
     }
   },
+};
+
+function MenuDemo({ onConfirm }: DemoProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline">Photo actions</Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem variant="destructive" onSelect={() => setOpen(true)}>
+            Delete photo
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Delete this photo?"
+        description="Guests will no longer see it. This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        pendingLabel="Deleting"
+        destructive
+        onConfirm={onConfirm}
+        errorMessage="Could not delete the photo. Try again."
+      />
+    </>
+  );
+}
+
+/**
+ * Opened from a menu item, which unmounts as the menu closes: focus must still return to the
+ * menu trigger (not fall to the page), and the page must stay clickable (no `pointer-events:
+ * none` left on the body by the two stacked modal layers).
+ */
+export const FromMenu: Story = {
+  render: (args) => <MenuDemo {...args} />,
+  play: async ({ args, canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Photo actions' });
+    // Keyboard and pointer, closed each way the dialog can close.
+    const runs = [
+      ['keyboard', '{Escape}'],
+      ['keyboard', 'Cancel'],
+      ['pointer', 'Cancel'],
+      ['pointer', '{Escape}'],
+      ['pointer', 'Delete'],
+    ] as const;
+    for (const [input, close] of runs) {
+      if (input === 'keyboard') {
+        trigger.focus();
+        await userEvent.keyboard('{Enter}');
+        const item = await screen.findByRole('menuitem', { name: 'Delete photo' });
+        await waitFor(() => expect(item).toHaveFocus());
+        await userEvent.keyboard('{Enter}');
+      } else {
+        await userEvent.click(trigger);
+        await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete photo' }));
+      }
+      await screen.findByRole('alertdialog', { name: 'Delete this photo?' });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus());
+      if (close === '{Escape}') await userEvent.keyboard(close);
+      else await userEvent.click(screen.getByRole('button', { name: close }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+    }
+    await expect(args.onConfirm).toHaveBeenCalledTimes(1);
+    // The page is clickable again: a pointer click reopens the menu.
+    await userEvent.click(trigger);
+    await screen.findByRole('menuitem', { name: 'Delete photo' });
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(document.querySelector('[data-aria-hidden]')).toBeNull());
+  },
+};
+
+/** The same without exit animations: the menu unmounts at once instead of fading out. */
+export const FromMenuReducedMotion: Story = {
+  ...FromMenu,
+  tags: ['!dev', '!autodocs', 'reduced-motion'],
 };

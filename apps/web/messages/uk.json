@@ -50,7 +50,13 @@
     "signedInAs": "Ви увійшли як {email}",
     "logout": "Вийти",
     "placeholderTitle": "Ваші колекції",
-    "placeholderText": "Тут з’являться ваші колекції."
+    "placeholderText": "Тут з’являться ваші колекції.",
+    "nav": {
+      "label": "Розділи",
+      "collections": "Колекції"
+    },
+    "menu": "Меню",
+    "logoutFailed": "Не вдалося вийти. Спробуйте ще раз."
   },
   "brand": {
     "name": "Stepler",
@@ -78,7 +84,8 @@
     "label": "Тема",
     "system": "Системна",
     "light": "Світла",
-    "dark": "Темна"
+    "dark": "Темна",
+    "cycle": "Тема: {current}. Натисніть, щоб увімкнути: {next}"
   },
   "language": {
     "label": "Мова",

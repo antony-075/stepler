@@ -36,6 +36,19 @@ type ConfirmDialogProps = {
 type Status = 'idle' | 'pending' | 'error';
 
 /**
+ * Where focus goes back to on close. A menu item that opened the dialog unmounts with its menu
+ * (at once under reduced motion), so focus would fall to the page: return it to the menu's
+ * trigger instead, which Radix links to the open menu with `aria-controls`.
+ */
+function focusReturnTarget(active: Element | null): HTMLElement | null {
+  if (!(active instanceof HTMLElement)) return null;
+  const menu = active.closest<HTMLElement>('[role="menu"]');
+  if (menu === null || menu.id === '') return active;
+  const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(menu.id)}"]`);
+  return trigger ?? active;
+}
+
+/**
  * Asks before an action, especially a destructive one. Built on Radix AlertDialog, so it traps
  * focus, only closes by an explicit choice (Escape or Cancel, never an outside click) and returns
  * focus to the trigger. Initial focus goes to Cancel, never to the action. While `onConfirm` is
@@ -61,7 +74,8 @@ function ConfirmDialog({
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
   // The dialog is controlled, often without an AlertDialog.Trigger (a menu item or a row
-  // button opens it), so it remembers what had focus and returns focus there on close.
+  // button opens it), so it remembers what had focus (a menu item: its menu's trigger) and
+  // returns focus there on close.
   const returnFocusRef = useRef<HTMLElement | null>(null);
   // Ignores a settle that arrives after the dialog was closed or reopened.
   const attempt = useRef(0);
@@ -109,8 +123,7 @@ function ConfirmDialog({
           className={cn(dialogContentClassName, className)}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            returnFocusRef.current =
-              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            returnFocusRef.current = focusReturnTarget(document.activeElement);
             cancelRef.current?.focus();
           }}
           onCloseAutoFocus={(event) => {

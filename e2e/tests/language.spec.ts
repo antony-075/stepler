@@ -18,6 +18,12 @@ const UK_APP_TITLE = 'Ваші колекції';
 const switchToEnglish = (page: Page) =>
   page.getByRole('radiogroup', { name: 'Мова', exact: true }).getByRole('radio', { name: 'EN' });
 
+/** On /app the language is in the account menu, whose trigger is the admin's email. */
+async function chooseInAccountMenu(page: Page, email: string, language: 'English' | 'Українська') {
+  await page.getByRole('button', { name: email }).click();
+  await page.getByRole('menuitemradio', { name: language, exact: true }).click();
+}
+
 type TurnstileCounters = { renders: number; resets: number; removes: number };
 
 /** Counts widget re-renders, resets and removals from now on (any of them drops the token). */
@@ -80,7 +86,7 @@ test('a signed-in admin switches to English: it persists and emails follow', asy
   await signIn(page, email);
   await expect(page.getByRole('heading', { name: UK_APP_TITLE })).toBeVisible();
 
-  await switchToEnglish(page).click();
+  await chooseInAccountMenu(page, email, 'English');
   await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
   await page.reload();
   await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
@@ -124,19 +130,21 @@ test('/login and /app fit a 360px screen in both languages', async ({ page }) =>
   expect(await overflow()).toBeLessThanOrEqual(0);
 
   await page.context().clearCookies();
-  await signIn(page, newEmail());
+  const email = newEmail();
+  await signIn(page, email);
   expect(await overflow()).toBeLessThanOrEqual(0);
-  await switchToEnglish(page).click();
+  await chooseInAccountMenu(page, email, 'English');
   await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
 test('a failed profile save shows a toast and still switches the page', async ({ page }) => {
-  await signIn(page, newEmail());
+  const email = newEmail();
+  await signIn(page, email);
   await page.route('**/api/v1/me', (route) =>
     route.request().method() === 'PATCH' ? route.abort() : route.continue(),
   );
-  await switchToEnglish(page).click();
+  await chooseInAccountMenu(page, email, 'English');
   await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
   // The toast is worded in whichever language was loaded when the save failed.
   await expect(page.locator('[data-slot="toast-title"]')).toHaveText(
@@ -145,7 +153,8 @@ test('a failed profile save shows a toast and still switches the page', async ({
 });
 
 test('quick switches save in order, so the profile ends on the last choice', async ({ page }) => {
-  await signIn(page, newEmail());
+  const email = newEmail();
+  await signIn(page, email);
   // Sent in parallel, a later choice could reach the server first and an earlier one would win.
   // Holds the first save and records when each save is sent and settles.
   const events: string[] = [];
@@ -167,10 +176,9 @@ test('quick switches save in order, so the profile ends on the last choice', asy
     return route.continue();
   });
 
-  await page.getByRole('radio', { name: 'EN', exact: true }).click();
+  await chooseInAccountMenu(page, email, 'English');
   await expect.poll(() => events).toEqual(['send en']);
-  await page.getByRole('radio', { name: 'UA', exact: true }).click();
-  await expect(page.getByRole('radio', { name: 'UA', exact: true })).toBeChecked();
+  await chooseInAccountMenu(page, email, 'Українська');
   release();
 
   await expect.poll(() => events).toEqual(['send en', 'done en', 'send uk', 'done uk']);

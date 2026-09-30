@@ -1,7 +1,8 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 
-// Ukrainian UI (no supported browser language → default locale).
-test.use({ locale: 'de-DE' });
+// Ukrainian UI (no supported browser language → default locale). The three-item switch shows
+// from `sm` (640px); phones get one cycling button, tested at the end.
+test.use({ locale: 'de-DE', viewport: { width: 1024, height: 768 } });
 
 const DARK_BACKGROUND = 'rgb(19, 20, 27)';
 const LIGHT_BACKGROUND = 'rgb(244, 244, 247)';
@@ -103,4 +104,72 @@ test.describe('after another tab changed the theme', () => {
     await expect(en.getByRole('radio', { name: 'Dark', exact: true })).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
+});
+
+test.describe('on a phone', () => {
+  test.use({ colorScheme: 'dark', viewport: { width: 360, height: 780 } });
+
+  test('one button cycles System → Light → Dark and says what it does', async ({
+    page,
+    browserName,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByRole('radiogroup', { name: T.group, exact: true })).toBeHidden();
+    const cycle = (current: string, next: string) =>
+      page.getByRole('button', {
+        name: `${T.group}: ${current}. Натисніть, щоб увімкнути: ${next}`,
+        exact: true,
+      });
+
+    await cycle(T.system, T.light).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    await expect.poll(() => bodyBackground(page)).toBe(LIGHT_BACKGROUND);
+    // Focus stays on the button, so it can be pressed again (WebKit does not focus on click).
+    if (browserName !== 'webkit') await expect(cycle(T.light, T.dark)).toBeFocused();
+    await cycle(T.light, T.dark).click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await cycle(T.dark, T.system).click();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme');
+    await expect(cycle(T.system, T.light)).toBeVisible();
+  });
+});
+
+test.describe('public header', () => {
+  for (const locale of ['de-DE', 'en-US']) {
+    test.describe(locale, () => {
+      test.use({ locale });
+      for (const width of [320, 360, 393, 412, 640]) {
+        test(`fits ${width}px with the wordmark`, async ({ page }) => {
+          await page.setViewportSize({ width, height: 780 });
+          for (const path of ['/', '/login']) {
+            await page.goto(path);
+            const brand = page.getByRole('banner').getByRole('link', { name: 'Stepler' });
+            await expect(brand.getByText('Stepler')).toBeVisible();
+            expect((await brand.boundingBox())!.width).toBeGreaterThanOrEqual(44);
+            // Everything in the header stays inside the viewport. (Below 360px the sign-in
+            // card's 300px Turnstile widget overflows the page by itself; not a header concern.)
+            const rightmost = await page
+              .getByRole('banner')
+              .evaluate((header) =>
+                Math.max(
+                  ...Array.from(
+                    header.querySelectorAll('*'),
+                    (el) => el.getBoundingClientRect().right,
+                  ),
+                ),
+              );
+            expect(rightmost).toBeLessThanOrEqual(width);
+            if (width >= 360) {
+              expect(
+                await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+              ).toBeLessThanOrEqual(0);
+            }
+            // The tools stay on the brand's row.
+            const header = await page.getByRole('banner').boundingBox();
+            expect(header!.height).toBeLessThan(80);
+          }
+        });
+      }
+    });
+  }
 });
