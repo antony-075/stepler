@@ -36,7 +36,7 @@ export async function SignInLanding({ error }: { error?: unknown }) {
           </section>
 
           <section className="[grid-area:auth] lg:self-center">
-            <Card className="animate-in duration-300 fade-in slide-in-from-bottom-2">
+            <Card className="animate-in duration-300 fade-in slide-in-from-bottom-2 motion-reduce:animate-none">
               <CardContent>
                 {methods === null ? (
                   <p role="alert">{tl('unavailable')}</p>

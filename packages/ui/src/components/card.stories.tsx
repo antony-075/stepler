@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Button } from './button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
+import { Separator } from './separator';
 
 const meta = {
   title: 'Components/Card',
@@ -81,6 +82,36 @@ export const TitleAsChild: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('heading', { level: 3, name: 'Guest link' })).toBeVisible();
     await expect(canvas.queryByRole('heading', { level: 2 })).toBeNull();
+  },
+};
+
+/**
+ * Only a following card section trims the bottom padding: content before a Separator keeps it,
+ * and a footer after content still gets its top spacing.
+ */
+export const SeparatedContent: Story = {
+  render: () => (
+    <Card>
+      <CardContent>
+        <p>Guests can see earlier uploads.</p>
+      </CardContent>
+      <Separator />
+      <CardContent>
+        <p>Uploads are open until 20 September.</p>
+      </CardContent>
+      <CardFooter>
+        <Button>Save</Button>
+      </CardFooter>
+    </Card>
+  ),
+  play: async ({ canvasElement }) => {
+    const [first, second] = Array.from(
+      canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-content"]'),
+    );
+    const footer = canvasElement.querySelector<HTMLElement>('[data-slot="card-footer"]');
+    await expect(first && getComputedStyle(first).paddingBottom).not.toBe('0px');
+    await expect(second && getComputedStyle(second).paddingBottom).toBe('0px');
+    await expect(footer && getComputedStyle(footer).paddingTop).toBe('20px');
   },
 };
 
