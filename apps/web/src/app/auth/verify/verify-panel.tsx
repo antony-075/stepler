@@ -5,6 +5,7 @@ import {
   magicLinkVerifyResponseSchema,
   meResponseSchema,
 } from '@stepler/contracts';
+import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -70,7 +71,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
     const retryable = failure === 'UPSTREAM_UNAVAILABLE' || failure === 'DEPENDENCY_UNAVAILABLE';
     return (
       <div className="grid gap-4">
-        <p role="alert">{t(errorMessageKey(failure))}</p>
+        <Alert variant="error">{t(errorMessageKey(failure))}</Alert>
         {retryable ? (
           <Button
             onClick={() => {

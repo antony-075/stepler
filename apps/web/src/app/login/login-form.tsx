@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { magicLinkRequestSchema } from '@stepler/contracts';
+import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
@@ -88,14 +89,7 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
         <p className="text-muted-foreground">{t('login.hint')}</p>
       </div>
 
-      {shownError !== null && (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/40 p-3 text-sm text-destructive"
-        >
-          {t(errorMessageKey(shownError))}
-        </p>
-      )}
+      {shownError !== null && <Alert variant="error">{t(errorMessageKey(shownError))}</Alert>}
 
       <form
         noValidate
