@@ -20,7 +20,7 @@ function PageHeader({ title, description, actions, back, className }: PageHeader
     >
       <div className="grid min-w-0 gap-2">
         {back ? (
-          <div data-slot="page-header-back" className="-mt-2 justify-self-start">
+          <div data-slot="page-header-back" className="justify-self-start">
             {back}
           </div>
         ) : null}

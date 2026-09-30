@@ -82,6 +82,11 @@ export const WithBack: Story = {
     await expect(back.getBoundingClientRect().bottom).toBeLessThanOrEqual(
       title.getBoundingClientRect().top,
     );
+    // The back link does not poke out above the header.
+    const header = canvasElement.querySelector('[data-slot="page-header"]')!;
+    await expect(back.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+      header.getBoundingClientRect().top,
+    );
     await expect(canvasElement.querySelectorAll('h1')).toHaveLength(1);
   },
 };
