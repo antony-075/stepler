@@ -46,7 +46,8 @@ docker compose -f docker/compose.yaml --env-file docker/.env down
 | Mailpit (sent email) | http://127.0.0.1:8025 | Docker Compose |
 | Prisma Studio (database UI) | http://localhost:5555 | `pnpm --filter @stepler/api db:studio` |
 | PostgreSQL (TablePlus, DBeaver, psql) | `127.0.0.1:5433`, user and password from `docker/.env` | Docker Compose |
-| S3 emulator (no UI; use an S3 client such as Cyberduck) | http://127.0.0.1:8333 | Docker Compose, then `storage:bootstrap` |
+| S3 emulator API | http://127.0.0.1:8333 | Docker Compose, then `storage:bootstrap` |
+| Bucket browser (SeaweedFS filer UI; no auth, localhost only) | http://127.0.0.1:8888/buckets/ | Docker Compose |
 | Storybook | http://localhost:6006 | `pnpm --filter @stepler/ui storybook` |
 | e2e servers | web :3100, api :4100 | `pnpm e2e` |
 
