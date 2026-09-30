@@ -40,7 +40,9 @@ test.describe('on a light OS', () => {
     await page.goto('/');
     expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
     await expect(
-      page.getByRole('radiogroup', { name: T.group }).getByRole('radio', { name: T.system }),
+      page
+        .getByRole('radiogroup', { name: T.group, exact: true })
+        .getByRole('radio', { name: T.system, exact: true }),
     ).toBeChecked();
   });
 });
@@ -56,8 +58,8 @@ test.describe('on a dark OS', () => {
       (window as unknown as { themeMarker: boolean }).themeMarker = true;
     });
 
-    const group = page.getByRole('radiogroup', { name: T.group });
-    await group.getByRole('radio', { name: T.light }).click();
+    const group = page.getByRole('radiogroup', { name: T.group, exact: true });
+    await group.getByRole('radio', { name: T.light, exact: true }).click();
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expect.poll(() => bodyBackground(page)).toBe(LIGHT_BACKGROUND);
@@ -68,11 +70,37 @@ test.describe('on a dark OS', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
-    await expect(group.getByRole('radio', { name: T.light })).toBeChecked();
+    await expect(group.getByRole('radio', { name: T.light, exact: true })).toBeChecked();
 
     // Back to System removes the override and the OS (dark) applies again.
-    await group.getByRole('radio', { name: T.system }).click();
+    await group.getByRole('radio', { name: T.system, exact: true }).click();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme');
     await expect.poll(() => bodyBackground(page)).toBe(DARK_BACKGROUND);
+  });
+});
+
+test.describe('after another tab changed the theme', () => {
+  test.use({ colorScheme: 'light' });
+
+  test('a refresh shows the theme from the cookie in the switch', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await page.goto('/login');
+    const uk = page.getByRole('radiogroup', { name: T.group, exact: true });
+    await expect(uk.getByRole('radio', { name: T.system, exact: true })).toBeChecked();
+
+    // Another tab picks Dark; this tab only learns it from the server on the next refresh,
+    // which the language switch triggers.
+    await setThemeCookie(context, baseURL!, 'dark');
+    await page
+      .getByRole('radiogroup', { name: 'Мова', exact: true })
+      .getByRole('radio', { name: 'EN', exact: true })
+      .click();
+
+    const en = page.getByRole('radiogroup', { name: 'Theme', exact: true });
+    await expect(en.getByRole('radio', { name: 'Dark', exact: true })).toBeChecked();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 });

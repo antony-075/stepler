@@ -70,22 +70,32 @@ export function VerifyPanel({ token }: { token: string | null }) {
     token === null ? 'MAGIC_LINK_INVALID' : failureCode(preview.error ?? verify.error);
   if (failure !== null) {
     const retryable = failure === 'UPSTREAM_UNAVAILABLE' || failure === 'DEPENDENCY_UNAVAILABLE';
+    const message = t(errorMessageKey(failure));
+    // A retryable failure keeps its Retry with the message; otherwise the way out is a new link.
+    if (retryable) {
+      return (
+        <Alert
+          variant="error"
+          action={
+            <Button
+              onClick={() => {
+                void retry();
+              }}
+            >
+              {t('verify.retry')}
+            </Button>
+          }
+        >
+          {message}
+        </Alert>
+      );
+    }
     return (
       <div className="grid gap-4">
-        <Alert variant="error">{t(errorMessageKey(failure))}</Alert>
-        {retryable ? (
-          <Button
-            onClick={() => {
-              void retry();
-            }}
-          >
-            {t('verify.retry')}
-          </Button>
-        ) : (
-          <Button asChild variant="outline">
-            <Link href="/login">{t('verify.backToLogin')}</Link>
-          </Button>
-        )}
+        <Alert variant="error">{message}</Alert>
+        <Button asChild variant="outline">
+          <Link href="/login">{t('verify.backToLogin')}</Link>
+        </Button>
       </div>
     );
   }

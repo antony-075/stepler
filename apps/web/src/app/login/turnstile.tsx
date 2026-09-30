@@ -2,6 +2,8 @@
 
 import Script from 'next/script';
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import type { ThemePreference } from '@/theme/theme';
+import { useThemePreference } from '@/theme/theme-provider';
 
 interface TurnstileApi {
   render(
@@ -9,6 +11,7 @@ interface TurnstileApi {
     options: {
       sitekey: string;
       language?: string;
+      theme?: 'auto' | 'light' | 'dark';
       size?: 'normal' | 'flexible' | 'compact';
       callback: (token: string) => void;
       'expired-callback': () => void;
@@ -44,16 +47,21 @@ interface TurnstileProps {
  *
  * The widget is rendered once per mount and only a new site key re-renders it: re-rendering
  * drops a solved token, so a language switch (`router.refresh()` with a new `locale`) must not.
- * The trade-off: the widget keeps the language it was rendered in until the page is reloaded.
+ * The same goes for the theme: it follows the site theme at render time, and a mid-form theme
+ * change does not re-render it. The trade-off: the widget keeps the language and theme it was
+ * rendered in until the page is reloaded (with `auto` it still follows the OS by itself).
  */
 export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileProps) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const { preference } = useThemePreference();
+  const theme: 'auto' | Exclude<ThemePreference, 'system'> =
+    preference === 'system' ? 'auto' : preference;
   // Read at render time and from the widget's callbacks, without re-rendering the widget.
-  const latest = useRef({ locale, onToken, onError });
+  const latest = useRef({ locale, theme, onToken, onError });
   useEffect(() => {
-    latest.current = { locale, onToken, onError };
+    latest.current = { locale, theme, onToken, onError };
   });
 
   const render = useCallback(() => {
@@ -62,6 +70,7 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
     widgetId.current = api.render(container.current, {
       sitekey: siteKey,
       language: latest.current.locale,
+      theme: latest.current.theme,
       size: 'flexible',
       callback: (token) => latest.current.onToken(token),
       'expired-callback': () => latest.current.onToken(null),

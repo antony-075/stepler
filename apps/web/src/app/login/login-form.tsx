@@ -125,20 +125,23 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
           onError={onTurnstileError}
         />
         {turnstileFailed && (
-          <div role="alert" className="grid gap-2 text-sm">
-            <p>{t('login.turnstileFailed')}</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="justify-self-start"
-              onClick={() => {
-                setTurnstileFailed(false);
-                turnstile.current?.reset();
-              }}
-            >
-              {t('login.turnstileRetry')}
-            </Button>
-          </div>
+          <Alert
+            variant="error"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setTurnstileFailed(false);
+                  turnstile.current?.reset();
+                }}
+              >
+                {t('login.turnstileRetry')}
+              </Button>
+            }
+          >
+            {t('login.turnstileFailed')}
+          </Alert>
         )}
 
         <Button type="submit" size="lg" disabled={request.isPending || turnstileToken === null}>

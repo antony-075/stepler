@@ -23,6 +23,13 @@ export function ThemeProvider({
   children: ReactNode;
 }) {
   const [preference, setPreferenceState] = useState(initialPreference);
+  // `router.refresh()` re-renders the layout with the cookie as it is now, which another tab may
+  // have changed: follow it (adjusting state on a prop change, not in an effect).
+  const [syncedPreference, setSyncedPreference] = useState(initialPreference);
+  if (initialPreference !== syncedPreference) {
+    setSyncedPreference(initialPreference);
+    setPreferenceState(initialPreference);
+  }
 
   const setPreference = useCallback((next: ThemePreference) => {
     document.cookie = themeCookie(next, { secure: window.location.protocol === 'https:' });
