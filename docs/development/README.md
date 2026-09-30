@@ -35,6 +35,23 @@ docker compose -f docker/compose.yaml --env-file docker/.env down
 | Mailpit    | SMTP `127.0.0.1:1025`, UI http://127.0.0.1:8025      |
 | S3 (SeaweedFS) | `http://127.0.0.1:8333`, credentials `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` from `docker/.env` |
 
+### Local links
+
+| What | Address | Started by |
+| ---- | ------- | ---------- |
+| Web | http://localhost:3000 | `pnpm dev` |
+| API | http://localhost:4000/api/v1 | `pnpm dev` |
+| Swagger UI (local only; not served in production mode) | http://localhost:4000/api/docs | `pnpm dev` |
+| API health | http://localhost:4000/api/v1/health/live, `/health/ready` | `pnpm dev` |
+| Mailpit (sent email) | http://127.0.0.1:8025 | Docker Compose |
+| Prisma Studio (database UI) | http://localhost:5555 | `pnpm --filter @stepler/api db:studio` |
+| PostgreSQL (TablePlus, DBeaver, psql) | `127.0.0.1:5433`, user and password from `docker/.env` | Docker Compose |
+| S3 emulator (no UI; use an S3 client such as Cyberduck) | http://127.0.0.1:8333 | Docker Compose, then `storage:bootstrap` |
+| Storybook | http://localhost:6006 | `pnpm --filter @stepler/ui storybook` |
+| e2e servers | web :3100, api :4100 | `pnpm e2e` |
+
+Staging and provider consoles: https://stepler-staging.onrender.com (site), https://dashboard.render.com (deploys, logs, env), https://dash.cloudflare.com (R2, Turnstile), https://app.brevo.com (staging email), https://console.cloud.google.com/apis/credentials (OAuth clients).
+
 - PostgreSQL uses host port 5433 so it does not clash with a locally installed PostgreSQL.
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
@@ -58,6 +75,7 @@ Run everything from the repository root.
 | `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
 | `pnpm --filter @stepler/api db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
 | `pnpm --filter @stepler/api db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
+| `pnpm --filter @stepler/api db:studio`          | Prisma Studio on 5555 against `DATABASE_URL` (the API's `.env`) |
 | `pnpm --filter @stepler/api db:check`           | Fail if migrations and schema differ; needs `SHADOW_DATABASE_URL` |
 | `pnpm --filter @stepler/api openapi:write`      | Regenerate `apps/api/openapi.json`; the API test suite fails when it is stale |
 
