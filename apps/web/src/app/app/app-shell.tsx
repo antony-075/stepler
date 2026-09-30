@@ -1,23 +1,23 @@
 'use client';
 
-import { meResponseSchema } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { apiRequest, isApiError } from '@/api/client';
+import { fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { SiteHeader } from '@/components/site-header';
 import { errorMessageKey } from '@/errors/error-message';
+import { LanguageSwitch } from '@/i18n/language-switch';
+import { setLocaleCookie } from '@/i18n/set-locale';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const me = useQuery({
-    queryKey: ['me'],
-    queryFn: () => apiRequest('/me', { schema: meResponseSchema }),
-  });
+  const locale = useLocale();
+  const me = useQuery({ queryKey: ME_QUERY_KEY, queryFn: fetchMe });
   const logout = useMutation({
     mutationFn: () => apiRequest('/auth/logout', { method: 'POST' }),
     onSuccess: () => {
@@ -25,6 +25,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       router.replace('/login');
     },
   });
+
+  // ADR 0011: the profile locale comes before the cookie. The server only sees the cookie, so
+  // when the profile disagrees (set on another device) the cookie follows it and the page is
+  // re-rendered. Checked once per visit: later changes come from this tab's own switch, which
+  // updates the profile itself, and a failed save must not bounce the page back.
+  const localeChecked = useRef(false);
+  const profileLocale = me.data?.locale;
+  useEffect(() => {
+    if (profileLocale === undefined || localeChecked.current) return;
+    localeChecked.current = true;
+    if (profileLocale === locale) return;
+    setLocaleCookie(profileLocale);
+    router.refresh();
+  }, [profileLocale, locale, router]);
 
   const unauthenticated = isApiError(me.error, 'UNAUTHENTICATED');
   useEffect(() => {
@@ -51,7 +65,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="stepler-atmosphere flex min-h-dvh flex-col">
       <SiteHeader>
-        <div className="flex min-w-0 items-center gap-3">
+        {/* Wraps under the brand on narrow phones until the account menu replaces it. */}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <LanguageSwitch />
           <p className="max-w-[40vw] min-w-0 truncate text-sm text-muted-foreground sm:max-w-xs">
             {t('app.signedInAs', { email: me.data.email })}
           </p>

@@ -2,6 +2,7 @@ const MAILPIT = process.env.E2E_MAILPIT_URL ?? 'http://127.0.0.1:8025';
 
 interface MailpitSummary {
   ID: string;
+  Subject: string;
 }
 
 async function search(to: string): Promise<MailpitSummary[]> {
@@ -23,4 +24,9 @@ export async function latestMagicLink(to: string, timeoutMs = 15_000): Promise<s
     if (Date.now() > deadline) throw new Error(`no sign-in email for ${to}`);
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
+}
+
+/** Subjects of the emails sent to `to`, newest first. */
+export async function mailSubjects(to: string): Promise<string[]> {
+  return (await search(to)).map((message) => message.Subject);
 }

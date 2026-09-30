@@ -79,5 +79,14 @@
     "system": "System",
     "light": "Light",
     "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "uk": "Українська",
+    "en": "English",
+    "ukShort": "UA",
+    "enShort": "EN",
+    "saveFailed": "Couldn't save the language to your profile",
+    "saveFailedHint": "The page has switched. Emails will use the previous language until you try again."
   }
 }

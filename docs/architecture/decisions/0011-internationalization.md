@@ -40,3 +40,10 @@ Setup:
 Caveats:
 - Every route that reads the locale is dynamic (`ƒ`), because locale depends on cookies/headers. Legal pages are therefore server-rendered on demand; acceptable for MVP.
 - next-intl depends on `@parcel/watcher` and `@swc/core` (message extractor tooling). `@parcel/watcher`'s install script is denied in `allowBuilds`; `@swc/core`'s is allowed because the API's test runner needs it (ADR 0005).
+
+## Language switch (Phase 3, 2026-09-30)
+
+- The header switch (UA / EN) writes `st_locale` (1 year, `path=/`, `SameSite=Lax`, `Secure` on https; not `HttpOnly`, the client writes it) and re-renders with `router.refresh()`, which keeps client state such as a half-filled sign-in form.
+- For a signed-in admin it also sends `PATCH /api/v1/me { locale }`, so emails follow the choice. A failed save shows an error toast; the page still switches.
+- "Profile locale first" without middleware: after `/me` loads, the app shell compares the profile locale with the page locale once per visit; if they differ it writes the cookie and refreshes.
+- The Turnstile widget on `/login` is not re-rendered on a language switch (that would drop a solved token), so it keeps its original language until the next page load.

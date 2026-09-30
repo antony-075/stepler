@@ -39,27 +39,38 @@ interface TurnstileProps {
   ref?: Ref<TurnstileHandle>;
 }
 
-/** Cloudflare Turnstile, loaded only on this page (ADR 0012). The API verifies the token. */
+/**
+ * Cloudflare Turnstile, loaded only on this page (ADR 0012). The API verifies the token.
+ *
+ * The widget is rendered once per mount and only a new site key re-renders it: re-rendering
+ * drops a solved token, so a language switch (`router.refresh()` with a new `locale`) must not.
+ * The trade-off: the widget keeps the language it was rendered in until the page is reloaded.
+ */
 export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileProps) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // Read at render time and from the widget's callbacks, without re-rendering the widget.
+  const latest = useRef({ locale, onToken, onError });
+  useEffect(() => {
+    latest.current = { locale, onToken, onError };
+  });
 
   const render = useCallback(() => {
     const api = window.turnstile;
     if (api === undefined || container.current === null || widgetId.current !== null) return;
     widgetId.current = api.render(container.current, {
       sitekey: siteKey,
-      language: locale,
+      language: latest.current.locale,
       size: 'flexible',
-      callback: (token) => onToken(token),
-      'expired-callback': () => onToken(null),
+      callback: (token) => latest.current.onToken(token),
+      'expired-callback': () => latest.current.onToken(null),
       'error-callback': () => {
-        onToken(null);
-        onError();
+        latest.current.onToken(null);
+        latest.current.onError();
       },
     });
-  }, [siteKey, locale, onToken, onError]);
+  }, [siteKey]);
 
   useEffect(() => {
     if (loaded || window.turnstile !== undefined) render();
@@ -72,7 +83,7 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
   useImperativeHandle(ref, () => ({
     reset: () => {
       if (widgetId.current !== null) window.turnstile?.reset(widgetId.current);
-      onToken(null);
+      latest.current.onToken(null);
     },
   }));
 
@@ -82,7 +93,7 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
         src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
         strategy="afterInteractive"
         onLoad={() => setLoaded(true)}
-        onError={onError}
+        onError={() => latest.current.onError()}
       />
       <div ref={container} className="min-h-[65px]" />
     </>

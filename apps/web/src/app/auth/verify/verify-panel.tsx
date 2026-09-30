@@ -12,6 +12,7 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest, isApiError } from '@/api/client';
+import { ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 
 /**
@@ -41,7 +42,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
         schema: magicLinkVerifyResponseSchema,
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['me'] });
+      await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
       router.replace('/app');
     },
   });
