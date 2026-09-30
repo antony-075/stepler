@@ -80,13 +80,14 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 - `ToggleGroup` never deselects: pressing the selected item keeps it selected, and `onValueChange` is never called with `''`.
 - Language items keep the visible text as the accessible name (WCAG 2.5.3 Label in Name): `<ToggleGroupItem value="uk" lang="uk" title="Українська">UA</ToggleGroupItem>`. No `aria-label` that drops what is on screen.
 - Page width: the `stepler-container` utility (1240px content, 1320px from 1600px, gutter 16 / 24 / 40px at base / `sm` / `lg`). The gutter is `--stepler-gutter`, so a child can bleed into it with `-mx-(--stepler-gutter) px-(--stepler-gutter)`.
+- Turnstile renders `compact` below 300px container width, `flexible` otherwise, so the widget never overflows the card.
 - Page atmosphere: the `stepler-atmosphere` utility (key light, cool fill, dot grid). Decorative; never behind text that needs contrast.
 - Stories are checked at the Storybook viewports `phone` (360), `tablet` (768) and `laptop` (1280).
 
 ### Theme and language
 
 - Theme: `<html data-theme="light|dark">`, rendered by the server from the `st_theme` cookie (1 year, `SameSite=Lax`, not `HttpOnly`), so the first paint is right. No attribute means "follow the system" (`prefers-color-scheme`). In the app, read and change it with `ThemeProvider` / `useThemePreference()` (`apps/web/src/theme/theme-provider.tsx`); do not write the cookie or the attribute directly.
-- Language: switch with `useChangeLocale()` (`apps/web/src/i18n/language-switch.tsx`). It writes the `st_locale` cookie, saves the admin profile's locale when signed in, and refreshes the server tree while keeping client state. A failed save shows a toast; the page still switches.
+- Language: switch with `useChangeLocale()` (`apps/web/src/i18n/language-switch.tsx`). It writes the `st_locale` cookie and, whenever an admin session exists (also on public pages such as `/` and `/login`), saves the choice to the profile with `PATCH /me`; then it refreshes the server tree while keeping client state. A failed save shows a toast; the page still switches.
 
 ## Tokens
 
@@ -168,7 +169,6 @@ Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 
 
 ## Known issues and deferred items
 
-- **Turnstile at 320px:** at a 320px viewport, `/` and `/login` scroll about 7px sideways because Cloudflare Turnstile's widget has a fixed 300px width that does not fit the card. Deferred by the owner (360px and up are fine).
 - **Turnstile keeps its initial language and theme** until the page reloads. By design: re-rendering the widget would drop the token of a half-filled form.
 - **Raw values** still in components: `rounded-[20px]` (Card), `rounded-[6px]` (Checkbox), `min-w-[12rem]` (DropdownMenuContent), `text-[0.8125rem]` (ToggleGroupItem).
 - **Overlay colour:** dialogs use `bg-black/50`; there is no `--overlay` token.
