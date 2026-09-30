@@ -37,7 +37,7 @@ describe('upstreamRequestHeaders', () => {
   });
 
   test('drops client-supplied forwarding and hop-by-hop headers by default', () => {
-    const headers = upstreamRequestHeaders(incoming, { trustForwardedHeaders: false });
+    const headers = upstreamRequestHeaders(incoming, { clientIpHeader: undefined });
     for (const name of [
       'host',
       'x-forwarded-for',
@@ -54,44 +54,53 @@ describe('upstreamRequestHeaders', () => {
   });
 
   test('keeps end-to-end headers', () => {
-    const headers = upstreamRequestHeaders(incoming, { trustForwardedHeaders: false });
+    const headers = upstreamRequestHeaders(incoming, { clientIpHeader: undefined });
     expect(headers.get('cookie')).toBe('st_session=abc');
     expect(headers.get('content-type')).toBe('application/json');
     expect(headers.get('accept-language')).toBe('uk');
   });
 
-  test('behind a trusted edge, forwards only the client IP it set (first X-Forwarded-For entry)', () => {
+  test('behind an edge, forwards only the IP from the configured header', () => {
     const headers = upstreamRequestHeaders(
       new Headers({
-        'x-forwarded-for': '203.0.113.7, 172.70.1.2, 10.0.0.5',
-        'x-forwarded-host': 'evil.example',
+        'cf-connecting-ip': '203.0.113.7',
+        // Render keeps the client-supplied entry first, so X-Forwarded-For is never trusted.
+        'x-forwarded-for': '198.51.100.1, 203.0.113.7, 10.0.0.5',
         'x-real-ip': '9.9.9.9',
       }),
-      { trustForwardedHeaders: true },
+      { clientIpHeader: 'cf-connecting-ip' },
     );
     expect(headers.get('x-forwarded-for')).toBe('203.0.113.7');
-    for (const name of ['x-forwarded-host', 'x-forwarded-proto', 'forwarded', 'x-real-ip']) {
+    for (const name of ['cf-connecting-ip', 'x-real-ip', 'forwarded', 'x-forwarded-host']) {
       expect(headers.has(name), name).toBe(false);
     }
   });
 
   test('accepts IPv6 client addresses', () => {
-    const headers = upstreamRequestHeaders(
-      new Headers({ 'x-forwarded-for': '2001:db8::1, 172.70.1.2' }),
-      { trustForwardedHeaders: true },
-    );
+    const headers = upstreamRequestHeaders(new Headers({ 'cf-connecting-ip': '2001:db8::1' }), {
+      clientIpHeader: 'cf-connecting-ip',
+    });
     expect(headers.get('x-forwarded-for')).toBe('2001:db8::1');
   });
 
-  test.each(['evil.example, 1.2.3.4', '', 'unknown', '1.2.3.4:80'])(
-    'drops a first entry that is not an IP address (%j)',
+  test.each(['evil.example', '', 'unknown', '1.2.3.4:80', '1.2.3.4, 5.6.7.8'])(
+    'sends no client IP when the header is not a single IP address (%j)',
     (value) => {
-      const headers = upstreamRequestHeaders(new Headers({ 'x-forwarded-for': value }), {
-        trustForwardedHeaders: true,
-      });
+      const headers = upstreamRequestHeaders(
+        new Headers({ 'cf-connecting-ip': value, 'x-forwarded-for': '1.2.3.4' }),
+        { clientIpHeader: 'cf-connecting-ip' },
+      );
       expect(headers.has('x-forwarded-for')).toBe(false);
     },
   );
+
+  test('without a configured header, a client-sent cf-connecting-ip is dropped too', () => {
+    const headers = upstreamRequestHeaders(new Headers({ 'cf-connecting-ip': '1.2.3.4' }), {
+      clientIpHeader: undefined,
+    });
+    expect(headers.has('cf-connecting-ip')).toBe(false);
+    expect(headers.has('x-forwarded-for')).toBe(false);
+  });
 });
 
 describe('downstreamResponseHeaders', () => {

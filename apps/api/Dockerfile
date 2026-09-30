@@ -3,6 +3,11 @@
 # Base image pinned by multi-arch digest (node:24-slim); bump deliberately.
 FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+# Prisma's schema engine (migrations) needs OpenSSL; installed before `pnpm install` so the
+# engine for the right OpenSSL version is downloaded.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable
 WORKDIR /repo
 
@@ -19,6 +24,10 @@ RUN pnpm turbo run build --filter @stepler/api \
 
 FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS runner
 ENV NODE_ENV=production
+# OpenSSL for Prisma's schema engine (the pre-deploy `prisma migrate deploy`).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Root-owned, read-only for the runtime user: the app cannot modify its own code.
 COPY --from=builder /prod/api .

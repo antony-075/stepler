@@ -76,6 +76,8 @@ echo "$first" | grep -q "migrations have been successfully applied\|All migratio
   || fail "migrate deploy did not apply migrations: $first"
 second=$(migrate) || fail "second migrate deploy failed: $second"
 echo "$second" | grep -q "No pending migrations" || fail "second migrate deploy was not a no-op: $second"
+# Prisma must find OpenSSL, or it guesses an engine that can break on the next migration.
+echo "$first" | grep -qi "failed to detect the libssl" && fail "prisma cannot detect OpenSSL in the api image"
 docker run -d --name stepler-verify-api --network "$NET" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" "$API_IMAGE" >/dev/null
 docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
   -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null
