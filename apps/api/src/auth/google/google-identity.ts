@@ -38,7 +38,11 @@ export class ArcticGoogleIdentity implements GoogleIdentity {
   }
 
   authorizationUrl(state: string, codeVerifier: string): URL {
-    return this.google.createAuthorizationURL(state, codeVerifier, SCOPES);
+    const url = this.google.createAuthorizationURL(state, codeVerifier, SCOPES);
+    // Without it, Google silently signs in with the browser's current account; after signing
+    // out of Stepler people could not choose another one (owner decision, 2026-09-30).
+    url.searchParams.set('prompt', 'select_account');
+    return url;
   }
 
   async exchange(code: string, codeVerifier: string): Promise<GoogleClaims> {

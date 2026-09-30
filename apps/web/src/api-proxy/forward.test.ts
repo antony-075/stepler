@@ -60,11 +60,38 @@ describe('upstreamRequestHeaders', () => {
     expect(headers.get('accept-language')).toBe('uk');
   });
 
-  test('passes forwarding headers only when a trusted edge sets them', () => {
-    const headers = upstreamRequestHeaders(incoming, { trustForwardedHeaders: true });
-    expect(headers.get('x-forwarded-for')).toBe('1.2.3.4');
-    expect(headers.has('host')).toBe(false);
+  test('behind a trusted edge, forwards only the client IP it set (first X-Forwarded-For entry)', () => {
+    const headers = upstreamRequestHeaders(
+      new Headers({
+        'x-forwarded-for': '203.0.113.7, 172.70.1.2, 10.0.0.5',
+        'x-forwarded-host': 'evil.example',
+        'x-real-ip': '9.9.9.9',
+      }),
+      { trustForwardedHeaders: true },
+    );
+    expect(headers.get('x-forwarded-for')).toBe('203.0.113.7');
+    for (const name of ['x-forwarded-host', 'x-forwarded-proto', 'forwarded', 'x-real-ip']) {
+      expect(headers.has(name), name).toBe(false);
+    }
   });
+
+  test('accepts IPv6 client addresses', () => {
+    const headers = upstreamRequestHeaders(
+      new Headers({ 'x-forwarded-for': '2001:db8::1, 172.70.1.2' }),
+      { trustForwardedHeaders: true },
+    );
+    expect(headers.get('x-forwarded-for')).toBe('2001:db8::1');
+  });
+
+  test.each(['evil.example, 1.2.3.4', '', 'unknown', '1.2.3.4:80'])(
+    'drops a first entry that is not an IP address (%j)',
+    (value) => {
+      const headers = upstreamRequestHeaders(new Headers({ 'x-forwarded-for': value }), {
+        trustForwardedHeaders: true,
+      });
+      expect(headers.has('x-forwarded-for')).toBe(false);
+    },
+  );
 });
 
 describe('downstreamResponseHeaders', () => {

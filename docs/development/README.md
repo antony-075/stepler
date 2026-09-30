@@ -121,7 +121,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
-| `TRUST_PROXY_HEADERS` | web | no | `true` only behind an edge that overwrites `X-Forwarded-*`; default `false` (headers dropped) |
+| `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
+| `TRUST_PROXY_HEADERS` | web | no | `true` only behind an edge that sets the client IP first in `X-Forwarded-For` (Render). The web then forwards only that IP; all other forwarding headers are always dropped. Default `false` |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
 Both apps validate their env at startup and exit when it is invalid. Error messages name the variables but never print their values.
