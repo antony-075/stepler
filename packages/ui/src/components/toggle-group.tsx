@@ -53,8 +53,17 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
   hideLabel?: 'always' | 'phone';
 };
 
-// Items are at least 44×44px (rule 05). Other props (`lang`, `title`, `aria-label`) pass through
-// to the Radix item, e.g. `lang` on each item of the language switch.
+/**
+ * Items are at least 44×44px (rule 05). Other props (`lang`, `title`, …) pass through to the
+ * Radix item.
+ *
+ * Keep the visible text in the accessible name (WCAG 2.5.3 Label in Name): do not give a
+ * text item an `aria-label` that drops what is on screen. For the language switch the visible
+ * short label ("UA") is the name, `lang` tells screen readers how to say it, and `title`
+ * carries the full language name:
+ * `<ToggleGroupItem value="uk" lang="uk" title="Українська">UA</ToggleGroupItem>`.
+ * Icon items name themselves with their (visually hidden) label via `hideLabel`.
+ */
 function ToggleGroupItem({ className, icon, hideLabel, children, ...props }: ToggleGroupItemProps) {
   return (
     <ToggleGroupPrimitive.Item

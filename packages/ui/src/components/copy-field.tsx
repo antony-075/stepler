@@ -20,6 +20,10 @@ type CopyFieldProps = {
 
 type CopyStatus = 'idle' | 'copied' | 'failed';
 
+function nextFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 /**
  * A read-only value (e.g. a guest link) with a copy button. Success is announced through a
  * polite live region and the button says `copiedLabel` for 2s. Without a working clipboard the
@@ -36,9 +40,17 @@ function CopyField({
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Identifies the latest click; a stale clipboard result or one after unmount is ignored.
+  const attempt = useRef(0);
   const [status, setStatus] = useState<CopyStatus>('idle');
 
-  useEffect(() => () => clearTimeout(resetTimer.current), []);
+  useEffect(
+    () => () => {
+      attempt.current += 1;
+      clearTimeout(resetTimer.current);
+    },
+    [],
+  );
 
   function selectValue() {
     inputRef.current?.focus();
@@ -46,13 +58,23 @@ function CopyField({
   }
 
   async function copy() {
+    const current = ++attempt.current;
     clearTimeout(resetTimer.current);
+    // Empty the live region first so a repeated outcome (a second failure) is announced again.
+    setStatus('idle');
     // Typed as optional: the API is missing on insecure origins and in some embedded browsers.
     const clipboard: Clipboard | undefined = navigator.clipboard;
+    let copiedOk = true;
     try {
       if (!clipboard) throw new Error('Clipboard API unavailable');
       await clipboard.writeText(value);
     } catch {
+      copiedOk = false;
+    }
+    // Let the cleared region render before the new message goes in.
+    await nextFrame();
+    if (current !== attempt.current) return;
+    if (!copiedOk) {
       selectValue();
       setStatus('failed');
       return;
@@ -81,9 +103,20 @@ function CopyField({
           }}
           className="flex-1"
         />
-        <Button type="button" variant="outline" onClick={() => void copy()}>
+        {/* \`lg\` matches the input's 48px height. */}
+        <Button type="button" variant="outline" size="lg" onClick={() => void copy()}>
           {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-          {copied ? copiedLabel : copyLabel}
+          {/* Both labels share one grid cell, so the button is as wide as the longer one and
+              the input does not shift when the label changes. `invisible` also removes the
+              inactive label from the accessible name. */}
+          <span className="grid">
+            <span className={cn('col-start-1 row-start-1', { invisible: copied })}>
+              {copyLabel}
+            </span>
+            <span className={cn('col-start-1 row-start-1', { invisible: !copied })}>
+              {copiedLabel}
+            </span>
+          </span>
         </Button>
       </div>
       <p

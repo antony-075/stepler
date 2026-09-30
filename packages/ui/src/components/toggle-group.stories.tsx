@@ -110,23 +110,25 @@ export const Laptop: Story = {
   },
 };
 
-/** The language switch: text-only items that carry their own `lang`. */
+/** The language switch: text-only items that carry their own `lang` and a `title`. */
 export const Language: Story = {
   args: { defaultValue: 'uk', 'aria-label': 'Language' },
   render: (args) => (
     <ToggleGroup {...args}>
-      <ToggleGroupItem value="uk" lang="uk" aria-label="Українська">
+      <ToggleGroupItem value="uk" lang="uk" title="Українська">
         UA
       </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en" aria-label="English">
+      <ToggleGroupItem value="en" lang="en" title="English">
         EN
       </ToggleGroupItem>
     </ToggleGroup>
   ),
   play: async ({ canvas, args }) => {
-    const english = canvas.getByRole('radio', { name: 'English' });
+    // The visible text is the accessible name (WCAG 2.5.3); the full name is the description.
+    const english = canvas.getByRole('radio', { name: 'EN' });
     await expect(english).toHaveAttribute('lang', 'en');
-    await expect(canvas.getByRole('radio', { name: 'Українська' })).toHaveAttribute('lang', 'uk');
+    await expect(english).toHaveAccessibleDescription('English');
+    await expect(canvas.getByRole('radio', { name: 'UA' })).toHaveAttribute('lang', 'uk');
     await userEvent.click(english);
     await expect(english).toHaveAttribute('aria-checked', 'true');
     await expect(args.onValueChange).toHaveBeenLastCalledWith('en');

@@ -14,6 +14,14 @@ function stubClipboard(value: unknown) {
 
 const writeText = fn(async (_text: string) => {});
 
+/** Records every text the live region shows, so a repeated message can be told from a stale one. */
+function recordAnnouncements(region: Element) {
+  const texts: string[] = [];
+  const observer = new MutationObserver(() => texts.push(region.textContent));
+  observer.observe(region, { childList: true, characterData: true, subtree: true });
+  return { texts, stop: () => observer.disconnect() };
+}
+
 const meta = {
   title: 'Components/CopyField',
   component: CopyField,
@@ -44,14 +52,20 @@ export const Copy: Story = {
     return stubClipboard({ writeText });
   },
   play: async ({ canvas, canvasElement }) => {
-    await expect(canvas.getByRole('textbox', { name: 'Guest link' })).toHaveValue(LINK);
+    const input = canvas.getByRole('textbox', { name: 'Guest link' });
+    await expect(input).toHaveValue(LINK);
     const status = canvasElement.querySelector('[aria-live="polite"]');
     await expect(status).toBeEmptyDOMElement();
+    const button = canvas.getByRole('button', { name: 'Copy' });
+    // The button lines up with the input, and its width does not change with the label.
+    await expect(button.getBoundingClientRect().height).toBe(input.getBoundingClientRect().height);
+    const width = button.getBoundingClientRect().width;
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Copy' }));
+    await userEvent.click(button);
     await expect(writeText).toHaveBeenCalledWith(LINK);
-    await expect(status).toHaveTextContent('Copied');
+    await waitFor(() => expect(status).toHaveTextContent('Copied'));
     await expect(canvas.getByRole('button', { name: 'Copied' })).toBeVisible();
+    await expect(button.getBoundingClientRect().width).toBe(width);
 
     await waitFor(() => expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible(), {
       timeout: 3000,
@@ -76,13 +90,21 @@ export const Unavailable: Story = {
   beforeEach: () => stubClipboard(undefined),
   play: async ({ canvas, canvasElement }) => {
     const input = canvas.getByRole<HTMLInputElement>('textbox', { name: 'Guest link' });
-    await userEvent.click(canvas.getByRole('button', { name: 'Copy' }));
-    await expect(input).toHaveFocus();
+    const region = canvasElement.querySelector('[aria-live="polite"]');
+    if (!region) throw new Error('live region missing');
+    const button = canvas.getByRole('button', { name: 'Copy' });
+    await userEvent.click(button);
+    await waitFor(() => expect(input).toHaveFocus());
     await expect(input.selectionStart).toBe(0);
     await expect(input.selectionEnd).toBe(LINK.length);
-    await expect(canvasElement.querySelector('[aria-live="polite"]')).toHaveTextContent(
-      'Could not copy.',
-    );
+    await expect(region).toHaveTextContent('Could not copy.');
+
+    // A second failure empties the region and fills it again, so it is announced again.
+    const announcements = recordAnnouncements(region);
+    await userEvent.click(button);
+    await waitFor(() => expect(announcements.texts.at(-1)).toMatch(/^Could not copy\./));
+    announcements.stop();
+    await expect(announcements.texts[0]).toBe('');
   },
 };
 
@@ -98,9 +120,35 @@ export const Rejected: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Copy' }));
     await expect(writeText).toHaveBeenCalledWith(LINK);
     await waitFor(() => expect(input.selectionEnd).toBe(LINK.length));
+    await waitFor(() => expect(input).toHaveFocus());
     await expect(canvasElement.querySelector('[aria-live="polite"]')).toHaveTextContent(
       'Could not copy.',
     );
+    await expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible();
+  },
+};
+
+let resolveFirst: () => void = () => {};
+
+/** A slow first copy that finishes after a newer, failed one does not overwrite its message. */
+export const StaleResult: Story = {
+  beforeEach: () => {
+    writeText.mockReset();
+    writeText
+      .mockImplementationOnce(() => new Promise<void>((resolve) => (resolveFirst = resolve)))
+      .mockRejectedValueOnce(new DOMException('Denied', 'NotAllowedError'));
+    return stubClipboard({ writeText });
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const region = canvasElement.querySelector('[aria-live="polite"]');
+    const button = canvas.getByRole('button', { name: 'Copy' });
+    await userEvent.click(button);
+    await userEvent.click(button);
+    await waitFor(() => expect(region).toHaveTextContent('Could not copy.'));
+    resolveFirst();
+    // Give the stale result a couple of frames to (wrongly) land.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    await expect(region).toHaveTextContent('Could not copy.');
     await expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible();
   },
 };
@@ -128,7 +176,9 @@ export const LongValue: Story = {
     await expect(canvas.getByRole('textbox', { name: 'Guest link' })).toHaveValue(LONG_LINK);
     const button = canvas.getByRole('button', { name: 'Copy' });
     await expect(button.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
-    await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(button.getBoundingClientRect().height).toBe(
+      canvas.getByRole('textbox').getBoundingClientRect().height,
+    );
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
