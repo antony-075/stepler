@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent } from 'storybook/test';
-import { Button } from './button';
+import { Button, type ButtonProps } from './button';
 
 const meta = {
   title: 'Components/Button',
@@ -56,5 +56,68 @@ export const IconOnly: Story = {
     const button = canvas.getByRole('button', { name: 'Close' });
     // 44px minimum touch target (rule 05).
     await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+  },
+};
+
+const VARIANTS = [
+  'default',
+  'destructive',
+  'outline',
+  'secondary',
+  'ghost',
+  'link',
+] as const satisfies readonly NonNullable<ButtonProps['variant']>[];
+const SIZES = ['default', 'sm', 'lg'] as const satisfies readonly NonNullable<
+  ButtonProps['size']
+>[];
+
+/** Every variant at every size, enabled and disabled, on a card, so axe checks them all. */
+export const AllVariants: Story = {
+  render: () => (
+    <div className="grid gap-3 rounded-[20px] bg-card p-4">
+      {SIZES.map((size) => (
+        <div key={size} className="flex flex-wrap items-center gap-2">
+          {VARIANTS.map((variant) => (
+            <Button key={variant} variant={variant} size={size}>
+              {`${variant} ${size}`}
+            </Button>
+          ))}
+          {VARIANTS.map((variant) => (
+            <Button key={`${variant}-disabled`} variant={variant} size={size} disabled>
+              {`${variant} ${size} disabled`}
+            </Button>
+          ))}
+          <Button variant="outline" size="icon" aria-label={`icon ${size}`}>
+            <svg
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M18 6 6 18M6 6l12 12" />
+            </svg>
+          </Button>
+        </div>
+      ))}
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    for (const size of SIZES) {
+      for (const variant of VARIANTS) {
+        const button = canvas.getByRole('button', { name: `${variant} ${size}` });
+        await expect(button).toHaveAttribute('data-variant', variant);
+        await expect(button).toHaveAttribute('data-size', size);
+      }
+    }
+  },
+};
+
+export const AllVariantsDark: Story = {
+  ...AllVariants,
+  globals: { theme: 'dark' },
+  play: async ({ canvas }) => {
+    await expect(document.documentElement.dataset.theme).toBe('dark');
+    await expect(canvas.getByRole('button', { name: 'destructive lg' })).toBeVisible();
   },
 };
