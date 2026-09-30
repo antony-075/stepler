@@ -1,3 +1,5 @@
+'use client';
+
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '../lib/utils';

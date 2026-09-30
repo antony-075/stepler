@@ -1,3 +1,5 @@
+'use client';
+
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui';
 import { type ComponentProps, type ReactNode, useState } from 'react';
 import { cn } from '../lib/utils';
