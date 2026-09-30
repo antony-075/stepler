@@ -48,8 +48,10 @@ function DropdownMenuGroup(props: ComponentProps<typeof DropdownMenuPrimitive.Gr
   return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
+// Pointer hover highlights with the muted background only; keyboard focus adds a solid inset ring
+// (≥ 5.5:1 against the highlighted item in both themes) because the background alone is ~1.2:1.
 const itemClassName =
-  "relative flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 text-base outline-hidden select-none [overflow-wrap:anywhere] focus:bg-muted data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground";
+  "relative flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 text-base outline-hidden select-none [overflow-wrap:anywhere] focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground";
 
 function DropdownMenuItem({
   className,
