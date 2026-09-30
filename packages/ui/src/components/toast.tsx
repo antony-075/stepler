@@ -114,24 +114,34 @@ const AVOID_SELECTOR = '[data-toast-avoid]';
 
 /**
  * Lifts the viewport above any fixed bottom element marked `data-toast-avoid`, so a toast never
- * covers the page's primary action. Measured only while toasts are shown.
+ * covers the page's primary action. Active only while toasts are shown: it re-measures whenever
+ * the set of open toasts changes, on window resize, and when a matched bar appears, hides or
+ * changes size (ResizeObserver).
+ *
+ * @param openKey the ids of the open toasts joined into a string; empty when none are open.
  */
-function useAvoidOffset(active: boolean): number {
+function useAvoidOffset(openKey: string): number {
   const [offset, setOffset] = useState(0);
 
   useLayoutEffect(() => {
-    if (!active) return;
+    if (!openKey) return;
+    const bars = Array.from(document.querySelectorAll(AVOID_SELECTOR));
     const measure = () => {
-      const tops = Array.from(document.querySelectorAll(AVOID_SELECTOR))
+      const tops = bars
         .map((element) => element.getBoundingClientRect())
         .filter((rect) => rect.height > 0 && rect.bottom >= window.innerHeight - 1)
         .map((rect) => rect.top);
       setOffset(tops.length ? Math.max(0, window.innerHeight - Math.min(...tops)) : 0);
     };
     measure();
+    const observer = new ResizeObserver(measure);
+    for (const bar of bars) observer.observe(bar);
     window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [active]);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [openKey]);
 
   return offset;
 }
@@ -150,7 +160,11 @@ type ToasterProps = {
 // Radix's `foreground` type (announced assertively), and motion is off under reduced motion.
 function Toaster({ label, closeLabel, className }: ToasterProps) {
   const { toasts, dismiss } = useToastContext();
-  const offset = useAvoidOffset(toasts.some((t) => t.open));
+  const openKey = toasts
+    .filter((t) => t.open)
+    .map((t) => t.id)
+    .join(',');
+  const offset = useAvoidOffset(openKey);
 
   return (
     <>
@@ -208,7 +222,9 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
         label={label}
         style={{ bottom: offset }}
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-50 m-0 flex max-h-dvh list-none flex-col gap-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] outline-none sm:left-auto sm:w-[420px] sm:max-w-full',
+          'pointer-events-none fixed inset-x-0 z-50 m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none sm:left-auto sm:w-[420px] sm:max-w-full',
+          // Above a bottom bar the bar already clears the safe area; only the gutter remains.
+          { 'pb-[max(1rem,env(safe-area-inset-bottom))]': offset === 0 },
           className,
         )}
       />

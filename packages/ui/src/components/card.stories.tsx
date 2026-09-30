@@ -105,13 +105,18 @@ export const SeparatedContent: Story = {
     </Card>
   ),
   play: async ({ canvasElement }) => {
-    const [first, second] = Array.from(
+    const contents = Array.from(
       canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-content"]'),
     );
-    const footer = canvasElement.querySelector<HTMLElement>('[data-slot="card-footer"]');
-    await expect(first && getComputedStyle(first).paddingBottom).not.toBe('0px');
-    await expect(second && getComputedStyle(second).paddingBottom).toBe('0px');
-    await expect(footer && getComputedStyle(footer).paddingTop).toBe('20px');
+    const footers = Array.from(
+      canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-footer"]'),
+    );
+    await expect(contents).toHaveLength(2);
+    await expect(footers).toHaveLength(1);
+    const [first, second] = contents as [HTMLElement, HTMLElement];
+    await expect(getComputedStyle(first).paddingBottom).not.toBe('0px');
+    await expect(getComputedStyle(second).paddingBottom).toBe('0px');
+    await expect(getComputedStyle(footers[0]!).paddingTop).toBe('20px');
   },
 };
 

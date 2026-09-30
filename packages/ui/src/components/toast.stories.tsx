@@ -1,5 +1,7 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
+import { cn } from '../lib/utils';
 import { Button } from './button';
 import { Toaster, ToastProvider, useToast } from './toast';
 
@@ -8,15 +10,22 @@ type TriggerProps = {
   description?: string;
   variant?: 'info' | 'success' | 'error';
   count?: number;
+  durationMs?: number;
 };
 
-function Trigger({ title = 'Link copied', description, variant, count = 1 }: TriggerProps) {
+function Trigger({
+  title = 'Link copied',
+  description,
+  variant,
+  count = 1,
+  durationMs,
+}: TriggerProps) {
   const { toast } = useToast();
   return (
     <Button
       onClick={() => {
         for (let i = 1; i <= count; i += 1) {
-          toast({ title: count > 1 ? `${title} ${i}` : title, description, variant });
+          toast({ title: count > 1 ? `${title} ${i}` : title, description, variant, durationMs });
         }
       }}
     >
@@ -144,5 +153,91 @@ export const Phone: Story = {
     await expect(box.right).toBeLessThanOrEqual(window.innerWidth - 16);
     await expect(overlaps(box, action)).toBe(false);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Review Focus 4: a hovered toast stays until the pointer leaves, then its timer resumes. */
+export const PauseOnHover: Story = {
+  args: { durationMs: 500 },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    await userEvent.hover(toasts()[0]!);
+    await wait(900);
+    await expect(toasts()).toHaveLength(1);
+    await userEvent.unhover(toasts()[0]!);
+    await waitFor(() => expect(toasts()).toHaveLength(0), { timeout: 2000 });
+  },
+};
+
+/** Review Focus 4: a focused toast stays until focus leaves, then its timer resumes. */
+export const PauseOnFocus: Story = {
+  args: { durationMs: 500 },
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Show toast' });
+    await userEvent.click(trigger);
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    toasts()[0]!.focus();
+    await expect(toasts()[0]).toHaveFocus();
+    await wait(900);
+    await expect(toasts()).toHaveLength(1);
+    trigger.focus();
+    await waitFor(() => expect(toasts()).toHaveLength(0), { timeout: 2000 });
+  },
+};
+
+function BarDemo(args: TriggerProps) {
+  const [shown, setShown] = useState(false);
+  const [tall, setTall] = useState(false);
+  return (
+    <>
+      <Trigger {...args} />
+      <Button variant="outline" onClick={() => setShown(true)}>
+        Show bar
+      </Button>
+      <div
+        data-toast-avoid=""
+        className={cn('fixed inset-x-0 bottom-0 grid gap-2 border-t bg-card p-4', {
+          hidden: !shown,
+        })}
+      >
+        <Button variant="outline" className="w-full" onClick={() => setTall(true)}>
+          More actions
+        </Button>
+        {tall ? <Button className="w-full">Upload photos</Button> : null}
+      </div>
+    </>
+  );
+}
+
+async function expectAboveBar(canvasElement: HTMLElement) {
+  const bar = canvasElement.querySelector<HTMLElement>('[data-toast-avoid]')!;
+  await waitFor(async () => {
+    const toast = toasts()[0]!;
+    await expect(toast.getAnimations().filter((a) => a.playState === 'running')).toHaveLength(0);
+    await expect(overlaps(toast.getBoundingClientRect(), bar.getBoundingClientRect())).toBe(false);
+  });
+}
+
+/**
+ * A bottom bar that appears or grows while a toast is open lifts the toast above it (the bars are
+ * watched with a ResizeObserver, not only measured when the toast opens).
+ */
+export const AvoidChangingBar: Story = {
+  globals: { viewport: { value: 'phone' } },
+  args: { title: 'Collection saved', durationMs: 60_000 },
+  render: (args) => <BarDemo {...args} />,
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    await userEvent.click(canvas.getByRole('button', { name: 'Show bar' }));
+    await expectAboveBar(canvasElement);
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }));
+    await expect(canvas.getByRole('button', { name: 'Upload photos' })).toBeVisible();
+    await expectAboveBar(canvasElement);
   },
 };
