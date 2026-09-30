@@ -167,6 +167,27 @@
   }
 }
 
+/* The page column: a 1240px content width (1320px from 1600px) inside a 16 / 24 / 40px gutter.
+   The gutter is exposed as --stepler-gutter so a child can bleed into it
+   (`-mx-(--stepler-gutter) px-(--stepler-gutter)`) and stay in step with it. */
+@utility stepler-container {
+  --stepler-gutter: 1rem;
+  --stepler-content: 1240px;
+  width: 100%;
+  max-width: calc(var(--stepler-content) + 2 * var(--stepler-gutter));
+  margin-inline: auto;
+  padding-inline: var(--stepler-gutter);
+  @variant sm {
+    --stepler-gutter: 1.5rem;
+  }
+  @variant lg {
+    --stepler-gutter: 2.5rem;
+  }
+  @media (width >= 100rem) {
+    --stepler-content: 1320px;
+  }
+}
+
 /* Page atmosphere: a warm key light (top right), a faint cool fill (bottom left) and the dot
    grid, faded towards the edges. Decorative only; never behind text that needs contrast. */
 @utility stepler-atmosphere {

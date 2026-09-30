@@ -4,7 +4,7 @@ import { getTranslations } from 'next-intl/server';
 export default async function AppHomePage() {
   const t = await getTranslations('app');
   return (
-    <main className="mx-auto grid max-w-[1240px] gap-2 px-4 py-8 sm:px-6 lg:px-10">
+    <main className="stepler-container grid gap-2 py-8">
       <h1 className="font-display text-2xl font-medium tracking-tight sm:text-3xl">
         {t('placeholderTitle')}
       </h1>
