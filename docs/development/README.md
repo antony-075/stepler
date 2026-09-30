@@ -63,20 +63,26 @@ Run everything from the repository root.
 
 Local `.env` files: copy `apps/api/.env.example` to `apps/api/.env`, and `apps/web/.env.example` to `apps/web/.env`. `pnpm dev` loads them. Turborepo runs in strict env mode, so every new runtime variable must also be added to `passThroughEnv` in `turbo.json`.
 
-## Branches and releases
+## Branches and environments
 
 ```
-feature branch ──PR──► dev ──release PR──► main
-                       │                    │
-                 (future staging)    (future production)
+feature branch ──PR──► dev ──PR──► stage ──PR──► main
+                        │           │             │
+                 local only   staging (deployed)  production
 ```
 
-- `dev` is the default branch and the integration branch. Start work from it (`git switch -c <type>/<topic> dev`) and open PRs against it; Dependabot targets it too.
-- `main` holds released code only. A release is a PR from `dev` to `main`.
-- Merge with **merge commits** (no squash, no rebase), so `dev` and `main` share history and a release PR contains exactly what `dev` has.
-- Changes to `dev` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
+| Branch | Environment | Configuration |
+| --- | --- | --- |
+| `dev` | local development only; never deployed | `apps/api/.env`, `apps/web/.env`, `docker/.env` on the developer's machine |
+| `stage` | staging: a deployed copy of `dev` | its own secrets: database, `APP_SECRET`, `APP_ORIGIN`, S3 bucket and keys, SMTP, Turnstile keys, Google OAuth client |
+| `main` | production | its own secrets, never shared with staging (rule 17) |
+
+- `dev` is the default branch. Start work from it (`git switch -c <type>/<topic> dev`) and open PRs against it; Dependabot targets it too.
+- Promote with PRs: `dev` → `stage` to deploy to staging, `stage` → `main` to release.
+- Merge with **merge commits** (no squash, no rebase), so the branches share history and a promotion PR contains exactly what the source branch has.
+- Changes to `dev`, `stage` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
 - Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
-- CI runs on every PR and on pushes to `dev` and `main`. Deployment is wired up when hosting is chosen: `dev` → staging, `main` → production.
+- CI runs on every PR and on pushes to `dev`, `stage` and `main`. Deployment (`stage` → staging, `main` → production) is wired up when hosting is chosen.
 
 ## Environment variables
 
