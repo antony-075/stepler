@@ -2,13 +2,11 @@ import { BrandMark } from '@stepler/ui/components/brand-mark';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { LanguageSwitch } from '@/i18n/language-switch';
-import { ThemeSwitch } from '@/theme/theme-switch';
 
 /**
- * Brand link on the left; tools on the right: `children` (the admin nav and account menu in the
- * app shell), or the language and theme switches on public pages. Synchronous so both server
- * pages and the client app shell can render it.
+ * Brand link on the left; `children` on the right (the admin nav and account menu in the app
+ * shell; public pages show the brand only). Synchronous so both server pages and the client app
+ * shell can render it.
  */
 export function SiteHeader({ children }: { children?: ReactNode }) {
   const t = useTranslations('brand');
@@ -24,12 +22,7 @@ export function SiteHeader({ children }: { children?: ReactNode }) {
             {t('name')}
           </span>
         </Link>
-        {children ?? (
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <LanguageSwitch />
-            <ThemeSwitch />
-          </div>
-        )}
+        {children}
       </div>
     </header>
   );

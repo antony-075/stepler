@@ -1,56 +1,33 @@
 'use client';
 
-import { Button } from '@stepler/ui/components/button';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { parseTheme, type ThemePreference } from './theme';
+import { parseTheme } from './theme';
 import { useThemePreference } from './theme-provider';
 
-const CYCLE: Record<ThemePreference, ThemePreference> = {
-  system: 'light',
-  light: 'dark',
-  dark: 'system',
-};
-const ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
+// Below 360px the three labelled items need slightly less padding to fit a card.
+const ITEM = 'max-[359px]:px-2';
 
-/**
- * System / Light / Dark; applies at once, no reload. From `sm` a three-item segmented control;
- * on phones one button (as in the v4 prototype) that shows the current mode and cycles
- * System → Light → Dark, its name saying both the current theme and the next one.
- */
-export function ThemeSwitch() {
+/** System / Light / Dark as a segmented control; applies at once, no reload. */
+export function ThemeSwitch({ labelledBy }: { labelledBy: string }) {
   const t = useTranslations('theme');
   const { preference, setPreference } = useThemePreference();
-  const next = CYCLE[preference];
-  const Icon = ICONS[preference];
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="rounded-full text-foreground sm:hidden"
-        aria-label={t('cycle', { current: t(preference), next: t(next) })}
-        onClick={() => setPreference(next)}
-      >
-        <Icon aria-hidden="true" className="size-[18px]" />
-      </Button>
-      <ToggleGroup
-        aria-label={t('label')}
-        value={preference}
-        onValueChange={(value) => setPreference(parseTheme(value))}
-        className="max-sm:hidden"
-      >
-        <ToggleGroupItem value="system" icon={<Monitor />}>
-          {t('system')}
-        </ToggleGroupItem>
-        <ToggleGroupItem value="light" icon={<Sun />}>
-          {t('light')}
-        </ToggleGroupItem>
-        <ToggleGroupItem value="dark" icon={<Moon />}>
-          {t('dark')}
-        </ToggleGroupItem>
-      </ToggleGroup>
-    </>
+    <ToggleGroup
+      aria-labelledby={labelledBy}
+      value={preference}
+      onValueChange={(value) => setPreference(parseTheme(value))}
+    >
+      <ToggleGroupItem value="system" className={ITEM} icon={<Monitor />}>
+        {t('system')}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="light" className={ITEM} icon={<Sun />}>
+        {t('light')}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="dark" className={ITEM} icon={<Moon />}>
+        {t('dark')}
+      </ToggleGroupItem>
+    </ToggleGroup>
   );
 }

@@ -3,20 +3,20 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
 
-// The header's theme and language switches (Tasks 9 and 10) are built on this.
+// The theme and language settings on /app/settings are built on this.
 const meta = {
   title: 'Components/ToggleGroup',
   component: ToggleGroup,
   args: { defaultValue: 'system', 'aria-label': 'Theme', onValueChange: fn() },
   render: (args) => (
     <ToggleGroup {...args}>
-      <ToggleGroupItem value="system" icon={<Monitor />} hideLabel="phone">
+      <ToggleGroupItem value="system" icon={<Monitor />}>
         System
       </ToggleGroupItem>
-      <ToggleGroupItem value="light" icon={<Sun />} hideLabel="phone">
+      <ToggleGroupItem value="light" icon={<Sun />}>
         Light
       </ToggleGroupItem>
-      <ToggleGroupItem value="dark" icon={<Moon />} hideLabel="phone">
+      <ToggleGroupItem value="dark" icon={<Moon />}>
         Dark
       </ToggleGroupItem>
     </ToggleGroup>
@@ -88,47 +88,39 @@ export const Dark: Story = {
   },
 };
 
-/** On phones the labels are visually hidden but still name the items. */
+/** At 360px the three labelled items fit side by side, each a touch target. */
 export const Phone: Story = {
   globals: { viewport: { value: 'phone' } },
   play: async ({ canvas }) => {
     await expect(window.innerWidth).toBe(360);
     const light = canvas.getByRole('radio', { name: 'Light' });
-    const label = canvas.getByText('Light');
-    // `sr-only` collapses the label to 1px; the icon is what shows.
-    await expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+    await expect(canvas.getByText('Light').getBoundingClientRect().width).toBeGreaterThan(1);
     await expect(light.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    await expect(canvas.getByRole('radiogroup').getBoundingClientRect().right).toBeLessThanOrEqual(
+      360,
+    );
     await expectItemsAreTouchTargets(canvas.getAllByRole('radio'));
   },
 };
 
-/** From `sm` the labels show next to the icons. */
-export const Laptop: Story = {
-  globals: { viewport: { value: 'laptop' } },
-  play: async ({ canvas }) => {
-    await expect(canvas.getByText('Light').getBoundingClientRect().width).toBeGreaterThan(1);
-  },
-};
-
-/** The language switch: text-only items that carry their own `lang` and a `title`. */
+/** The language switch: text-only items, each name in its own language (`lang`). */
 export const Language: Story = {
   args: { defaultValue: 'uk', 'aria-label': 'Language' },
   render: (args) => (
     <ToggleGroup {...args}>
-      <ToggleGroupItem value="uk" lang="uk" title="Українська">
-        UA
+      <ToggleGroupItem value="uk" lang="uk">
+        Українська
       </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en" title="English">
-        EN
+      <ToggleGroupItem value="en" lang="en">
+        English
       </ToggleGroupItem>
     </ToggleGroup>
   ),
   play: async ({ canvas, args }) => {
-    // The visible text is the accessible name (WCAG 2.5.3); the full name is the description.
-    const english = canvas.getByRole('radio', { name: 'EN' });
+    // The visible text is the accessible name (WCAG 2.5.3).
+    const english = canvas.getByRole('radio', { name: 'English' });
     await expect(english).toHaveAttribute('lang', 'en');
-    await expect(english).toHaveAccessibleDescription('English');
-    await expect(canvas.getByRole('radio', { name: 'UA' })).toHaveAttribute('lang', 'uk');
+    await expect(canvas.getByRole('radio', { name: 'Українська' })).toHaveAttribute('lang', 'uk');
     await userEvent.click(english);
     await expect(english).toHaveAttribute('aria-checked', 'true');
     await expect(args.onValueChange).toHaveBeenLastCalledWith('en');

@@ -43,7 +43,6 @@ Caveats:
 
 ## Language switch (Phase 3, 2026-09-30)
 
-- The header switch (UA / EN) writes `st_locale` (1 year, `path=/`, `SameSite=Lax`, `Secure` on https; not `HttpOnly`, the client writes it) and re-renders with `router.refresh()`, which keeps client state such as a half-filled sign-in form.
-- For a signed-in admin it also sends `PATCH /api/v1/me { locale }`, so emails follow the choice. A failed save shows an error toast; the page still switches.
+- The switch (Українська / English) lives on `/app/settings`, so only a signed-in admin has one. Public pages (`/`, `/login`, `/auth/verify`) have no switch: anonymous visitors get the locale from the cookie or `Accept-Language` as above. (Owner decision, 2026-09-30: no language or theme switch in the header.)
+- It writes `st_locale` (1 year, `path=/`, `SameSite=Lax`, `Secure` on https; not `HttpOnly`, the client writes it), sends `PATCH /api/v1/me { locale }` so emails follow the choice, and re-renders with `router.refresh()`, which keeps client state. A failed save shows an error toast; the page still switches.
 - "Profile locale first" without middleware: after `/me` loads, the app shell compares the profile locale with the page locale once per visit; if they differ it writes the cookie and refreshes.
-- The Turnstile widget on `/login` is not re-rendered on a language switch (that would drop a solved token), so it keeps its original language until the next page load.

@@ -13,13 +13,13 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
 import { setLocaleCookie } from './set-locale';
 
 /**
- * The current locale and a change handler shared by every language control (header switch,
- * account menu). `changeLocale` takes the raw `onValueChange` string and ignores unknown values.
+ * The current locale and a change handler for the language control on /app/settings.
+ * `changeLocale` takes the raw `onValueChange` string and ignores unknown values.
  *
  * On change it writes `st_locale`, saves the choice to the profile when an admin is signed in
  * (a `me` query is cached) so emails follow it, and re-renders the server tree with
- * `router.refresh()`. The refresh keeps client state, so a half-filled form (and its Turnstile
- * token) survives. A failed save shows a toast; the page still switches.
+ * `router.refresh()`. The refresh keeps client state. A failed save shows a toast; the page still
+ * switches.
  *
  * Saves run one at a time (a shared mutation `scope`), so quick UA → EN → UA clicks reach the
  * server in order and the profile ends on the last choice; only the latest choice updates the
@@ -69,22 +69,17 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
   return { locale, changeLocale };
 }
 
-/** UA / EN. The short code is the accessible name; `title` spells out the language. */
-export function LanguageSwitch({ className }: { className?: string }) {
+/** Українська / English, each name in its own language (`lang`). */
+export function LanguageSwitch({ labelledBy }: { labelledBy: string }) {
   const t = useTranslations('language');
   const { locale, changeLocale } = useChangeLocale();
   return (
-    <ToggleGroup
-      aria-label={t('label')}
-      value={locale}
-      onValueChange={changeLocale}
-      className={className}
-    >
-      <ToggleGroupItem value="uk" lang="uk" title={t('uk')}>
-        {t('ukShort')}
+    <ToggleGroup aria-labelledby={labelledBy} value={locale} onValueChange={changeLocale}>
+      <ToggleGroupItem value="uk" lang="uk">
+        {t('uk')}
       </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en" title={t('en')}>
-        {t('enShort')}
+      <ToggleGroupItem value="en" lang="en">
+        {t('en')}
       </ToggleGroupItem>
     </ToggleGroup>
   );

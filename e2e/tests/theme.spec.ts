@@ -1,7 +1,8 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
+import { newEmail, signIn } from '../support/auth.js';
 
-// Ukrainian UI (no supported browser language → default locale). The three-item switch shows
-// from `sm` (640px); phones get one cycling button, tested at the end.
+// Ukrainian UI (no supported browser language → default locale). The theme switch is on
+// /app/settings; public pages have none, so anonymous tests set the `st_theme` cookie directly.
 test.use({ locale: 'de-DE', viewport: { width: 1024, height: 768 } });
 
 const DARK_BACKGROUND = 'rgb(19, 20, 27)';
@@ -14,6 +15,12 @@ async function setThemeCookie(context: BrowserContext, baseURL: string, value: s
 
 const bodyBackground = (page: Page) =>
   page.locator('body').evaluate((body) => getComputedStyle(body).backgroundColor);
+
+async function openSettings(page: Page) {
+  await signIn(page, newEmail());
+  await page.goto('/app/settings');
+  await expect(page.getByRole('heading', { name: 'Налаштування', level: 1 })).toBeVisible();
+}
 
 test.describe('on a light OS', () => {
   test.use({ colorScheme: 'light' });
@@ -40,19 +47,28 @@ test.describe('on a light OS', () => {
 
     await page.goto('/');
     expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
-    await expect(
-      page
-        .getByRole('radiogroup', { name: T.group, exact: true })
-        .getByRole('radio', { name: T.system, exact: true }),
-    ).toBeChecked();
+  });
+
+  test('a light preference overrides a dark OS on public pages', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await setThemeCookie(context, baseURL!, 'light');
+    await page.goto('/login');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
   });
 });
 
 test.describe('on a dark OS', () => {
   test.use({ colorScheme: 'dark' });
 
-  test('choosing Light switches without a reload and survives one', async ({ page }) => {
-    await page.goto('/');
+  test('choosing Light in settings switches without a reload and survives one', async ({
+    page,
+  }) => {
+    await openSettings(page);
     expect(await bodyBackground(page)).toBe(DARK_BACKGROUND);
     // A reload would drop this marker.
     await page.evaluate(() => {
@@ -88,7 +104,7 @@ test.describe('after another tab changed the theme', () => {
     page,
     baseURL,
   }) => {
-    await page.goto('/login');
+    await openSettings(page);
     const uk = page.getByRole('radiogroup', { name: T.group, exact: true });
     await expect(uk.getByRole('radio', { name: T.system, exact: true })).toBeChecked();
 
@@ -97,7 +113,7 @@ test.describe('after another tab changed the theme', () => {
     await setThemeCookie(context, baseURL!, 'dark');
     await page
       .getByRole('radiogroup', { name: 'Мова', exact: true })
-      .getByRole('radio', { name: 'EN', exact: true })
+      .getByRole('radio', { name: 'English', exact: true })
       .click();
 
     const en = page.getByRole('radiogroup', { name: 'Theme', exact: true });
@@ -106,32 +122,22 @@ test.describe('after another tab changed the theme', () => {
   });
 });
 
-test.describe('on a phone', () => {
-  test.use({ colorScheme: 'dark', viewport: { width: 360, height: 780 } });
-
-  test('one button cycles System → Light → Dark and says what it does', async ({
-    page,
-    browserName,
-  }) => {
-    await page.goto('/');
-    await expect(page.getByRole('radiogroup', { name: T.group, exact: true })).toBeHidden();
-    const cycle = (current: string, next: string) =>
-      page.getByRole('button', {
-        name: `${T.group}: ${current}. Натисніть, щоб увімкнути: ${next}`,
-        exact: true,
-      });
-
-    await cycle(T.system, T.light).click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await expect.poll(() => bodyBackground(page)).toBe(LIGHT_BACKGROUND);
-    // Focus stays on the button, so it can be pressed again (WebKit does not focus on click).
-    if (browserName !== 'webkit') await expect(cycle(T.light, T.dark)).toBeFocused();
-    await cycle(T.light, T.dark).click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-    await cycle(T.dark, T.system).click();
-    await expect(page.locator('html')).not.toHaveAttribute('data-theme');
-    await expect(cycle(T.system, T.light)).toBeVisible();
-  });
+test.describe('settings on a phone', () => {
+  for (const width of [320, 360]) {
+    test(`fit ${width}px with every label visible`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 780 });
+      await openSettings(page);
+      for (const name of [T.system, T.light, T.dark, 'Українська', 'English']) {
+        const radio = page.getByRole('radio', { name, exact: true });
+        await expect(radio).toBeVisible();
+        const box = (await radio.boundingBox())!;
+        expect(box.x + box.width).toBeLessThanOrEqual(width);
+      }
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+      ).toBeLessThanOrEqual(0);
+    });
+  }
 });
 
 test.describe('public header', () => {
@@ -161,7 +167,7 @@ test.describe('public header', () => {
             expect(
               await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
             ).toBeLessThanOrEqual(0);
-            // The tools stay on the brand's row.
+            // One row: the brand only.
             const header = await page.getByRole('banner').boundingBox();
             expect(header!.height).toBeLessThan(80);
           }

@@ -20,7 +20,7 @@ Story paths are Storybook titles; the files are `packages/ui/src/components/<nam
 | `Checkbox` | 20px box | Inside a `Label` row of `min-h-11` so the whole row is the 44px target | Radix Checkbox props | Components/Checkbox |
 | `Switch` | 24px track, on/off setting that applies at once | Inside a `Label` row of `min-h-11`. Not for a choice submitted with a form button (use Checkbox) | Radix Switch props | Components/Switch |
 | `RadioGroup`, `RadioGroupItem` | One choice from a few visible options; each item is a full-row 44px label | 2–5 options that should all be visible. Name it with `aria-labelledby` or `fieldset`/`legend`, never `Field`. Not for a segmented switch (ToggleGroup) | Radix props; vertical by default; item `children` is its name | Components/RadioGroup |
-| `ToggleGroup`, `ToggleGroupItem` | Single-select segmented control (theme and language switches) that always has a value | Small sets of immediate settings. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon`, `hideLabel`: `always` / `phone`, `lang`, `title` | Components/ToggleGroup |
+| `ToggleGroup`, `ToggleGroupItem` | Single-select segmented control (theme and language on `/app/settings`) that always has a value | Small sets of immediate settings. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon` (decorative, before the visible label), `lang` | Components/ToggleGroup |
 | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Switch between views of one page; the list scrolls inside itself when it does not fit | Sibling views on one page. Not for site navigation | Radix Tabs props | Components/Tabs |
 | `CopyField` | Read-only value with a copy button and polite announcement; selects the value when the clipboard fails | Guest links and other values to share. Not for editable values | **`label`**, `value`, **`copyLabel`**, **`copiedLabel`**, **`failedLabel`** | Components/CopyField |
 | `Alert` | Inline message in the flow; `role="alert"` for `error`, `status` otherwise | Errors and warnings the user must read or act on, with an optional `action` (Retry). Not for confirming a finished action (toast) | `variant`: info, success, warning, error; `title`, `children`, `action` | Components/Alert |
@@ -61,7 +61,7 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 ### Icons
 
 - Icons come from `lucide-react`, imported by the plain name (`import { Copy } from 'lucide-react'`, not `CopyIcon` or `LucideCopy`).
-- Decorative icons get `aria-hidden="true"`. An icon-only button gets its name from `aria-label` (a prop), or from a visually hidden label (ToggleGroupItem `hideLabel`).
+- Decorative icons get `aria-hidden="true"`. An icon-only button gets its name from `aria-label` (a prop). ToggleGroupItem labels are always visible.
 
 ### Motion
 
@@ -87,7 +87,8 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 ### Theme and language
 
 - Theme: `<html data-theme="light|dark">`, rendered by the server from the `st_theme` cookie (1 year, `SameSite=Lax`, not `HttpOnly`), so the first paint is right. No attribute means "follow the system" (`prefers-color-scheme`). In the app, read and change it with `ThemeProvider` / `useThemePreference()` (`apps/web/src/theme/theme-provider.tsx`); do not write the cookie or the attribute directly.
-- Language: switch with `useChangeLocale()` (`apps/web/src/i18n/language-switch.tsx`). It writes the `st_locale` cookie and, whenever an admin session exists (also on public pages such as `/` and `/login`), saves the choice to the profile with `PATCH /me`; then it refreshes the server tree while keeping client state. A failed save shows a toast; the page still switches.
+- Where: both switches are on `/app/settings` (Appearance card, reached from the account menu and the admin nav). The header has none; public pages show the brand only and follow the cookies (or the OS / `Accept-Language`).
+- Language: switch with `useChangeLocale()` (`apps/web/src/i18n/language-switch.tsx`). It writes the `st_locale` cookie, saves the choice to the profile with `PATCH /me` when the `me` query is cached (always the case inside `/app`), then refreshes the server tree while keeping client state. A failed save shows a toast; the page still switches.
 
 ## Tokens
 

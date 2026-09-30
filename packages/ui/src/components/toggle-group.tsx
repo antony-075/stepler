@@ -7,7 +7,7 @@ import { cn } from '../lib/utils';
 type ToggleGroupProps = Omit<ToggleGroupPrimitive.ToggleGroupSingleProps, 'type'>;
 
 /**
- * Single-select segmented control (the v4 header's theme and language switches). Radix renders
+ * Single-select segmented control (the theme and language settings). Radix renders
  * it as a `radiogroup` of `radio` items: arrows move focus, Space or Enter selects. Name it with
  * `aria-label` or `aria-labelledby`.
  *
@@ -48,11 +48,6 @@ function ToggleGroup({
 type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
   /** Decorative icon shown before the label; it is hidden from assistive technology. */
   icon?: ReactNode;
-  /**
-   * Visually hides the label (it still names the item): `always`, or `phone` below `sm`, where
-   * the icon alone shows. Only use it together with `icon`.
-   */
-  hideLabel?: 'always' | 'phone';
 };
 
 /**
@@ -60,13 +55,11 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
  * Radix item.
  *
  * Keep the visible text in the accessible name (WCAG 2.5.3 Label in Name): do not give a
- * text item an `aria-label` that drops what is on screen. For the language switch the visible
- * short label ("UA") is the name, `lang` tells screen readers how to say it, and `title`
- * carries the full language name:
- * `<ToggleGroupItem value="uk" lang="uk" title="Українська">UA</ToggleGroupItem>`.
- * Icon items name themselves with their (visually hidden) label via `hideLabel`.
+ * text item an `aria-label` that drops what is on screen. For a language the visible name is
+ * the accessible name and `lang` tells screen readers how to say it:
+ * `<ToggleGroupItem value="uk" lang="uk">Українська</ToggleGroupItem>`.
  */
-function ToggleGroupItem({ className, icon, hideLabel, children, ...props }: ToggleGroupItemProps) {
+function ToggleGroupItem({ className, icon, children, ...props }: ToggleGroupItemProps) {
   return (
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
@@ -85,15 +78,7 @@ function ToggleGroupItem({ className, icon, hideLabel, children, ...props }: Tog
           {icon}
         </span>
       ) : null}
-      <span
-        data-slot="toggle-group-item-label"
-        className={cn({
-          'sr-only': hideLabel === 'always',
-          'max-sm:sr-only': hideLabel === 'phone',
-        })}
-      >
-        {children}
-      </span>
+      <span data-slot="toggle-group-item-label">{children}</span>
     </ToggleGroupPrimitive.Item>
   );
 }

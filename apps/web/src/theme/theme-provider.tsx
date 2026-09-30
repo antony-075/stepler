@@ -11,8 +11,8 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**
- * Holds the preference the server read from the cookie, so every switch (header, account menu)
- * starts from the same value and stays in sync. The server already rendered `<html data-theme>`;
+ * Holds the preference the server read from the cookie, so the settings switch starts from it and
+ * stays in sync. The server already rendered `<html data-theme>`;
  * this only changes it when the user picks another theme.
  */
 export function ThemeProvider({

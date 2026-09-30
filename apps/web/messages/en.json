@@ -53,7 +53,8 @@
     "placeholderText": "Your collections will appear here.",
     "nav": {
       "label": "Sections",
-      "collections": "Collections"
+      "collections": "Collections",
+      "settings": "Settings"
     },
     "menu": "Menu",
     "logoutFailed": "Couldn't sign out. Try again."
@@ -84,16 +85,17 @@
     "label": "Theme",
     "system": "System",
     "light": "Light",
-    "dark": "Dark",
-    "cycle": "Theme: {current}. Press to switch to {next}"
+    "dark": "Dark"
   },
   "language": {
     "label": "Language",
     "uk": "Українська",
     "en": "English",
-    "ukShort": "UA",
-    "enShort": "EN",
     "saveFailed": "Couldn't save the language to your profile",
     "saveFailedHint": "Emails will keep the previous language, and the app will open in it next time. Try again."
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "appearance": "Appearance"
   }
 }

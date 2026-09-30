@@ -6,32 +6,26 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@stepler/ui/components/dropdown-menu';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, Settings } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { apiRequest } from '@/api/client';
-import { useChangeLocale } from '@/i18n/language-switch';
-import { parseTheme } from '@/theme/theme';
-import { useThemePreference } from '@/theme/theme-provider';
 
 /**
  * The signed-in admin's menu: the email as the trigger (truncated, full address in `title` and
- * in the menu), language and theme (the same actions as the public header switches), sign out.
+ * in the menu), a link to the settings page (theme and language), sign out.
  */
 export function AccountMenu({ email }: { email: string }) {
   const t = useTranslations();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { locale, changeLocale } = useChangeLocale();
-  const { preference, setPreference } = useThemePreference();
   const logout = useMutation({
     mutationFn: () => apiRequest('/auth/logout', { method: 'POST' }),
     onSuccess: () => {
@@ -57,31 +51,12 @@ export function AccountMenu({ email }: { email: string }) {
         <DropdownMenuLabel className="font-normal">
           {t('app.signedInAs', { email })}
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t('language.label')}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          aria-label={t('language.label')}
-          value={locale}
-          onValueChange={changeLocale}
-        >
-          <DropdownMenuRadioItem value="uk" lang="uk">
-            {t('language.uk')}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="en" lang="en">
-            {t('language.en')}
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t('theme.label')}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          aria-label={t('theme.label')}
-          value={preference}
-          onValueChange={(value) => setPreference(parseTheme(value))}
-        >
-          <DropdownMenuRadioItem value="system">{t('theme.system')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="light">{t('theme.light')}</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">{t('theme.dark')}</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
+        <DropdownMenuItem asChild>
+          <Link href="/app/settings" className="no-underline">
+            <Settings aria-hidden="true" />
+            {t('settings.pageTitle')}
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled={logout.isPending} onSelect={() => logout.mutate()}>
           <LogOut aria-hidden="true" />

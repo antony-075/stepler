@@ -59,7 +59,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="stepler-atmosphere flex min-h-dvh flex-col">
       <SiteHeader>
         <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <AdminNav items={[{ href: '/app', label: t('app.nav.collections') }]} />
+          <AdminNav
+            items={[
+              { href: '/app', label: t('app.nav.collections') },
+              { href: '/app/settings', label: t('app.nav.settings') },
+            ]}
+          />
           <AccountMenu email={me.data.email} />
         </div>
       </SiteHeader>
