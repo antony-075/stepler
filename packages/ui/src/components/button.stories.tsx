@@ -13,7 +13,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   play: async ({ args, canvas }) => {
-    // No theme leaks in from another story (e.g. StapledStack/Dark).
+    // The decorator applies the default global.
     await expect(document.documentElement.dataset.theme).toBe('light');
     await userEvent.click(canvas.getByRole('button', { name: 'Upload photos' }));
     await expect(args.onClick).toHaveBeenCalledTimes(1);

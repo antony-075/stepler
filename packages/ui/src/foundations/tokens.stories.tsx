@@ -72,7 +72,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Dark comes first so Light doubles as the in-file theme-leak check (files run isolated).
+// Dark comes first: Light then checks that the default global replaces an earlier story's theme.
 export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas, canvasElement }) => {
@@ -85,7 +85,7 @@ export const Dark: Story = {
 
 export const Light: Story = {
   play: async ({ canvas, canvasElement }) => {
-    // Runs after Dark in the same page: the theme must not leak between stories.
+    // The decorator writes the global for every story, so Dark's theme is replaced here.
     await expect(document.documentElement.dataset.theme).toBe('light');
     for (const { name } of TOKENS) {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
