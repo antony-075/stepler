@@ -52,8 +52,9 @@ export async function SignInLanding({ error }: { error?: unknown }) {
           </section>
 
           <StapledStack
-            // Bleeds into the page gutter so the horizontal clip does not cut tile shadows; on
-            // desktop the column has room, so the fly-in is left unclipped there.
+            // Bleeds into the page gutter so the horizontal clip does not cut tile shadows: the
+            // negative margin and padding mirror <main>'s `px-4 sm:px-6` above, so change them
+            // together. On desktop the column has room, so the fly-in is left unclipped there.
             className="-mx-4 px-4 [grid-area:visual] sm:-mx-6 sm:px-6 lg:mx-0 lg:justify-start lg:overflow-x-visible lg:px-0"
             label={t('stackLabel')}
             photoCaption={t('photoCaption')}

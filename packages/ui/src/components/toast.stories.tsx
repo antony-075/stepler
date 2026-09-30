@@ -241,3 +241,35 @@ export const AvoidChangingBar: Story = {
     await expectAboveBar(canvasElement);
   },
 };
+
+function MountedBarDemo(args: TriggerProps) {
+  const [mounted, setMounted] = useState(false);
+  return (
+    <>
+      <Trigger {...args} />
+      <Button variant="outline" onClick={() => setMounted(true)}>
+        Mount bar
+      </Button>
+      {mounted ? (
+        <div data-toast-avoid="" className="fixed inset-x-0 bottom-0 border-t bg-card p-4">
+          <Button className="w-full">Upload photos</Button>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** A bottom bar that mounts while a toast is open (not just unhides) also lifts the toast. */
+export const AvoidMountedBar: Story = {
+  globals: { viewport: { value: 'phone' } },
+  args: { title: 'Collection saved', durationMs: 60_000 },
+  render: (args) => <MountedBarDemo {...args} />,
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    await expect(canvasElement.querySelector('[data-toast-avoid]')).toBeNull();
+    await userEvent.click(canvas.getByRole('button', { name: 'Mount bar' }));
+    await expect(canvas.getByRole('button', { name: 'Upload photos' })).toBeVisible();
+    await expectAboveBar(canvasElement);
+  },
+};

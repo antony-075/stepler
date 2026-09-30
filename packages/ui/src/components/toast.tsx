@@ -114,9 +114,10 @@ const AVOID_SELECTOR = '[data-toast-avoid]';
 
 /**
  * Lifts the viewport above any fixed bottom element marked `data-toast-avoid`, so a toast never
- * covers the page's primary action. Active only while toasts are shown: it re-measures whenever
- * the set of open toasts changes, on window resize, and when a matched bar appears, hides or
- * changes size (ResizeObserver).
+ * covers the page's primary action. Active only while toasts are shown. It re-measures when the
+ * set of open toasts changes, on window resize, when a watched bar is shown, hidden or resized
+ * (ResizeObserver), and when bars mount or unmount (a MutationObserver on the body re-queries
+ * them and re-observes).
  *
  * @param openKey the ids of the open toasts joined into a string; empty when none are open.
  */
@@ -125,7 +126,7 @@ function useAvoidOffset(openKey: string): number {
 
   useLayoutEffect(() => {
     if (!openKey) return;
-    const bars = Array.from(document.querySelectorAll(AVOID_SELECTOR));
+    let bars: Element[] = [];
     const measure = () => {
       const tops = bars
         .map((element) => element.getBoundingClientRect())
@@ -133,12 +134,21 @@ function useAvoidOffset(openKey: string): number {
         .map((rect) => rect.top);
       setOffset(tops.length ? Math.max(0, window.innerHeight - Math.min(...tops)) : 0);
     };
-    measure();
-    const observer = new ResizeObserver(measure);
-    for (const bar of bars) observer.observe(bar);
+    const resizeObserver = new ResizeObserver(measure);
+    const watchBars = () => {
+      bars = Array.from(document.querySelectorAll(AVOID_SELECTOR));
+      resizeObserver.disconnect();
+      for (const bar of bars) resizeObserver.observe(bar);
+      measure();
+    };
+    watchBars();
+    // Only element additions/removals matter; attribute changes (like our own `bottom`) do not.
+    const mutationObserver = new MutationObserver(watchBars);
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
     window.addEventListener('resize', measure);
     return () => {
-      observer.disconnect();
+      mutationObserver.disconnect();
+      resizeObserver.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, [openKey]);

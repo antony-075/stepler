@@ -122,3 +122,18 @@ export const Phone: Story = {
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
   },
 };
+
+/**
+ * Ends with the menu open so axe audits its contents. The audit is scoped to the menu: while a
+ * modal menu is open Radix marks the rest of the page `aria-hidden` (focus is trapped in the
+ * menu), which axe would report as hidden focusable content.
+ */
+export const OpenAudit: Story = {
+  parameters: { a11y: { context: '[data-slot="dropdown-menu-content"]' } },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Account' }));
+    const menu = await screen.findByRole('menu');
+    await settled(menu);
+    await expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
+  },
+};

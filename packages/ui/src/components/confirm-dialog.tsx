@@ -21,8 +21,8 @@ type ConfirmDialogProps = {
   destructive?: boolean;
   /** Resolve to close the dialog; reject to keep it open and show `errorMessage`. */
   onConfirm: () => Promise<void>;
-  /** Shown in an error Alert when `onConfirm` rejects. */
-  errorMessage?: string;
+  /** Shown in an error Alert when `onConfirm` rejects; required so a failure always has feedback. */
+  errorMessage: string;
   className?: string;
 };
 
@@ -130,9 +130,7 @@ function ConfirmDialog({
               {description}
             </AlertDialogPrimitive.Description>
           </DialogHeader>
-          {status === 'error' && errorMessage ? (
-            <Alert variant="error">{errorMessage}</Alert>
-          ) : null}
+          {status === 'error' ? <Alert variant="error">{errorMessage}</Alert> : null}
           <DialogFooter>
             <AlertDialogPrimitive.Cancel asChild>
               <Button
