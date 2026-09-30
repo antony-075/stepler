@@ -110,3 +110,23 @@ export const Laptop: Story = {
     await expect(Math.round(dialog.getBoundingClientRect().width)).toBe(448);
   },
 };
+
+/**
+ * Ends with the dialog open so axe audits its contents. The audit is scoped to the dialog: while
+ * a modal dialog is open Radix marks the rest of the page `aria-hidden`, which axe would report
+ * as hidden focusable content.
+ */
+export const OpenAudit: Story = {
+  parameters: { a11y: { context: '[data-slot="dialog-content"]' } },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Rename collection' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Rename collection' });
+    await settled(dialog);
+    await expect(screen.getByRole('button', { name: 'Save' })).toBeVisible();
+  },
+};
+
+export const OpenAuditDark: Story = {
+  ...OpenAudit,
+  globals: { theme: 'dark' },
+};

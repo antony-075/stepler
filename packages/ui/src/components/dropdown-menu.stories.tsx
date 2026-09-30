@@ -143,3 +143,8 @@ export const OpenAudit: Story = {
     await expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeVisible();
   },
 };
+
+export const OpenAuditDark: Story = {
+  ...OpenAudit,
+  globals: { theme: 'dark' },
+};
