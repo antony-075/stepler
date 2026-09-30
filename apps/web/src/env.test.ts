@@ -25,3 +25,16 @@ test('TRUST_PROXY_HEADERS must be explicit true/false', () => {
     /TRUST_PROXY_HEADERS/,
   );
 });
+
+test('API_INTERNAL_HOSTPORT (a platform private address) stands in for API_INTERNAL_URL', () => {
+  expect(loadWebEnv({ API_INTERNAL_HOSTPORT: 'stepler-api:4000' }).API_INTERNAL_URL).toBe(
+    'http://stepler-api:4000',
+  );
+  expect(
+    loadWebEnv({ API_INTERNAL_URL: 'http://a:1', API_INTERNAL_HOSTPORT: 'b:2' }).API_INTERNAL_URL,
+  ).toBe('http://a:1');
+  expect(() => loadWebEnv({ API_INTERNAL_HOSTPORT: 'not a host/port' })).toThrow(
+    /API_INTERNAL_URL/,
+  );
+  expect(() => loadWebEnv({})).toThrow(/API_INTERNAL_URL/);
+});

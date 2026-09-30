@@ -1,0 +1,93 @@
+# Render Blueprint: staging (ADR 0014). Deploys the `stage` branch after CI passes.
+# Secrets are `sync: false`: Render asks for them when the Blueprint is created and they live
+# only in the Render dashboard, never in this repository. Production gets its own Blueprint and
+# credentials later (rule 17: staging and production never share data or secrets).
+
+databases:
+  - name: stepler-staging-db
+    region: frankfurt
+    plan: 0.1c-256mb
+    diskSizeGB: 1
+    postgresMajorVersion: '18'
+    databaseName: stepler
+    user: stepler
+    # No public access: only services on the private network connect.
+    ipAllowList: []
+
+services:
+  # The API is private: only the web service reaches it, over Render's private network.
+  - type: pserv
+    name: stepler-staging-api
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: stage
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    # Runs in the new image before it starts serving (docker/scripts/verify-images.sh tests it).
+    preDeployCommand: node_modules/.bin/prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: '4000'
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stepler-staging-db
+          property: connectionString
+      # The only proxy in front of the API is the web service, which forwards one clean
+      # X-Forwarded-For with the client IP.
+      - key: API_TRUST_PROXY
+        value: '1'
+      - key: APP_SECRET
+        generateValue: true
+      # https://<web service>.onrender.com; must match exactly (CSRF origin, links, OAuth).
+      - key: APP_ORIGIN
+        sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OPERATOR_EMAILS
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
+  - type: web
+    name: stepler-staging
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: stage
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: API_INTERNAL_HOSTPORT
+        fromService:
+          type: pserv
+          name: stepler-staging-api
+          property: hostport
+      # Render (via Cloudflare) sets the client IP first in X-Forwarded-For.
+      - key: TRUST_PROXY_HEADERS
+        value: 'true'

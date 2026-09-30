@@ -15,8 +15,16 @@ const webEnvSchema = z.object({
 export type WebEnv = z.infer<typeof webEnvSchema>;
 
 /** Names the invalid variables only; values may contain secrets and are never included. */
+/** `host:port` of a private service, as hosting platforms expose it (e.g. Render `hostport`). */
+const HOSTPORT = /^[A-Za-z0-9.-]+:\d{1,5}$/;
+
 export function loadWebEnv(source: Record<string, string | undefined>): WebEnv {
-  const result = webEnvSchema.safeParse(source);
+  const hostport = source.API_INTERNAL_HOSTPORT;
+  const withUrl =
+    source.API_INTERNAL_URL === undefined && hostport !== undefined && HOSTPORT.test(hostport)
+      ? { ...source, API_INTERNAL_URL: `http://${hostport}` }
+      : source;
+  const result = webEnvSchema.safeParse(withUrl);
   if (!result.success) {
     const names = [...new Set(result.error.issues.map((issue) => String(issue.path[0])))];
     throw new Error(`Invalid or missing environment variables: ${names.join(', ')}`);
