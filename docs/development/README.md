@@ -63,6 +63,21 @@ Run everything from the repository root.
 
 Local `.env` files: copy `apps/api/.env.example` to `apps/api/.env`, and `apps/web/.env.example` to `apps/web/.env`. `pnpm dev` loads them. Turborepo runs in strict env mode, so every new runtime variable must also be added to `passThroughEnv` in `turbo.json`.
 
+## Branches and releases
+
+```
+feature branch ──PR──► dev ──release PR──► main
+                       │                    │
+                 (future staging)    (future production)
+```
+
+- `dev` is the default branch and the integration branch. Start work from it (`git switch -c <type>/<topic> dev`) and open PRs against it; Dependabot targets it too.
+- `main` holds released code only. A release is a PR from `dev` to `main`.
+- Merge with **merge commits** (no squash, no rebase), so `dev` and `main` share history and a release PR contains exactly what `dev` has.
+- Changes to `dev` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
+- Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
+- CI runs on every PR and on pushes to `dev` and `main`. Deployment is wired up when hosting is chosen: `dev` → staging, `main` → production.
+
 ## Environment variables
 
 These are names only; real values never go into the repository. Staging and production use separate credentials.

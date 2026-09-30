@@ -1,9 +1,11 @@
 # Security and version updates. The 1-day cooldown mirrors pnpm's minimumReleaseAge policy
 # (docs/development/README.md → Dependency policy). Deliberate holds are ignored below.
+# PRs target dev (the integration branch); main receives changes only through release PRs.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
     cooldown:
@@ -29,6 +31,7 @@ updates:
 
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
     cooldown:
@@ -36,6 +39,7 @@ updates:
 
   - package-ecosystem: docker
     directories: [/apps/api, /apps/web]
+    target-branch: dev
     schedule:
       interval: weekly
     cooldown:
