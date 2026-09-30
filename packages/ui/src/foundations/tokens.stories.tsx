@@ -2,22 +2,37 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useSyncExternalStore } from 'react';
 import { expect, within } from 'storybook/test';
 
-/** The v4 token table in docs/ux/README.md ("Visual direction v4"). */
+/** The colour tokens of the table in docs/ux/design-system.md ("Tokens"). */
 const TOKENS = [
   { name: '--background', role: 'page' },
-  { name: '--card', role: 'cards, tiles' },
   { name: '--foreground', role: 'text' },
+  { name: '--card', role: 'cards, tiles, dialogs, menus, fields' },
+  { name: '--card-foreground', role: 'text on card' },
+  { name: '--popover', role: 'unused (shadcn default)' },
+  { name: '--popover-foreground', role: 'unused (shadcn default)' },
   { name: '--muted', role: 'fills' },
   { name: '--muted-foreground', role: 'secondary text' },
-  { name: '--border', role: 'hairlines' },
+  { name: '--secondary', role: 'secondary button, neutral badge' },
+  { name: '--secondary-foreground', role: 'text on secondary' },
+  { name: '--accent', role: 'unused (shadcn default)' },
+  { name: '--accent-foreground', role: 'unused (shadcn default)' },
+  { name: '--border', role: 'hairlines (decorative)' },
   { name: '--input', role: 'field edges' },
-  { name: '--primary', role: 'actions, links, focus' },
+  { name: '--primary', role: 'actions, links' },
   { name: '--primary-hover', role: 'primary on hover' },
   { name: '--primary-foreground', role: 'text on primary' },
-  { name: '--accent-warm', role: 'decoration only (note, mark, QR dot, light)' },
+  { name: '--ring', role: 'focus ring (used at /70)' },
   { name: '--success', role: 'success' },
+  { name: '--success-soft', role: 'success tint' },
   { name: '--destructive', role: 'destructive' },
   { name: '--destructive-foreground', role: 'text on destructive' },
+  { name: '--accent-warm', role: 'decoration only (note, mark, QR dot, warning fill)' },
+  { name: '--accent-warm-foreground', role: 'text and icons on accent-warm' },
+  { name: '--staple', role: 'the staple (decorative)' },
+  { name: '--staple-shine', role: 'staple highlight (decorative)' },
+  { name: '--dot', role: 'atmosphere dot grid (decorative)' },
+  { name: '--glow-warm', role: 'atmosphere key light (decorative)' },
+  { name: '--glow-cool', role: 'atmosphere cool fill (decorative)' },
 ] as const;
 
 /** Re-renders whenever <html data-theme> changes (the toolbar toggle or a story's globals). */

@@ -6,8 +6,8 @@
 @source '../';
 
 /*
- * Design tokens, direction v4 (approved 2026-09-30; prototype and contrast table in
- * docs/ux/README.md). Cool ink-blue for everything you act on, warm apricot only as
+ * Design tokens, direction v4 (approved 2026-09-30; direction in docs/ux/README.md, the token
+ * and contrast table in docs/ux/design-system.md). Cool ink-blue for everything you act on, warm apricot only as
  * decoration (light and memories), near-neutral greys between. Dark is "the same room at night".
  * Every text pair passes WCAG AA in both themes; input edges are >= 3:1 against the card.
  */

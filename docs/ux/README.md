@@ -18,6 +18,10 @@ Admin experience is responsive and optimized for desktop while remaining fully u
 
 Use installed upstream UX/design skills for substantial design work.
 
+## Design system
+
+Component inventory, rules, tokens and how to add a component: [design-system.md](design-system.md).
+
 ## Visual direction v4 (approved 2026-09-30, may still change)
 
 Chosen after five prototypes (v1, v2, v3a–c, v4). The owner kept v1's restraint and added a little warmth from v3b ("after dark"); v2 (warm scrapbook) was rejected.
@@ -29,22 +33,4 @@ Chosen after five prototypes (v1, v2, v3a–c, v4). The owner kept v1's restrain
 - **Shape:** radius 12px controls, 20px cards, 14px tiles; soft ink-tinted shadows.
 - **Themes:** light and dark are designed together; dark is "the same room at night", not navy + neon. The theme follows the system setting by default. The header switch (System / Light / Dark) stores an explicit choice in the `st_theme` cookie (1 year, `SameSite=Lax`, not `HttpOnly`); the server renders it as `<html data-theme="light|dark">`, so the first paint is right with no flash, and System removes the attribute.
 
-Tokens (`packages/ui/src/styles/globals.css`):
-
-| Token | Light | Dark | Role |
-| --- | --- | --- | --- |
-| `--background` | `#F4F4F7` | `#13141B` | page |
-| `--card` | `#FFFFFF` | `#1B1D27` | cards, tiles |
-| `--foreground` | `#16182A` | `#EEEEF3` | text |
-| `--muted` | `#EBECF1` | `#252836` | fills |
-| `--muted-foreground` | `#5A5E73` | `#A7AABC` | secondary text |
-| `--border` | `#DFE1E9` | `#2C2F3D` | hairlines |
-| `--input` | `#868A9E` | `#6A6E85` | field edges |
-| `--primary` / hover | `#3B4BD8` / `#2F3DB8` | `#A3ADFF` / `#BAC2FF` | actions, links, focus |
-| `--primary-foreground` | `#FFFFFF` | `#13141B` | text on primary |
-| `--accent-warm` | `#F0A04B` | `#F4B26A` | decoration only (note, mark, QR dot, light) |
-| `--success` | `#1A7F4B` | `#5FD39A` | |
-| `--destructive` | `#C23A2E` | `#FF8A7D` | |
-| `--destructive-foreground` | `#FFFFFF` | `#13141B` | text on a destructive button |
-
-Contrast (WCAG 2 ratios, computed by the prototype's script): text on background 15.97 / 15.88; secondary text on background 5.83 / 7.97 and on card 6.40 / 7.29; primary button 6.60 / 8.73; destructive button text 5.33 / 8.03 (computed for `--destructive-foreground`); links on card 6.60 / 7.97; input edge vs card 3.42 / 3.34 (≥ 3:1); success and destructive on card ≥ 5.0. The approved prototype is published as an artifact (link in the session notes); it is not part of the repository.
+Tokens: the full table (every custom property in `packages/ui/src/styles/globals.css`, light and dark, with contrast ratios) is in [design-system.md](design-system.md#tokens), the single source; do not copy it here. The approved prototype is published as an artifact (link in the session notes); it is not part of the repository.

@@ -72,7 +72,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm build`                                    | Build all packages and apps                                   |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached)                            |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script) |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
