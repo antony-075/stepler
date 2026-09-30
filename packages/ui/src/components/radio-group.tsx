@@ -37,7 +37,7 @@ function RadioGroupItem({
       <RadioGroupPrimitive.Item
         data-slot="radio-group-item"
         className={cn(
-          'peer aspect-square size-5 shrink-0 rounded-full border border-input bg-card shadow-xs transition-[border-color,box-shadow] outline-none motion-reduce:transition-none',
+          'aspect-square size-5 shrink-0 rounded-full border border-input bg-card shadow-xs transition-[border-color,box-shadow] outline-none motion-reduce:transition-none',
           'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
           'data-[state=checked]:border-primary',
           'disabled:cursor-not-allowed disabled:opacity-50',

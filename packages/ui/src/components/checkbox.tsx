@@ -1,10 +1,10 @@
+import { Check } from 'lucide-react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
 
 // Based on shadcn/ui (new-york). The box is 20px; wrap it in a `Label` row of min-h-11 so the
-// whole row is the 44px touch target (see the story). The check is inline SVG until the icon set
-// lands.
+// whole row is the 44px touch target (see the story).
 function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
     <CheckboxPrimitive.Root
@@ -23,18 +23,7 @@ function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimiti
         data-slot="checkbox-indicator"
         className="flex items-center justify-center text-current"
       >
-        <svg
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          className="size-3.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
+        <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

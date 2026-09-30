@@ -23,6 +23,10 @@ type FieldProps = {
  * through the render prop so any input (Input, Textarea, a Radix trigger) receives the same
  * `id`, `aria-describedby` and `aria-invalid`. The error has `role="alert"` so it is announced
  * when it appears.
+ *
+ * Only for controls a `<label for>` can name (Input, Textarea, Checkbox, Switch, a Radix trigger).
+ * Do not wrap a RadioGroup in Field: it is a `role="radiogroup"` div, so name it with
+ * `aria-labelledby` or a `fieldset`/`legend` instead.
  */
 function Field({ id, label, description, error, className, children }: FieldProps) {
   const descriptionId = description ? `${id}-description` : undefined;
