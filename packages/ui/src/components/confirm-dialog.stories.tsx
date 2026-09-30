@@ -190,7 +190,7 @@ export const Phone: Story = {
   },
 };
 
-function MenuDemo({ onConfirm }: DemoProps) {
+function MenuDemo({ onConfirm, deferOpen = false }: DemoProps & { deferOpen?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -199,7 +199,10 @@ function MenuDemo({ onConfirm }: DemoProps) {
           <Button variant="outline">Photo actions</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
-          <DropdownMenuItem variant="destructive" onSelect={() => setOpen(true)}>
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => (deferOpen ? setTimeout(() => setOpen(true), 0) : setOpen(true))}
+          >
             Delete photo
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -269,5 +272,34 @@ export const FromMenu: Story = {
 /** The same without exit animations: the menu unmounts at once instead of fading out. */
 export const FromMenuReducedMotion: Story = {
   ...FromMenu,
+  tags: ['!dev', '!autodocs', 'reduced-motion'],
+};
+
+/**
+ * Opened a tick after `onSelect` (`setTimeout(…, 0)`), as apps do to let the menu start closing
+ * first: by then the trigger no longer has `aria-controls` (the dialog finds it through the
+ * menu's `aria-labelledby`), and under reduced motion the menu is already gone and nothing has
+ * focus. Focus still returns to the trigger.
+ */
+export const FromMenuDeferred: Story = {
+  render: (args) => <MenuDemo {...args} deferOpen />,
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Photo actions' });
+    for (const close of ['{Escape}', 'Cancel'] as const) {
+      await userEvent.click(trigger);
+      await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete photo' }));
+      await screen.findByRole('alertdialog', { name: 'Delete this photo?' });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus());
+      if (close === '{Escape}') await userEvent.keyboard(close);
+      else await userEvent.click(screen.getByRole('button', { name: close }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      await waitFor(() => expect(document.body.style.pointerEvents).not.toBe('none'));
+    }
+  },
+};
+
+export const FromMenuDeferredReducedMotion: Story = {
+  ...FromMenuDeferred,
   tags: ['!dev', '!autodocs', 'reduced-motion'],
 };

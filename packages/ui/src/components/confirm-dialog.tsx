@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
-import { type MouseEvent, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
 import { Alert } from './alert';
 import { Button } from './button';
@@ -35,17 +35,28 @@ type ConfirmDialogProps = {
 
 type Status = 'idle' | 'pending' | 'error';
 
+/** A menu's trigger. Radix labels the menu with it; `aria-controls` is there only while open. */
+function menuTrigger(menu: HTMLElement): HTMLElement | null {
+  const labelledBy = menu.getAttribute('aria-labelledby');
+  const byLabel = labelledBy ? document.getElementById(labelledBy) : null;
+  if (byLabel !== null || menu.id === '') return byLabel;
+  return document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(menu.id)}"]`);
+}
+
 /**
  * Where focus goes back to on close. A menu item that opened the dialog unmounts with its menu
  * (at once under reduced motion), so focus would fall to the page: return it to the menu's
- * trigger instead, which Radix links to the open menu with `aria-controls`.
+ * trigger instead. `menuLeftFocus` covers a dialog opened a tick after `onSelect` (a
+ * `setTimeout`): by then the menu may be gone and nothing has focus.
  */
-function focusReturnTarget(active: Element | null): HTMLElement | null {
+function focusReturnTarget(
+  active: Element | null,
+  menuLeftFocus: HTMLElement | null,
+): HTMLElement | null {
+  if (active === null || active === document.body) return menuLeftFocus;
   if (!(active instanceof HTMLElement)) return null;
   const menu = active.closest<HTMLElement>('[role="menu"]');
-  if (menu === null || menu.id === '') return active;
-  const trigger = document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(menu.id)}"]`);
-  return trigger ?? active;
+  return (menu === null ? null : menuTrigger(menu)) ?? active;
 }
 
 /**
@@ -77,9 +88,33 @@ function ConfirmDialog({
   // button opens it), so it remembers what had focus (a menu item: its menu's trigger) and
   // returns focus there on close.
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  // The trigger of a menu that just lost focus with nothing focused since (see focusReturnTarget).
+  const menuLeftFocusRef = useRef<HTMLElement | null>(null);
   // Ignores a settle that arrives after the dialog was closed or reopened.
   const attempt = useRef(0);
   const pending = status === 'pending';
+
+  useEffect(() => {
+    const onFocusOut = (event: FocusEvent) => {
+      const menu =
+        event.target instanceof HTMLElement
+          ? event.target.closest<HTMLElement>('[role="menu"]')
+          : null;
+      const leavingMenu =
+        menu !== null &&
+        !(event.relatedTarget instanceof Node && menu.contains(event.relatedTarget));
+      menuLeftFocusRef.current = leavingMenu ? menuTrigger(menu) : null;
+    };
+    const onFocusIn = () => {
+      menuLeftFocusRef.current = null;
+    };
+    document.addEventListener('focusout', onFocusOut, true);
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => {
+      document.removeEventListener('focusout', onFocusOut, true);
+      document.removeEventListener('focusin', onFocusIn, true);
+    };
+  }, []);
 
   // Every opening starts clean (no stale error or spinner from the last time).
   if (open !== wasOpen) {
@@ -123,7 +158,10 @@ function ConfirmDialog({
           className={cn(dialogContentClassName, className)}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            returnFocusRef.current = focusReturnTarget(document.activeElement);
+            returnFocusRef.current = focusReturnTarget(
+              document.activeElement,
+              menuLeftFocusRef.current,
+            );
             cancelRef.current?.focus();
           }}
           onCloseAutoFocus={(event) => {
