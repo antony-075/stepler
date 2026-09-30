@@ -45,5 +45,6 @@ Tokens (`packages/ui/src/styles/globals.css`):
 | `--accent-warm` | `#F0A04B` | `#F4B26A` | decoration only (note, mark, QR dot, light) |
 | `--success` | `#1A7F4B` | `#5FD39A` | |
 | `--destructive` | `#C23A2E` | `#FF8A7D` | |
+| `--destructive-foreground` | `#FFFFFF` | `#13141B` | text on a destructive button |
 
 Contrast (WCAG 2 ratios, computed by the prototype's script): text on background 15.97 / 15.88; secondary text on background 5.83 / 7.97 and on card 6.40 / 7.29; primary button 6.60 / 8.73; links on card 6.60 / 7.97; input edge vs card 3.42 / 3.34 (≥ 3:1); success and destructive on card ≥ 5.0. The approved prototype is published as an artifact (link in the session notes); it is not part of the repository.

@@ -17,6 +17,7 @@ const TOKENS = [
   { name: '--accent-warm', role: 'decoration only (note, mark, QR dot, light)' },
   { name: '--success', role: 'success' },
   { name: '--destructive', role: 'destructive' },
+  { name: '--destructive-foreground', role: 'text on destructive' },
 ] as const;
 
 /** Re-renders whenever <html data-theme> changes (the toolbar toggle or a story's globals). */
