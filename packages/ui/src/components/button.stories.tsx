@@ -30,6 +30,18 @@ export const Disabled: Story = {
   },
 };
 
+/** `aria-disabled` keeps the button focusable (e.g. while pending) but looks like `disabled`. */
+export const AriaDisabled: Story = {
+  args: { 'aria-disabled': true },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Upload photos' });
+    button.focus();
+    await expect(button).toHaveFocus();
+    await expect(getComputedStyle(button).opacity).toBe('0.5');
+    await expect(getComputedStyle(button).pointerEvents).toBe('none');
+  },
+};
+
 export const IconOnly: Story = {
   args: {
     size: 'icon',

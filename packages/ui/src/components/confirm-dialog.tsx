@@ -32,8 +32,9 @@ type Status = 'idle' | 'pending' | 'error';
  * Asks before an action, especially a destructive one. Built on Radix AlertDialog, so it traps
  * focus, only closes by an explicit choice (Escape or Cancel, never an outside click) and returns
  * focus to the trigger. Initial focus goes to Cancel, never to the action. While `onConfirm` is
- * pending, both buttons are disabled and Escape is ignored; a rejection keeps the dialog open
- * with the error.
+ * pending, both buttons are `aria-disabled` (still focusable, so focus never falls out of the
+ * dialog) and inert, and Escape is ignored; a rejection keeps the dialog open with the error and
+ * focus on the confirm button.
  */
 function ConfirmDialog({
   open,
@@ -51,6 +52,7 @@ function ConfirmDialog({
   const [status, setStatus] = useState<Status>('idle');
   const [wasOpen, setWasOpen] = useState(open);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const confirmRef = useRef<HTMLButtonElement>(null);
   // The dialog is controlled, often without an AlertDialog.Trigger (a menu item or a row
   // button opens it), so it remembers what had focus and returns focus there on close.
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -78,6 +80,7 @@ function ConfirmDialog({
     } catch {
       if (current !== attempt.current) return;
       setStatus('error');
+      confirmRef.current?.focus();
     }
   };
 
@@ -137,16 +140,17 @@ function ConfirmDialog({
                 ref={cancelRef}
                 data-slot="confirm-dialog-cancel"
                 variant="outline"
-                disabled={pending}
+                aria-disabled={pending || undefined}
               >
                 {cancelLabel}
               </Button>
             </AlertDialogPrimitive.Cancel>
             <AlertDialogPrimitive.Action asChild>
               <Button
+                ref={confirmRef}
                 data-slot="confirm-dialog-action"
                 variant={destructive ? 'destructive' : 'default'}
-                disabled={pending}
+                aria-disabled={pending || undefined}
                 onClick={(event) => void handleConfirm(event)}
               >
                 {pending ? <Spinner label={pendingLabel} className="size-4" /> : null}

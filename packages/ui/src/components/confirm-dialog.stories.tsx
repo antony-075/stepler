@@ -106,7 +106,11 @@ export const Confirm: Story = {
   },
 };
 
-/** While `onConfirm` is pending both buttons are disabled and the confirm button spins. */
+/**
+ * While `onConfirm` is pending both buttons are `aria-disabled` (not `disabled`, which would drop
+ * focus to the page), the confirm button spins, focus stays in the dialog, and neither button
+ * nor Escape does anything.
+ */
 export const Pending: Story = {
   args: { onConfirm: fn(() => new Promise<void>(() => {})) },
   play: async ({ args, canvas }) => {
@@ -114,12 +118,21 @@ export const Pending: Story = {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await expect(args.onConfirm).toHaveBeenCalledTimes(1);
     const confirm = dialog.querySelector<HTMLButtonElement>('[data-slot="confirm-dialog-action"]');
-    await waitFor(() => expect(confirm).toBeDisabled());
-    await expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    await waitFor(() => expect(confirm).toHaveAttribute('aria-disabled', 'true'));
+    await expect(cancel).toHaveAttribute('aria-disabled', 'true');
     await expect(screen.getByRole('status', { name: 'Deleting' })).toBeInTheDocument();
+    await expect(dialog.contains(document.activeElement)).toBe(true);
+    // Activating either button again does nothing.
+    confirm!.focus();
+    await userEvent.keyboard('{Enter}');
+    cancel.focus();
+    await userEvent.keyboard('{Enter}');
+    await expect(args.onConfirm).toHaveBeenCalledTimes(1);
     // Escape does not dismiss while the action is in flight.
     await userEvent.keyboard('{Escape}');
     await expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+    await expect(dialog.contains(document.activeElement)).toBe(true);
   },
 };
 
@@ -133,8 +146,14 @@ export const Failure: Story = {
     const alert = await screen.findByRole('alert');
     await expect(alert).toHaveTextContent('Could not delete the photo. Try again.');
     await expect(dialog).toBeInTheDocument();
-    await expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled();
-    await expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    const confirm = screen.getByRole('button', { name: 'Delete' });
+    await expect(confirm).not.toHaveAttribute('aria-disabled');
+    await expect(screen.getByRole('button', { name: 'Cancel' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+    // Focus stays in the dialog, on the confirm button, ready for a retry.
+    await expect(dialog.contains(document.activeElement)).toBe(true);
+    await expect(confirm).toHaveFocus();
     // Reopening starts clean.
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
