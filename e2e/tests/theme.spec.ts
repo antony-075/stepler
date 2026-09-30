@@ -146,8 +146,7 @@ test.describe('public header', () => {
             const brand = page.getByRole('banner').getByRole('link', { name: 'Stepler' });
             await expect(brand.getByText('Stepler')).toBeVisible();
             expect((await brand.boundingBox())!.width).toBeGreaterThanOrEqual(44);
-            // Everything in the header stays inside the viewport. (Below 360px the sign-in
-            // card's 300px Turnstile widget overflows the page by itself; not a header concern.)
+            // Everything in the header stays inside the viewport.
             const rightmost = await page
               .getByRole('banner')
               .evaluate((header) =>
@@ -159,11 +158,9 @@ test.describe('public header', () => {
                 ),
               );
             expect(rightmost).toBeLessThanOrEqual(width);
-            if (width >= 360) {
-              expect(
-                await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-              ).toBeLessThanOrEqual(0);
-            }
+            expect(
+              await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+            ).toBeLessThanOrEqual(0);
             // The tools stay on the brand's row.
             const header = await page.getByRole('banner').boundingBox();
             expect(header!.height).toBeLessThan(80);
@@ -172,4 +169,24 @@ test.describe('public header', () => {
       }
     });
   }
+});
+
+test.describe('sign-in card at 360px', () => {
+  test.use({ viewport: { width: 360, height: 780 } });
+
+  test('the form keeps the same inset on both sides, Turnstile included', async ({ page }) => {
+    await page.goto('/login');
+    const submit = page.locator('form button[type="submit"]');
+    // The widget is in once the always-pass test key has produced a token.
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    const { contentRight, buttonRight } = await submit.evaluate((button) => {
+      const content = button.closest<HTMLElement>('[data-slot="card-content"]')!;
+      const style = getComputedStyle(content);
+      return {
+        contentRight: content.getBoundingClientRect().right - parseFloat(style.paddingRight),
+        buttonRight: button.getBoundingClientRect().right,
+      };
+    });
+    expect(buttonRight).toBeLessThanOrEqual(contentRight + 0.5);
+  });
 });

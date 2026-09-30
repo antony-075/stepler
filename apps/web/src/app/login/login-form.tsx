@@ -17,6 +17,10 @@ import { isLocale } from '@/i18n/locales';
 import { Turnstile, type TurnstileHandle } from './turnstile';
 
 const emailFormSchema = magicLinkRequestSchema.pick({ email: true });
+
+// The Ukrainian labels are wider than a 320–360px card: tighter padding below `sm`, and the
+// label wraps (the button grows) instead of pushing the form out of the card.
+const WRAPPING_BUTTON = 'h-auto min-h-12 py-2 whitespace-normal text-balance max-sm:px-4';
 type EmailForm = z.infer<typeof emailFormSchema>;
 
 interface LoginFormProps {
@@ -144,7 +148,12 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
           </Alert>
         )}
 
-        <Button type="submit" size="lg" disabled={request.isPending || turnstileToken === null}>
+        <Button
+          type="submit"
+          size="lg"
+          className={WRAPPING_BUTTON}
+          disabled={request.isPending || turnstileToken === null}
+        >
           {request.isPending
             ? t('login.sending')
             : turnstileToken === null
@@ -160,7 +169,7 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
             {t('login.or')}
             <span className="h-px flex-1 bg-border" />
           </div>
-          <Button asChild variant="outline" size="lg">
+          <Button asChild variant="outline" size="lg" className={WRAPPING_BUTTON}>
             {/* A full navigation to an API route (not a page): it redirects to Google and back. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- API route, not a page */}
             <a href="/api/v1/auth/google/start">{t('login.google')}</a>

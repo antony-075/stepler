@@ -28,6 +28,9 @@ declare global {
   }
 }
 
+/** Cloudflare's minimum width for `size: 'flexible'`. */
+const FLEXIBLE_MIN_WIDTH = 300;
+
 export interface TurnstileHandle {
   /** Tokens are single-use: reset after every submit so the next one gets a fresh token. */
   reset(): void;
@@ -55,6 +58,7 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [compact, setCompact] = useState(false);
   const { preference } = useThemePreference();
   const theme: 'auto' | Exclude<ThemePreference, 'system'> =
     preference === 'system' ? 'auto' : preference;
@@ -67,11 +71,16 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
   const render = useCallback(() => {
     const api = window.turnstile;
     if (api === undefined || container.current === null || widgetId.current !== null) return;
+    // `flexible` is at least 300px wide: on a narrower form (phones up to ~360px) it would push
+    // the form out of the card, so take the 150x140 `compact` widget there. Measured once, at
+    // render time, like the language and theme.
+    const size = container.current.clientWidth < FLEXIBLE_MIN_WIDTH ? 'compact' : 'flexible';
+    setCompact(size === 'compact');
     widgetId.current = api.render(container.current, {
       sitekey: siteKey,
       language: latest.current.locale,
       theme: latest.current.theme,
-      size: 'flexible',
+      size,
       callback: (token) => latest.current.onToken(token),
       'expired-callback': () => latest.current.onToken(null),
       'error-callback': () => {
@@ -104,7 +113,8 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
         onLoad={() => setLoaded(true)}
         onError={() => latest.current.onError()}
       />
-      <div ref={container} className="min-h-[65px]" />
+      {/* Reserves the widget's height so the button below does not jump when it appears. */}
+      <div ref={container} className={compact ? 'min-h-[140px]' : 'min-h-[65px]'} />
     </>
   );
 }
