@@ -43,6 +43,35 @@ test('logout ends the session and /app sends you back to /login', async ({ page 
   await expect(page).toHaveURL(/\/login$/);
 });
 
+test('a signed-out visit to /app is redirected to /login by the server', async ({ page }) => {
+  const res = await page.request.get('/app', { maxRedirects: 0 });
+  expect([307, 308]).toContain(res.status());
+  expect(new URL(res.headers()['location']!, 'http://x').pathname).toBe('/login');
+
+  // The browser's navigation is redirected before any of the shell renders.
+  const landed = await page.goto('/app');
+  expect(new URL(landed!.url()).pathname).toBe('/login');
+  const first = landed!.request().redirectedFrom();
+  expect(first && new URL(first.url()).pathname).toBe('/app');
+  expect([307, 308]).toContain((await first!.response())!.status());
+  await expect(page.getByRole('heading', { name: T.title })).toBeVisible();
+});
+
+test('a signed-in visit to / or /login goes to /app; /auth/verify does not', async ({ page }) => {
+  await signIn(page, newEmail());
+  for (const path of ['/', '/login']) {
+    const res = await page.request.get(path, { maxRedirects: 0 });
+    expect([307, 308]).toContain(res.status());
+    expect(new URL(res.headers()['location']!, 'http://x').pathname).toBe('/app');
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/app$/);
+  }
+  // A link may be for another account: the verify page stays, here with its invalid-link error.
+  await page.goto(`/auth/verify?token=${'A'.repeat(43)}`);
+  await expect(page.getByText(T.invalid)).toBeVisible();
+  await expect(page).toHaveURL(/\/auth\/verify\?token=/);
+});
+
 test('an invalid link shows an error with a way back to /login', async ({ page }) => {
   await page.goto(`/auth/verify?token=${'A'.repeat(43)}`);
   await expect(page.getByText(T.invalid)).toBeVisible();
