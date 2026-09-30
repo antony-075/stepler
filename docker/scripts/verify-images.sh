@@ -6,7 +6,7 @@ cd "$(dirname "$0")/../.."
 API_IMAGE=stepler-api:verify
 WEB_IMAGE=stepler-web:verify
 NET=stepler-verify
-CONTAINERS=(stepler-verify-api stepler-verify-web stepler-verify-badenv)
+CONTAINERS=(stepler-verify-api stepler-verify-web stepler-verify-badenv stepler-verify-db)
 cleanup() {
   docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
@@ -60,6 +60,22 @@ expect_exit_on_bad_env "$API_IMAGE" --env-file docker/scripts/verify-api.env -e 
 expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
 
 docker network create "$NET" >/dev/null
+
+# Migrations run from the production API image (the platform's pre-deploy command, ADR 0014):
+# the first run applies every migration, a second run finds nothing to do.
+docker run -d --name stepler-verify-db --network "$NET" -e POSTGRES_USER=verify -e POSTGRES_PASSWORD=verify \
+  -e POSTGRES_DB=verify --health-cmd "pg_isready -U verify -d verify" --health-interval 1s \
+  postgres:18.6 >/dev/null
+wait_healthy stepler-verify-db 30
+migrate() {
+  docker run --rm --network "$NET" -e DATABASE_URL=postgresql://verify:verify@stepler-verify-db:5432/verify \
+    "$API_IMAGE" node_modules/.bin/prisma migrate deploy 2>&1
+}
+first=$(migrate) || fail "migrate deploy failed in the api image: $first"
+echo "$first" | grep -q "migrations have been successfully applied\|All migrations have been successfully applied" \
+  || fail "migrate deploy did not apply migrations: $first"
+second=$(migrate) || fail "second migrate deploy failed: $second"
+echo "$second" | grep -q "No pending migrations" || fail "second migrate deploy was not a no-op: $second"
 docker run -d --name stepler-verify-api --network "$NET" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" "$API_IMAGE" >/dev/null
 docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
   -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null

@@ -586,12 +586,12 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 
 ## 21. Open decisions (not blocking bootstrap)
 
-1. Hosting provider and production deployment architecture (EU).
-2. Email provider (EU preference).
+1. Hosting provider and production deployment architecture (EU). *Staging decided: Render, Frankfurt (ADR 0014); production to be confirmed.*
+2. Email provider (EU preference). *Staging: Brevo SMTP (ADR 0014); production to be confirmed.*
 3. Error monitoring provider.
 4. ~~Auth implementation (S1)~~ — decided: in-house (ADR 0006).
 5. Rate-limit storage for multi-instance deployment (depends on 1). Phase 2 limits are in-memory per API instance.
-5a. How deployed environments run migrations: the production API image contains neither the Prisma CLI nor the migrations (depends on 1).
+5a. ~~How deployed environments run migrations~~: the API image ships the Prisma CLI and migrations; Render runs `prisma migrate deploy` as the pre-deploy command (ADR 0014).
 6. Legal: DSA/GDPR review, reporter IP storage, evidence preservation for reported illegal content.
 7. Billing provider and pricing; transcoding provider.
 8. Final UI texts and legal texts.
