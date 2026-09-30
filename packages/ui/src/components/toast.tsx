@@ -41,13 +41,13 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 
 type ToastProviderProps = {
   /** Spoken before each toast's text by screen readers (e.g. "Сповіщення"). */
-  label: string;
+  announcementLabel: string;
   children: ReactNode;
 };
 
 // Toast state lives in React context (not a global store) next to Radix's provider, which owns
 // the timers, pause-on-hover/focus, swipe and the screen-reader announcement.
-function ToastProvider({ label, children }: ToastProviderProps) {
+function ToastProvider({ announcementLabel, children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
 
@@ -75,7 +75,7 @@ function ToastProvider({ label, children }: ToastProviderProps) {
 
   return (
     <ToastContext.Provider value={value}>
-      <ToastPrimitive.Provider label={label} swipeDirection="right">
+      <ToastPrimitive.Provider label={announcementLabel} swipeDirection="right">
         {children}
       </ToastPrimitive.Provider>
     </ToastContext.Provider>

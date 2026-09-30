@@ -35,7 +35,7 @@ function Trigger({
 }
 
 const withToaster: Decorator = (Story) => (
-  <ToastProvider label="Notification">
+  <ToastProvider announcementLabel="Notification">
     <Story />
     <Toaster label="Notifications" closeLabel="Close" />
   </ToastProvider>

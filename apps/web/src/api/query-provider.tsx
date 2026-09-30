@@ -26,7 +26,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider label={t('announcement')}>
+      <ToastProvider announcementLabel={t('announcement')}>
         {children}
         <Toaster label={t('region')} closeLabel={t('close')} />
       </ToastProvider>

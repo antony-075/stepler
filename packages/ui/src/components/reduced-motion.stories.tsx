@@ -99,7 +99,7 @@ function ToastTrigger() {
 
 export const Toast: Story = {
   render: () => (
-    <ToastProvider label="Notification">
+    <ToastProvider announcementLabel="Notification">
       <ToastTrigger />
       <Toaster label="Notifications" closeLabel="Close" />
     </ToastProvider>
