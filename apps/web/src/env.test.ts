@@ -4,7 +4,6 @@ import { loadWebEnv } from './env';
 test('loadWebEnv accepts a URL', () => {
   expect(loadWebEnv({ API_INTERNAL_URL: 'http://localhost:4000' })).toEqual({
     API_INTERNAL_URL: 'http://localhost:4000',
-    TRUST_PROXY_HEADERS: false,
   });
 });
 
@@ -17,13 +16,21 @@ test('loadWebEnv only accepts http(s) API URLs', () => {
   expect(() => loadWebEnv({ API_INTERNAL_URL: 'file:///etc/passwd' })).toThrow(/API_INTERNAL_URL/);
 });
 
-test('TRUST_PROXY_HEADERS must be explicit true/false', () => {
+test('CLIENT_IP_HEADER is a lowercased header name; the old TRUST_PROXY_HEADERS is ignored', () => {
   expect(
-    loadWebEnv({ API_INTERNAL_URL: 'http://a', TRUST_PROXY_HEADERS: 'true' }).TRUST_PROXY_HEADERS,
-  ).toBe(true);
-  expect(() => loadWebEnv({ API_INTERNAL_URL: 'http://a', TRUST_PROXY_HEADERS: 'yes' })).toThrow(
-    /TRUST_PROXY_HEADERS/,
-  );
+    loadWebEnv({ API_INTERNAL_URL: 'http://a', CLIENT_IP_HEADER: 'CF-Connecting-IP' })
+      .CLIENT_IP_HEADER,
+  ).toBe('cf-connecting-ip');
+  expect(() =>
+    loadWebEnv({ API_INTERNAL_URL: 'http://a', CLIENT_IP_HEADER: 'x forwarded' }),
+  ).toThrow(/CLIENT_IP_HEADER/);
+  // X-Forwarded-For is client-controlled at its first entry on Render; it cannot be the source.
+  expect(() =>
+    loadWebEnv({ API_INTERNAL_URL: 'http://a', CLIENT_IP_HEADER: 'x-forwarded-for' }),
+  ).toThrow(/CLIENT_IP_HEADER/);
+  expect(loadWebEnv({ API_INTERNAL_URL: 'http://a', TRUST_PROXY_HEADERS: 'true' })).toEqual({
+    API_INTERNAL_URL: 'http://a',
+  });
 });
 
 test('API_INTERNAL_HOSTPORT (a platform private address) stands in for API_INTERNAL_URL', () => {

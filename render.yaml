@@ -88,6 +88,7 @@ services:
           type: pserv
           name: stepler-staging-api
           property: hostport
-      # Render (via Cloudflare) sets the client IP first in X-Forwarded-For.
-      - key: TRUST_PROXY_HEADERS
-        value: 'true'
+      # Cloudflare (in front of Render) sets the real client IP here and overwrites any
+      # client-sent value. X-Forwarded-For is not used: Render keeps the client-sent value first.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip

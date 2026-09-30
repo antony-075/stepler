@@ -71,7 +71,7 @@ A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `sta
 - Google sign-in with a test user.
 - **Client IP check** (ADR 0014): temporarily set `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR=3` on the API and redeploy.
   1. Send 4 preview requests from one machine, each with a different spoofed header:
-     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/magic-link/preview`
+     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -H 'CF-Connecting-IP: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/magic-link/preview`
   2. The 4th request must return 429: spoofing does not create new buckets.
   3. The same test from another network must still get 400, not 429: clients do not share one bucket.
   4. Remove the override afterwards.
