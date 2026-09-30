@@ -16,6 +16,7 @@
     "@stepler/contracts": "workspace:*",
     "@stepler/ui": "workspace:*",
     "@tanstack/react-query": "5.104.0",
+    "lucide-react": "1.48.0",
     "next": "catalog:",
     "next-intl": "4.14.7",
     "react": "catalog:",

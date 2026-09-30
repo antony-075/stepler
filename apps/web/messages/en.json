@@ -73,5 +73,11 @@
     "announcement": "Notification",
     "region": "Notifications",
     "close": "Close notification"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
   }
 }

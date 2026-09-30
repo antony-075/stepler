@@ -27,7 +27,7 @@ Chosen after five prototypes (v1, v2, v3a–c, v4). The owner kept v1's restrain
 - **Background:** flat page colour, a soft warm key light top right, a faint cool fill bottom left and a faded dot grid (`stepler-atmosphere` utility).
 - **Type:** Unbounded 500/600 for the wordmark and headings, Manrope for everything else; both self-hosted with `next/font` (latin, cyrillic, cyrillic-ext).
 - **Shape:** radius 12px controls, 20px cards, 14px tiles; soft ink-tinted shadows.
-- **Themes:** light and dark are designed together; dark is "the same room at night", not navy + neon. The theme follows the system setting; `data-theme` on `<html>` is ready for an explicit switch later.
+- **Themes:** light and dark are designed together; dark is "the same room at night", not navy + neon. The theme follows the system setting by default. The header switch (System / Light / Dark) stores an explicit choice in the `st_theme` cookie (1 year, `SameSite=Lax`, not `HttpOnly`); the server renders it as `<html data-theme="light|dark">`, so the first paint is right with no flash, and System removes the attribute.
 
 Tokens (`packages/ui/src/styles/globals.css`):
 
