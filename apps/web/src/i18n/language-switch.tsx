@@ -3,10 +3,10 @@
 import { meResponseSchema, type UpdateMeRequest } from '@stepler/contracts';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import { useToast } from '@stepler/ui/components/toast';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useOptimistic, useTransition } from 'react';
+import { useCallback, useOptimistic, useRef, useTransition } from 'react';
 import { apiRequest } from '@/api/client';
 import { ME_QUERY_KEY } from '@/api/me';
 import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
@@ -20,6 +20,10 @@ import { setLocaleCookie } from './set-locale';
  * (a `me` query is cached) so emails follow it, and re-renders the server tree with
  * `router.refresh()`. The refresh keeps client state, so a half-filled form (and its Turnstile
  * token) survives. A failed save shows a toast; the page still switches.
+ *
+ * Saves run one at a time (a shared mutation `scope`), so quick UA → EN → UA clicks reach the
+ * server in order and the profile ends on the last choice; only the latest choice updates the
+ * cache or reports a failure.
  */
 export function useChangeLocale(): { locale: Locale; changeLocale: (value: string) => void } {
   const t = useTranslations('language');
@@ -30,25 +34,36 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
   // Shows the new choice at once, until the refreshed server tree brings the real locale.
   const [locale, setOptimisticLocale] = useOptimistic(isLocale(current) ? current : DEFAULT_LOCALE);
   const [, startTransition] = useTransition();
+  const latestChoice = useRef<Locale | null>(null);
+  const { mutate: saveLocale } = useMutation({
+    scope: { id: 'me-locale' },
+    mutationFn: (value: Locale) => {
+      const body: UpdateMeRequest = { locale: value };
+      return apiRequest('/me', { method: 'PATCH', body, schema: meResponseSchema });
+    },
+    onSuccess: (me, value) => {
+      if (value === latestChoice.current) queryClient.setQueryData(ME_QUERY_KEY, me);
+    },
+    onError: (_error, value) => {
+      if (value !== latestChoice.current) return;
+      toast({ variant: 'error', title: t('saveFailed'), description: t('saveFailedHint') });
+    },
+  });
 
   const changeLocale = useCallback(
     (value: string) => {
       if (!isLocale(value) || value === locale) return;
       setLocaleCookie(value);
       if (queryClient.getQueryData(ME_QUERY_KEY) !== undefined) {
-        const body: UpdateMeRequest = { locale: value };
-        apiRequest('/me', { method: 'PATCH', body, schema: meResponseSchema }).then(
-          (me) => queryClient.setQueryData(ME_QUERY_KEY, me),
-          () =>
-            toast({ variant: 'error', title: t('saveFailed'), description: t('saveFailedHint') }),
-        );
+        latestChoice.current = value;
+        saveLocale(value);
       }
       startTransition(() => {
         setOptimisticLocale(value);
         router.refresh();
       });
     },
-    [locale, queryClient, router, setOptimisticLocale, t, toast],
+    [locale, queryClient, router, saveLocale, setOptimisticLocale],
   );
 
   return { locale, changeLocale };

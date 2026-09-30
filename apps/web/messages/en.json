@@ -87,6 +87,6 @@
     "ukShort": "UA",
     "enShort": "EN",
     "saveFailed": "Couldn't save the language to your profile",
-    "saveFailedHint": "The page has switched. Emails will use the previous language until you try again."
+    "saveFailedHint": "Emails will keep the previous language, and the app will open in it next time. Try again."
   }
 }

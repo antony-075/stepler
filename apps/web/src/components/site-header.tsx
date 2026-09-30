@@ -7,8 +7,8 @@ import { ThemeSwitch } from '@/theme/theme-switch';
 
 /**
  * Brand link on the left; tools on the right: `children` (e.g. sign out in the app shell), or
- * the language and theme switches on public pages. Synchronous so both server pages and the client app shell
- * can render it.
+ * the language and theme switches on public pages. Synchronous so both server pages and the
+ * client app shell can render it.
  */
 export function SiteHeader({ children }: { children?: ReactNode }) {
   const t = useTranslations('brand');

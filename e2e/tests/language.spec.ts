@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, type Request, test } from '@playwright/test';
 import { newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
 import { latestMagicLink, mailSubjects } from '../support/mailpit.js';
 
@@ -142,4 +142,39 @@ test('a failed profile save shows a toast and still switches the page', async ({
   await expect(page.locator('[data-slot="toast-title"]')).toHaveText(
     /Couldn't save the language|Не вдалося зберегти мову/,
   );
+});
+
+test('quick switches save in order, so the profile ends on the last choice', async ({ page }) => {
+  await signIn(page, newEmail());
+  // Sent in parallel, a later choice could reach the server first and an earlier one would win.
+  // Holds the first save and records when each save is sent and settles.
+  const events: string[] = [];
+  const localeOf = (request: Request) => (request.postDataJSON() as { locale: string }).locale;
+  const isSave = (request: Request) =>
+    request.method() === 'PATCH' && request.url().endsWith('/api/v1/me');
+  page.on('request', (r) => isSave(r) && events.push(`send ${localeOf(r)}`));
+  page.on('requestfinished', (r) => isSave(r) && events.push(`done ${localeOf(r)}`));
+  page.on('requestfailed', (r) => isSave(r) && events.push(`fail ${localeOf(r)}`));
+  let release = () => {};
+  const held = new Promise<void>((resolve) => (release = resolve));
+  let first = true;
+  await page.route('**/api/v1/me', async (route) => {
+    if (!isSave(route.request())) return route.continue();
+    if (first) {
+      first = false;
+      await held;
+    }
+    return route.continue();
+  });
+
+  await page.getByRole('radio', { name: 'EN', exact: true }).click();
+  await expect.poll(() => events).toEqual(['send en']);
+  await page.getByRole('radio', { name: 'UA', exact: true }).click();
+  await expect(page.getByRole('radio', { name: 'UA', exact: true })).toBeChecked();
+  release();
+
+  await expect.poll(() => events).toEqual(['send en', 'done en', 'send uk', 'done uk']);
+  const me = await page.request.get('/api/v1/me');
+  expect(((await me.json()) as { locale: string }).locale).toBe('uk');
+  await expect(page.getByRole('heading', { name: UK_APP_TITLE })).toBeVisible();
 });
