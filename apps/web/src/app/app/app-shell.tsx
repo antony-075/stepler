@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect } from 'react';
 import { apiRequest, isApiError } from '@/api/client';
+import { SiteHeader } from '@/components/site-header';
 import { errorMessageKey } from '@/errors/error-message';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -34,7 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const failed = me.error !== null && !unauthenticated;
     const failure = isApiError(me.error) ? me.error.code : 'INTERNAL';
     return (
-      <main className="grid min-h-dvh place-items-center px-4">
+      <main className="stepler-atmosphere grid min-h-dvh place-items-center px-4">
         {failed ? (
           <div className="grid gap-4 text-center">
             <p role="alert">{t(errorMessageKey(failure))}</p>
@@ -48,16 +49,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
-        <p className="min-w-0 truncate text-sm text-muted-foreground">
-          {t('app.signedInAs', { email: me.data.email })}
-        </p>
-        <Button variant="outline" disabled={logout.isPending} onClick={() => logout.mutate()}>
-          {t('app.logout')}
-        </Button>
-      </header>
-      {children}
+    <div className="stepler-atmosphere flex min-h-dvh flex-col">
+      <SiteHeader>
+        <div className="flex min-w-0 items-center gap-3">
+          <p className="max-w-[40vw] min-w-0 truncate text-sm text-muted-foreground sm:max-w-xs">
+            {t('app.signedInAs', { email: me.data.email })}
+          </p>
+          <Button variant="outline" disabled={logout.isPending} onClick={() => logout.mutate()}>
+            {t('app.logout')}
+          </Button>
+        </div>
+      </SiteHeader>
+      <div className="flex-1">{children}</div>
     </div>
   );
 }

@@ -94,7 +94,9 @@ export function VerifyPanel({ token }: { token: string | null }) {
 
   return (
     <div className="grid gap-4">
-      <h1 className="text-xl font-semibold">{t('verify.title')}</h1>
+      <h1 className="font-display text-xl leading-tight font-medium tracking-tight sm:text-2xl">
+        {t('verify.title')}
+      </h1>
       <p>{t('verify.signInAs', { email: preview.data.email })}</p>
       <p className="text-sm text-muted-foreground">{t('verify.notYou')}</p>
       <Button size="lg" disabled={verify.isPending} onClick={() => verify.mutate()}>

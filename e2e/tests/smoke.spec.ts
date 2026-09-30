@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-const UK_TAGLINE = 'Збирайте фото, відео та історії з події в одному місці';
-const EN_TAGLINE = 'Collect photos, videos and stories from your event in one place';
+const UK_TITLE = 'Зберіть усе з події в одну колекцію';
+const EN_TITLE = 'Gather everything from your event in one collection';
 
 // test.use keeps each project's device (viewport, touch, user agent); only the browser locale
 // (which drives Accept-Language) changes.
@@ -11,7 +11,7 @@ test.describe('without a supported language preference', () => {
   test('home renders Ukrainian', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('lang', 'uk');
-    await expect(page.getByText(UK_TAGLINE)).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: UK_TITLE })).toBeVisible();
   });
 });
 
@@ -21,7 +21,7 @@ test.describe('with an English browser', () => {
   test('home renders English', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-    await expect(page.getByText(EN_TAGLINE)).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: EN_TITLE })).toBeVisible();
   });
 });
 

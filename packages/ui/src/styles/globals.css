@@ -1,37 +1,131 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import './stapled-stack.css';
 
 /* Scan ui sources wherever this stylesheet is imported (e.g. apps/web). */
 @source '../';
 
-/* Design tokens (shadcn neutral). Light theme only; dark tokens arrive with the Phase 3 design system. */
+/*
+ * Design tokens, direction v4 (approved 2026-09-30; prototype and contrast table in
+ * docs/ux/README.md). Cool ink-blue for everything you act on, warm apricot only as
+ * decoration (light and memories), near-neutral greys between. Dark is "the same room at night".
+ * Every text pair passes WCAG AA in both themes; input edges are >= 3:1 against the card.
+ */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  color-scheme: light;
+  --radius: 0.75rem;
+  --background: #f4f4f7;
+  --foreground: #16182a;
+  --card: #ffffff;
+  --card-foreground: #16182a;
+  --popover: #ffffff;
+  --popover-foreground: #16182a;
+  --primary: #3b4bd8;
+  --primary-hover: #2f3db8;
+  --primary-foreground: #ffffff;
+  --secondary: #ebecf1;
+  --secondary-foreground: #16182a;
+  --muted: #ebecf1;
+  --muted-foreground: #5a5e73;
+  --accent: #ebecf1;
+  --accent-foreground: #16182a;
+  --accent-warm: #f0a04b;
+  --accent-warm-foreground: #2a1605;
+  --success: #1a7f4b;
+  --success-soft: #e4f3ea;
+  --destructive: #c23a2e;
+  --border: #dfe1e9;
+  --input: #868a9e;
+  --ring: #3b4bd8;
+  --staple: #a3a7b6;
+  --staple-shine: #ecedf2;
+  --dot: #d6d8e0;
+  --glow-warm: rgb(255 186 120 / 0.42);
+  --glow-cool: rgb(150 162 255 / 0.16);
+  --shadow-card: 0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2);
+  --shadow-tile: 0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --background: #13141b;
+    --foreground: #eeeef3;
+    --card: #1b1d27;
+    --card-foreground: #eeeef3;
+    --popover: #1b1d27;
+    --popover-foreground: #eeeef3;
+    --primary: #a3adff;
+    --primary-hover: #bac2ff;
+    --primary-foreground: #13141b;
+    --secondary: #252836;
+    --secondary-foreground: #eeeef3;
+    --muted: #252836;
+    --muted-foreground: #a7aabc;
+    --accent: #252836;
+    --accent-foreground: #eeeef3;
+    --accent-warm: #f4b26a;
+    --accent-warm-foreground: #2a1605;
+    --success: #5fd39a;
+    --success-soft: #173327;
+    --destructive: #ff8a7d;
+    --border: #2c2f3d;
+    --input: #6a6e85;
+    --ring: #a3adff;
+    --staple: #7e8296;
+    --staple-shine: #c9cbd6;
+    --dot: #262834;
+    --glow-warm: rgb(255 168 96 / 0.15);
+    --glow-cool: rgb(120 132 255 / 0.07);
+    --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
+    --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
+  }
+}
+
+/* An explicit choice (a future theme switch) wins over the system setting. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --background: #13141b;
+  --foreground: #eeeef3;
+  --card: #1b1d27;
+  --card-foreground: #eeeef3;
+  --popover: #1b1d27;
+  --popover-foreground: #eeeef3;
+  --primary: #a3adff;
+  --primary-hover: #bac2ff;
+  --primary-foreground: #13141b;
+  --secondary: #252836;
+  --secondary-foreground: #eeeef3;
+  --muted: #252836;
+  --muted-foreground: #a7aabc;
+  --accent: #252836;
+  --accent-foreground: #eeeef3;
+  --accent-warm: #f4b26a;
+  --accent-warm-foreground: #2a1605;
+  --success: #5fd39a;
+  --success-soft: #173327;
+  --destructive: #ff8a7d;
+  --border: #2c2f3d;
+  --input: #6a6e85;
+  --ring: #a3adff;
+  --staple: #7e8296;
+  --staple-shine: #c9cbd6;
+  --dot: #262834;
+  --glow-warm: rgb(255 168 96 / 0.15);
+  --glow-cool: rgb(120 132 255 / 0.07);
+  --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
+  --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
 }
 
 @theme inline {
+  /* next/font sets --font-manrope / --font-unbounded in apps/web; Storybook uses the fallbacks. */
+  --font-sans: var(--font-manrope, 'Manrope'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display:
+    var(--font-unbounded, 'Unbounded'), var(--font-manrope, 'Manrope'), system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -39,6 +133,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -46,10 +141,17 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-warm-foreground: var(--accent-warm-foreground);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-staple: var(--staple);
+  --shadow-card: var(--shadow-card);
+  --shadow-tile: var(--shadow-tile);
 }
 
 @layer base {
@@ -57,6 +159,38 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}
+
+/* Page atmosphere: a warm key light (top right), a faint cool fill (bottom left) and the dot
+   grid, faded towards the edges. Decorative only; never behind text that needs contrast. */
+@utility stepler-atmosphere {
+  position: relative;
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    background-position: 11px 11px;
+    mask-image: radial-gradient(ellipse 70% 55% at 30% 30%, #000 20%, transparent 80%);
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        min(900px, 120vw) min(640px, 90vw) at 92% -4%,
+        var(--glow-warm),
+        transparent 70%
+      ),
+      radial-gradient(min(700px, 100vw) 520px at -6% 104%, var(--glow-cool), transparent 70%);
   }
 }

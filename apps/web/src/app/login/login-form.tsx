@@ -56,7 +56,9 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   if (sentTo !== null) {
     return (
       <div role="status" className="grid gap-3">
-        <h2 className="text-xl font-semibold">{t('login.sentTitle')}</h2>
+        <h2 className="font-display text-xl leading-tight font-medium tracking-tight">
+          {t('login.sentTitle')}
+        </h2>
         <p className="text-muted-foreground">{t('login.sentText', { email: sentTo })}</p>
         <p className="text-muted-foreground">{t('login.sentHint')}</p>
         <Button
@@ -80,7 +82,9 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   return (
     <div className="grid gap-5">
       <div className="grid gap-1">
-        <h1 className="text-xl font-semibold">{t('login.title')}</h1>
+        <h2 className="font-display text-xl leading-tight font-medium tracking-tight lg:text-2xl">
+          {t('login.title')}
+        </h2>
         <p className="text-muted-foreground">{t('login.hint')}</p>
       </div>
 
