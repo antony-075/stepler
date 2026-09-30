@@ -193,10 +193,10 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
             }}
             className={cn(
               'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border bg-card p-4 pr-2 text-sm text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] focus-visible:ring-[3px] focus-visible:ring-ring/50',
-              'data-[state=open]:animate-in data-[state=open]:duration-200 data-[state=open]:fade-in data-[state=open]:slide-in-from-bottom-2',
-              'data-[state=closed]:animate-out data-[state=closed]:duration-150 data-[state=closed]:fade-out',
-              'data-[swipe=cancel]:translate-x-0 data-[swipe=cancel]:transition-transform data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) data-[swipe=end]:animate-out data-[swipe=end]:fade-out data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) data-[swipe=move]:transition-none',
-              'motion-reduce:animate-none motion-reduce:transition-none',
+              'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:duration-200 motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
+              'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:duration-150 motion-safe:data-[state=closed]:fade-out',
+              // The swipe itself follows the finger; only the snap-back and the exit are animated.
+              'data-[swipe=cancel]:translate-x-0 motion-safe:data-[swipe=cancel]:transition-transform data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) motion-safe:data-[swipe=end]:animate-out motion-safe:data-[swipe=end]:fade-out data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) data-[swipe=move]:transition-none',
               {
                 'border-border': variant === 'info',
                 'border-success/40': variant === 'success',

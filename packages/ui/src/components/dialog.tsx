@@ -27,8 +27,7 @@ function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrim
       data-slot="dialog-overlay"
       className={cn(
         'fixed inset-0 z-50 bg-black/50',
-        'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0',
-        'motion-reduce:animate-none',
+        'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
         className,
       )}
       {...props}
@@ -39,8 +38,7 @@ function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrim
 /** Panel classes shared with `ConfirmDialog` (Radix AlertDialog) so both overlays match. */
 const dialogContentClassName = cn(
   'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-card p-6 text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] sm:max-w-md',
-  'duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-  'motion-reduce:animate-none',
+  'duration-200 motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
 );
 
 type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
