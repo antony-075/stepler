@@ -1,6 +1,8 @@
 'use client';
 
+import { Toaster, ToastProvider } from '@stepler/ui/components/toast';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { isApiError } from './client';
 
@@ -10,7 +12,9 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
   return failureCount < 2;
 }
 
+/** Server-state client and the app's single toast outlet, so any screen can `useToast()`. */
 export function QueryProvider({ children }: { children: ReactNode }) {
+  const t = useTranslations('toast');
   const [client] = useState(
     () =>
       new QueryClient({
@@ -20,5 +24,12 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <ToastProvider label={t('announcement')}>
+        {children}
+        <Toaster label={t('region')} closeLabel={t('close')} />
+      </ToastProvider>
+    </QueryClientProvider>
+  );
 }

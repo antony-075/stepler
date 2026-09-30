@@ -68,5 +68,10 @@
     "documentTitle": "Evening programme",
     "note": "Thanks for a wonderful evening!",
     "noteAuthor": "Olena"
+  },
+  "toast": {
+    "announcement": "Notification",
+    "region": "Notifications",
+    "close": "Close notification"
   }
 }
