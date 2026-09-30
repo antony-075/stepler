@@ -75,6 +75,46 @@ export const Keyboard: Story = {
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     await waitFor(() => expect(trigger).toHaveFocus());
+    // A keyboard-only session keeps the focus ring on the trigger.
+    await expect(trigger.matches(':focus-visible')).toBe(true);
+  },
+};
+
+/**
+ * After a pointer-opened menu closes (an item, Escape or an outside click), focus is back on the
+ * trigger but without `:focus-visible`, so no ring sticks around for a mouse user.
+ */
+export const PointerNoStickyRing: Story = {
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Account' });
+    const expectFocusWithoutRing = async () => {
+      await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+      await waitFor(() => expect(trigger).toHaveFocus());
+      await expect(trigger.matches(':focus-visible')).toBe(false);
+    };
+
+    await userEvent.click(trigger);
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Settings' }));
+    await expectFocusWithoutRing();
+
+    await userEvent.click(trigger);
+    await screen.findByRole('menu');
+    await userEvent.keyboard('{Escape}');
+    await expectFocusWithoutRing();
+
+    await userEvent.click(trigger);
+    await screen.findByRole('menu');
+    // A modal menu blocks pointer events on the page, as a real outside click would meet.
+    await userEvent.click(document.body, { pointerEventsCheck: 0 });
+    await expectFocusWithoutRing();
+
+    // A keyboard session afterwards gets its ring back.
+    await userEvent.keyboard('{Enter}');
+    await screen.findByRole('menu');
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await expect(trigger.matches(':focus-visible')).toBe(true);
   },
 };
 

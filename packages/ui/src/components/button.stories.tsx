@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, fn, userEvent } from 'storybook/test';
+import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { Button, type ButtonProps } from './button';
 
 const meta = {
@@ -120,4 +120,34 @@ export const AllVariantsDark: Story = {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await expect(canvas.getByRole('button', { name: 'destructive lg' })).toBeVisible();
   },
+};
+
+/**
+ * Ghost buttons sit directly on the page atmosphere: hover and open use a translucent foreground
+ * tint that blends with the warm background instead of the cool grey muted surface.
+ */
+export const GhostOnAtmosphere: Story = {
+  args: { variant: 'ghost', children: 'anna@example.com', className: 'text-foreground' },
+  render: (args) => (
+    <div className="stepler-atmosphere flex min-h-40 items-center justify-center bg-background p-6">
+      <Button {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'anna@example.com' });
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    // Synthetic hover does not reach CSS `:hover`; the open state (a menu trigger) uses the same
+    // tint, so assert it there.
+    button.dataset.state = 'open';
+    // A translucent tint, never an opaque surface.
+    await waitFor(() =>
+      expect(getComputedStyle(button).backgroundColor).toMatch(/\/ 0\.06\)$|, 0\.06\)$/),
+    );
+    delete button.dataset.state;
+  },
+};
+
+export const GhostOnAtmosphereDark: Story = {
+  ...GhostOnAtmosphere,
+  globals: { theme: 'dark' },
 };

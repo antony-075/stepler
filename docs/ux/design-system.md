@@ -73,6 +73,8 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 ### Focus, touch and layout
 
 - Focus ring: `focus-visible:ring-[3px] focus-visible:ring-ring/70` (the base outline is `outline-ring/70`); invalid and destructive controls use `ring-destructive/70`. Measured ratios are in the token table; `/50` was 2.33:1 on the card in light and failed WCAG 1.4.11. Menu items use a solid inset `ring-ring` because the hover background alone is about 1.2:1.
+- A `DropdownMenu` session that saw pointer input returns focus to its trigger with `focus({ focusVisible: false })`, so no ring sticks after a mouse user closes the menu; a keyboard-only session keeps the ring. Safari ignores the option and may still show it.
+- Surfaces drawn straight on the page (ghost buttons, admin nav links) hover and open with `bg-foreground/[0.06]`, not `bg-muted`: the cool grey clashes with the warm `stepler-atmosphere`. Cards and inputs keep `bg-muted`.
 - Touch targets are at least 44×44px. Button `sm` (36px) is not for touch; Checkbox and Switch sit in a `min-h-11` Label row.
 - A fixed bottom bar (for example an upload bar) gets `data-toast-avoid`; the Toaster lifts its viewport above it while toasts are open.
 - `RadioGroup` is not wrapped in `Field`: it is a `role="radiogroup"` div that `<label for>` cannot name. Use `aria-labelledby` or `fieldset`/`legend`.

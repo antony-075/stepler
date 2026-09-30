@@ -16,7 +16,10 @@ const buttonVariants = cva(
           'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/70',
         outline: 'border border-input bg-card hover:bg-muted',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'text-primary hover:bg-muted',
+        // A translucent foreground tint rather than `bg-muted`: ghost buttons sit on the page
+        // (often the warm `stepler-atmosphere`), where the cool grey muted surface clashes.
+        ghost:
+          'text-primary hover:bg-foreground/[0.06] active:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.06]',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {

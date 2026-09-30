@@ -2,36 +2,130 @@
 
 import { Check, Circle } from 'lucide-react';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
-import type { ComponentProps } from 'react';
+import { createContext, useContext, useEffect, useState, type ComponentProps } from 'react';
 import { cn } from '../lib/utils';
 
-function DropdownMenu(props: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
+/**
+ * How the current menu session was driven. Radix returns focus to the trigger on close with a
+ * plain `focus()`, which the browser shows as `:focus-visible` after an Escape or Enter, so a
+ * mouse user who opened the menu is left with a ring. A session that saw any pointer input
+ * returns focus with `focusVisible: false` instead (Chromium, Firefox; Safari ignores the option
+ * and may still show the ring). Keyboard-only sessions keep the ring.
+ */
+class MenuSession {
+  private modal = true;
+  private trigger: HTMLElement | null = null;
+  private pointer = false;
+  private skipReturn = false;
+
+  setModal(modal: boolean) {
+    this.modal = modal;
+  }
+
+  start(trigger: HTMLElement, pointer: boolean) {
+    this.trigger = trigger;
+    this.pointer = pointer;
+    this.skipReturn = false;
+  }
+
+  pointerInside() {
+    this.pointer = true;
+  }
+
+  // Radix skips the focus return after an outside press on a non-modal menu or a right click;
+  // so does this.
+  pointerOutside(rightClick: boolean) {
+    this.pointer = true;
+    this.skipReturn = !this.modal || rightClick;
+  }
+
+  /** The trigger to focus without a ring on close, or null to leave it to Radix. */
+  takeQuietReturn(): HTMLElement | null {
+    const target = this.pointer && !this.skipReturn ? this.trigger : null;
+    this.pointer = false;
+    this.skipReturn = false;
+    return target?.isConnected ? target : null;
+  }
+}
+
+const SessionContext = createContext<MenuSession | null>(null);
+
+function DropdownMenu({
+  modal = true,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  const [session] = useState(() => new MenuSession());
+  useEffect(() => {
+    session.setModal(modal);
+  }, [session, modal]);
+  return (
+    <SessionContext.Provider value={session}>
+      <DropdownMenuPrimitive.Root data-slot="dropdown-menu" modal={modal} {...props} />
+    </SessionContext.Provider>
+  );
 }
 
 function DropdownMenuPortal(props: ComponentProps<typeof DropdownMenuPrimitive.Portal>) {
   return <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
 }
 
-function DropdownMenuTrigger(props: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
+function DropdownMenuTrigger({
+  onPointerDown,
+  onKeyDown,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  const session = useContext(SessionContext);
+  return (
+    <DropdownMenuPrimitive.Trigger
+      data-slot="dropdown-menu-trigger"
+      onPointerDown={(event) => {
+        session?.start(event.currentTarget, true);
+        onPointerDown?.(event);
+      }}
+      onKeyDown={(event) => {
+        session?.start(event.currentTarget, false);
+        onKeyDown?.(event);
+      }}
+      {...props}
+    />
+  );
 }
 
 // Based on shadcn/ui (new-york). Deviations: items are 44px tall (rule 05) with 16px text, the
 // menu never exceeds the viewport width minus the gutters, v4 tokens, no motion under reduced
-// motion, and no submenus or shortcuts until a slice needs them.
+// motion, no submenus or shortcuts until a slice needs them, and no focus ring left on the
+// trigger after a pointer session (see MenuSession).
 function DropdownMenuContent({
   className,
   sideOffset = 4,
   collisionPadding = 16,
+  onPointerDown,
+  onPointerDownOutside,
+  onCloseAutoFocus,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+  const session = useContext(SessionContext);
   return (
     <DropdownMenuPortal>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
+        onPointerDown={(event) => {
+          session?.pointerInside();
+          onPointerDown?.(event);
+        }}
+        onPointerDownOutside={(event) => {
+          session?.pointerOutside(event.detail.originalEvent.button === 2);
+          onPointerDownOutside?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const target = session?.takeQuietReturn() ?? null;
+          if (event.defaultPrevented || target === null) return;
+          event.preventDefault();
+          target.focus({ focusVisible: false });
+        }}
         className={cn(
           'z-50 max-h-(--radix-dropdown-menu-content-available-height) max-w-[calc(100vw-2rem)] min-w-[12rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border bg-card p-1 text-card-foreground shadow-card',
           'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
