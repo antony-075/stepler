@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -71,5 +82,45 @@ export class CollectionsController {
     @Body({ schema: updateCollectionRequestSchema }) body: UpdateCollectionRequest,
   ): Promise<Collection> {
     return this.collections.update(principal, params.id, body);
+  }
+
+  @Post(':id/archive')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: collectionSchema })
+  archive(
+    @CurrentPrincipal() principal: Principal,
+    @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<Collection> {
+    return this.collections.archive(principal, params.id, requestId);
+  }
+
+  @Post(':id/unarchive')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: collectionSchema })
+  @ApiResponse({
+    status: 409,
+    description: 'COLLECTION_LIMIT_REACHED: the active limit is reached',
+  })
+  unarchive(
+    @CurrentPrincipal() principal: Principal,
+    @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<Collection> {
+    return this.collections.unarchive(principal, params.id, requestId);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({
+    status: 204,
+    description: 'Deletion requested; the collection is gone for everyone',
+  })
+  delete(
+    @CurrentPrincipal() principal: Principal,
+    @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<void> {
+    return this.collections.delete(principal, params.id, requestId);
   }
 }

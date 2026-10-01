@@ -6,7 +6,7 @@ import type {
   ListCollectionsQuery,
   UpdateCollectionRequest,
 } from '@stepler/contracts';
-import { AuditService } from '../audit/audit.service.js';
+import { type AuditAction, AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -127,6 +127,108 @@ export class CollectionsService {
       if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
       throw error;
     }
+  }
+
+  /** `ACTIVE` → `ARCHIVED`; guests lose access. Idempotent: an archived one is returned as is. */
+  async archive(principal: Principal, id: string, requestId?: string): Promise<Collection> {
+    return this.prisma.$transaction(async (tx) => {
+      // Conditional, so concurrent archives change (and audit) the row once.
+      const { count } = await tx.collection.updateMany({
+        where: { id, ownerId: principal.userId, status: 'ACTIVE' },
+        data: { status: 'ARCHIVED', archivedAt: new Date() },
+      });
+      if (count === 1) {
+        await this.recordTransition(
+          tx,
+          principal,
+          id,
+          'collection.archive',
+          'ACTIVE',
+          'ARCHIVED',
+          requestId,
+        );
+      }
+      return toCollectionDto(await this.findOwned(id, principal.userId, tx));
+    });
+  }
+
+  /** `ARCHIVED` → `ACTIVE` under the owner lock, refused at the active limit (D1). Idempotent. */
+  async unarchive(principal: Principal, id: string, requestId?: string): Promise<Collection> {
+    const { userId } = principal;
+    const limits = this.limits.forUser({ id: userId });
+    return this.prisma.$transaction(async (tx) => {
+      await this.usage.lockOwner(tx, userId);
+      const row = await this.findOwned(id, userId, tx);
+      if (row.status !== 'ARCHIVED') return toCollectionDto(row);
+      if ((await this.usage.activeCollections(userId, tx)) >= limits.activeCollections) {
+        throw new AppError('COLLECTION_LIMIT_REACHED', 409);
+      }
+      const { count } = await tx.collection.updateMany({
+        where: { id, ownerId: userId, status: 'ARCHIVED' },
+        data: { status: 'ACTIVE', archivedAt: null },
+      });
+      if (count === 1) {
+        await this.recordTransition(
+          tx,
+          principal,
+          id,
+          'collection.unarchive',
+          'ARCHIVED',
+          'ACTIVE',
+          requestId,
+        );
+      }
+      return toCollectionDto(await this.findOwned(id, userId, tx));
+    });
+  }
+
+  /**
+   * Requests deletion (D2): the collection becomes `DELETING`, which is gone for everyone; the
+   * purge job removes the rows and objects later. Repeating it for an owned collection is a no-op.
+   */
+  async delete(principal: Principal, id: string, requestId?: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      // Includes DELETING (for the no-op) and locks the row, so `fromStatus` is accurate.
+      const [row] = await tx.$queryRaw<{ status: CollectionRow['status'] }[]>`
+        SELECT "status" FROM "Collection"
+        WHERE "id" = ${id}::uuid AND "ownerId" = ${principal.userId}::uuid
+        FOR UPDATE`;
+      if (row === undefined) throw new AppError('NOT_FOUND', 404);
+      if (row.status === 'DELETING') return;
+      await tx.collection.update({
+        where: { id },
+        data: { status: 'DELETING', deletionRequestedAt: new Date(), archivedAt: null },
+      });
+      await this.recordTransition(
+        tx,
+        principal,
+        id,
+        'collection.delete',
+        row.status,
+        'DELETING',
+        requestId,
+      );
+    });
+  }
+
+  private recordTransition(
+    tx: Prisma.TransactionClient,
+    actor: Principal,
+    id: string,
+    action: AuditAction,
+    fromStatus: CollectionRow['status'],
+    toStatus: CollectionRow['status'],
+    requestId: string | undefined,
+  ): Promise<void> {
+    return this.audit.record(tx, {
+      collectionId: id,
+      actor,
+      action,
+      targetType: 'collection',
+      targetId: id,
+      metadata: { fromStatus, toStatus },
+      ...(requestId === undefined ? {} : { requestId }),
+    });
   }
 
   private async findOwned(
