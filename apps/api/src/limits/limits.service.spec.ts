@@ -12,6 +12,7 @@ describe('LimitsService', () => {
     });
     expect(limits.forUser({ id: 'u1' })).toEqual({
       activeCollections: 3,
+      collectionCreationsPerDay: 10,
       storageBytes: 20n * 1024n ** 3n,
     });
     expect(limits.forCollection({ id: 'c1' })).toEqual({ storageBytes: 10n * 1024n ** 3n });
@@ -23,9 +24,14 @@ describe('LimitsService', () => {
         LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '2',
         LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '7',
         LIMIT_STORAGE_BYTES_PER_ACCOUNT: '1000',
+        LIMIT_COLLECTION_CREATIONS_PER_DAY: '4',
       }),
     );
     expect(limits.magicLink().perEmailPerHour).toBe(2);
-    expect(limits.forUser({ id: 'u1' })).toEqual({ activeCollections: 7, storageBytes: 1000n });
+    expect(limits.forUser({ id: 'u1' })).toEqual({
+      activeCollections: 7,
+      collectionCreationsPerDay: 4,
+      storageBytes: 1000n,
+    });
   });
 });

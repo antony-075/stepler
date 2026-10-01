@@ -10,6 +10,8 @@ export interface MagicLinkLimits {
 
 export interface UserLimits {
   activeCollections: number;
+  /** Creations per rolling 24 hours; deleting a collection does not give one back. */
+  collectionCreationsPerDay: number;
   storageBytes: bigint;
 }
 
@@ -40,6 +42,7 @@ export class LimitsService {
   forUser(_user: { id: string }): UserLimits {
     return {
       activeCollections: this.env.LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT,
+      collectionCreationsPerDay: this.env.LIMIT_COLLECTION_CREATIONS_PER_DAY,
       storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_ACCOUNT,
     };
   }

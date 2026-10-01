@@ -2,6 +2,7 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { CollectionsModule } from './collections/collections.module.js';
 import { ConfigModule } from './config/config.module.js';
 import type { ApiEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
@@ -36,6 +37,7 @@ export class AppModule {
         AuditModule,
         AuthModule,
         UsersModule,
+        CollectionsModule,
         HealthModule,
       ],
     };
