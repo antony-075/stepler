@@ -1,0 +1,32 @@
+import { Check } from 'lucide-react';
+import { Checkbox as CheckboxPrimitive } from 'radix-ui';
+import type { ComponentProps } from 'react';
+import { cn } from '../lib/utils';
+
+// Based on shadcn/ui (new-york). The box is 20px; wrap it in a `Label` row of min-h-11 so the
+// whole row is the 44px touch target (see the story).
+function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimitive.Root>) {
+  return (
+    <CheckboxPrimitive.Root
+      data-slot="checkbox"
+      className={cn(
+        'peer size-5 shrink-0 rounded-[6px] border border-input bg-card shadow-xs transition-[color,background-color,border-color,box-shadow] outline-none motion-reduce:transition-none',
+        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70',
+        'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        'aria-invalid:border-destructive aria-invalid:ring-destructive/70',
+        className,
+      )}
+      {...props}
+    >
+      <CheckboxPrimitive.Indicator
+        data-slot="checkbox-indicator"
+        className="flex items-center justify-center text-current"
+      >
+        <Check aria-hidden="true" className="size-3.5" strokeWidth={3} />
+      </CheckboxPrimitive.Indicator>
+    </CheckboxPrimitive.Root>
+  );
+}
+
+export { Checkbox };

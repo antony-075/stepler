@@ -20,6 +20,11 @@ const QR_MODULES =
 /**
  * The hero picture: guest moments (photo, video, programme PDF, a note) and a QR code,
  * clipped by one staple. Purely presentational; all text comes from the caller (i18n).
+ *
+ * The tiles fly in from outside the stack, so the root clips horizontally: the entrance can never
+ * make the page scroll sideways. At rest nothing but tile shadows reaches past the stack; where
+ * the stack fills the column, let the root bleed into the page gutter (negative margin plus the
+ * same padding) so those shadows are not cut.
  */
 function StapledStack({
   label,
@@ -33,7 +38,11 @@ function StapledStack({
   className,
 }: StapledStackProps) {
   return (
-    <div role="img" aria-label={label} className={cn('flex justify-center', className)}>
+    <div
+      role="img"
+      aria-label={label}
+      className={cn('flex justify-center overflow-x-clip', className)}
+    >
       <div className="st-stack" aria-hidden="true">
         <div className="st-stack-inner">
           <div className="st-tile st-photo">

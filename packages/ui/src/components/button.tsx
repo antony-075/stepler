@@ -7,16 +7,22 @@ import { cn } from '../lib/utils';
 // (rule 05); the xs sizes are removed. `sm` (36px) is for dense pointer-first layouts only
 // (e.g. admin tables) and must not be the primary action on touch screens.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-base font-bold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] active:translate-y-px outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-base font-bold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/70 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover',
+        // Disabled: a solid muted fill instead of a half-transparent primary, so the label (often
+        // the reason, "Wait, checking…") stays readable.
+        default:
+          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none aria-disabled:bg-muted aria-disabled:text-muted-foreground aria-disabled:opacity-100 aria-disabled:shadow-none',
         destructive:
-          'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20',
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/70',
         outline: 'border border-input bg-card hover:bg-muted',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'text-primary hover:bg-muted',
+        // A translucent foreground tint rather than `bg-muted`: ghost buttons sit on the page
+        // (often the warm `stepler-atmosphere`), where the cool grey muted surface clashes.
+        ghost:
+          'text-primary hover:bg-foreground/[0.06] active:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.06]',
         link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
@@ -32,6 +38,10 @@ const buttonVariants = cva(
     },
   },
 );
+
+/** The 44px icon-only close button of dialogs and toasts (muted, not a primary action). */
+const closeButtonClassName =
+  'inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70';
 
 type ButtonProps = ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
@@ -58,4 +68,4 @@ function Button({
   );
 }
 
-export { Button, buttonVariants, type ButtonProps };
+export { Button, buttonVariants, closeButtonClassName, type ButtonProps };

@@ -3,9 +3,11 @@
 // Run: pnpm --filter @stepler/api storage:bootstrap
 import {
   CreateBucketCommand,
+  DeleteObjectCommand,
   HeadBucketCommand,
   NotFound,
   PutBucketCorsCommand,
+  PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { createS3Client } from '../src/storage/s3-client.ts';
 
@@ -26,6 +28,25 @@ const client = createS3Client({
   secretAccessKey: required('S3_SECRET_ACCESS_KEY'),
   forcePathStyle: true,
 });
+
+/**
+ * A fresh emulator reports healthy before it can store data (volumes are created on the first
+ * write), so write and delete a probe object until it succeeds, for up to 30 seconds.
+ */
+async function warmUp(Bucket: string): Promise<void> {
+  const Key = '.bootstrap-probe';
+  const deadline = Date.now() + 30_000;
+  for (;;) {
+    try {
+      await client.send(new PutObjectCommand({ Bucket, Key, Body: 'ok' }));
+      await client.send(new DeleteObjectCommand({ Bucket, Key }));
+      return;
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+}
 
 for (const Bucket of BUCKETS) {
   try {
@@ -50,6 +71,7 @@ for (const Bucket of BUCKETS) {
       },
     }),
   );
+  await warmUp(Bucket);
   process.stdout.write(`bucket ${Bucket}: ready\n`);
 }
 client.destroy();

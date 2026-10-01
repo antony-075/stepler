@@ -59,6 +59,9 @@ jobs:
       # Storybook story tests run in a real browser.
       - run: pnpm --filter @stepler/ui exec playwright install --with-deps chromium
       - run: pnpm turbo run lint typecheck test build build-storybook
+      - if: failure()
+        name: Emulator logs on failure
+        run: docker compose -f docker/compose.yaml --env-file docker/.env.example logs --tail 200 s3
       - name: Prisma migrations match the schema (no drift)
         env:
           SHADOW_DATABASE_URL: postgresql://stepler:stepler-local@127.0.0.1:5433/stepler_shadow
@@ -86,6 +89,9 @@ jobs:
       - run: pnpm --filter @stepler/api storage:bootstrap
       - run: pnpm --filter @stepler/e2e exec playwright install --with-deps chromium webkit
       - run: pnpm e2e
+      - if: failure()
+        name: Emulator logs on failure
+        run: docker compose -f docker/compose.yaml --env-file docker/.env.example logs --tail 200 s3
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

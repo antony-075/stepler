@@ -1,0 +1,72 @@
+import type { ReactNode } from 'react';
+import { cn } from '../lib/utils';
+
+type PageHeaderProps = {
+  /** The page's only `h1`. */
+  title: ReactNode;
+  description?: ReactNode;
+  /** Page-level actions, usually Buttons: under the title on phones, on its right from `sm`. */
+  actions?: ReactNode;
+  /** An optional link above the title (e.g. back to the list). */
+  back?: ReactNode;
+  /**
+   * `default`: the large fluid title of public pages. `compact`: a fixed 24px title for the
+   * admin area, where the page is a tool and the header should not outweigh its content.
+   */
+  size?: 'default' | 'compact';
+  className?: string;
+};
+
+const TITLE_SIZE = {
+  default: 'text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)]',
+  compact: 'text-2xl',
+} as const;
+
+function PageHeader({
+  title,
+  description,
+  actions,
+  back,
+  size = 'default',
+  className,
+}: PageHeaderProps) {
+  return (
+    <header
+      data-slot="page-header"
+      className={cn('grid gap-4 sm:flex sm:items-end sm:justify-between sm:gap-6', className)}
+    >
+      <div className="grid min-w-0 gap-2">
+        {back ? (
+          <div data-slot="page-header-back" className="justify-self-start">
+            {back}
+          </div>
+        ) : null}
+        <h1
+          data-slot="page-header-title"
+          data-size={size}
+          className={cn(
+            'font-display leading-tight font-medium tracking-tight text-balance [overflow-wrap:anywhere]',
+            TITLE_SIZE[size],
+          )}
+        >
+          {title}
+        </h1>
+        {description ? (
+          <p
+            data-slot="page-header-description"
+            className="max-w-prose text-muted-foreground [overflow-wrap:anywhere]"
+          >
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {actions ? (
+        <div data-slot="page-header-actions" className="flex shrink-0 flex-wrap gap-2">
+          {actions}
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
+export { PageHeader, type PageHeaderProps };

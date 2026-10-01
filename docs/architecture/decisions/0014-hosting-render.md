@@ -42,3 +42,22 @@ Stepler needs EU hosting for the web app (Next.js), the API (NestJS) and Postgre
 The first design trusted the first `X-Forwarded-For` entry, based on Render guidance that it is the real client IP. The runbook check disproved this. With the preview limit set to 3, five requests carrying different forged `X-Forwarded-For` values all got 400 and never reached 429. Five plain requests from the same machine hit 429 on the fourth. Render keeps the client-sent value in front of the entries its proxies append.
 
 The fix is `CLIENT_IP_HEADER=cf-connecting-ip`, as described above. The same spoofing check is repeated after deploy.
+
+## Staging verified (2026-09-30)
+
+On `https://stepler-staging.onrender.com`, after the `CF-Connecting-IP` fix (#14, deployed via #15):
+
+- **Health:** `/healthz`, `/api/v1/health/live` and `/api/v1/health/ready` return ok; readiness reaches the database and the R2 bucket.
+- **Pre-deploy migrations:** they ran without the OpenSSL warning.
+- **Sign-in:** the owner signed in by magic link (mail through Brevo) and with Google.
+- **Production hardening:**
+  - `/api/docs` returns 404;
+  - unsafe requests without `Origin` or with a foreign one get 403 `CSRF_ORIGIN_MISMATCH`;
+  - a fake Turnstile token gets 400 `TURNSTILE_FAILED`;
+  - `st_oauth` is `Secure`;
+  - API responses are `no-store` and `nosniff`;
+  - startup logs contain no secrets.
+- **Client IP** (preview limit temporarily 3):
+  - requests from one machine with different forged `X-Forwarded-For` values shared one bucket and got 429 after the limit;
+  - a client-sent `CF-Connecting-IP` is rejected by Cloudflare itself (403, error 1000);
+  - a phone on a mobile network, a different client, still got 400 while this machine was limited, so clients do not share a bucket.
