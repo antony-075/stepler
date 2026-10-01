@@ -11,7 +11,10 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover',
+        // Disabled: a solid muted fill instead of a half-transparent primary, so the label (often
+        // the reason, "Wait, checking…") stays readable.
+        default:
+          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none aria-disabled:bg-muted aria-disabled:text-muted-foreground aria-disabled:opacity-100 aria-disabled:shadow-none',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/70',
         outline: 'border border-input bg-card hover:bg-muted',

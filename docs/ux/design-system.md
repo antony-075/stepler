@@ -20,7 +20,7 @@ Story paths are Storybook titles; the files are `packages/ui/src/components/<nam
 | `Checkbox` | 20px box | Inside a `Label` row of `min-h-11` so the whole row is the 44px target | Radix Checkbox props | Components/Checkbox |
 | `Switch` | 24px track, on/off setting that applies at once | Inside a `Label` row of `min-h-11`. Not for a choice submitted with a form button (use Checkbox) | Radix Switch props | Components/Switch |
 | `RadioGroup`, `RadioGroupItem` | One choice from a few visible options; each item is a full-row 44px label | 2–5 options that should all be visible. Name it with `aria-labelledby` or `fieldset`/`legend`, never `Field`. Not for a segmented switch (ToggleGroup) | Radix props; vertical by default; item `children` is its name | Components/RadioGroup |
-| `ToggleGroup`, `ToggleGroupItem` | Single-select segmented control (theme and language on `/app/settings`) that always has a value | Small sets of immediate settings. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon` (decorative, before the visible label), `lang` | Components/ToggleGroup |
+| `ToggleGroup`, `ToggleGroupItem` | Single-select segmented control (theme and language on `/app/settings`) that always has a value. Recessed track (`--control-track` + inset hairline), raised thumb (`--control-thumb`, `--shadow-thumb`) drawn 3px inside each 44px item, selected icon `text-primary` | Small sets of immediate settings. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon` (decorative, before the visible label), `lang` | Components/ToggleGroup |
 | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Switch between views of one page; the list scrolls inside itself when it does not fit | Sibling views on one page. Not for site navigation | Radix Tabs props | Components/Tabs |
 | `CopyField` | Read-only value with a copy button and polite announcement; selects the value when the clipboard fails | Guest links and other values to share. Not for editable values | **`label`**, `value`, **`copyLabel`**, **`copiedLabel`**, **`failedLabel`** | Components/CopyField |
 | `Alert` | Inline message in the flow; `role="alert"` for `error`, `status` otherwise | Errors and warnings the user must read or act on, with an optional `action` (Retry). Not for confirming a finished action (toast) | `variant`: info, success, warning, error; `title`, `children`, `action` | Components/Alert |
@@ -35,7 +35,7 @@ Story paths are Storybook titles; the files are `packages/ui/src/components/<nam
 | `Skeleton` | Placeholder shape while content loads; `aria-hidden` | Layout-preserving loading. Announce loading elsewhere (Spinner, `aria-busy`) | Div props | Components/Skeleton |
 | `Progress` | Determinate or indeterminate (`value={null}`) bar | Uploads and other measurable work | `value` (0–100 or `null`), **`label`**, `valueText` | Components/Progress |
 | `EmptyState` | Centered "nothing here yet" with an optional next step | Empty lists and galleries. Not for errors (Alert) | **`title`**, `description`, `icon` (decorative), `action`, `headingLevel`: 2 / 3 | Components/EmptyState |
-| `PageHeader` | The page's only `h1`, description, actions (under the title on phones, right from `sm`), optional back link | The top of every admin page | **`title`**, `description`, `actions`, `back` | Components/PageHeader |
+| `PageHeader` | The page's only `h1` (`text-balance`), description, actions (under the title on phones, right from `sm`), optional back link | The top of every page. Admin pages use `size="compact"` (24px); public pages keep the default fluid size | **`title`**, `description`, `actions`, `back`, `size`: default, compact | Components/PageHeader |
 | `BrandMark` | The Stepler mark (decorative SVG) | Inside a labelled link or next to the wordmark | SVG props | Components/BrandMark |
 | `StapledStack` | The hero illustration (photo, video, PDF, note, QR, staple); motion runs once and is off under reduced motion | The sign-in landing only; the one place raw colours are allowed | **`label`**, **`photoCaption`**, **`videoCaption`**, **`videoDuration`**, **`documentKind`**, **`documentTitle`**, **`note`**, **`noteAuthor`** | Components/StapledStack |
 
@@ -82,14 +82,20 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 - `ToggleGroup` never deselects: pressing the selected item keeps it selected, and `onValueChange` is never called with `''`.
 - Language items keep the visible text as the accessible name (WCAG 2.5.3 Label in Name): `<ToggleGroupItem value="uk" lang="uk" title="Українська">UA</ToggleGroupItem>`. No `aria-label` that drops what is on screen.
 - Page width: the `stepler-container` utility (1240px content, 1320px from 1600px, gutter 16 / 24 / 40px at base / `sm` / `lg`). The gutter is `--stepler-gutter`, so a child can bleed into it with `-mx-(--stepler-gutter) px-(--stepler-gutter)`.
-- Turnstile renders `compact` below 300px container width, `flexible` otherwise, so the widget never overflows the card.
+- Turnstile renders `compact` below 300px container width (centred in the form), `flexible` otherwise, so the widget never overflows the card.
 - Page atmosphere: the `stepler-atmosphere` utility (key light, cool fill, dot grid). Decorative; never behind text that needs contrast.
+- **Admin vs public surface.** Public pages (`/`, `/login`, `/auth/verify`) sit on `stepler-atmosphere` with the floating brand header. The admin area (`/app/*`) is flat `bg-background` in every state (loading, error, loaded) with `SiteHeader variant="app"`: 64px, `border-b border-border`, on the same `stepler-container` as the page so the brand, the `h1` and the content share one left edge. Admin pages use `PageHeader size="compact"`, `pt-8 pb-16 lg:pt-10 lg:pb-20`, and group content in panels (`rounded-2xl border bg-card shadow-xs`, rows split by `divide-y`) rather than floating cards.
+- Admin nav: the current section is a tinted pill (`bg-foreground/[0.06] text-foreground`) on desktop and `text-primary` with a check in the phone menu, never weight alone; `aria-current="page"` either way. On phones the menu button comes before the brand.
+- Account menu: the trigger is a 32px avatar initial (`bg-primary/14 text-primary`, decorative) plus the email from `md` (`max-w-[26ch]`, truncated, `title`); on phones the email is `sr-only`, so it stays the accessible name. The menu label is two lines: "Signed in as" (small, muted) above the truncated address.
+- Settings rows: label (15px/600) and a helper line (14px muted, `max-w-[40ch]`, linked with `aria-describedby`) on the left, the control on the right from 600px (`grid-cols-[minmax(0,1fr)_auto]`); on phones they stack and the segmented control fills the row with equal segments (theme icons hidden below 400px).
+- Disabled primary button: solid `bg-muted text-muted-foreground` (5.42 / 6.35), not half-transparent primary, so a reason such as "Wait, checking…" stays readable. Other variants keep `opacity-50`.
 - Stories are checked at the Storybook viewports `phone` (360), `tablet` (768) and `laptop` (1280).
 
 ### Theme and language
 
 - Theme: `<html data-theme="light|dark">`, rendered by the server from the `st_theme` cookie (1 year, `SameSite=Lax`, not `HttpOnly`), so the first paint is right. No attribute means "follow the system" (`prefers-color-scheme`). In the app, read and change it with `ThemeProvider` / `useThemePreference()` (`apps/web/src/theme/theme-provider.tsx`); do not write the cookie or the attribute directly.
-- Where: both switches are on `/app/settings` (Appearance card, reached from the account menu and the admin nav). The header has none; public pages show the brand only and follow the cookies (or the OS / `Accept-Language`).
+- Where: both switches are on `/app/settings` (Appearance panel, reached from the account menu and the admin nav). The header has none; public pages show the brand only and follow the cookies (or the OS / `Accept-Language`).
+- Browser chrome: the root layout sets `theme-color` to `--background` for `prefers-color-scheme: light` and `dark`. It follows the system setting, not an explicit choice in the cookie.
 - Language: switch with `useChangeLocale()` (`apps/web/src/i18n/language-switch.tsx`). It writes the `st_locale` cookie, saves the choice to the profile with `PATCH /me` when the `me` query is cached (always the case inside `/app`), then refreshes the server tree while keeping client state. A failed save shows a toast; the page still switches.
 
 ## Tokens
@@ -108,7 +114,7 @@ Contrast is WCAG 2 (sRGB relative luminance), light / dark. Text pairs need 4.5:
 | `--card-foreground` | `#16182A` | `#EEEEF3` | text on card | as `--foreground` on card |
 | `--popover` | `#FFFFFF` | `#1B1D27` | unused (shadcn default; menus use `card`) | |
 | `--popover-foreground` | `#16182A` | `#EEEEF3` | unused | |
-| `--muted` | `#EBECF1` | `#252836` | fills: tabs list, toggle group, skeleton, hover | |
+| `--muted` | `#EBECF1` | `#252836` | fills: tabs list, skeleton, hover, disabled primary button | |
 | `--muted-foreground` | `#5A5E73` | `#A7AABC` | secondary text | on background 5.83 / 7.97; on card 6.40 / 7.29; on muted 5.42 / 6.35 |
 | `--secondary` | `#EBECF1` | `#252836` | secondary button, neutral badge | |
 | `--secondary-foreground` | `#16182A` | `#EEEEF3` | text on secondary | 14.86 / 12.65 |
@@ -116,6 +122,8 @@ Contrast is WCAG 2 (sRGB relative luminance), light / dark. Text pairs need 4.5:
 | `--accent-foreground` | `#16182A` | `#EEEEF3` | unused | |
 | `--border` | `#DFE1E9` | `#2C2F3D` | hairlines (decorative) | on card 1.31 / 1.26 (not relied on to identify controls) |
 | `--input` | `#868A9E` | `#6A6E85` | field edges, unchecked switch track | on card 3.42 / 3.34; on background 3.11 / 3.66 |
+| `--control-track` | `var(--background)` | `var(--background)` | ToggleGroup track: a recessed well (with an inset `--border` hairline) | vs card 1.10 / 1.09 (decorative; the labels identify the items); muted-foreground on it 5.83 / 7.97 |
+| `--control-thumb` | `#FFFFFF` | `#2C2F3D` | ToggleGroup selected thumb; lighter than the card in dark | vs track 1.10 / 1.38 (plus `--shadow-thumb` and a `foreground/10` ring; selection is also `aria-checked` and foreground text); foreground on it 17.53 / 11.49; primary icon 6.60 / 6.31 |
 
 ### Actions and focus
 
@@ -156,6 +164,7 @@ Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 
 | `--radius` | `0.75rem` | same | controls (`rounded-lg`); `--radius-sm` −4px, `--radius-md` −2px, `--radius-xl` +8px (20px) |
 | `--shadow-card` | `0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2)` | `inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75)` | cards, dialogs, menus, toasts (`shadow-card`) |
 | `--shadow-tile` | `0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3)` | `inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8)` | StapledStack tiles (`shadow-tile`) |
+| `--shadow-thumb` | `0 1px 2px rgb(22 24 42 / 0.1), 0 1px 1px rgb(22 24 42 / 0.04)` | `inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5)` | ToggleGroup thumb (`shadow-thumb`) |
 | `--font-sans` | Manrope (`--font-manrope` from `next/font`), system fallbacks | same | body text |
 | `--font-display` | Unbounded (`--font-unbounded`), then Manrope | same | wordmark and headings (`font-display`) |
 | `--stepler-gutter` / `--stepler-content` | 1rem / 1240px (1.5rem from `sm`, 2.5rem from `lg`, 1320px from 1600px) | same | set by `stepler-container` |
@@ -173,7 +182,7 @@ Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 
 ## Known issues and deferred items
 
 - **Turnstile keeps its initial language and theme** until the page reloads. By design: re-rendering the widget would drop the token of a half-filled form.
-- **Raw values** still in components: `rounded-[20px]` (Card), `rounded-[6px]` (Checkbox), `min-w-[12rem]` (DropdownMenuContent), `text-[0.8125rem]` (ToggleGroupItem).
+- **Raw values** still in components: `rounded-[20px]` (Card), `rounded-[6px]` (Checkbox), `min-w-[12rem]` (DropdownMenuContent), `rounded-[9px]` (ToggleGroupItem thumb: the 12px control radius minus its 3px inset).
 - **Overlay colour:** dialogs use `bg-black/50`; there is no `--overlay` token.
 - **Unused tokens:** `--popover`, `--popover-foreground` (and `--accent`, `--accent-foreground`) are kept from the shadcn defaults but nothing uses them.
 - **No DOM prop pass-through:** `Alert`, `EmptyState`, `PageHeader`, `Progress`, `Spinner`, `CopyField` and `ConfirmDialog` take only their typed props (plus `className`), not extra DOM attributes such as `id` or `data-*`.

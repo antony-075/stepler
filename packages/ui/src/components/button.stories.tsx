@@ -37,8 +37,20 @@ export const AriaDisabled: Story = {
     const button = canvas.getByRole('button', { name: 'Upload photos' });
     button.focus();
     await expect(button).toHaveFocus();
-    await expect(getComputedStyle(button).opacity).toBe('0.5');
     await expect(getComputedStyle(button).pointerEvents).toBe('none');
+    // The primary button turns solid muted rather than half-transparent, so its label stays
+    // readable.
+    await expect(getComputedStyle(button).opacity).toBe('1');
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(235, 236, 241)');
+  },
+};
+
+/** Other variants keep the half-transparent disabled look. */
+export const AriaDisabledOutline: Story = {
+  args: { 'aria-disabled': true, variant: 'outline' },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Upload photos' });
+    await expect(getComputedStyle(button).opacity).toBe('0.5');
   },
 };
 

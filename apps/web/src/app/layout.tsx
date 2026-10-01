@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Manrope, Unbounded } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
@@ -21,6 +21,15 @@ const unbounded = Unbounded({
   variable: '--font-unbounded',
   display: 'swap',
 });
+
+// Browser chrome in the page colour (--background, light and dark). It follows the system
+// setting; an explicit theme choice in the cookie is not reflected here.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f7' },
+    { media: '(prefers-color-scheme: dark)', color: '#13141b' },
+  ],
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('brand');

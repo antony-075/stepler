@@ -113,8 +113,12 @@ export function Turnstile({ siteKey, locale, onToken, onError, ref }: TurnstileP
         onLoad={() => setLoaded(true)}
         onError={() => latest.current.onError()}
       />
-      {/* Reserves the widget's height so the button below does not jump when it appears. */}
-      <div ref={container} className={compact ? 'min-h-[140px]' : 'min-h-[65px]'} />
+      {/* Reserves the widget's height so the button below does not jump when it appears. The
+          150px compact widget is centred so it does not hang off the left of a phone form. */}
+      <div
+        ref={container}
+        className={compact ? 'flex min-h-[140px] justify-center' : 'min-h-[65px]'}
+      />
     </>
   );
 }

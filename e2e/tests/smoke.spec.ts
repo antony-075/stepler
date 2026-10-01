@@ -38,3 +38,26 @@ test('page fits the viewport without horizontal scroll', async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test('/login renders the main page and names / as canonical; / has none', async ({
+  page,
+  baseURL,
+}) => {
+  await page.goto('/login');
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', `${baseURL}/`);
+  await page.goto('/');
+  await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+});
+
+test('the browser chrome follows the page colour in both themes', async ({ page }) => {
+  await page.goto('/');
+  const colours = await page
+    .locator('meta[name="theme-color"]')
+    .evaluateAll((metas) =>
+      metas.map((meta) => [meta.getAttribute('media'), meta.getAttribute('content')]),
+    );
+  expect(colours).toEqual([
+    ['(prefers-color-scheme: light)', '#f4f4f7'],
+    ['(prefers-color-scheme: dark)', '#13141b'],
+  ]);
+});
