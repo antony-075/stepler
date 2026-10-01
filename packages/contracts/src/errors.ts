@@ -18,6 +18,7 @@ export const ERROR_CODES = [
   'UPSTREAM_UNAVAILABLE',
   'DEPENDENCY_UNAVAILABLE',
   'INTERNAL',
+  'COLLECTION_LIMIT_REACHED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

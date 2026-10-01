@@ -12,7 +12,8 @@
     "ACCOUNT_BLOCKED": "This account is blocked.",
     "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
     "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
-    "INTERNAL": "Something went wrong. Try again."
+    "INTERNAL": "Something went wrong. Try again.",
+    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room."
   },
   "login": {
     "pageTitle": "Sign in",

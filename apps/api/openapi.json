@@ -18,7 +18,8 @@
               "ACCOUNT_BLOCKED",
               "UPSTREAM_UNAVAILABLE",
               "DEPENDENCY_UNAVAILABLE",
-              "INTERNAL"
+              "INTERNAL",
+              "COLLECTION_LIMIT_REACHED"
             ],
             "type": "string"
           },
