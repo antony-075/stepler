@@ -10,6 +10,7 @@ import {
 } from './dropdown-menu';
 import { Input } from './input';
 import { Toaster, ToastProvider, useToast } from './toast';
+import { ToggleGroup, ToggleGroupItem } from './toggle-group';
 
 /**
  * Regression tests: overlays and toasts do not animate under `prefers-reduced-motion: reduce`.
@@ -128,5 +129,23 @@ export const Controls: Story = {
     const button = canvas.getByRole('button', { name: 'Save' });
     await expect(getComputedStyle(button).transitionProperty).toBe('none');
     await expect(getComputedStyle(canvas.getByRole('textbox')).transitionProperty).toBe('none');
+  },
+};
+
+/** ToggleGroup: the item colour and the thumb (`::before`) switch without a fade. */
+export const ToggleGroup_: Story = {
+  render: () => (
+    <ToggleGroup aria-label="Theme" defaultValue="light">
+      <ToggleGroupItem value="light">Light</ToggleGroupItem>
+      <ToggleGroupItem value="dark">Dark</ToggleGroupItem>
+    </ToggleGroup>
+  ),
+  play: async ({ canvas }) => {
+    await expectReducedMotion();
+    const dark = canvas.getByRole('radio', { name: 'Dark' });
+    await expect(getComputedStyle(dark).transitionProperty).toBe('none');
+    await expect(getComputedStyle(dark, '::before').transitionProperty).toBe('none');
+    await userEvent.click(dark);
+    await expectStill(canvas.getByRole('radiogroup'));
   },
 };

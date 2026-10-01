@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
+import { Card, CardContent } from './card';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
 
 // The theme and language settings on /app/settings are built on this.
@@ -125,5 +126,73 @@ export const Language: Story = {
     await expect(english).toHaveAttribute('aria-checked', 'true');
     await expect(args.onValueChange).toHaveBeenLastCalledWith('en');
     await expectItemsAreTouchTargets(canvas.getAllByRole('radio'));
+  },
+};
+
+/** The thumb is drawn by the selected item's `::before`. */
+function thumbColor(radio: HTMLElement) {
+  return getComputedStyle(radio, '::before').backgroundColor;
+}
+
+/**
+ * On a card the track is recessed (the page colour, not the card's) and the selected thumb
+ * stands out from the track; in dark it is also lighter than the card (`thumbDiffersFromCard`).
+ */
+async function expectReadsOnCard(canvasElement: HTMLElement, thumbDiffersFromCard = false) {
+  const card = canvasElement.querySelector<HTMLElement>('[data-slot="card"]')!;
+  const track = canvasElement.querySelector<HTMLElement>('[data-slot="toggle-group"]')!;
+  const radios = Array.from(track.querySelectorAll<HTMLElement>('[role="radio"]'));
+  const selected = radios.find((radio) => radio.getAttribute('aria-checked') === 'true')!;
+  const cardColor = getComputedStyle(card).backgroundColor;
+  await expect(getComputedStyle(track).backgroundColor).not.toBe(cardColor);
+  await expect(thumbColor(selected)).not.toBe(getComputedStyle(track).backgroundColor);
+  if (thumbDiffersFromCard) await expect(thumbColor(selected)).not.toBe(cardColor);
+  for (const radio of radios.filter((radio) => radio !== selected)) {
+    await expect(thumbColor(radio)).toBe('rgba(0, 0, 0, 0)');
+  }
+  // The selected icon is primary, the others stay muted.
+  const icon = selected.querySelector('[data-slot="toggle-group-item-icon"]');
+  if (icon) await expect(getComputedStyle(icon).color).not.toBe(getComputedStyle(selected).color);
+}
+
+const onCard: Story['render'] = (args) => (
+  <Card className="max-w-md">
+    <CardContent className="grid gap-3">
+      <span id="theme-label" className="font-semibold">
+        Theme
+      </span>
+      <ToggleGroup {...args} aria-label={undefined} aria-labelledby="theme-label">
+        <ToggleGroupItem value="system" icon={<Monitor />}>
+          System
+        </ToggleGroupItem>
+        <ToggleGroupItem value="light" icon={<Sun />}>
+          Light
+        </ToggleGroupItem>
+        <ToggleGroupItem value="dark" icon={<Moon />}>
+          Dark
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </CardContent>
+  </Card>
+);
+
+/** On a card in light: recessed track, white raised thumb, primary icon. */
+export const OnCard: Story = {
+  render: onCard,
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
+    await expectReadsOnCard(canvasElement);
+  },
+};
+
+/** On a card in dark: the thumb is lighter than the card, the track darker. */
+export const OnCardDark: Story = {
+  globals: { theme: 'dark' },
+  render: onCard,
+  play: async ({ canvas, canvasElement }) => {
+    await expect(document.documentElement.dataset.theme).toBe('dark');
+    await userEvent.click(canvas.getByRole('radio', { name: 'Dark' }));
+    // The thumb fades between items: check once it has settled.
+    await waitFor(() => expectReadsOnCard(canvasElement, true));
   },
 };

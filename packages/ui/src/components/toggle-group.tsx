@@ -36,8 +36,10 @@ function ToggleGroup({
       type="single"
       value={currentValue}
       onValueChange={handleValueChange}
+      // A recessed well: the page colour with an inset hairline, so it reads on a card in both
+      // themes without a grey fill.
       className={cn(
-        'inline-flex w-fit items-center gap-0.5 rounded-full bg-muted p-0.5',
+        'inline-flex w-fit items-center rounded-xl bg-control-track shadow-[inset_0_0_0_1px_var(--border)]',
         className,
       )}
       {...props}
@@ -51,8 +53,9 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
 };
 
 /**
- * Items are at least 44×44px (rule 05). Other props (`lang`, `title`, …) pass through to the
- * Radix item.
+ * Each item is a full 44px touch target (rule 05); the raised thumb is drawn 3px inside it
+ * (`before:`), lighter than the card in both themes, and the selected icon turns primary. Other
+ * props (`lang`, `title`, …) pass through to the Radix item.
  *
  * Keep the visible text in the accessible name (WCAG 2.5.3 Label in Name): do not give a
  * text item an `aria-label` that drops what is on screen. For a language the visible name is
@@ -64,11 +67,13 @@ function ToggleGroupItem({ className, icon, children, ...props }: ToggleGroupIte
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        'inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-2.5 text-[0.8125rem] font-semibold whitespace-nowrap text-muted-foreground transition-[color,background-color,box-shadow] outline-none motion-reduce:transition-none sm:px-3',
+        'relative isolate inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none motion-reduce:transition-none',
+        "before:absolute before:inset-[3px] before:-z-10 before:rounded-[9px] before:content-[''] before:transition-[background-color,box-shadow] motion-reduce:before:transition-none",
         'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
-        'data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm',
+        'data-[state=on]:text-foreground data-[state=on]:before:bg-control-thumb data-[state=on]:before:shadow-[var(--shadow-thumb),0_0_0_1px_color-mix(in_srgb,var(--foreground)_10%,transparent)]',
+        'data-[state=on]:[&_[data-slot=toggle-group-item-icon]]:text-primary',
         'disabled:pointer-events-none disabled:opacity-50',
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-[18px]",
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}

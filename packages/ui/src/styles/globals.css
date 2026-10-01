@@ -45,6 +45,10 @@
   --glow-cool: rgb(150 162 255 / 0.16);
   --shadow-card: 0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2);
   --shadow-tile: 0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3);
+  /* Segmented control: a recessed well in the page colour and a raised thumb. */
+  --control-track: var(--background);
+  --control-thumb: #ffffff;
+  --shadow-thumb: 0 1px 2px rgb(22 24 42 / 0.1), 0 1px 1px rgb(22 24 42 / 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -81,6 +85,10 @@
     --glow-cool: rgb(120 132 255 / 0.07);
     --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
     --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
+    /* Darker than the card = recessed; the thumb is lighter than the card = raised. */
+    --control-track: var(--background);
+    --control-thumb: #2c2f3d;
+    --shadow-thumb: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5);
   }
 }
 
@@ -118,6 +126,9 @@
   --glow-cool: rgb(120 132 255 / 0.07);
   --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
   --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
+  --control-track: var(--background);
+  --control-thumb: #2c2f3d;
+  --shadow-thumb: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5);
 }
 
 @theme inline {
@@ -155,7 +166,10 @@
   --color-ring: var(--ring);
   --color-staple: var(--staple);
   --shadow-card: var(--shadow-card);
+  --color-control-track: var(--control-track);
+  --color-control-thumb: var(--control-thumb);
   --shadow-tile: var(--shadow-tile);
+  --shadow-thumb: var(--shadow-thumb);
 }
 
 @layer base {
