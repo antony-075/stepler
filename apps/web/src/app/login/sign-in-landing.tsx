@@ -1,3 +1,4 @@
+import { Card, CardContent } from '@stepler/ui/components/card';
 import { StapledStack } from '@stepler/ui/components/stapled-stack';
 import { getTranslations } from 'next-intl/server';
 import { fetchAuthMethods } from '@/api/server';
@@ -25,8 +26,8 @@ export async function SignInLanding({ error }: { error?: unknown }) {
   return (
     <div className="stepler-atmosphere flex min-h-dvh flex-col">
       <SiteHeader />
-      <main className="flex-1 px-4 sm:px-6 lg:px-10">
-        <div className="mx-auto grid max-w-[620px] grid-cols-1 gap-5 pt-2 pb-10 [grid-template-areas:'intro'_'auth'_'visual'] sm:gap-7 sm:pt-6 sm:pb-14 lg:max-w-[1240px] lg:min-h-[calc(100dvh-180px)] lg:grid-cols-[minmax(0,1.15fr)_minmax(380px,440px)] lg:[grid-template-rows:auto_1fr] lg:gap-x-[clamp(40px,6vw,96px)] lg:gap-y-8 lg:pt-8 lg:pb-18 lg:[grid-template-areas:'intro_auth'_'visual_auth']">
+      <main className="stepler-container flex-1">
+        <div className="mx-auto grid max-w-[620px] grid-cols-1 gap-5 pt-2 pb-10 [grid-template-areas:'intro'_'auth'_'visual'] sm:gap-7 sm:pt-6 sm:pb-14 lg:max-w-none lg:min-h-[calc(100dvh-180px)] lg:grid-cols-[minmax(0,1.15fr)_minmax(380px,440px)] lg:[grid-template-rows:auto_1fr] lg:gap-x-[clamp(40px,6vw,96px)] lg:gap-y-8 lg:pt-8 lg:pb-18 lg:[grid-template-areas:'intro_auth'_'visual_auth']">
           <section className="[grid-area:intro]">
             <h1 className="mb-3 max-w-[16ch] font-display text-[clamp(1.625rem,1.05rem+2.9vw,3.6rem)] leading-[1.1] font-medium tracking-[-0.02em] text-balance">
               {t('title')}
@@ -35,21 +36,26 @@ export async function SignInLanding({ error }: { error?: unknown }) {
           </section>
 
           <section className="[grid-area:auth] lg:self-center">
-            <div className="animate-in fade-in slide-in-from-bottom-2 rounded-[20px] border bg-card p-5 shadow-card duration-300 sm:p-7 lg:p-8">
-              {methods === null ? (
-                <p role="alert">{tl('unavailable')}</p>
-              ) : (
-                <LoginForm
-                  turnstileSiteKey={methods.turnstileSiteKey}
-                  googleEnabled={methods.google}
-                  initialError={callbackError(error)}
-                />
-              )}
-            </div>
+            <Card className="animate-in duration-300 fade-in slide-in-from-bottom-2 motion-reduce:animate-none">
+              <CardContent>
+                {methods === null ? (
+                  <p role="alert">{tl('unavailable')}</p>
+                ) : (
+                  <LoginForm
+                    turnstileSiteKey={methods.turnstileSiteKey}
+                    googleEnabled={methods.google}
+                    initialError={callbackError(error)}
+                  />
+                )}
+              </CardContent>
+            </Card>
           </section>
 
           <StapledStack
-            className="[grid-area:visual] lg:justify-start"
+            // Bleeds into the page gutter so the horizontal clip does not cut tile shadows: the
+            // negative margin and padding use <main>'s container gutter, so they stay in step with
+            // it. On desktop the column has room, so the fly-in is left unclipped there.
+            className="-mx-(--stepler-gutter) px-(--stepler-gutter) [grid-area:visual] lg:mx-0 lg:justify-start lg:overflow-x-visible lg:px-0"
             label={t('stackLabel')}
             photoCaption={t('photoCaption')}
             videoCaption={t('videoCaption')}

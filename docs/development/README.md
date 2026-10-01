@@ -25,8 +25,8 @@ Apps run natively. Docker Compose runs the infrastructure only.
 
 ```sh
 cp docker/.env.example docker/.env
-docker compose -f docker/compose.yaml --env-file docker/.env up -d --wait
-docker compose -f docker/compose.yaml --env-file docker/.env down
+pnpm infra:up     # docker compose -f docker/compose.yaml --env-file docker/.env up -d --wait
+pnpm infra:down   # docker compose -f docker/compose.yaml --env-file docker/.env down
 ```
 
 | Service    | Address                                              |
@@ -35,31 +35,54 @@ docker compose -f docker/compose.yaml --env-file docker/.env down
 | Mailpit    | SMTP `127.0.0.1:1025`, UI http://127.0.0.1:8025      |
 | S3 (SeaweedFS) | `http://127.0.0.1:8333`, credentials `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` from `docker/.env` |
 
+### Local links
+
+| What | Address | Started by |
+| ---- | ------- | ---------- |
+| Web | http://localhost:3000 | `pnpm dev` |
+| API | http://localhost:4000/api/v1 | `pnpm dev` |
+| Swagger UI (local only; not served in production mode) | http://localhost:4000/api/docs | `pnpm dev` |
+| API health | http://localhost:4000/api/v1/health/live, `/health/ready` | `pnpm dev` |
+| Mailpit (sent email) | http://127.0.0.1:8025 | `pnpm infra:up` |
+| Prisma Studio (database UI) | http://localhost:5555 | `pnpm db:studio` |
+| PostgreSQL (TablePlus, DBeaver, psql) | `127.0.0.1:5433`, user and password from `docker/.env` | `pnpm infra:up` |
+| S3 emulator API | http://127.0.0.1:8333 | `pnpm infra:up`, then `pnpm storage:bootstrap` |
+| Bucket browser (SeaweedFS filer UI; no auth, localhost only) | http://127.0.0.1:8888/buckets/ | `pnpm infra:up` |
+| Storybook | http://localhost:6006 | `pnpm storybook` |
+| e2e servers | web :3100, api :4100 | `pnpm e2e` |
+
+Staging and provider consoles: https://stepler-staging.onrender.com (site), https://dashboard.render.com (deploys, logs, env), https://dash.cloudflare.com (R2, Turnstile), https://app.brevo.com (staging email), https://console.cloud.google.com/apis/credentials (OAuth clients).
+
 - PostgreSQL uses host port 5433 so it does not clash with a locally installed PostgreSQL.
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
-- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm --filter @stepler/api storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
+- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
 - The worker process arrives with the processing slice.
 
 ## Commands
 
 Run everything from the repository root.
 
+Every tool or process a developer starts has a root `package.json` script and a row in this table (and in **Local links** when it serves a page).
+
 | Command                                         | What it does                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------- |
 | `pnpm install`                                  | Install dependencies                                          |
+| `pnpm infra:up` / `pnpm infra:down`             | Start (and wait for healthy) / stop Postgres, Mailpit and the S3 emulator |
+| `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm build`                                    | Build all packages and apps                                   |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached)                            |
-| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `docker compose up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script) |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
+| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script) |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
-| `pnpm --filter @stepler/ui storybook`         | Storybook dev server on 6006                                  |
+| `pnpm storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
 | `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
-| `pnpm --filter @stepler/api db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
-| `pnpm --filter @stepler/api db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
-| `pnpm --filter @stepler/api db:check`           | Fail if migrations and schema differ; needs `SHADOW_DATABASE_URL` |
-| `pnpm --filter @stepler/api openapi:write`      | Regenerate `apps/api/openapi.json`; the API test suite fails when it is stale |
+| `pnpm db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
+| `pnpm db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
+| `pnpm db:studio`          | Prisma Studio on 5555 against `DATABASE_URL` (the API's `.env`) |
+| `pnpm db:check`           | Fail if migrations and schema differ; needs `SHADOW_DATABASE_URL` |
+| `pnpm openapi:write`      | Regenerate `apps/api/openapi.json`; the API test suite fails when it is stale |
 
 Local `.env` files: copy `apps/api/.env.example` to `apps/api/.env`, and `apps/web/.env.example` to `apps/web/.env`. `pnpm dev` loads them. Turborepo runs in strict env mode, so every new runtime variable must also be added to `passThroughEnv` in `turbo.json`.
 

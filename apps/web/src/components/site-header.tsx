@@ -3,18 +3,38 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
+type SiteHeaderProps = {
+  /**
+   * `public`: the brand floating on the page atmosphere. `app`: the admin bar, 64px with a
+   * hairline below, on the same container as the page so brand, `h1` and content share one left
+   * edge.
+   */
+  variant?: 'public' | 'app';
+  /** Where the brand links: the landing page by default, the collections list in the app. */
+  brandHref?: string;
+  /** After the brand (the account menu). */
+  children?: ReactNode;
+};
+
 /**
- * Brand link on the left; optional tools (e.g. sign out) on the right. Synchronous so both
- * server pages and the client app shell can render it.
+ * Brand link plus optional slots on either side; public pages show the brand only. Synchronous
+ * so both server pages and the client app shell can render it.
  */
-export function SiteHeader({ children }: { children?: ReactNode }) {
+export function SiteHeader({ variant = 'public', brandHref = '/', children }: SiteHeaderProps) {
   const t = useTranslations('brand');
+  const app = variant === 'app';
   return (
-    <header className="px-4 py-3 sm:px-6 lg:px-10 lg:py-5">
-      <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-3">
+    <header className={app ? 'border-b border-border bg-background' : 'py-3 lg:py-5'}>
+      <div
+        className={
+          app
+            ? 'stepler-container flex h-16 items-center gap-2'
+            : 'stepler-container flex items-center justify-between gap-3'
+        }
+      >
         <Link
-          href="/"
-          className="inline-flex min-h-11 shrink-0 items-center gap-2.5 rounded-lg text-foreground no-underline"
+          href={brandHref}
+          className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2.5 rounded-lg text-foreground no-underline"
         >
           <BrandMark className="shrink-0" />
           <span className="font-display text-lg font-semibold tracking-tight lowercase">

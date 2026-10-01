@@ -43,14 +43,18 @@
     "submit": "Sign in",
     "signingIn": "Signing in…",
     "backToLogin": "Get a new link",
-    "retry": "Try again"
+    "retry": "Try again",
+    "invalidTitle": "This link didn't work",
+    "unavailableTitle": "Couldn't check the link"
   },
   "app": {
     "loading": "Loading…",
-    "signedInAs": "Signed in as {email}",
+    "signedInAs": "Signed in as",
     "logout": "Sign out",
     "placeholderTitle": "Your collections",
-    "placeholderText": "Your collections will appear here."
+    "logoutFailed": "Couldn't sign out. Try again.",
+    "emptyTitle": "No collections yet",
+    "emptyText": "Your collections, and everything guests add to them, will appear here."
   },
   "brand": {
     "name": "Stepler",
@@ -68,5 +72,32 @@
     "documentTitle": "Evening programme",
     "note": "Thanks for a wonderful evening!",
     "noteAuthor": "Olena"
+  },
+  "toast": {
+    "announcement": "Notification",
+    "region": "Notifications",
+    "close": "Close notification"
+  },
+  "theme": {
+    "label": "Theme",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "language": {
+    "label": "Language",
+    "uk": "Українська",
+    "en": "English",
+    "saveFailed": "Couldn't save the language to your profile",
+    "saveFailedHint": "Emails will keep the previous language, and the app will open in it next time. Try again."
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "back": "Collections",
+    "appearance": "Appearance",
+    "description": "How your workspace looks and which language it uses.",
+    "appearanceHint": "Changes apply right away, no reload needed.",
+    "themeHint": "System follows your device setting. The choice applies to this browser.",
+    "languageHint": "The language of the interface and of the emails Stepler sends you."
   }
 }

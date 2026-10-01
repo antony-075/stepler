@@ -14,7 +14,16 @@
     "e2e": "turbo run e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build-storybook": "turbo run build-storybook"
+    "build-storybook": "turbo run build-storybook",
+    "infra:up": "docker compose -f docker/compose.yaml --env-file docker/.env up -d --wait",
+    "infra:down": "docker compose -f docker/compose.yaml --env-file docker/.env down",
+    "storage:bootstrap": "pnpm --filter @stepler/api storage:bootstrap",
+    "storybook": "pnpm --filter @stepler/ui storybook",
+    "db:migrate": "pnpm --filter @stepler/api db:migrate",
+    "db:deploy": "pnpm --filter @stepler/api db:deploy",
+    "db:studio": "pnpm --filter @stepler/api db:studio",
+    "db:check": "pnpm --filter @stepler/api db:check",
+    "openapi:write": "pnpm --filter @stepler/api openapi:write"
   },
   "devDependencies": {
     "@stepler/config": "workspace:*",

@@ -23,7 +23,8 @@ function parseAcceptLanguage(header: string): LanguagePreference[] {
 
 /**
  * Resolution order: explicit cookie → Accept-Language (by q-weight, region ignored) → default.
- * The admin profile locale is added to this chain with authentication (Phase 2).
+ * The admin profile locale, which comes first (ADR 0011), is applied on the client: the app
+ * shell copies it into the cookie and refreshes once when they differ.
  */
 export function resolveLocale(input: { cookieLocale?: string; acceptLanguage?: string }): Locale {
   if (isLocale(input.cookieLocale)) return input.cookieLocale;

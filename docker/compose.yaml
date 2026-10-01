@@ -39,6 +39,8 @@ services:
       AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set in docker/.env}
     ports:
       - '127.0.0.1:8333:8333'
+      # Filer web UI to browse buckets (/buckets/). No auth: localhost only, never publish it wider.
+      - '127.0.0.1:8888:8888'
     volumes:
       - stepler-s3:/data
     healthcheck:

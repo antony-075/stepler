@@ -34,3 +34,11 @@ export const Default: Story = {
     await expect(canvas.getByRole('img', { name: args.label })).toBeVisible();
   },
 };
+
+export const Dark: Story = {
+  globals: { theme: 'dark' },
+  play: async ({ canvas, args }) => {
+    await expect(document.documentElement.dataset.theme).toBe('dark');
+    await expect(canvas.getByRole('img', { name: args.label })).toBeVisible();
+  },
+};

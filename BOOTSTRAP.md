@@ -50,6 +50,8 @@ Implement:
 
 Build Storybook primitives and responsive foundations (mobile-first guest, responsive admin).
 
+**Status: implemented on branch `feat/phase-3-design-system` (2026-09-30), PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-09-30-phase-3-design-system.md`. Inventory, rules, tokens and known issues: `docs/ux/design-system.md`. Also in this phase: the theme preference (`st_theme` cookie, no flash), the language switch synced with the admin profile, and the admin shell with navigation and account menu.
+
 ## Phase 4 — Product vertical slices (MVP)
 
 1. Collection (CRUD, archive, dashboard, account limits)

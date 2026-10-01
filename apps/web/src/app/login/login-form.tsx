@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { magicLinkRequestSchema } from '@stepler/contracts';
+import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
@@ -16,6 +17,10 @@ import { isLocale } from '@/i18n/locales';
 import { Turnstile, type TurnstileHandle } from './turnstile';
 
 const emailFormSchema = magicLinkRequestSchema.pick({ email: true });
+
+// The Ukrainian labels are wider than a 320–360px card: tighter padding below `sm`, and the
+// label wraps (the button grows) instead of pushing the form out of the card.
+const WRAPPING_BUTTON = 'h-auto min-h-12 py-2 whitespace-normal text-balance max-sm:px-4';
 type EmailForm = z.infer<typeof emailFormSchema>;
 
 interface LoginFormProps {
@@ -88,14 +93,7 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
         <p className="text-muted-foreground">{t('login.hint')}</p>
       </div>
 
-      {shownError !== null && (
-        <p
-          role="alert"
-          className="rounded-md border border-destructive/40 p-3 text-sm text-destructive"
-        >
-          {t(errorMessageKey(shownError))}
-        </p>
-      )}
+      {shownError !== null && <Alert variant="error">{t(errorMessageKey(shownError))}</Alert>}
 
       <form
         noValidate
@@ -131,23 +129,31 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
           onError={onTurnstileError}
         />
         {turnstileFailed && (
-          <div role="alert" className="grid gap-2 text-sm">
-            <p>{t('login.turnstileFailed')}</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="justify-self-start"
-              onClick={() => {
-                setTurnstileFailed(false);
-                turnstile.current?.reset();
-              }}
-            >
-              {t('login.turnstileRetry')}
-            </Button>
-          </div>
+          <Alert
+            variant="error"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setTurnstileFailed(false);
+                  turnstile.current?.reset();
+                }}
+              >
+                {t('login.turnstileRetry')}
+              </Button>
+            }
+          >
+            {t('login.turnstileFailed')}
+          </Alert>
         )}
 
-        <Button type="submit" size="lg" disabled={request.isPending || turnstileToken === null}>
+        <Button
+          type="submit"
+          size="lg"
+          className={WRAPPING_BUTTON}
+          disabled={request.isPending || turnstileToken === null}
+        >
           {request.isPending
             ? t('login.sending')
             : turnstileToken === null
@@ -163,7 +169,7 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
             {t('login.or')}
             <span className="h-px flex-1 bg-border" />
           </div>
-          <Button asChild variant="outline" size="lg">
+          <Button asChild variant="outline" size="lg" className={WRAPPING_BUTTON}>
             {/* A full navigation to an API route (not a page): it redirects to Google and back. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- API route, not a page */}
             <a href="/api/v1/auth/google/start">{t('login.google')}</a>

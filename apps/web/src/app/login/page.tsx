@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/api/server';
 import { SignInLanding } from './sign-in-landing';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,6 +14,9 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Signed in → the admin area; signed out or API unavailable → the form as usual.
+  const user = await getSessionUser();
+  if (user !== null && user !== 'unavailable') redirect('/app');
   const { error } = await searchParams;
   return <SignInLanding error={error} />;
 }
