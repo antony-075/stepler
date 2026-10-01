@@ -567,11 +567,13 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
                     "type": "string"
                   }
                 },
@@ -824,11 +826,13 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
                     "type": "string"
                   }
                 },

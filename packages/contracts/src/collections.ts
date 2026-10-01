@@ -1,10 +1,28 @@
 import { z } from 'zod';
 
-/** Plain text, rendered escaped. Mirrored by `Collection_title_length` in the database. */
-export const collectionTitleSchema = z.string().trim().min(1).max(100);
+// PostgreSQL text cannot store NUL, and other C0 control characters have no place in plain text.
+// Matching control characters is the point of these patterns, hence the lint exceptions.
+// eslint-disable-next-line no-control-regex
+const NO_CONTROL_CHARACTERS = /^[^\u0000-\u001f]*$/;
+const NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS =
+  // eslint-disable-next-line no-control-regex
+  /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f]*$/;
 
-/** Plain text with line breaks kept. Mirrored by `Collection_description_length`. */
-export const collectionDescriptionSchema = z.string().trim().min(1).max(1000);
+/** Plain text on one line, rendered escaped. Mirrored by `Collection_title_length` in the database. */
+export const collectionTitleSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(NO_CONTROL_CHARACTERS, 'Must not contain control characters or line breaks');
+
+/** Plain text with line breaks and tabs kept. Mirrored by `Collection_description_length`. */
+export const collectionDescriptionSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(1000)
+  .regex(NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS, 'Must not contain control characters');
 
 /** The statuses the API exposes. `DELETING` is internal and never leaves the server. */
 export const collectionStatusSchema = z.enum(['ACTIVE', 'ARCHIVED']);

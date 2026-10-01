@@ -109,6 +109,20 @@ describe('collections API', () => {
       }
     });
 
+    test('rejects control characters with 400, not a database error', async () => {
+      const { cookie } = await signInAs(app, prisma, 'a@stepler.test');
+      for (const body of [
+        { title: 'A\u0000B' },
+        { title: 'A\nB' },
+        { title: 'A', description: 'A\u0000B' },
+        { title: 'A', description: 'A\u001bB' },
+      ]) {
+        const res = await create(cookie, body).expect(400);
+        expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      }
+      expect(await prisma.collection.count()).toBe(0);
+    });
+
     test('two concurrent creates at 2 of 3 give exactly one 201 and one 409', async () => {
       const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
       await seed(userId);
@@ -193,6 +207,18 @@ describe('collections API', () => {
       expect(renamed.body).toMatchObject({ title: 'Renamed' });
       await patch({ title: '' }).expect(400);
       await patch({ status: 'ARCHIVED' }).expect(400);
+      for (const body of [
+        { title: 'A\u0000B' },
+        { description: 'A\u0000B' },
+        { description: 'A\u0007B' },
+      ]) {
+        const res = await patch(body).expect(400);
+        expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      }
+      expect(await prisma.collection.findUniqueOrThrow({ where: { id } })).toMatchObject({
+        title: 'Renamed',
+        description: null,
+      });
       expect((await prisma.collection.findUniqueOrThrow({ where: { id } })).status).toBe('ACTIVE');
     });
   });

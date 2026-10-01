@@ -39,6 +39,29 @@ describe('createCollectionRequestSchema', () => {
   });
 });
 
+describe('control characters', () => {
+  // PostgreSQL text rejects NUL, so it must be a 400 here rather than a 500 from the database.
+  test('the title rejects every C0 control character, line breaks and tabs included', () => {
+    for (const title of ['A\u0000B', 'A\u0007B', 'A\u001bB', 'A\nB', 'A\rB', 'A\tB']) {
+      expect(createCollectionRequestSchema.safeParse({ title }).success).toBe(false);
+      expect(updateCollectionRequestSchema.safeParse({ title }).success).toBe(false);
+    }
+  });
+
+  test('the description keeps line breaks and tabs but rejects other C0 characters', () => {
+    expect(
+      createCollectionRequestSchema.parse({ title: 'A', description: 'Line 1\r\nLine 2\tend' })
+        .description,
+    ).toBe('Line 1\r\nLine 2\tend');
+    for (const description of ['A\u0000B', 'A\u0007B', 'A\u001bB', 'A\u001fB']) {
+      expect(createCollectionRequestSchema.safeParse({ title: 'A', description }).success).toBe(
+        false,
+      );
+      expect(updateCollectionRequestSchema.safeParse({ description }).success).toBe(false);
+    }
+  });
+});
+
 describe('updateCollectionRequestSchema', () => {
   test('accepts partial updates, null clears the description, rejects status', () => {
     expect(updateCollectionRequestSchema.parse({ description: null })).toEqual({
