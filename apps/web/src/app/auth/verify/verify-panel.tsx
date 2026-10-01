@@ -5,7 +5,6 @@ import {
   magicLinkVerifyResponseSchema,
   meResponseSchema,
 } from '@stepler/contracts';
-import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -71,31 +70,30 @@ export function VerifyPanel({ token }: { token: string | null }) {
   if (failure !== null) {
     const retryable = failure === 'UPSTREAM_UNAVAILABLE' || failure === 'DEPENDENCY_UNAVAILABLE';
     const message = t(errorMessageKey(failure));
-    // A retryable failure keeps its Retry with the message; otherwise the way out is a new link.
-    if (retryable) {
-      return (
-        <Alert
-          variant="error"
-          action={
-            <Button
-              onClick={() => {
-                void retry();
-              }}
-            >
-              {t('verify.retry')}
-            </Button>
-          }
-        >
-          {message}
-        </Alert>
-      );
-    }
+    // A retryable failure offers Retry; otherwise the way out is a new link. Plain text under a
+    // heading, not an Alert: the error is the whole content of this page.
     return (
       <div className="grid gap-4">
-        <Alert variant="error">{message}</Alert>
-        <Button asChild variant="outline">
-          <Link href="/login">{t('verify.backToLogin')}</Link>
-        </Button>
+        <h1 className={TITLE}>
+          {t(retryable ? 'verify.unavailableTitle' : 'verify.invalidTitle')}
+        </h1>
+        <p role="alert" className="text-muted-foreground">
+          {message}
+        </p>
+        {retryable ? (
+          <Button
+            size="lg"
+            onClick={() => {
+              void retry();
+            }}
+          >
+            {t('verify.retry')}
+          </Button>
+        ) : (
+          <Button asChild size="lg">
+            <Link href="/login">{t('verify.backToLogin')}</Link>
+          </Button>
+        )}
       </div>
     );
   }
@@ -106,9 +104,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
 
   return (
     <div className="grid gap-4">
-      <h1 className="font-display text-xl leading-tight font-medium tracking-tight sm:text-2xl">
-        {t('verify.title')}
-      </h1>
+      <h1 className={TITLE}>{t('verify.title')}</h1>
       <p>{t('verify.signInAs', { email: preview.data.email })}</p>
       <p className="text-sm text-muted-foreground">{t('verify.notYou')}</p>
       <Button size="lg" disabled={verify.isPending} onClick={() => verify.mutate()}>
@@ -117,6 +113,9 @@ export function VerifyPanel({ token }: { token: string | null }) {
     </div>
   );
 }
+
+const TITLE =
+  'font-display text-xl leading-tight font-medium tracking-tight text-balance sm:text-2xl';
 
 function failureCode(error: unknown) {
   if (error === null || error === undefined) return null;

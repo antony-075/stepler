@@ -43,7 +43,9 @@
     "submit": "Sign in",
     "signingIn": "Signing in…",
     "backToLogin": "Get a new link",
-    "retry": "Try again"
+    "retry": "Try again",
+    "invalidTitle": "This link didn't work",
+    "unavailableTitle": "Couldn't check the link"
   },
   "app": {
     "loading": "Loading…",

@@ -11,6 +11,7 @@ const T = {
   collections: 'Колекції',
   menu: 'Меню',
   invalid: 'Посилання недійсне або вже використане. Отримайте нове.',
+  invalidTitle: 'Посилання не спрацювало',
   newLink: 'Отримати нове посилання',
 };
 
@@ -74,6 +75,7 @@ test('a signed-in visit to / or /login goes to /app; /auth/verify does not', asy
 
 test('an invalid link shows an error with a way back to /login', async ({ page }) => {
   await page.goto(`/auth/verify?token=${'A'.repeat(43)}`);
+  await expect(page.getByRole('heading', { level: 1, name: T.invalidTitle })).toBeVisible();
   await expect(page.getByText(T.invalid)).toBeVisible();
   await page.getByRole('link', { name: T.newLink }).click();
   await expect(page).toHaveURL(/\/login$/);
