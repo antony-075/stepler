@@ -26,8 +26,10 @@ async function openSettings(page: Page, email: string) {
   await expect(page.getByRole('heading', { name: UK_SETTINGS, level: 1 })).toBeVisible();
 }
 
+/** Picks a language in the select, whose label is in the current UI language. */
 async function choose(page: Page, language: 'English' | 'Українська') {
-  await page.getByRole('radio', { name: language, exact: true }).click();
+  await page.getByRole('combobox', { name: /^(Мова|Language)$/ }).click();
+  await page.getByRole('option', { name: language, exact: true }).click();
 }
 
 test('a signed-in admin switches to English: it persists and emails follow', async ({

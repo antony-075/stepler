@@ -1,5 +1,7 @@
 import { PageHeader } from '@stepler/ui/components/page-header';
+import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { LanguageSwitch } from '@/i18n/language-switch';
@@ -44,14 +46,27 @@ function SettingRow({
   );
 }
 
-/** Theme and language. The theme lives in a cookie; the language is saved to the profile too. */
+/**
+ * Theme and language, in one centred column on wide screens. The theme lives in a cookie; the
+ * language is saved to the profile too. Reached from the account menu; the back link above the
+ * title returns to the collections.
+ */
 export default async function SettingsPage() {
   const t = await getTranslations();
   return (
-    <main className="stepler-container pt-8 pb-16 lg:pt-10 lg:pb-20">
-      <div className="max-w-[720px]">
+    <main className="stepler-container pt-5 pb-16 lg:pt-8 lg:pb-20">
+      <div className="mx-auto max-w-[640px]">
         <PageHeader
           size="compact"
+          back={
+            <Link
+              href="/app"
+              className="-ml-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1.5 text-sm font-semibold text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
+            >
+              <ArrowLeft aria-hidden="true" className="size-4" />
+              {t('settings.back')}
+            </Link>
+          }
           title={t('settings.pageTitle')}
           description={t('settings.description')}
         />

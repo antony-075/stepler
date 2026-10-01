@@ -1,14 +1,21 @@
 'use client';
 
 import { meResponseSchema, type UpdateMeRequest } from '@stepler/contracts';
-import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@stepler/ui/components/select';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useOptimistic, useRef, useTransition } from 'react';
 import { apiRequest } from '@/api/client';
-import { SETTING_CONTROL, SETTING_ITEM } from '@/components/setting-control';
+import { SETTING_SELECT } from '@/components/setting-control';
 import { ME_QUERY_KEY } from '@/api/me';
 import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
 import { setLocaleCookie } from './set-locale';
@@ -70,7 +77,7 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
   return { locale, changeLocale };
 }
 
-/** Українська / English, each name in its own language (`lang`). */
+/** Українська / English as a select, each name in its own language (`lang`). */
 export function LanguageSwitch({
   labelledBy,
   describedBy,
@@ -81,19 +88,25 @@ export function LanguageSwitch({
   const t = useTranslations('language');
   const { locale, changeLocale } = useChangeLocale();
   return (
-    <ToggleGroup
-      aria-labelledby={labelledBy}
-      aria-describedby={describedBy}
-      value={locale}
-      onValueChange={changeLocale}
-      className={SETTING_CONTROL}
-    >
-      <ToggleGroupItem value="uk" lang="uk" className={SETTING_ITEM}>
-        {t('uk')}
-      </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en" className={SETTING_ITEM}>
-        {t('en')}
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <Select value={locale} onValueChange={changeLocale}>
+      <SelectTrigger
+        aria-labelledby={labelledBy}
+        aria-describedby={describedBy}
+        className={SETTING_SELECT}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          {/* `lang` on the text too: the trigger shows a copy of it, outside the option. */}
+          <SelectItem value="uk" lang="uk">
+            <span lang="uk">{t('uk')}</span>
+          </SelectItem>
+          <SelectItem value="en" lang="en">
+            <span lang="en">{t('en')}</span>
+          </SelectItem>
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 }

@@ -16,6 +16,16 @@ async function setThemeCookie(context: BrowserContext, baseURL: string, value: s
 const bodyBackground = (page: Page) =>
   page.locator('body').evaluate((body) => getComputedStyle(body).backgroundColor);
 
+/** The theme select, named by its row label. */
+const themeSelect = (page: Page, label = T.group) =>
+  page.getByRole('combobox', { name: label, exact: true });
+
+async function choose(page: Page, select: string, option: string) {
+  await page.getByRole('combobox', { name: select, exact: true }).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+  await expect(page.getByRole('listbox')).toHaveCount(0);
+}
+
 async function openSettings(page: Page) {
   await signIn(page, newEmail());
   await page.goto('/app/settings');
@@ -75,8 +85,7 @@ test.describe('on a dark OS', () => {
       (window as unknown as { themeMarker: boolean }).themeMarker = true;
     });
 
-    const group = page.getByRole('radiogroup', { name: T.group, exact: true });
-    await group.getByRole('radio', { name: T.light, exact: true }).click();
+    await choose(page, T.group, T.light);
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expect.poll(() => bodyBackground(page)).toBe(LIGHT_BACKGROUND);
@@ -87,10 +96,10 @@ test.describe('on a dark OS', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
-    await expect(group.getByRole('radio', { name: T.light, exact: true })).toBeChecked();
+    await expect(themeSelect(page)).toHaveText(T.light);
 
     // Back to System removes the override and the OS (dark) applies again.
-    await group.getByRole('radio', { name: T.system, exact: true }).click();
+    await choose(page, T.group, T.system);
     await expect(page.locator('html')).not.toHaveAttribute('data-theme');
     await expect.poll(() => bodyBackground(page)).toBe(DARK_BACKGROUND);
   });
@@ -105,37 +114,47 @@ test.describe('after another tab changed the theme', () => {
     baseURL,
   }) => {
     await openSettings(page);
-    const uk = page.getByRole('radiogroup', { name: T.group, exact: true });
-    await expect(uk.getByRole('radio', { name: T.system, exact: true })).toBeChecked();
+    await expect(themeSelect(page)).toHaveText(T.system);
 
     // Another tab picks Dark; this tab only learns it from the server on the next refresh,
     // which the language switch triggers.
     await setThemeCookie(context, baseURL!, 'dark');
-    await page
-      .getByRole('radiogroup', { name: 'Мова', exact: true })
-      .getByRole('radio', { name: 'English', exact: true })
-      .click();
+    await choose(page, 'Мова', 'English');
 
-    const en = page.getByRole('radiogroup', { name: 'Theme', exact: true });
-    await expect(en.getByRole('radio', { name: 'Dark', exact: true })).toBeChecked();
+    await expect(themeSelect(page, 'Theme')).toHaveText('Dark');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 });
 
 test.describe('settings on a phone', () => {
   for (const width of [320, 360]) {
-    test(`fit ${width}px with every label visible`, async ({ page }) => {
+    test(`fit ${width}px: full-width selects, every option visible`, async ({ page }) => {
       await page.setViewportSize({ width, height: 780 });
       await openSettings(page);
-      for (const name of [T.system, T.light, T.dark, 'Українська', 'English']) {
-        const radio = page.getByRole('radio', { name, exact: true });
-        await expect(radio).toBeVisible();
-        const box = (await radio.boundingBox())!;
-        expect(box.x + box.width).toBeLessThanOrEqual(width);
+      const overflow = () =>
+        page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      for (const [select, options] of [
+        [T.group, [T.system, T.light, T.dark]],
+        ['Мова', ['Українська', 'English']],
+      ] as const) {
+        const trigger = page.getByRole('combobox', { name: select, exact: true });
+        const box = (await trigger.boundingBox())!;
+        // The row stacks and the select fills it, inside the 16px gutters.
+        expect(box.x).toBeGreaterThanOrEqual(16);
+        expect(box.x + box.width).toBeLessThanOrEqual(width - 16 + 0.5);
+        expect(box.width).toBeGreaterThan(width - 2 * 16 - 2 * 24);
+        await trigger.click();
+        for (const name of options) {
+          const option = page.getByRole('option', { name, exact: true });
+          await expect(option).toBeVisible();
+          const optionBox = (await option.boundingBox())!;
+          expect(optionBox.x + optionBox.width).toBeLessThanOrEqual(width);
+        }
+        expect(await overflow()).toBeLessThanOrEqual(0);
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('listbox')).toHaveCount(0);
       }
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-      ).toBeLessThanOrEqual(0);
+      expect(await overflow()).toBeLessThanOrEqual(0);
     });
   }
 });

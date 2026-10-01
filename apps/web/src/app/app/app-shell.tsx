@@ -11,7 +11,6 @@ import { SiteHeader } from '@/components/site-header';
 import { errorMessageKey } from '@/errors/error-message';
 import { setLocaleCookie } from '@/i18n/set-locale';
 import { AccountMenu } from './account-menu';
-import { AdminNav, AdminNavMenu, type AdminNavItem } from './admin-nav';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
@@ -55,16 +54,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const sections: AdminNavItem[] = [
-    { href: '/app', label: t('app.nav.collections') },
-    { href: '/app/settings', label: t('app.nav.settings') },
-  ];
   // The admin area is a flat surface (no stepler-atmosphere): it is a tool, and the glow is kept
-  // for the public pages.
+  // for the public pages. No section nav: the brand goes back to the collections and settings
+  // live in the account menu.
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader variant="app" leading={<AdminNavMenu items={sections} />}>
-        <AdminNav items={sections} />
+      <SiteHeader variant="app" brandHref="/app">
         <div className="ml-auto flex min-w-0 justify-end">
           <AccountMenu email={me.data.email} />
         </div>

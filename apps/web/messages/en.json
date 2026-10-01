@@ -52,12 +52,6 @@
     "signedInAs": "Signed in as",
     "logout": "Sign out",
     "placeholderTitle": "Your collections",
-    "nav": {
-      "label": "Sections",
-      "collections": "Collections",
-      "settings": "Settings"
-    },
-    "menu": "Menu",
     "logoutFailed": "Couldn't sign out. Try again.",
     "emptyTitle": "No collections yet",
     "emptyText": "Your collections, and everything guests add to them, will appear here."
@@ -99,6 +93,7 @@
   },
   "settings": {
     "pageTitle": "Settings",
+    "back": "Collections",
     "appearance": "Appearance",
     "description": "How your workspace looks and which language it uses.",
     "appearanceHint": "Changes apply right away, no reload needed.",

@@ -10,9 +10,9 @@ type SiteHeaderProps = {
    * edge.
    */
   variant?: 'public' | 'app';
-  /** Before the brand (the admin menu button on phones). */
-  leading?: ReactNode;
-  /** After the brand (the admin nav and account menu). */
+  /** Where the brand links: the landing page by default, the collections list in the app. */
+  brandHref?: string;
+  /** After the brand (the account menu). */
   children?: ReactNode;
 };
 
@@ -20,7 +20,7 @@ type SiteHeaderProps = {
  * Brand link plus optional slots on either side; public pages show the brand only. Synchronous
  * so both server pages and the client app shell can render it.
  */
-export function SiteHeader({ variant = 'public', leading, children }: SiteHeaderProps) {
+export function SiteHeader({ variant = 'public', brandHref = '/', children }: SiteHeaderProps) {
   const t = useTranslations('brand');
   const app = variant === 'app';
   return (
@@ -32,9 +32,8 @@ export function SiteHeader({ variant = 'public', leading, children }: SiteHeader
             : 'stepler-container flex items-center justify-between gap-3'
         }
       >
-        {leading}
         <Link
-          href="/"
+          href={brandHref}
           className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-2.5 rounded-lg text-foreground no-underline"
         >
           <BrandMark className="shrink-0" />

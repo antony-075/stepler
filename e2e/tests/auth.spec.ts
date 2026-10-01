@@ -8,8 +8,9 @@ test.use({ locale: 'de-DE' });
 const T = {
   ...SIGN_IN_UK,
   logout: 'Вийти',
-  collections: 'Колекції',
-  menu: 'Меню',
+  appTitle: 'Ваші колекції',
+  settings: 'Налаштування',
+  back: 'Колекції',
   invalid: 'Посилання недійсне або вже використане. Отримайте нове.',
   invalidTitle: 'Посилання не спрацювало',
   newLink: 'Отримати нове посилання',
@@ -160,13 +161,29 @@ test('a 60-character email fits the header, truncated (Review Focus 5)', async (
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
-test('the admin nav marks the current section', async ({ page }) => {
-  await signIn(page, newEmail());
-  const wide = page.viewportSize()!.width >= 768;
-  const link = wide
-    ? page.getByRole('navigation').getByRole('link', { name: T.collections })
-    : page.getByRole('menuitem', { name: T.collections });
-  if (!wide) await page.getByRole('button', { name: T.menu }).click();
-  await expect(link).toHaveAttribute('aria-current', 'page');
-  await expect(link).toHaveAttribute('href', '/app');
+test('the admin header has no section nav: settings via the account menu, back via the brand', async ({
+  page,
+}) => {
+  const email = newEmail();
+  await signIn(page, email);
+  const header = page.getByRole('banner');
+  await expect(header.getByRole('navigation')).toHaveCount(0);
+  // Settings has one entry point: the account menu.
+  await expect(header.getByRole('link', { name: T.settings })).toHaveCount(0);
+  await page.getByRole('button', { name: email }).click();
+  await page.getByRole('menuitem', { name: T.settings }).click();
+  await expect(page).toHaveURL(/\/app\/settings$/);
+  await expect(page.getByRole('heading', { name: T.settings, level: 1 })).toBeVisible();
+
+  // The back link above the title returns to the collections.
+  await page.getByRole('main').getByRole('link', { name: T.back }).click();
+  await expect(page).toHaveURL(/\/app$/);
+  await expect(page.getByRole('heading', { name: T.appTitle, level: 1 })).toBeVisible();
+
+  // The brand goes to the collections too, not to the landing page.
+  await page.goto('/app/settings');
+  const brand = header.getByRole('link', { name: 'Stepler' });
+  await expect(brand).toHaveAttribute('href', '/app');
+  await brand.click();
+  await expect(page).toHaveURL(/\/app$/);
 });
