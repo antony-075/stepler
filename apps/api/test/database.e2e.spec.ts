@@ -91,3 +91,75 @@ describe('identity schema', () => {
     expect([...ids].sort()).toEqual(ids);
   });
 });
+
+describe('collection schema', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  async function owner(): Promise<string> {
+    return (await prisma.user.create({ data: { email: 'owner@x.io' } })).id;
+  }
+
+  test('ARCHIVED requires archivedAt', async () => {
+    const ownerId = await owner();
+    expect(
+      await violation(
+        prisma.collection.create({ data: { ownerId, title: 'A', status: 'ARCHIVED' } }),
+      ),
+    ).toEqual({ kind: 'check', constraint: 'Collection_archived_consistent' });
+    await prisma.collection.create({
+      data: { ownerId, title: 'A', status: 'ARCHIVED', archivedAt: new Date() },
+    });
+  });
+
+  test('DELETING requires deletionRequestedAt', async () => {
+    const ownerId = await owner();
+    expect(
+      await violation(
+        prisma.collection.create({ data: { ownerId, title: 'A', status: 'DELETING' } }),
+      ),
+    ).toEqual({ kind: 'check', constraint: 'Collection_deleting_consistent' });
+  });
+
+  test('title is 1 to 100 characters and description at most 1000', async () => {
+    const ownerId = await owner();
+    await prisma.collection.create({ data: { ownerId, title: 'x'.repeat(100) } });
+    expect(
+      await violation(prisma.collection.create({ data: { ownerId, title: 'x'.repeat(101) } })),
+    ).toEqual({ kind: 'check', constraint: 'Collection_title_length' });
+    expect(await violation(prisma.collection.create({ data: { ownerId, title: '' } }))).toEqual({
+      kind: 'check',
+      constraint: 'Collection_title_length',
+    });
+    expect(
+      await violation(
+        prisma.collection.create({ data: { ownerId, title: 'A', description: 'x'.repeat(1001) } }),
+      ),
+    ).toEqual({ kind: 'check', constraint: 'Collection_description_length' });
+  });
+
+  test('a user who owns a collection cannot be deleted', async () => {
+    const ownerId = await owner();
+    await prisma.collection.create({ data: { ownerId, title: 'A' } });
+    await expect(prisma.user.delete({ where: { id: ownerId } })).rejects.toThrow();
+    expect(await prisma.user.count()).toBe(1);
+  });
+
+  test('audit events survive deleting their collection (no foreign key)', async () => {
+    const ownerId = await owner();
+    const collection = await prisma.collection.create({ data: { ownerId, title: 'A' } });
+    await prisma.auditEvent.create({
+      data: {
+        collectionId: collection.id,
+        actorType: 'ADMIN',
+        actorId: ownerId,
+        action: 'collection.create',
+        targetType: 'collection',
+        targetId: collection.id,
+      },
+    });
+    await prisma.collection.delete({ where: { id: collection.id } });
+    expect(await prisma.auditEvent.count({ where: { targetId: collection.id } })).toBe(1);
+  });
+});

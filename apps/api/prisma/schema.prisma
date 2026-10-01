@@ -1,4 +1,4 @@
-// Identity schema (spec §7.1). Constraints the schema cannot express (citext extension, CHECKs,
+// Identity (spec §7.1), collections and audit (§7.2, §7.4). Constraints the schema cannot express (citext extension, CHECKs,
 // partial indexes) live as named raw SQL in the migrations (ADR 0005, spike S6).
 
 generator client {
@@ -21,6 +21,20 @@ enum UserStatus {
   BLOCKED
 }
 
+enum CollectionStatus {
+  ACTIVE
+  ARCHIVED
+  /// Deletion requested: gone for everyone; the purge job removes the rows (D2).
+  DELETING
+}
+
+enum AuditActorType {
+  ADMIN
+  OPERATOR
+  GUEST
+  SYSTEM
+}
+
 enum AuthProvider {
   GOOGLE
   EMAIL
@@ -41,6 +55,7 @@ model User {
   updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
   accounts        AuthAccount[]
   sessions        AuthSession[]
+  collections     Collection[]
 }
 
 model AuthAccount {
@@ -81,4 +96,41 @@ model MagicLinkToken {
   createdAt     DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([email, createdAt])
+}
+
+model Collection {
+  id                  String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerId             String           @db.Uuid
+  /// 1 to 100 characters (CHECK "Collection_title_length").
+  title               String
+  /// 1 to 1000 characters when set (CHECK "Collection_description_length").
+  description         String?
+  /// ARCHIVED iff archivedAt is set, DELETING iff deletionRequestedAt is set
+  /// (CHECKs "Collection_archived_consistent", "Collection_deleting_consistent").
+  status              CollectionStatus @default(ACTIVE)
+  archivedAt          DateTime?        @db.Timestamptz(3)
+  deletionRequestedAt DateTime?        @db.Timestamptz(3)
+  createdAt           DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime         @updatedAt @db.Timestamptz(3)
+  owner               User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+/// Append-only. Plain ids without foreign keys, so events outlive what they describe (spec §7.4).
+/// Metadata never holds user content (titles, descriptions, texts).
+model AuditEvent {
+  id           String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId String?        @db.Uuid
+  actorType    AuditActorType
+  actorId      String?        @db.Uuid
+  action       String
+  targetType   String
+  targetId     String         @db.Uuid
+  metadata     Json           @default("{}")
+  requestId    String?
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([collectionId, createdAt])
+  @@index([actorId, action, createdAt])
 }
