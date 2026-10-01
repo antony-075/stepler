@@ -126,27 +126,36 @@ test('the account menu works with the keyboard only', async ({ page, isMobile })
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('a 60-character email fits a 360px header, truncated (Review Focus 5)', async ({ page }) => {
+test('a 60-character email fits the header, truncated (Review Focus 5)', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
   const email = `e2e-longer-${randomUUID()}@stepler.test`;
   expect(email).toHaveLength(60);
   await signIn(page, email);
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-  ).toBeLessThanOrEqual(0);
+  const overflow = () =>
+    page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  // On a phone the trigger is the avatar initial; the address stays its accessible name.
   const trigger = page.getByRole('button', { name: email });
-  const text = trigger.locator('span[title]');
-  await expect(text).toHaveAttribute('title', email);
-  // Only the text is cut: the button itself stays inside the page.
-  expect(await text.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await expect(trigger).toHaveText(/^E/);
   const box = await trigger.boundingBox();
   expect(box!.x + box!.width).toBeLessThanOrEqual(360);
-  // The menu shows the whole address and fits too.
+  // The menu shows the whole address (truncated with a title) and fits too.
   await trigger.click();
-  await expect(page.getByRole('menu').getByText(email)).toBeVisible();
-  expect(
-    await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
-  ).toBeLessThanOrEqual(0);
+  const full = page.getByRole('menu').getByText(email);
+  await expect(full).toBeVisible();
+  await expect(full).toHaveAttribute('title', email);
+  expect(await overflow()).toBeLessThanOrEqual(0);
+  await page.keyboard.press('Escape');
+
+  // From md the address is shown, cut to 26ch: only the text is cut, the button stays inside.
+  await page.setViewportSize({ width: 768, height: 1024 });
+  const text = trigger.locator('span[title]');
+  await expect(text).toBeVisible();
+  await expect(text).toHaveAttribute('title', email);
+  expect(await text.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  const wide = await trigger.boundingBox();
+  expect(wide!.x + wide!.width).toBeLessThanOrEqual(768);
+  expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
 test('the admin nav marks the current section', async ({ page }) => {

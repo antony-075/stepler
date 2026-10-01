@@ -47,17 +47,18 @@
   },
   "app": {
     "loading": "Завантаження…",
-    "signedInAs": "Ви увійшли як {email}",
+    "signedInAs": "Ви увійшли як",
     "logout": "Вийти",
     "placeholderTitle": "Ваші колекції",
-    "placeholderText": "Тут з’являться ваші колекції.",
     "nav": {
       "label": "Розділи",
       "collections": "Колекції",
       "settings": "Налаштування"
     },
     "menu": "Меню",
-    "logoutFailed": "Не вдалося вийти. Спробуйте ще раз."
+    "logoutFailed": "Не вдалося вийти. Спробуйте ще раз.",
+    "emptyTitle": "Колекцій поки немає",
+    "emptyText": "Тут з’являться ваші колекції та все, що до них додадуть гості."
   },
   "brand": {
     "name": "Stepler",

@@ -123,3 +123,19 @@ export const ContainerPhone: Story = {
     await expect(Math.round(title.getBoundingClientRect().left)).toBe(16);
   },
 };
+
+/** The admin area uses `compact`: a fixed 24px title at every width. */
+export const Compact: Story = {
+  args: {
+    size: 'compact',
+    title: 'Settings',
+    description: 'How your workspace looks and which language it uses.',
+    actions: undefined,
+  },
+  globals: { viewport: { value: 'laptop' } },
+  play: async ({ canvas }) => {
+    const title = canvas.getByRole('heading', { level: 1, name: 'Settings' });
+    await expect(getComputedStyle(title).fontSize).toBe('24px');
+    await expect(title).toHaveAttribute('data-size', 'compact');
+  },
+};

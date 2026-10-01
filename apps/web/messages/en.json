@@ -47,17 +47,18 @@
   },
   "app": {
     "loading": "Loading…",
-    "signedInAs": "Signed in as {email}",
+    "signedInAs": "Signed in as",
     "logout": "Sign out",
     "placeholderTitle": "Your collections",
-    "placeholderText": "Your collections will appear here.",
     "nav": {
       "label": "Sections",
       "collections": "Collections",
       "settings": "Settings"
     },
     "menu": "Menu",
-    "logoutFailed": "Couldn't sign out. Try again."
+    "logoutFailed": "Couldn't sign out. Try again.",
+    "emptyTitle": "No collections yet",
+    "emptyText": "Your collections, and everything guests add to them, will appear here."
   },
   "brand": {
     "name": "Stepler",

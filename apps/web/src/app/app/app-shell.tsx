@@ -11,7 +11,7 @@ import { SiteHeader } from '@/components/site-header';
 import { errorMessageKey } from '@/errors/error-message';
 import { setLocaleCookie } from '@/i18n/set-locale';
 import { AccountMenu } from './account-menu';
-import { AdminNav } from './admin-nav';
+import { AdminNav, AdminNavMenu, type AdminNavItem } from './admin-nav';
 
 export function AppShell({ children }: { children: ReactNode }) {
   const t = useTranslations();
@@ -42,7 +42,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const failed = me.error !== null && !unauthenticated;
     const failure = isApiError(me.error) ? me.error.code : 'INTERNAL';
     return (
-      <main className="stepler-atmosphere grid min-h-dvh place-items-center px-4">
+      <main className="grid min-h-dvh place-items-center bg-background px-4">
         {failed ? (
           <div className="grid gap-4 text-center">
             <p role="alert">{t(errorMessageKey(failure))}</p>
@@ -55,16 +55,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     );
   }
 
+  const sections: AdminNavItem[] = [
+    { href: '/app', label: t('app.nav.collections') },
+    { href: '/app/settings', label: t('app.nav.settings') },
+  ];
+  // The admin area is a flat surface (no stepler-atmosphere): it is a tool, and the glow is kept
+  // for the public pages.
   return (
-    <div className="stepler-atmosphere flex min-h-dvh flex-col">
-      <SiteHeader>
-        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-          <AdminNav
-            items={[
-              { href: '/app', label: t('app.nav.collections') },
-              { href: '/app/settings', label: t('app.nav.settings') },
-            ]}
-          />
+    <div className="flex min-h-dvh flex-col bg-background">
+      <SiteHeader variant="app" leading={<AdminNavMenu items={sections} />}>
+        <AdminNav items={sections} />
+        <div className="ml-auto flex min-w-0 justify-end">
           <AccountMenu email={me.data.email} />
         </div>
       </SiteHeader>
