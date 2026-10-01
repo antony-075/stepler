@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 import { Input } from './input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Toaster, ToastProvider, useToast } from './toast';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
 
@@ -90,6 +91,30 @@ export const DropdownMenu_: Story = {
     await expectStill(await screen.findByRole('menu'));
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+  },
+};
+
+export const Select_: Story = {
+  name: 'Select',
+  render: () => (
+    <Select defaultValue="light">
+      <SelectTrigger aria-label="Theme">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="light">Light</SelectItem>
+        <SelectItem value="dark">Dark</SelectItem>
+      </SelectContent>
+    </Select>
+  ),
+  play: async ({ canvas }) => {
+    await expectReducedMotion();
+    const trigger = canvas.getByRole('combobox', { name: 'Theme' });
+    await expect(getComputedStyle(trigger).transitionProperty).toBe('none');
+    await userEvent.click(trigger);
+    await expectStill(await screen.findByRole('listbox'));
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
   },
 };
 
