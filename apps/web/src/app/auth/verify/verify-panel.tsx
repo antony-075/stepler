@@ -75,7 +75,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
     return (
       <div className="grid gap-4">
         <h1 className={TITLE}>
-          {t(retryable ? 'verify.unavailableTitle' : 'verify.invalidTitle')}
+          {retryable ? t('verify.unavailableTitle') : t('verify.invalidTitle')}
         </h1>
         <p role="alert" className="text-muted-foreground">
           {message}
