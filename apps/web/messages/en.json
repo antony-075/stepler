@@ -97,6 +97,10 @@
   },
   "settings": {
     "pageTitle": "Settings",
-    "appearance": "Appearance"
+    "appearance": "Appearance",
+    "description": "How your workspace looks and which language it uses.",
+    "appearanceHint": "Changes apply right away, no reload needed.",
+    "themeHint": "System follows your device setting. The choice applies to this browser.",
+    "languageHint": "The language of the interface and of the emails Stepler sends you."
   }
 }

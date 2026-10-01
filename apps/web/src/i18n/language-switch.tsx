@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useOptimistic, useRef, useTransition } from 'react';
 import { apiRequest } from '@/api/client';
+import { SETTING_CONTROL, SETTING_ITEM } from '@/components/setting-control';
 import { ME_QUERY_KEY } from '@/api/me';
 import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
 import { setLocaleCookie } from './set-locale';
@@ -70,15 +71,27 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
 }
 
 /** Українська / English, each name in its own language (`lang`). */
-export function LanguageSwitch({ labelledBy }: { labelledBy: string }) {
+export function LanguageSwitch({
+  labelledBy,
+  describedBy,
+}: {
+  labelledBy: string;
+  describedBy?: string;
+}) {
   const t = useTranslations('language');
   const { locale, changeLocale } = useChangeLocale();
   return (
-    <ToggleGroup aria-labelledby={labelledBy} value={locale} onValueChange={changeLocale}>
-      <ToggleGroupItem value="uk" lang="uk">
+    <ToggleGroup
+      aria-labelledby={labelledBy}
+      aria-describedby={describedBy}
+      value={locale}
+      onValueChange={changeLocale}
+      className={SETTING_CONTROL}
+    >
+      <ToggleGroupItem value="uk" lang="uk" className={SETTING_ITEM}>
         {t('uk')}
       </ToggleGroupItem>
-      <ToggleGroupItem value="en" lang="en">
+      <ToggleGroupItem value="en" lang="en" className={SETTING_ITEM}>
         {t('en')}
       </ToggleGroupItem>
     </ToggleGroup>

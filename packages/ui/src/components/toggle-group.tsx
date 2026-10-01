@@ -39,7 +39,7 @@ function ToggleGroup({
       // A recessed well: the page colour with an inset hairline, so it reads on a card in both
       // themes without a grey fill.
       className={cn(
-        'inline-flex w-fit items-center rounded-xl bg-control-track shadow-[inset_0_0_0_1px_var(--border)]',
+        'inline-flex w-fit items-center rounded-lg bg-control-track shadow-[inset_0_0_0_1px_var(--border)]',
         className,
       )}
       {...props}
@@ -67,7 +67,7 @@ function ToggleGroupItem({ className, icon, children, ...props }: ToggleGroupIte
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        'relative isolate inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none motion-reduce:transition-none',
+        'relative isolate inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none motion-reduce:transition-none',
         "before:absolute before:inset-[3px] before:-z-10 before:rounded-[9px] before:content-[''] before:transition-[background-color,box-shadow] motion-reduce:before:transition-none",
         'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
         'data-[state=on]:text-foreground data-[state=on]:before:bg-control-thumb data-[state=on]:before:shadow-[var(--shadow-thumb),0_0_0_1px_color-mix(in_srgb,var(--foreground)_10%,transparent)]',
