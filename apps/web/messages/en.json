@@ -60,10 +60,71 @@
     "copyright": "© {year} Stepler"
   },
   "landing": {
-    "title": "Gather everything from your event in one collection",
-    "lede": "Send guests a link or a QR code. They add photos, videos, documents and notes without signing up.",
-    "sheetLabel": "A collection's contact sheet: eight frames from guests — photos, a video and a PDF, one circled in pencil",
-    "documentKind": "PDF"
+    "metaTitle": "Stepler — photos and videos from every guest in one collection",
+    "metaDescription": "Create a collection for your event and share a link or QR code. Guests add photos and videos from their phones — no app, no sign-up.",
+    "titleLines": {
+      "one": "Photos and videos",
+      "two": "from every guest",
+      "three": "in one collection"
+    },
+    "lede": "Show guests a QR code or send them a link. They add photos and videos straight from their phone’s gallery — no app, no sign-up.",
+    "sheetLabel": "Frames from one collection",
+    "photos": {
+      "p05": "Friends laughing and raising their glasses at a candlelit dinner",
+      "p01": "Bride and groom laughing under a stone archway",
+      "p10": "A guest photographs the couple on her phone",
+      "p03": "Exchanging rings, a bouquet in hand",
+      "p09": "Three friends laughing in a warmly lit room",
+      "p06": "A birthday cake with lit candles",
+      "p02": "The bride dancing with guests under string lights"
+    },
+    "benefits": {
+      "title": "Why it’s easy",
+      "items": {
+        "noApp": {
+          "title": "No app, no sign-up",
+          "text": "Guests open the link in the browser of any phone."
+        },
+        "onePlace": {
+          "title": "One place instead of a dozen chats",
+          "text": "No more collecting shots from chats or asking people to send them again."
+        },
+        "original": {
+          "title": "Original quality",
+          "text": "Files are kept exactly as they were uploaded, without messenger compression."
+        },
+        "control": {
+          "title": "You decide who sees what",
+          "text": "Guests see each other’s frames, or only add their own."
+        }
+      }
+    },
+    "how": {
+      "title": "How it works",
+      "steps": {
+        "create": {
+          "title": "Create a collection",
+          "text": "Sign in with email or Google and name it after your event.",
+          "label": "An example collection, “Olia & Marko’s wedding”, with empty frames waiting for guests’ photos"
+        },
+        "share": {
+          "title": "Share the link or QR code",
+          "text": "Send it to a group chat, add it to the invitation or put the QR on the tables.",
+          "label": "An example guest link with its QR code and a Copy button"
+        },
+        "collect": {
+          "title": "Guests add their frames",
+          "text": "Photos, videos, documents and messages gather in one collection.",
+          "label": "Four new frames from guests: a photo, a video, a wish and another photo, the latest marked as new"
+        }
+      },
+      "sampleTitle": "Olia & Marko’s wedding",
+      "linkTitle": "Guest link",
+      "linkValue": "stepler.app/c/k7Xa…",
+      "copy": "Copy",
+      "new": "new",
+      "wish": "Thank you for bringing us all together"
+    }
   },
   "toast": {
     "announcement": "Notification",
