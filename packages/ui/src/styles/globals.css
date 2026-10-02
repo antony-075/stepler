@@ -94,7 +94,6 @@
 
   /* Legacy v4 tokens, still read by components restyled in later steps of the migration
      (DESIGN-SYSTEM.md §10.4). Removed with them; do not use in new code. */
-  --radius: 0.75rem;
   --accent-warm: #f0a04b;
   --accent-warm-foreground: #2a1605;
   --staple: #a3a7b6;
@@ -228,10 +227,6 @@
   --font-sans: var(--font-geologica, 'Geologica'), system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono:
     var(--font-geist-mono, 'Geist Mono'), ui-monospace, 'SFMono-Regular', Menlo, monospace;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 8px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

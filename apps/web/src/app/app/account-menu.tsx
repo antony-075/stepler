@@ -18,7 +18,7 @@ import { useTranslations } from 'next-intl';
 import { apiRequest } from '@/api/client';
 
 /**
- * The signed-in admin's menu. The trigger is an avatar initial, plus the email from `md`
+ * The signed-in admin's menu. The trigger is a violet avatar initial, plus the email from `md`
  * (truncated, full address in `title`); on phones the email stays the trigger's accessible name
  * but is visually hidden. The menu repeats the full address, then settings and sign out.
  */
@@ -43,16 +43,16 @@ export function AccountMenu({ email }: { email: string }) {
             address truncates instead of widening the header. */}
         <Button
           variant="ghost"
-          className="max-w-full min-w-0 shrink gap-2.5 px-1.5 text-foreground has-[>svg]:px-1.5 md:pr-2"
+          className="-mr-1.5 max-w-full min-w-0 shrink gap-2.5 px-1.5 has-[>svg]:px-1.5 md:pr-2"
         >
           <span
             aria-hidden="true"
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/14 text-[0.8125rem] font-semibold text-primary"
+            className="grid size-7 shrink-0 place-items-center rounded-full bg-link text-xs font-semibold text-primary-foreground"
           >
             {initial(email)}
           </span>
           <span
-            className="sr-only text-sm font-semibold md:not-sr-only md:max-w-[26ch] md:truncate"
+            className="sr-only text-sm font-medium md:not-sr-only md:max-w-[26ch] md:truncate"
             title={email}
           >
             {email}

@@ -99,7 +99,11 @@ export function VerifyPanel({ token }: { token: string | null }) {
   }
 
   if (preview.data === undefined) {
-    return <p role="status">{t('verify.checking')}</p>;
+    return (
+      <p role="status" className="text-muted-foreground">
+        {t('verify.checking')}
+      </p>
+    );
   }
 
   return (
@@ -114,8 +118,8 @@ export function VerifyPanel({ token }: { token: string | null }) {
   );
 }
 
-const TITLE =
-  'font-display text-xl leading-tight font-medium tracking-tight text-balance sm:text-2xl';
+// The page's h1, sized as a section heading: the panel is the whole page.
+const TITLE = 'type-h2';
 
 function failureCode(error: unknown) {
   if (error === null || error === undefined) return null;
