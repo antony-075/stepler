@@ -1,14 +1,15 @@
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { formatFrameNumber } from '@stepler/ui/components/empty-state';
-import { FrameSlots } from '@stepler/ui/components/frame-slots';
 import { fieldClassName } from '@stepler/ui/components/input';
+import { TintTile } from '@stepler/ui/components/tint-tile';
 import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
 import { cn } from '@stepler/ui/lib/utils';
 import { Copy, Play } from 'lucide-react';
 import Image from 'next/image';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
+import { collectionInitials } from '../app/collection-initials';
 import { LANDING_PHOTOS } from './landing-photos';
 import { PencilUnderline } from './pencil';
 import { QR_MODULES, qrIllustrationPath } from './qr-pattern';
@@ -118,17 +119,21 @@ async function CollectionFragment() {
     getFormatter(),
   ]);
   return (
-    <div className="grid gap-4">
-      <div className="grid gap-2">
+    // The dashboard row as it looks before content: the cover with the initials, title and meta.
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4">
+      <TintTile tint="sand">
+        <span translate="no">{collectionInitials(t('sampleTitle'))}</span>
+      </TintTile>
+      <div className="grid min-w-0 gap-2">
         <p className="type-h3">{t('sampleTitle')}</p>
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Badge variant="success">{tc('status.ACTIVE')}</Badge>
           <span className="text-sm text-muted-foreground tabular-nums">
             {tc('createdOn', { date: format.dateTime(SAMPLE_DATE, 'short') })}
           </span>
+          <span className="text-sm text-muted-foreground">{tc('noContentYet')}</span>
         </p>
       </div>
-      <FrameSlots count={5} tint="sand" className="w-full" />
     </div>
   );
 }
