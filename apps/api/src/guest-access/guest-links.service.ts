@@ -226,9 +226,7 @@ export class GuestLinksService {
   ): Promise<GuestLink> {
     const row = await this.prisma.$transaction(async (tx) => {
       await this.lockOwnedCollection(tx, principal, collectionId);
-      const current = await tx.guestLink.findFirst({
-        where: { collectionId, isDefault: true, status: { not: 'REVOKED' } },
-      });
+      const current = await this.lockLiveDefault(tx, collectionId);
       if (current === null) return this.createDefault(tx, collectionId, 'system');
       if (current.id !== body.expectedLinkId) return current;
 
@@ -272,6 +270,27 @@ export class GuestLinksService {
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
     return row;
+  }
+
+  /**
+   * The live default, locked (`FOR UPDATE`) and then read, so it reflects any pause or permission
+   * change that committed while rotate waited, and none can commit until rotate does (a later
+   * one finds the link revoked → 409). Lock order: collection, then link. Single-link changes
+   * (`update`, `transition`, `revoke`) lock only the link row and never the collection, so the
+   * order cannot invert.
+   */
+  private async lockLiveDefault(
+    tx: Prisma.TransactionClient,
+    collectionId: string,
+  ): Promise<GuestLinkRow | null> {
+    const [locked] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT "id" FROM "GuestLink"
+      WHERE "collectionId" = ${collectionId}::uuid
+        AND "isDefault"
+        AND "status" <> 'REVOKED'
+      FOR UPDATE`;
+    if (locked === undefined) return null;
+    return tx.guestLink.findUniqueOrThrow({ where: { id: locked.id } });
   }
 
   /**

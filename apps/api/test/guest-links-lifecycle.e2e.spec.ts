@@ -4,6 +4,7 @@ import { type GuestLink, guestLinkListResponseSchema, guestLinkSchema } from '@s
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
+import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -329,6 +330,76 @@ describe('guest link management', () => {
       );
       expect(rotated).toMatchObject({ status: 'INACTIVE', permissions });
       expect(rotated.id).not.toBe(defaultLink.id);
+    });
+
+    test('a token encrypted under another APP_SECRET → url null, and rotate still works', async () => {
+      const { cookie, collectionId, defaultLink } = await ownerWithCollection();
+      const foreign = new GuestLinkTokens({
+        APP_SECRET: Buffer.alloc(32, 9),
+        APP_ORIGIN: ORIGIN,
+      }).generate();
+      await prisma.guestLink.update({
+        where: { id: defaultLink.id },
+        data: { tokenHash: foreign.tokenHash, tokenCiphertext: foreign.tokenCiphertext },
+      });
+      const extra = parseLink((await createLink(cookie, collectionId).expect(201)).body);
+
+      const links = await list(cookie, collectionId);
+      expect(links.map((link) => [link.id, link.url])).toEqual([
+        [defaultLink.id, null],
+        [extra.id, extra.url],
+      ]);
+      const rotated = parseLink(
+        (await rotate(cookie, collectionId, defaultLink.id).expect(200)).body,
+      );
+      expect(rotated.id).not.toBe(defaultLink.id);
+      expect(rotated.url).toMatch(/^http:\/\/localhost:3000\/g\/[A-Za-z0-9_-]{43}$/);
+      expect((await list(cookie, collectionId))[0]).toMatchObject({
+        id: rotated.id,
+        url: rotated.url,
+      });
+    });
+
+    test('rotate racing a pause never loses the pause', async () => {
+      for (let i = 0; i < 5; i++) {
+        await prisma.$executeRawUnsafe(
+          'TRUNCATE "GuestLink", "Collection", "AuthSession", "AuthAccount", "User" CASCADE',
+        );
+        const { cookie, collectionId, defaultLink } = await ownerWithCollection();
+        const [rotated, paused] = await Promise.all([
+          rotate(cookie, collectionId, defaultLink.id),
+          post(cookie, `/guest-links/${defaultLink.id}/deactivate`),
+        ]);
+        expect(rotated.status).toBe(200);
+        // Paused first → the replacement copies INACTIVE; rotated first → the pause sees 409.
+        expect([200, 409]).toContain(paused.status);
+        const [live] = await list(cookie, collectionId);
+        expect(live).toMatchObject({
+          id: parseLink(rotated.body).id,
+          status: paused.status === 200 ? 'INACTIVE' : 'ACTIVE',
+        });
+      }
+    });
+
+    test('rotate racing a permission change never loses the change', async () => {
+      for (let i = 0; i < 5; i++) {
+        await prisma.$executeRawUnsafe(
+          'TRUNCATE "GuestLink", "Collection", "AuthSession", "AuthAccount", "User" CASCADE',
+        );
+        const { cookie, collectionId, defaultLink } = await ownerWithCollection();
+        const permissions = { ...defaultLink.permissions, canViewGallery: true };
+        const [rotated, updated] = await Promise.all([
+          rotate(cookie, collectionId, defaultLink.id),
+          patch(cookie, defaultLink.id, { permissions }),
+        ]);
+        expect(rotated.status).toBe(200);
+        expect([200, 409]).toContain(updated.status);
+        const [live] = await list(cookie, collectionId);
+        expect(live).toMatchObject({
+          id: parseLink(rotated.body).id,
+          permissions: updated.status === 200 ? permissions : defaultLink.permissions,
+        });
+      }
     });
 
     test('rejects a malformed expectedLinkId', async () => {

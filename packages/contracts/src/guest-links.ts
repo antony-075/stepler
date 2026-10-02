@@ -36,7 +36,10 @@ export const guestLinkLabelSchema = z
   .max(60)
   .regex(NO_CONTROL_CHARACTERS, 'Must not contain control characters or line breaks');
 
-/** A guest link as its collection's owner sees it. `url` is `null` once the link is revoked. */
+/**
+ * A guest link as its collection's owner sees it. `url` is `null` once the link is revoked, and
+ * for a live link whose stored token can no longer be decrypted (rotate or revoke it).
+ */
 export const guestLinkSchema = z
   .object({
     id: z.uuid(),
