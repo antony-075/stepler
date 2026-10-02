@@ -59,8 +59,8 @@ export const WithActionsLaptop: Story = {
     await expect(actions.left).toBeGreaterThan(title.right);
     const container = canvasElement.querySelector('main');
     if (!container) throw new Error('container missing');
-    // Aligned with the container's content edge (the 40px desktop gutter).
-    await expect(Math.round(container.getBoundingClientRect().right - actions.right)).toBe(40);
+    // Aligned with the container's content edge (the 32px gutter from `lg`).
+    await expect(Math.round(container.getBoundingClientRect().right - actions.right)).toBe(32);
   },
 };
 

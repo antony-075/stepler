@@ -150,9 +150,6 @@ async function expectReadsOnCard(canvasElement: HTMLElement, thumbDiffersFromCar
   for (const radio of radios.filter((radio) => radio !== selected)) {
     await expect(thumbColor(radio)).toBe('rgba(0, 0, 0, 0)');
   }
-  // The selected icon is primary, the others stay muted.
-  const icon = selected.querySelector('[data-slot="toggle-group-item-icon"]');
-  if (icon) await expect(getComputedStyle(icon).color).not.toBe(getComputedStyle(selected).color);
 }
 
 const onCard: Story['render'] = (args) => (

@@ -1,8 +1,8 @@
 # Design system
 
-The reusable UI of Stepler lives in `packages/ui` (`@stepler/ui`): shadcn/ui (new-york) components on Radix primitives, styled with Tailwind CSS 4 and the v4 tokens in `packages/ui/src/styles/globals.css`. Every component has a story in Storybook (`pnpm storybook`, http://localhost:6006) with `play` tests and axe checks that run in `pnpm test`.
+The reusable UI of Stepler lives in `packages/ui` (`@stepler/ui`): shadcn/ui (new-york) components on Radix primitives, styled with Tailwind CSS 4 and the design tokens in `packages/ui/src/styles/globals.css`. Every component has a story in Storybook (`pnpm storybook`, http://localhost:6006) with `play` tests and axe checks that run in `pnpm test`.
 
-This page describes what is implemented (Phase 3, 2026-09-30). The visual direction and the reasons behind it are in [README.md](README.md#visual-direction-v4-approved-2026-09-30-may-still-change).
+This page describes what is implemented. The visual direction is C «Контактний аркуш» (owner decision 2026-10-02, [ADR 0015](../architecture/decisions/0015-visual-direction-c-fonts-frame-numbers.md)); its full specification, including parts not built yet, is [docs/design/DESIGN-SYSTEM.md](../design/DESIGN-SYSTEM.md). The migration from v4 follows its §10.4 step by step; until it is finished, some components below still carry v4 styling (noted where it matters).
 
 Import a component by its file: `import { Button } from '@stepler/ui/components/button'`. The stylesheet is `@stepler/ui/styles.css`.
 
@@ -40,7 +40,7 @@ Story paths are Storybook titles; the files are `packages/ui/src/components/<nam
 | `BrandMark` | The Stepler mark (decorative SVG) | Inside a labelled link or next to the wordmark | SVG props | Components/BrandMark |
 | `StapledStack` | The hero illustration (photo, video, PDF, note, QR, staple); motion runs once and is off under reduced motion | The sign-in landing only; the one place raw colours are allowed | **`label`**, **`photoCaption`**, **`videoCaption`**, **`videoDuration`**, **`documentKind`**, **`documentTitle`**, **`note`**, **`noteAuthor`** | Components/StapledStack |
 
-`Foundations/Tokens` shows the colour tokens with their live values in the current theme. `Tests/ReducedMotion` (hidden from the sidebar) holds the reduced-motion regression stories.
+`Foundations/Tokens` shows the colour tokens with their live values in the current theme; `Foundations/Contrast` computes the contrast pairs of the token tables from the live values and fails when one is under its minimum. `Tests/ReducedMotion` (hidden from the sidebar) holds the reduced-motion regression stories.
 
 Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` / `useThemePreference` and `ThemeSwitch` in `apps/web/src/theme/`, `useChangeLocale` and `LanguageSwitch` in `apps/web/src/i18n/language-switch.tsx`.
 
@@ -102,76 +102,82 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 
 ## Tokens
 
-All custom properties in `packages/ui/src/styles/globals.css`. Dark values apply under `prefers-color-scheme: dark` (unless `data-theme="light"`) and under `data-theme="dark"`. Tailwind exposes the colours as `bg-*`, `text-*`, `border-*` and so on through `@theme inline`.
+All custom properties in `packages/ui/src/styles/globals.css`, direction C (specification: [DESIGN-SYSTEM.md §2](../design/DESIGN-SYSTEM.md#2-токены)). Dark values apply under `prefers-color-scheme: dark` (unless `data-theme="light"`) and under `data-theme="dark"`. Tailwind exposes the colours as `bg-*`, `text-*`, `border-*` and so on through `@theme inline`; shadcn names are kept.
 
-Contrast is WCAG 2 (sRGB relative luminance), light / dark. Text pairs need 4.5:1, non-text (field edges, focus rings) 3:1. The ring values were measured in the browser; everything else was computed from the hex values with the WCAG formula (2026-09-30).
+Contrast is WCAG 2.x (sRGB relative luminance), light / dark, computed from the hex values. Text pairs need 4.5:1, non-text (field edges, focus ring, button shapes) 3:1. `Foundations/Contrast` recomputes every pair below from the live values in both themes and fails `pnpm test` when one drops under its minimum.
 
 ### Surfaces and text
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--background` | `#F4F4F7` | `#13141B` | page | |
-| `--foreground` | `#16182A` | `#EEEEF3` | text | on background 15.97 / 15.88; on card 17.53 / 14.51; on muted 14.86 / 12.65 |
-| `--card` | `#FFFFFF` | `#1B1D27` | cards, tiles, dialogs, menus, fields | |
-| `--card-foreground` | `#16182A` | `#EEEEF3` | text on card | as `--foreground` on card |
-| `--popover` | `#FFFFFF` | `#1B1D27` | unused (shadcn default; menus use `card`) | |
-| `--popover-foreground` | `#16182A` | `#EEEEF3` | unused | |
-| `--muted` | `#EBECF1` | `#252836` | fills: tabs list, skeleton, hover, disabled primary button | |
-| `--muted-foreground` | `#5A5E73` | `#A7AABC` | secondary text | on background 5.83 / 7.97; on card 6.40 / 7.29; on muted 5.42 / 6.35 |
-| `--secondary` | `#EBECF1` | `#252836` | secondary button, neutral badge | |
-| `--secondary-foreground` | `#16182A` | `#EEEEF3` | text on secondary | 14.86 / 12.65 |
-| `--accent` | `#EBECF1` | `#252836` | unused (shadcn default) | |
-| `--accent-foreground` | `#16182A` | `#EEEEF3` | unused | |
-| `--border` | `#DFE1E9` | `#2C2F3D` | hairlines (decorative) | on card 1.31 / 1.26 (not relied on to identify controls) |
-| `--input` | `#868A9E` | `#6A6E85` | field edges, unchecked switch track | on card 3.42 / 3.34; on background 3.11 / 3.66 |
-| `--control-track` | `var(--background)` | `var(--background)` | ToggleGroup track: a recessed well (with an inset `--border` hairline) | vs card 1.10 / 1.09 (decorative; the labels identify the items); muted-foreground on it 5.83 / 7.97 |
-| `--control-thumb` | `#FFFFFF` | `#2C2F3D` | ToggleGroup selected thumb; lighter than the card in dark | vs track 1.10 / 1.38 (plus `--shadow-thumb` and a `foreground/10` ring; selection is also `aria-checked` and foreground text); foreground on it 17.53 / 11.49; primary icon 6.60 / 6.31 |
+| `--background` | `#F0F1EE` | `#141615` | the light table: page | |
+| `--card` (sheet) | `#FFFFFF` | `#1C1F1D` | grids, panels, fields | |
+| `--popover` (raised) | `#FFFFFF` | `#232724` | menus, select, toast, dialog; in dark lighter than a sheet instead of a shadow | |
+| `--foreground` (`--card-`, `--popover-foreground`) | `#141614` | `#E9EBE6` | text, ink | on background 16.04 / 15.14; on card 18.19 / 13.85; on popover — / 12.61 |
+| `--muted-foreground` | `#5A5D58` | `#9CA099` | secondary text, time, hints | on background 5.90 / 6.84; on card 6.68 / 6.26; on muted 5.32 / 5.48 |
+| `--muted` | `#E4E6E1` | `#262A27` | fills: skeleton, disabled, frame placeholder | |
+| `--border` | `#D6D8D2` | `#2D312E` | grid lines, hairlines (decorative) | on card 1.44 / 1.26 (never identifies a control) |
+| `--input` | `#83877F` | `#6C716B` | field, checkbox and outline-button edges, empty-frame dash | on card 3.66 / 3.33; on background 3.23 / 3.65; on popover — / 3.04 |
 
-### Actions and focus
+### Actions
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--primary` | `#3B4BD8` | `#A3ADFF` | actions, links, selected states | links on card 6.60 / 7.97; on background 6.01 / 8.73; on muted 5.59 / 6.95 |
-| `--primary-hover` | `#2F3DB8` | `#BAC2FF` | primary button on hover | |
-| `--primary-foreground` | `#FFFFFF` | `#13141B` | text on primary | on primary 6.60 / 8.73; on hover 8.47 / 10.71 |
-| `--ring` | `#3B4BD8` | `#A3ADFF` | focus ring, used at `/70` | `ring/70` on card 3.49 / 4.60, on background 3.31 / 4.85; solid ring on a highlighted menu item (muted) 5.59 / 6.95 |
+| `--primary` (ink) | `#141614` | `#E9EBE6` | admin primary button | shape on background 16.04 / 15.14 |
+| `--primary-hover` / `--primary-active` | `#2E312D` / `#454944` | `#FFFFFF` / `#CDD0CA` | ink on hover / pressed | |
+| `--primary-foreground` | `#FFFFFF` | `#141615` | text on ink | on primary / hover / active 18.19 / 13.18 / 9.17 and 15.14 / 18.18 / 11.66 |
+| `--pencil` | `#B83E26` | `#F08766` | wax pencil: guest primary, selection, "new", focus, active tab | text on background 4.93 / 7.24; on card 5.59 / 6.62 |
+| `--pencil-hover` / `--pencil-active` | `#A33520` / `#8E2D1B` | `#F59B7E` / `#DD7556` | | |
+| `--pencil-foreground` | `#FFFFFF` | `#141615` | text on pencil | 5.59 / 6.80 / 8.26 and 7.24 / 8.54 / 5.85 |
+| `--pencil-soft` | `#FBECE8` | `#33201A` | selected row or chip | foreground on it 15.82 / 12.84; pencil 4.86 / 6.14 |
+| `--link` (violet) | `#5A4A8C` | `#B6A8E8` | links (underlined), information | on background 6.63 / 8.44; on card 7.52 / 7.72 |
+| `--link-hover` | `#463870` | `#CABFF0` | | on background 8.99 / 10.58 |
+| `--info-soft` | `#EEEBF5` | `#242036` | info Alert | foreground 15.45 / 13.10; link 6.39 / 7.31 |
+| `--destructive` | `#A3203A` | `#FF8DA0` | errors, deletion; always with an icon and a word | on background 6.56 / 8.28; on card 7.43 / 7.58 |
+| `--destructive-hover` / `--destructive-active` | `#8A1A31` / `#731429` | `#FFA3B3` / `#F07A8E` | | |
+| `--destructive-foreground` | `#FFFFFF` | `#141615` | text on destructive | 7.43 / 9.24 / 11.28 and 8.28 / 9.64 / 6.82 |
+| `--destructive-soft` | `#F8E7EA` | `#33191E` | error Alert | foreground 15.25 / 13.47; destructive 6.23 / 7.37 |
 
-### Status
+Pencil and destructive are 1.33 / 1.14 apart in luminance: they are never told apart by colour (destructive always has an icon and a word; pencil never means an error). Ink and pencil buttons are not placed side by side (3.25 / 2.09).
+
+### Status and states
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--success` | `#1A7F4B` | `#5FD39A` | success icon, edge, dot, text on card | on card 5.02 / 9.00; on success-soft 4.38 / 7.32 (below 4.5 in light, so success Badge and Alert keep `foreground` text) |
-| `--success-soft` | `#E4F3EA` | `#173327` | success tint | foreground on it 15.28 / 11.80; muted-foreground 5.58 / 5.92 |
-| `--destructive` | `#C23A2E` | `#FF8A7D` | destructive button, error icon/text, destructive menu item | on card 5.33 / 7.34; on background 4.86 / 8.03; on its `/10` tint 4.60 / 6.20; `ring-destructive/70` on card 3.19 / 4.25, on background 3.03 / 4.49 |
-| `--destructive-foreground` | `#FFFFFF` | `#13141B` | text on a destructive button | 5.33 / 8.03 |
+| `--success` | `#2C7350` | `#77C79C` | "added", active link | on card 5.71 / 8.26; on success-soft 4.93 / 7.51 |
+| `--success-soft` | `#E5F1EA` | `#172A20` | success Alert | foreground 15.68 / 12.60 |
+| `--warning` | `#8A6100` | `#E2B550` | large file, paused link | on card 5.54 / 8.68; on warning-soft 4.80 / 8.03; on `--hover` exactly 4.50, so warning text never sits on a hover fill |
+| `--warning-soft` | `#F7EEDA` | `#2B2414` | warning Alert | foreground 15.76 / 12.81 |
+| `--hover` | `#E7E8E5` | `#1F211F` | hover of things on the page (foreground 4% / 5% over background) | foreground 14.79 / 13.50; pencil 4.55 / 6.45 |
+| `--hover-card` | `#F6F6F6` | `#262927` | hover inside a sheet (rows, menu items) | foreground 16.83 / 12.24 |
+| `--ring` | `var(--pencil)` | `var(--pencil)` | focus ring, 2px solid, offset 2px | on background 4.93 / 7.24; on card 5.59 / 6.62; on popover — / 6.03; on pencil-soft 4.86 / 6.14 |
 
-Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 and on the warning tint (`accent-warm/10`) 16.37 / 11.87.
-
-### Warm accent and illustration (decorative)
-
-| Token | Light | Dark | Role | Contrast (light / dark) |
-| --- | --- | --- | --- | --- |
-| `--accent-warm` | `#F0A04B` | `#F4B26A` | decoration only: note tile, brand-mark staple, QR dot, warning fill | decorative; on card 2.14 / 9.13, so never text or a line icon on its own in light |
-| `--accent-warm-foreground` | `#2A1605` | `#2A1605` | text and icon strokes on accent-warm (warning Badge, warning Alert icon) | 8.09 / 9.40 |
-| `--staple` | `#A3A7B6` | `#7E8296` | the staple (StapledStack, sign-in landing) | decorative |
-| `--staple-shine` | `#ECEDF2` | `#C9CBD6` | highlight on the staple | decorative |
-| `--dot` | `#D6D8E0` | `#262834` | `stepler-atmosphere` dot grid | decorative |
-| `--glow-warm` | `rgb(255 186 120 / 0.42)` | `rgb(255 168 96 / 0.15)` | atmosphere key light | decorative |
-| `--glow-cool` | `rgb(150 162 255 / 0.16)` | `rgb(120 132 255 / 0.07)` | atmosphere cool fill | decorative |
-
-### Shape, elevation and type
+### Overlays and media
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `--radius` | `0.75rem` | same | controls (`rounded-lg`); `--radius-sm` −4px, `--radius-md` −2px, `--radius-xl` +8px (20px) |
-| `--shadow-card` | `0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2)` | `inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75)` | cards, dialogs, menus, toasts (`shadow-card`) |
-| `--shadow-tile` | `0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3)` | `inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8)` | StapledStack tiles (`shadow-tile`) |
-| `--shadow-thumb` | `0 1px 2px rgb(22 24 42 / 0.1), 0 1px 1px rgb(22 24 42 / 0.04)` | `inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5)` | ToggleGroup thumb (`shadow-thumb`) |
-| `--font-sans` | Manrope (`--font-manrope` from `next/font`), system fallbacks | same | body text |
-| `--font-display` | Unbounded (`--font-unbounded`), then Manrope | same | wordmark and headings (`font-display`) |
-| `--stepler-gutter` / `--stepler-content` | 1rem / 1240px (1.5rem from `sm`, 2.5rem from `lg`, 1320px from 1600px) | same | set by `stepler-container` |
+| `--overlay` | `rgb(20 22 20 / 0.48)` | `rgb(0 0 0 / 0.64)` | under a dialog or sheet |
+| `--scrim` | `linear-gradient(to top, rgb(0 0 0 / 0.60), transparent 70%)` | same | under text or icons over a photo (white on it ≥ 4.74 in the worst case) |
+| `--veil` | `rgb(255 255 255 / 0.68)` | `rgb(20 22 21 / 0.68)` | "not uploaded yet" over a frame; never text on it |
+| `--viewer` / `--viewer-foreground` | `#0F110F` / `#E9EBE6` | same | full-screen frame viewer (15.79) |
+
+### Shape, elevation, layers, motion and type
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--radius-frame` / `-sheet` / `-control` / `-dialog` | 2 / 4 / 8 / 12px (`rounded-frame` …) | photo in a frame, thumbnails, QR / sheets, panels, Alert / buttons, fields, chips, menu items, toast / dialog, bottom sheet. Pills only for dots, avatars and switch thumbs |
+| `--shadow-popover` | light `0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06)`; dark none (popover colour + 1px border) | menus, select, toast (`shadow-popover`) |
+| `--shadow-dialog` | light `0 24px 48px -16px rgb(20 22 20 / 0.32)`; dark none | dialog, sheet (`shadow-dialog`) |
+| `--shadow-print` | light `0 1px 1px rgb(20 22 20 / 0.10), 0 8px 18px -8px rgb(20 22 20 / 0.28)`; dark `inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6)` | only the top print of the guest success stack |
+| `--z-base` … `--z-skip` | 0 / 1 frame mark / 20 sticky / 30 dock / 40 overlay / 50 modal / 60 popover / 70 toast / 80 skip link | used inside `packages/ui` (`z-(--z-modal)`); pages never set z-index on overlays |
+| `--duration-instant` … `--duration-stack` | 0 / 120 fast / 180 base / 240 slow / 300 develop / 400 stack ms | `duration-(--duration-fast)` |
+| `--ease-out` / `--ease-in` / `--ease-in-out` | `cubic-bezier(0.2, 0.7, 0.3, 1)` / `(0.4, 0, 1, 1)` / `(0.4, 0, 0.2, 1)` | replace Tailwind's defaults (`ease-out` …) |
+| `--breakpoint-3xl` | 120rem (1920px) | adds `3xl:` |
+| `--stepler-gutter` / `--stepler-content` | 16 / 24 / 32 / 40px (base / `sm` / `lg` / `2xl`); 1240px (1320px from 1600px) | set by `stepler-container` |
 
 `color-scheme` is `light` / `dark` with the theme, so native scrollbars and form parts follow it.
+
+**Legacy v4 tokens** still defined for components that later steps of the migration restyle (DESIGN-SYSTEM.md §10.4), and removed with them: `--radius` (12px, `rounded-lg` …), `--secondary*` and `--accent` / `--accent-foreground` (now aliases of `--muted` / `--foreground`), `--accent-warm*`, `--staple*`, `--dot`, `--glow-*`, `--shadow-card` (now `--shadow-popover`), `--shadow-tile`, `--control-track`, `--control-thumb`, `--shadow-thumb`, the `stepler-atmosphere` utility and the fonts Manrope (`--font-sans`) and Unbounded (`--font-display`). Do not use them in new code.
 
 ## How to add a component
 

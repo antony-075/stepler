@@ -71,7 +71,7 @@ function ToggleGroupItem({ className, icon, children, ...props }: ToggleGroupIte
         "before:absolute before:inset-[3px] before:-z-10 before:rounded-[9px] before:content-[''] before:transition-[background-color,box-shadow] motion-reduce:before:transition-none",
         'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
         'data-[state=on]:text-foreground data-[state=on]:before:bg-control-thumb data-[state=on]:before:shadow-[var(--shadow-thumb),0_0_0_1px_color-mix(in_srgb,var(--foreground)_10%,transparent)]',
-        'data-[state=on]:[&_[data-slot=toggle-group-item-icon]]:text-primary',
+
         'disabled:pointer-events-none disabled:opacity-50',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,

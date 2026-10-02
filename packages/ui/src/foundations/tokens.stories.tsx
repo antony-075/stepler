@@ -1,50 +1,70 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { useSyncExternalStore } from 'react';
 import { expect, within } from 'storybook/test';
+import { useThemeAttribute } from './theme-attribute';
 
-/** The colour tokens of the table in docs/ux/design-system.md ("Tokens"). */
-const TOKENS = [
-  { name: '--background', role: 'page' },
-  { name: '--foreground', role: 'text' },
-  { name: '--card', role: 'cards, tiles, dialogs, menus, fields' },
-  { name: '--card-foreground', role: 'text on card' },
-  { name: '--popover', role: 'unused (shadcn default)' },
-  { name: '--popover-foreground', role: 'unused (shadcn default)' },
-  { name: '--muted', role: 'fills' },
-  { name: '--muted-foreground', role: 'secondary text' },
-  { name: '--secondary', role: 'secondary button, neutral badge' },
-  { name: '--secondary-foreground', role: 'text on secondary' },
-  { name: '--accent', role: 'unused (shadcn default)' },
-  { name: '--accent-foreground', role: 'unused (shadcn default)' },
-  { name: '--border', role: 'hairlines (decorative)' },
-  { name: '--input', role: 'field edges' },
-  { name: '--primary', role: 'actions, links' },
-  { name: '--primary-hover', role: 'primary on hover' },
-  { name: '--primary-foreground', role: 'text on primary' },
-  { name: '--ring', role: 'focus ring (used at /70)' },
-  { name: '--success', role: 'success' },
-  { name: '--success-soft', role: 'success tint' },
-  { name: '--destructive', role: 'destructive' },
-  { name: '--destructive-foreground', role: 'text on destructive' },
-  { name: '--accent-warm', role: 'decoration only (note, mark, QR dot, warning fill)' },
-  { name: '--accent-warm-foreground', role: 'text and icons on accent-warm' },
-  { name: '--staple', role: 'the staple (decorative)' },
-  { name: '--staple-shine', role: 'staple highlight (decorative)' },
-  { name: '--dot', role: 'atmosphere dot grid (decorative)' },
-  { name: '--glow-warm', role: 'atmosphere key light (decorative)' },
-  { name: '--glow-cool', role: 'atmosphere cool fill (decorative)' },
-] as const;
+type Token = { name: string; role: string };
 
-/** Re-renders whenever <html data-theme> changes (the toolbar toggle or a story's globals). */
-function subscribeToTheme(onChange: () => void) {
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributeFilter: ['data-theme'] });
-  return () => observer.disconnect();
-}
+/** The colour tokens of the tables in docs/ux/design-system.md ("Tokens"), by group. */
+const GROUPS: { title: string; tokens: Token[] }[] = [
+  {
+    title: 'Surfaces and text',
+    tokens: [
+      { name: '--background', role: 'the light table: page' },
+      { name: '--card', role: 'sheet: grids, panels, fields' },
+      { name: '--popover', role: 'raised: menus, select, toast, dialog' },
+      { name: '--foreground', role: 'text, ink' },
+      { name: '--muted-foreground', role: 'secondary text, time, hints' },
+      { name: '--muted', role: 'fill: skeleton, disabled, frame placeholder' },
+      { name: '--border', role: 'grid lines, hairlines (decorative)' },
+      { name: '--input', role: 'field, checkbox and outline-button edges' },
+    ],
+  },
+  {
+    title: 'Actions',
+    tokens: [
+      { name: '--primary', role: 'ink: admin primary button' },
+      { name: '--primary-hover', role: 'ink on hover' },
+      { name: '--primary-active', role: 'ink pressed' },
+      { name: '--primary-foreground', role: 'text on ink' },
+      { name: '--pencil', role: 'wax pencil: guest primary, selection, new, focus' },
+      { name: '--pencil-hover', role: 'pencil on hover' },
+      { name: '--pencil-active', role: 'pencil pressed' },
+      { name: '--pencil-foreground', role: 'text on pencil' },
+      { name: '--pencil-soft', role: 'selected row or chip' },
+      { name: '--link', role: 'links, information' },
+      { name: '--link-hover', role: 'link on hover' },
+      { name: '--info-soft', role: 'info Alert' },
+      { name: '--destructive', role: 'errors, deletion' },
+      { name: '--destructive-hover', role: 'destructive on hover' },
+      { name: '--destructive-active', role: 'destructive pressed' },
+      { name: '--destructive-foreground', role: 'text on destructive' },
+      { name: '--destructive-soft', role: 'error Alert' },
+    ],
+  },
+  {
+    title: 'Status and states',
+    tokens: [
+      { name: '--success', role: 'added, active link' },
+      { name: '--success-soft', role: 'success Alert' },
+      { name: '--warning', role: 'large file, paused link' },
+      { name: '--warning-soft', role: 'warning Alert' },
+      { name: '--hover', role: 'hover on the page' },
+      { name: '--hover-card', role: 'hover inside a sheet' },
+      { name: '--ring', role: 'focus ring (= pencil)' },
+    ],
+  },
+  {
+    title: 'Overlays and media',
+    tokens: [
+      { name: '--overlay', role: 'under a dialog or sheet' },
+      { name: '--veil', role: 'not uploaded yet, over a frame' },
+      { name: '--viewer', role: 'full-screen frame viewer (both themes)' },
+      { name: '--viewer-foreground', role: 'text in the viewer' },
+    ],
+  },
+];
 
-function useThemeAttribute() {
-  return useSyncExternalStore(subscribeToTheme, () => document.documentElement.dataset.theme);
-}
+const ALL_TOKENS = GROUPS.flatMap((group) => group.tokens);
 
 /** Swatches with the live computed values, so both themes can be compared from the toolbar. */
 function TokenTable() {
@@ -53,30 +73,39 @@ function TokenTable() {
   const style = getComputedStyle(document.documentElement);
 
   return (
-    <ul className="grid gap-3 p-4 text-foreground sm:grid-cols-2 lg:grid-cols-3">
-      {TOKENS.map(({ name, role }) => (
-        <li key={name} className="flex min-w-0 items-center gap-3 rounded-lg bg-card p-3">
-          <span
-            aria-hidden="true"
-            className="size-11 shrink-0 rounded-md border border-border"
-            style={{ background: `var(${name})` }}
-          />
-          <span className="min-w-0">
-            <code className="block font-mono text-sm break-all">{name}</code>
-            <span className="block font-mono text-xs text-muted-foreground">
-              {style.getPropertyValue(name).trim()}
-            </span>
-            <span className="block text-xs text-muted-foreground">{role}</span>
-          </span>
-        </li>
+    <div className="grid gap-8 p-4 text-foreground">
+      {GROUPS.map(({ title, tokens }) => (
+        <section key={title} aria-labelledby={`tokens-${title}`} className="grid gap-3">
+          <h2 id={`tokens-${title}`} className="text-base font-semibold">
+            {title}
+          </h2>
+          <ul className="grid gap-px overflow-hidden rounded-sheet bg-border sm:grid-cols-2 lg:grid-cols-3">
+            {tokens.map(({ name, role }) => (
+              <li key={name} className="flex min-w-0 items-center gap-3 bg-card p-3">
+                <span
+                  aria-hidden="true"
+                  className="size-11 shrink-0 rounded-frame border border-border"
+                  style={{ background: `var(${name})` }}
+                />
+                <span className="min-w-0">
+                  <code className="block font-mono text-sm break-all">{name}</code>
+                  <span className="block font-mono text-xs text-muted-foreground">
+                    {style.getPropertyValue(name).trim()}
+                  </span>
+                  <span className="block text-sm text-muted-foreground">{role}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }
 
-function backgroundRow(canvasElement: HTMLElement) {
-  const row = within(canvasElement).getByText('--background', { selector: 'code' }).closest('li');
-  if (!row) throw new Error('--background row not found');
+function tokenRow(canvasElement: HTMLElement, name: string) {
+  const row = within(canvasElement).getByText(name, { selector: 'code' }).closest('li');
+  if (!row) throw new Error(`${name} row not found`);
   return within(row);
 }
 
@@ -92,10 +121,11 @@ type Story = StoryObj<typeof meta>;
 export const Dark: Story = {
   globals: { theme: 'dark' },
   play: async ({ canvas, canvasElement }) => {
-    for (const { name } of TOKENS) {
+    for (const { name } of ALL_TOKENS) {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
     }
-    await expect(await backgroundRow(canvasElement).findByText('#13141b')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--background').findByText('#141615')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#f08766')).toBeVisible();
   },
 };
 
@@ -103,10 +133,11 @@ export const Light: Story = {
   play: async ({ canvas, canvasElement }) => {
     // The decorator writes the global for every story, so Dark's theme is replaced here.
     await expect(document.documentElement.dataset.theme).toBe('light');
-    for (const { name } of TOKENS) {
+    for (const { name } of ALL_TOKENS) {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
     }
     // The values are read live from the page, not copied into the story.
-    await expect(await backgroundRow(canvasElement).findByText('#f4f4f7')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--background').findByText('#f0f1ee')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#b83e26')).toBeVisible();
   },
 };

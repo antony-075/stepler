@@ -26,8 +26,8 @@ const unbounded = Unbounded({
 // setting; an explicit theme choice in the cookie is not reflected here.
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f4f7' },
-    { media: '(prefers-color-scheme: dark)', color: '#13141b' },
+    { media: '(prefers-color-scheme: light)', color: '#f0f1ee' },
+    { media: '(prefers-color-scheme: dark)', color: '#141615' },
   ],
 };
 

@@ -41,7 +41,7 @@ export const AriaDisabled: Story = {
     // The primary button turns solid muted rather than half-transparent, so its label stays
     // readable.
     await expect(getComputedStyle(button).opacity).toBe('1');
-    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(235, 236, 241)');
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(228, 230, 225)'); // --muted
   },
 };
 
