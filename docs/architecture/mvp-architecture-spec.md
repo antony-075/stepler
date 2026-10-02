@@ -234,6 +234,7 @@ UploadSession
 - `hiddenAt` is the first moderation state (operator/admin "hide"). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
+- **Planned, not implemented (ADR 0015, upload slice):** stable frame numbers — `Collection.nextFrameNo` and `ContentItem.frameNo` with `SQL UNIQUE (collectionId, frameNo)`, assigned in the completion transaction, never reused after deletion; shown to the owner for every item and to a guest only for their own. Optional `ContentItem.capturedAt?` (EXIF / video metadata) if the processing pipeline reads it cheaply; the MVP timeline uses `createdAt`.
 
 ### 7.4 Reports and audit
 
