@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-const UK_TITLE = 'Фото й відео від усіх гостей в одній колекції';
-const EN_TITLE = 'Photos and videos from every guest in one collection';
+const UK_TITLE = 'Збирайте фото й відео з подій без клопотів';
+const EN_TITLE = 'Collect every photo and video from your event';
 
 // test.use keeps each project's device (viewport, touch, user agent); only the browser locale
 // (which drives Accept-Language) changes.

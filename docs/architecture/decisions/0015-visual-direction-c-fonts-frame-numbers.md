@@ -64,3 +64,7 @@ Three parts of that choice reach beyond styling:
 - The upload slice must add the counter, the unique constraint and the number in DTOs (owner-facing always; guest-facing only for the guest's own items).
 - Until the upload slice, UI that would show frame numbers (Frame, FrameGrid, upload components) is built in Storybook only.
 - Guest copy must not promise that "your frames" survive another device or cleared cookies: ownership comes from the guest session.
+
+## Addendum 2026-10-02: a handwriting accent on the landing
+
+The owner's landing reference adds three short handwritten step labels. They use **Caveat** (OFL 1.1, google/fonts `ofl/caveat/Caveat[wght].ttf`), committed as `apps/web/src/assets/landing/fonts/caveat-500.woff2` with its licence: one static weight (`varLib.instancer wght=500`), latin + cyrillic (Ukrainian і ї є ґ checked in the cmap), kerning only (`pyftsubset --layout-features=kern`; the contextual alternates would make it 71 KB instead of 32 KB). It is loaded with `next/font/local` only by the landing and not preloaded. It is not an interface font: Geologica and Geist Mono remain the only families anywhere else.
