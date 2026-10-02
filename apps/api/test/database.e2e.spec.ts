@@ -289,6 +289,15 @@ describe('guest link schema', () => {
     await prisma.guestLink.update({ where: { id: old.id }, data: { replacedById: live.id } });
   });
 
+  test('only a revoked additional link can be hidden', async () => {
+    const id = await collection();
+    const rule = check('GuestLink_hidden_only_revoked_additional');
+    const hiddenAt = new Date();
+    expect(await violation(link(id, { isDefault: false, label: 'B', hiddenAt }))).toEqual(rule);
+    expect(await violation(link(id, { ...revoked, hiddenAt }))).toEqual(rule);
+    await link(id, { ...revoked, isDefault: false, label: 'B', hiddenAt });
+  });
+
   test('labels: none on the default link, 1 to 60 characters on additional links', async () => {
     const id = await collection();
     const rule = check('GuestLink_label_rules');

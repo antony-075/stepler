@@ -13,6 +13,7 @@ export type AuditAction =
   | 'guest_link.deactivate'
   | 'guest_link.activate'
   | 'guest_link.revoke'
+  | 'guest_link.delete'
   | 'guest_link.rotate';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */

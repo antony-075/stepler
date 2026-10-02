@@ -69,7 +69,7 @@ export class GuestLinksService {
 
   /**
    * The live default, then live additional links (oldest first), then the most recently revoked
-   * additional links. A collection from before guest links gets its default here [G4], under the
+   * additional links that were not deleted. A collection from before guest links gets its default here [G4], under the
    * collection lock so concurrent first reads create one.
    */
   async list(principal: Principal, collectionId: string): Promise<GuestLinkListResponse> {
@@ -83,7 +83,7 @@ export class GuestLinksService {
         live.unshift(await this.createDefault(tx, collectionId, 'system'));
       }
       const revoked = await tx.guestLink.findMany({
-        where: { collectionId, isDefault: false, status: 'REVOKED' },
+        where: { collectionId, isDefault: false, status: 'REVOKED', hiddenAt: null },
         orderBy: [{ revokedAt: 'desc' }, { id: 'desc' }],
         take: LISTED_REVOKED_LINKS,
       });
@@ -208,6 +208,37 @@ export class GuestLinksService {
   }
 
   /**
+   * Deletes an additional link: revokes it if it is still live (the token ciphertext is wiped,
+   * as on revoke) and hides it from the list. The row stays for the audit trail and for guest
+   * content that will reference it. The default link is replaced, never deleted. Deleting again
+   * is a no-op.
+   */
+  async remove(principal: Principal, linkId: string, requestId?: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const owned = await this.findOwnedLink(tx, principal, linkId);
+      if (owned.isDefault) throw new AppError('DEFAULT_LINK_NOT_REVOCABLE', 409);
+      // Locked, then read again, so a concurrent revoke, pause or delete cannot slip in between
+      // and the delete is audited once. Like the other single-link changes, only the link row.
+      await tx.$queryRaw`SELECT "id" FROM "GuestLink" WHERE "id" = ${linkId}::uuid FOR UPDATE`;
+      const link = await tx.guestLink.findUniqueOrThrow({ where: { id: linkId } });
+      if (link.hiddenAt !== null) return;
+      const hiddenAt = new Date();
+      await tx.guestLink.update({
+        where: { id: linkId },
+        data: link.status === 'REVOKED' ? { hiddenAt } : { ...revoked(), hiddenAt },
+      });
+      await this.record(
+        tx,
+        principal,
+        link,
+        'guest_link.delete',
+        { fromStatus: link.status },
+        requestId,
+      );
+    });
+  }
+
+  /**
    * Replaces the default link's token: the old link is revoked and a new one keeps its
    * permissions and status [G7]. Only when the live default is still `expectedLinkId`, so a
    * retried, doubled or stale request returns the current default without rotating twice.
@@ -271,7 +302,7 @@ export class GuestLinksService {
    * change that committed while rotate waited, and none can commit until rotate does (a later
    * one finds the link revoked → 409). Lock order: collection, then link. Single-link changes
    * (`update`, `transition`, `revoke`) lock only the link row and never the collection, so the
-   * order cannot invert.
+   * order cannot invert. (`remove` locks the link row alone too.)
    */
   private async lockLiveDefault(
     tx: Prisma.TransactionClient,
