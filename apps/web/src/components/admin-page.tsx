@@ -5,8 +5,8 @@ import type { ReactNode } from 'react';
  * The frame of every admin page (DESIGN-SYSTEM.md §6.0): the shared page column
  * (`stepler-container`) with the same top and bottom space everywhere, so the back link, the h1
  * and the section tabs sit at the same place on every page and switching between them does not
- * move them. Content width follows the content: lists, galleries and link cards use the full
- * column; forms use `AdminFormColumn`, which is narrower but starts at the same left edge.
+ * move them. Every page uses the full column (owner review 2026-10-02); settings pages split
+ * it into a heading column and a panel column from `lg` (`SettingsSection`).
  */
 export function AdminPage({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -14,9 +14,4 @@ export function AdminPage({ children, className }: { children: ReactNode; classN
       {children}
     </main>
   );
-}
-
-/** A form's reading width (640px), left-aligned to the page column: never centred on its own. */
-export function AdminFormColumn({ children }: { children: ReactNode }) {
-  return <div className="grid w-full max-w-[640px] gap-8">{children}</div>;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { CircleAlert, CircleCheck, Info, X, type LucideIcon } from 'lucide-react';
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from 'lucide-react';
 import { Toast as ToastPrimitive } from 'radix-ui';
 import {
   createContext,
@@ -16,7 +16,12 @@ import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
 import { closeButtonClassName } from './button';
 
-type ToastVariant = 'info' | 'success' | 'error';
+/**
+ * The colour of the state the thing is in now (DESIGN-SYSTEM.md §5.17): `success` when it works
+ * (saved, created, resumed), `warning` when it is on hold and needs a later look (paused),
+ * `info` when it is neutral or gone (archived, revoked, deleted), `error` when it failed.
+ */
+type ToastVariant = 'info' | 'success' | 'warning' | 'error';
 
 type ToastInput = {
   title: string;
@@ -101,6 +106,7 @@ function useToast(): { toast: (input: ToastInput) => void } {
 const ICONS: Record<ToastVariant, { icon: LucideIcon; className: string }> = {
   info: { icon: Info, className: 'text-link' },
   success: { icon: CircleCheck, className: 'text-success' },
+  warning: { icon: TriangleAlert, className: 'text-warning' },
   error: { icon: CircleAlert, className: 'text-destructive' },
 };
 
@@ -108,6 +114,7 @@ const ICONS: Record<ToastVariant, { icon: LucideIcon; className: string }> = {
 const ANNOUNCE_TYPE: Record<ToastVariant, 'foreground' | 'background'> = {
   info: 'background',
   success: 'background',
+  warning: 'background',
   error: 'foreground',
 };
 

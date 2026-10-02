@@ -17,7 +17,7 @@ const T = {
   description: 'Опис',
   create: 'Створити',
   created: 'Колекцію створено',
-  active: 'Активна',
+  active: 'Колекція активна',
   archived: 'В архіві',
   archive: 'Архів',
   back: 'Колекції',
@@ -375,6 +375,44 @@ test.describe('isolation and stale screens', () => {
     const { used, limit } = usage.activeCollections;
     await expect(page.getByText(`${used} з ${limit} активних колекцій`)).toBeVisible();
     expect(used).toBe(1);
+  });
+});
+
+test.describe('dashboard card and settings layout (owner review 2026-10-02)', () => {
+  test('a card shows the collection and its link as two labelled statuses, apart from the date', async ({
+    page,
+  }) => {
+    await signIn(page, newEmail());
+    await createCollectionViaApi(page, 'Хрестини Марка', 'Неділя, 12:00');
+    await page.reload();
+    const card = page.getByRole('article').filter({ hasText: 'Хрестини Марка' });
+    const status = card.locator('[data-slot="collection-status"]');
+    await expect(status.getByText(T.active, { exact: true })).toBeVisible();
+    await expect(status.getByText('Посилання активне', { exact: true })).toBeVisible();
+    await expect(status).not.toContainText('Створено');
+    // The description sits under the title, above the statuses.
+    const description = await card.getByText('Неділя, 12:00').boundingBox();
+    const statusBox = await status.boundingBox();
+    expect(description!.y + description!.height).toBeLessThanOrEqual(statusBox!.y);
+  });
+
+  test('settings use the full page column, like the collection tabs', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'the two-column layout starts at lg');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Ювілей');
+    await page.goto(`/app/collections/${id}/settings`);
+    const h1 = await page.getByRole('heading', { level: 1 }).boundingBox();
+    const details = page.getByRole('region', { name: 'Деталі' });
+    const heading = await details.getByRole('heading', { name: 'Деталі' }).boundingBox();
+    const panel = await details.locator('[data-slot="settings-section-panel"]').boundingBox();
+    // Same left edge as the page title; the panel beside the heading, reaching the column's end.
+    expect(Math.abs(heading!.x - h1!.x)).toBeLessThanOrEqual(1);
+    expect(panel!.x).toBeGreaterThan(heading!.x + heading!.width);
+    expect(panel!.x + panel!.width).toBeGreaterThan(1440 - 200);
   });
 });
 

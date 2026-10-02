@@ -17,6 +17,8 @@ type CopyFieldProps = {
   copiedLabel: string;
   /** Shown and announced when the clipboard is unavailable or refuses; the value is then selected. */
   failedLabel: string;
+  /** Keeps the label for screen readers only, where the context already says what the value is. */
+  hideLabel?: boolean;
   className?: string;
 };
 
@@ -37,6 +39,7 @@ function CopyField({
   copyLabel,
   copiedLabel,
   failedLabel,
+  hideLabel = false,
   className,
 }: CopyFieldProps) {
   const id = useId();
@@ -92,7 +95,9 @@ function CopyField({
       data-slot="copy-field"
       className={cn('@container/copy-field grid min-w-0 gap-2', className)}
     >
-      <Label htmlFor={id}>{label}</Label>
+      <Label htmlFor={id} className={cn({ 'sr-only': hideLabel })}>
+        {label}
+      </Label>
       {/* Below 22rem (a phone-width panel) the button goes under the field at full width, so
           the field keeps enough of the value to recognise it. */}
       <div className="flex min-w-0 flex-col gap-2 @[22rem]/copy-field:flex-row">

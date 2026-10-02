@@ -1,11 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
-import { expect, userEvent, waitFor } from 'storybook/test';
+import { expect, type screen, userEvent, waitFor } from 'storybook/test';
+import { Badge } from './badge';
 import { Button } from './button';
 import { Checkbox } from './checkbox';
 import { CopyField } from './copy-field';
 import { Label } from './label';
-import { LinkCard, LinkCardSection, LinkShare } from './link-card';
+import { LinkCard, LinkCardDangerAction, LinkCardSection } from './link-card';
 import { RotatingQr } from './qr-frame';
 import { Switch } from './switch';
 
@@ -43,29 +44,45 @@ function SampleQr({
   );
 }
 
-function Card({ paused = false, qr = true }: { paused?: boolean; qr?: boolean }) {
+function Card({
+  paused = false,
+  qr = true,
+  unsaved = false,
+  defaultOpen = false,
+}: {
+  paused?: boolean;
+  qr?: boolean;
+  unsaved?: boolean;
+  defaultOpen?: boolean;
+}) {
   return (
     <LinkCard
       title="Main link"
       status={paused ? 'paused' : 'active'}
       statusLabel={paused ? 'Paused' : 'Active'}
+      notice={unsaved ? <Badge variant="warning">Not saved</Badge> : undefined}
       meta="Every guest gets this one: on invitations, tables and in messages."
-    >
-      <LinkCardSection title="Share" description="Show the QR at the entrance or send the link.">
-        <LinkShare
-          qr={qr ? <SampleQr /> : null}
-          field={
-            <CopyField
-              label="Link"
-              value={URL_70}
-              copyLabel="Copy"
-              copiedLabel="Copied"
-              failedLabel="Could not copy. The link is selected: copy it with your keyboard."
-            />
-          }
-          actions={<Button variant="outline">Download QR</Button>}
+      summary="Guests can add photos, videos, documents and wishes and see only their own"
+      qr={qr ? <SampleQr /> : null}
+      share={
+        <CopyField
+          label="Link"
+          hideLabel
+          value={URL_70}
+          copyLabel="Copy"
+          copiedLabel="Copied"
+          failedLabel="Could not copy. The link is selected: copy it with your keyboard."
         />
-      </LinkCardSection>
+      }
+      actions={
+        <Button variant="outline" size="lg">
+          Download QR
+        </Button>
+      }
+      toggleLabel="Manage"
+      toggleName="Manage «Main link»"
+      defaultOpen={defaultOpen}
+    >
       <LinkCardSection title="What guests can do" description="Changes apply after you save.">
         <div className="grid gap-1">
           {['Photos', 'Videos', 'Documents', 'Wishes'].map((name) => (
@@ -82,12 +99,25 @@ function Card({ paused = false, qr = true }: { paused?: boolean; qr?: boolean })
           The link works
         </Label>
       </LinkCardSection>
-      <LinkCardSection
-        tone="danger"
-        title="Replace the link"
-        description="The old link and every printed QR stop working at once."
-      >
-        <Button variant="destructive">Replace link</Button>
+      <LinkCardSection tone="danger" title="Danger zone" description="These can’t be undone.">
+        <LinkCardDangerAction
+          id="replace"
+          title="Replace link"
+          description="The old link and every printed QR stop working at once."
+        >
+          <Button variant="destructive" aria-describedby="replace-hint">
+            Replace link
+          </Button>
+        </LinkCardDangerAction>
+        <LinkCardDangerAction
+          id="delete"
+          title="Delete link"
+          description="Stops working for good and disappears from the list."
+        >
+          <Button variant="destructive" aria-describedby="delete-hint">
+            Delete link
+          </Button>
+        </LinkCardDangerAction>
       </LinkCardSection>
     </LinkCard>
   );
@@ -109,16 +139,56 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 const box = (element: Element) => element.getBoundingClientRect();
+const toggle = (canvas: { getByRole: typeof screen.getByRole }) =>
+  canvas.getByRole('button', { name: 'Manage «Main link»' });
 
-export const Active: Story = {
+/** Closed by default: the header shares the link; the parts are hidden until «Manage». */
+export const Closed: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('heading', { level: 2, name: 'Main link' })).toBeVisible();
     await expect(canvas.getByRole('region', { name: 'Main link' })).toBeVisible();
-    for (const part of ['Share', 'What guests can do', 'Status', 'Replace the link']) {
-      await expect(canvas.getByRole('heading', { level: 3, name: part })).toBeVisible();
-    }
+    await expect(canvas.getByRole('textbox', { name: 'Link' })).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Copy' })).toBeVisible();
+    await expect(toggle(canvas)).toHaveAttribute('aria-expanded', 'false');
+    await expect(canvas.queryByRole('heading', { name: 'What guests can do' })).toBeNull();
   },
 };
+
+/** A real button: Enter opens it, its `aria-controls` names the parts, and it closes again. */
+export const OpenWithKeyboard: Story = {
+  play: async ({ canvas, canvasElement }) => {
+    const button = toggle(canvas);
+    button.focus();
+    await userEvent.keyboard('{Enter}');
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    const content = canvasElement.querySelector(
+      `#${CSS.escape(button.getAttribute('aria-controls') ?? '')}`,
+    );
+    // The parts fade in (base duration).
+    await waitFor(() => expect(content).toBeVisible());
+    for (const part of ['What guests can do', 'Status', 'Danger zone']) {
+      await expect(canvas.getByRole('heading', { level: 3, name: part })).toBeVisible();
+    }
+    await userEvent.keyboard(' ');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(content).not.toBeVisible();
+  },
+};
+
+/** Closing keeps the parts mounted, so what was ticked survives a close and reopen. */
+export const KeepsStateWhenClosed: Story = {
+  play: async ({ canvas }) => {
+    await userEvent.click(toggle(canvas));
+    const photos = canvas.getByRole('checkbox', { name: 'Photos' });
+    await userEvent.click(photos);
+    await expect(photos).not.toBeChecked();
+    await userEvent.click(toggle(canvas));
+    await userEvent.click(toggle(canvas));
+    await expect(canvas.getByRole('checkbox', { name: 'Photos' })).not.toBeChecked();
+  },
+};
+
+export const Open: Story = { args: { defaultOpen: true, unsaved: true } };
 
 export const Paused: Story = { args: { paused: true } };
 
@@ -131,37 +201,50 @@ export const Hidden: Story = {
   },
 };
 
-/** 320px: one column, the QR ≥ 180px and centred, nothing wider than the screen. */
+/** 320px: a 64px QR beside the name, the link and buttons under it, nothing wider than the screen. */
 export const Phone: Story = {
+  args: { defaultOpen: true },
   globals: { viewport: { value: 'small' } },
   play: async ({ canvas, canvasElement }) => {
     const frame = canvasElement.querySelector('[data-slot=qr-frame]');
     if (!frame) throw new Error('QR frame missing');
-    await expect(box(frame).width).toBeGreaterThanOrEqual(180);
-    const heading = canvas.getByRole('heading', { name: 'Share' });
-    // Stacked: the part's heading is above its controls.
-    await expect(box(heading).bottom).toBeLessThanOrEqual(box(frame).top);
+    await expect(box(frame).width).toBe(64);
+    const input = canvas.getByRole('textbox', { name: 'Link' });
+    await expect(box(input).top).toBeGreaterThan(box(frame).bottom);
+    // Stacked parts: a part's heading is above its controls.
+    const heading = canvas.getByRole('heading', { name: 'Status' });
+    const control = canvas.getByRole('switch');
+    await expect(box(heading).bottom).toBeLessThanOrEqual(box(control).top);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
 };
 
-/** Wide: each part's heading on the left of its controls; the QR beside the link. */
+/** Wide: a 112px QR, the link beside it, Manage on the right; parts with headings on the left. */
 export const Laptop: Story = {
+  args: { defaultOpen: true },
   globals: { viewport: { value: 'laptop' } },
   play: async ({ canvas, canvasElement }) => {
     const frame = canvasElement.querySelector('[data-slot=qr-frame]');
     if (!frame) throw new Error('QR frame missing');
-    const heading = canvas.getByRole('heading', { name: 'Share' });
     const input = canvas.getByRole('textbox', { name: 'Link' });
-    await expect(box(heading).right).toBeLessThan(box(frame).left);
-    await expect(box(frame).width).toBe(160);
+    await expect(box(frame).width).toBe(112);
     await expect(box(frame).right).toBeLessThan(box(input).left);
-    await expect(box(input).top).toBeLessThan(box(frame).bottom);
+    await expect(box(toggle(canvas)).left).toBeGreaterThan(box(input).right);
+    const heading = canvas.getByRole('heading', { name: 'Status' });
+    await expect(box(heading).right).toBeLessThan(box(canvas.getByRole('switch')).left);
+    // A danger row: its text on the left, its button on the right.
+    const text = canvasElement.querySelector('#delete');
+    if (!text) throw new Error('danger row missing');
+    const button = canvas.getByRole('button', { name: 'Delete link' });
+    await expect(box(button).left).toBeGreaterThan(box(text).right);
+    await expect(button).toHaveAccessibleDescription(
+      'Stops working for good and disappears from the list.',
+    );
   },
 };
 
 export const Dark: Story = {
-  args: { paused: true },
+  args: { paused: true, defaultOpen: true, unsaved: true },
   globals: { theme: 'dark' },
   play: async ({ canvasElement }) => {
     await expect(document.documentElement.dataset.theme).toBe('dark');

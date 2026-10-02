@@ -17,7 +17,7 @@
     "GUEST_LINK_LIMIT_REACHED": "This collection has reached its link limit. Revoke one you no longer need.",
     "LINK_REVOKED": "This link has been revoked.",
     "LINK_INACTIVE": "This link is paused.",
-    "DEFAULT_LINK_NOT_REVOCABLE": "The main link can't be revoked. Replace it instead.",
+    "DEFAULT_LINK_NOT_REVOCABLE": "The main link can’t be revoked or deleted. Replace it instead.",
     "COLLECTION_ARCHIVED": "This collection is closed.",
     "COLLECTION_UNAVAILABLE": "This collection is unavailable."
   },
@@ -209,7 +209,11 @@
     },
     "noContentYet": "Nothing added yet",
     "linkActive": "Link active",
-    "linkPaused": "Link paused"
+    "linkPaused": "Link paused",
+    "statusChip": {
+      "ACTIVE": "Collection active",
+      "ARCHIVED": "Archived"
+    }
   },
   "collection": {
     "pageTitle": "Collection",
@@ -252,7 +256,8 @@
       "deleteConfirmText": "Guests lose access at once, and everything they added is deleted. This can't be undone.",
       "deleteConfirm": "Delete for good",
       "deletePending": "Deleting",
-      "deleted": "Collection deleted"
+      "deleted": "Collection deleted",
+      "leave": "The collection details aren’t saved. Leave the page without saving?"
     },
     "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
     "nav": {
@@ -313,8 +318,8 @@
       "png": "PNG for print",
       "svg": "SVG",
       "downloadFailed": "Couldn’t create the QR file. Try again.",
-      "hidden": "The link can’t be shown. Replace it in the danger zone below to get a new one.",
-      "hiddenExtra": "The link can’t be shown. Revoke it in the danger zone below and create a new one.",
+      "hidden": "The link can’t be shown. Replace it (Manage → Replace link) to get a new one.",
+      "hiddenExtra": "The link can’t be shown. Delete it under Manage and create a new one.",
       "resume": "Resume"
     },
     "permissions": {
@@ -332,11 +337,12 @@
       "seeAllHint": "Guests see everything the others added.",
       "viewOnly": "Guests can’t add anything, only look.",
       "invalid": "That leaves guests nothing to do: let them add something or see what every guest added.",
-      "unsaved": "You have unsaved changes.",
+      "unsaved": "You have unsaved changes. Guests don’t see them yet.",
       "save": "Save",
       "saving": "Saving…",
       "saved": "Permissions saved",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "leave": "The link’s permissions aren’t saved. Leave the page without saving?"
     },
     "state": {
       "title": "Status",
@@ -349,7 +355,9 @@
     },
     "danger": {
       "title": "Danger zone",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "description": "These can’t be undone.",
+      "mainOnly": "The main link can’t be deleted, only replaced. If you don’t need it for a while, pause it above under Status."
     },
     "rotate": {
       "description": "Creates a new link and a new QR code. The old link and any printed QR code stop working at once.",
@@ -363,7 +371,7 @@
       "done": "Link replaced"
     },
     "revoke": {
-      "description": "The link stops working for good. It can’t be brought back; you can only create a new one.",
+      "description": "Stops working for good, but stays under Revoked so you remember who you gave it to.",
       "button": "Revoke link",
       "confirmTitle": "Revoke “{name}”?",
       "confirmText": "The link and its QR code stop working for good. They can’t be brought back; you can only create a new link.",
@@ -375,12 +383,21 @@
     "extra": {
       "title": "Additional links",
       "description": "Separate links with their own permissions, for example for a photographer or for viewing only after the event.",
-      "new": "New link"
+      "new": "New link",
+      "count": "{count, number}",
+      "emptyTitle": "No additional links yet",
+      "emptyText": "Create a separate link with its own permissions, for example upload-only for a photographer or view-only after the event."
     },
     "revoked": {
       "title": "Revoked",
-      "description": "These links no longer work. They stay here as a record.",
-      "on": "Revoked {date}"
+      "description": "These links don’t work any more. They stay here for the record until you remove them.",
+      "on": "Revoked {date}",
+      "remove": "Remove “{name}” from the history",
+      "removeTitle": "Remove “{name}” from the history?",
+      "removeText": "The link already doesn’t work. It just disappears from this list.",
+      "removeConfirm": "Remove",
+      "removePending": "Removing",
+      "removed": "Removed from the history"
     },
     "create": {
       "title": "New link",
@@ -396,6 +413,19 @@
       "close": "Close",
       "cancel": "Cancel",
       "limitTitle": "No more links can be created"
+    },
+    "manage": "Manage",
+    "manageName": "Manage “{name}”",
+    "unsavedTag": "Not saved",
+    "delete": {
+      "description": "Stops working for good and disappears from the list.",
+      "button": "Delete link",
+      "confirmTitle": "Delete “{name}”?",
+      "confirmText": "The link and its QR code stop working for good, and the link disappears from the list. This can’t be undone.",
+      "phrase": "To confirm, type “{name}”",
+      "confirm": "Delete",
+      "pending": "Deleting",
+      "done": "Link deleted"
     }
   },
   "guestLink": {

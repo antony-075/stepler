@@ -8,7 +8,7 @@ import { Toaster, ToastProvider, useToast } from './toast';
 type TriggerProps = {
   title?: string;
   description?: string;
-  variant?: 'info' | 'success' | 'error';
+  variant?: 'info' | 'success' | 'warning' | 'error';
   count?: number;
   durationMs?: number;
 };
@@ -86,6 +86,23 @@ export const Error: Story = {
 
 export const ErrorDark: Story = {
   ...Error,
+  globals: { theme: 'dark' },
+};
+
+/** A thing put on hold (a paused link): the warning icon, announced politely like success. */
+export const Warning: Story = {
+  args: { variant: 'warning', title: 'Link paused' },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    await expect(await screen.findByRole('status')).toHaveAttribute('aria-live', 'polite');
+    const [toast] = toasts();
+    await expect(toast).toHaveAttribute('data-variant', 'warning');
+    await expect(toast?.querySelector('svg')).toHaveClass('text-warning');
+  },
+};
+
+export const WarningDark: Story = {
+  ...Warning,
   globals: { theme: 'dark' },
 };
 

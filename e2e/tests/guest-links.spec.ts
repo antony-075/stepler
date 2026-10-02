@@ -37,6 +37,13 @@ async function openLinks(page: Page, title: string): Promise<{ id: string }> {
 
 const mainCard = (page: Page): Locator => page.getByRole('region', { name: T.main });
 
+/** Opens a card's accordion («Керувати») unless it is open. */
+async function manage(card: Locator, name: string): Promise<void> {
+  const toggle = card.getByRole('button', { name: `Керувати «${name}»` });
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true') await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+}
+
 test.describe('links tab', () => {
   test('a new collection has an active main link with its QR code and default permissions', async ({
     page,
@@ -55,11 +62,25 @@ test.describe('links tab', () => {
     await expect(card.getByRole('textbox', { name: T.link })).toHaveValue(
       /\/g\/[A-Za-z0-9_-]{43}$/,
     );
+    // Closed, the header still says what guests can do; the controls are behind «Керувати».
+    await expect(card.getByText(/^Гості можуть додавати фото, відео, документи/)).toBeVisible();
+    await expect(card.getByRole('checkbox')).toHaveCount(0);
+    await manage(card, T.main);
     for (const type of ['Фото', 'Відео', 'Документи', 'Побажання']) {
       await expect(card.getByRole('checkbox', { name: type })).toBeChecked();
     }
     await expect(card.getByRole('radio', { name: /^Лише своє/ })).toBeChecked();
     await expect(card.getByRole('switch', { name: T.works })).toBeChecked();
+    // The main link can only be replaced; the danger zone says so and offers no delete.
+    await expect(card.getByRole('button', { name: T.rotate })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Видалити посилання' })).toHaveCount(0);
+    await expect(
+      card.getByText('Основне посилання не можна видалити — лише оновити.'),
+    ).toBeVisible();
+    // No additional links yet: an empty card asks for one.
+    const extra = page.getByRole('region', { name: 'Додаткові посилання' });
+    await expect(extra.getByText('Додаткових посилань ще немає')).toBeVisible();
+    await expect(extra.getByRole('button', { name: 'Нове посилання' })).toHaveCount(1);
   });
 
   test('the link copies, and the QR downloads as PNG and SVG', async ({
@@ -95,22 +116,44 @@ test.describe('links tab', () => {
   });
 
   test('permissions change only on Save; Cancel puts them back', async ({ page }) => {
-    await openLinks(page, 'Хрестини');
+    const collection = await openLinks(page, 'Хрестини');
     const card = mainCard(page);
+    await manage(card, T.main);
     const documents = card.getByRole('checkbox', { name: 'Документи' });
     const save = card.getByRole('button', { name: T.save });
-    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    // Nothing changed: no Save to press.
+    await expect(save).toHaveCount(0);
 
     await documents.click();
-    await expect(card.getByText('Є незбережені зміни.')).toBeVisible();
+    // A warning bar with Save and Cancel, announced; the header flags it too.
+    await expect(card.getByRole('status').filter({ hasText: 'Є незбережені зміни' })).toHaveText(
+      'Є незбережені зміни — гості їх ще не бачать.',
+    );
+    await expect(card.getByText('Не збережено', { exact: true })).toBeVisible();
+    // It survives closing the card.
+    await card.getByRole('button', { name: `Керувати «${T.main}»` }).click();
+    await expect(card.getByText('Не збережено', { exact: true })).toBeVisible();
+    await manage(card, T.main);
+    await expect(documents).not.toBeChecked();
+
+    // Leaving through an in-app link asks first; dismissing stays on the page.
+    page.once('dialog', (dialog) => {
+      expect(dialog.message()).toContain('не збережено');
+      void dialog.dismiss();
+    });
+    await page.getByRole('link', { name: 'Вміст' }).click();
+    await expect(page).toHaveURL(new RegExp(`/app/collections/${collection.id}/links$`));
+
     await card.getByRole('button', { name: 'Скасувати' }).click();
     await expect(documents).toBeChecked();
+    await expect(save).toHaveCount(0);
 
     await documents.click();
     await card.getByRole('radio', { name: /^Вміст усіх гостей/ }).click();
     await save.click();
     await expect(toast(page).filter({ hasText: 'Права збережено' })).toBeVisible();
     await page.reload();
+    await manage(mainCard(page), T.main);
     await expect(mainCard(page).getByRole('checkbox', { name: 'Документи' })).not.toBeChecked();
     await expect(mainCard(page).getByRole('checkbox', { name: 'Фото' })).toBeChecked();
     await expect(mainCard(page).getByRole('radio', { name: /^Вміст усіх гостей/ })).toBeChecked();
@@ -126,6 +169,7 @@ test.describe('links tab', () => {
     await openLinks(page, 'Випускний');
     const card = mainCard(page);
     const before = await card.getByRole('textbox', { name: T.link }).inputValue();
+    await manage(card, T.main);
     await card.getByRole('button', { name: T.rotate }).click();
     const dialog = page.getByRole('alertdialog', { name: `Оновити «${T.main}»?` });
     await expect(dialog).toContainText('надрукований QR перестануть працювати');
@@ -141,7 +185,9 @@ test.describe('links tab', () => {
     await expect(card.getByRole('textbox', { name: T.link })).not.toHaveValue(before);
   });
 
-  test('an additional link is created, then revoked into the record', async ({ page }) => {
+  test('an additional link is created, revoked into the record, and removed from it', async ({
+    page,
+  }) => {
     await openLinks(page, 'Корпоратив');
     await page.getByRole('button', { name: 'Нове посилання' }).click();
     const create = page.getByRole('dialog', { name: 'Нове посилання' });
@@ -150,19 +196,60 @@ test.describe('links tab', () => {
     await create.getByRole('button', { name: 'Створити' }).click();
     await expect(toast(page).filter({ hasText: 'Посилання створено' })).toBeVisible();
 
+    const section = page.getByRole('region', { name: 'Додаткові посилання' });
+    await expect(section.locator('[data-slot="extra-links-count"]')).toHaveText('1');
     const extra = page.getByRole('region', { name: 'Фотограф' });
     await expect(extra.getByRole('heading', { name: 'Фотограф', level: 3 })).toBeVisible();
+    await manage(extra, 'Фотограф');
     await expect(extra.getByRole('checkbox', { name: 'Побажання' })).not.toBeChecked();
 
     await extra.getByRole('button', { name: 'Відкликати посилання' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Відкликати «Фотограф»?' });
     await dialog.getByRole('textbox').fill('Фотограф');
     await dialog.getByRole('button', { name: 'Відкликати' }).click();
-    await expect(toast(page).filter({ hasText: 'Посилання відкликано' })).toBeVisible();
+    await expect(
+      page.locator('[data-slot="toast"][data-variant="info"]', { hasText: 'Посилання відкликано' }),
+    ).toBeVisible();
     await expect(extra).toBeHidden();
     const record = page.getByRole('region', { name: 'Відкликані' });
     const label = record.getByText('Фотограф', { exact: true });
     await expect(label).toHaveCSS('text-decoration-line', 'line-through');
+
+    // On a phone the toast sits over the list: close it first.
+    for (const close of await page.getByRole('button', { name: 'Закрити сповіщення' }).all()) {
+      await close.click();
+    }
+    await expect(page.locator('[data-slot="toast"]')).toHaveCount(0);
+    // The record can go too: a plain confirm, the link no longer works anyway.
+    await record.getByRole('button', { name: 'Прибрати «Фотограф» з історії' }).click();
+    const remove = page.getByRole('alertdialog', { name: 'Прибрати «Фотограф» з історії?' });
+    await remove.getByRole('button', { name: 'Прибрати' }).click();
+    await expect(toast(page).filter({ hasText: 'Прибрано з історії' })).toBeVisible();
+    await expect(record).toBeHidden();
+  });
+
+  test('deleting an additional link asks for its name and removes it from the page', async ({
+    page,
+  }) => {
+    await openLinks(page, 'Випускний 11-Б');
+    await page.getByRole('button', { name: 'Нове посилання' }).click();
+    const create = page.getByRole('dialog', { name: 'Нове посилання' });
+    await create.getByRole('textbox', { name: 'Назва' }).fill('Батьки');
+    await create.getByRole('button', { name: 'Створити' }).click();
+    const extra = page.getByRole('region', { name: 'Батьки' });
+    await manage(extra, 'Батьки');
+
+    await extra.getByRole('button', { name: 'Видалити посилання' }).click();
+    const dialog = page.getByRole('alertdialog', { name: 'Видалити «Батьки»?' });
+    const confirm = dialog.getByRole('button', { name: 'Видалити' });
+    await expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    await dialog.getByRole('textbox', { name: 'Щоб підтвердити, введіть «Батьки»' }).fill('Батьки');
+    await confirm.click();
+    await expect(toast(page).filter({ hasText: 'Посилання видалено' })).toBeVisible();
+    await expect(extra).toBeHidden();
+    // Gone from the page, not moved to the record.
+    await expect(page.getByRole('region', { name: 'Відкликані' })).toHaveCount(0);
+    await expect(page.getByText('Додаткових посилань ще немає')).toBeVisible();
   });
 });
 
@@ -187,7 +274,14 @@ test.describe('sharing from the collection page', () => {
 
     // Pause on the Links tab; the dashboard says so without a reload.
     await page.getByRole('link', { name: T.links }).click();
+    await manage(mainCard(page), T.main);
     await mainCard(page).getByRole('switch', { name: T.works }).click();
+    // Paused is a state to come back to: a warning toast, not a success.
+    await expect(
+      page.locator('[data-slot="toast"][data-variant="warning"]', {
+        hasText: 'Посилання призупинено',
+      }),
+    ).toBeVisible();
     await expect(mainCard(page).getByText(T.paused, { exact: true })).toBeVisible();
     await expect(mainCard(page).getByText('побачать «Посилання призупинене»')).toBeVisible();
     await page.getByRole('link', { name: 'Колекції' }).click();

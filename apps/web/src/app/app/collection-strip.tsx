@@ -5,7 +5,7 @@ import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { cn } from '@stepler/ui/lib/utils';
-import { Settings } from 'lucide-react';
+import { Link2, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { collectionInitials } from './collection-initials';
@@ -22,16 +22,18 @@ const ROW = cn(
 );
 
 /**
- * One active collection on the dashboard (DESIGN-SYSTEM.md §5.10 `CollectionStrip`, §6.5): its
- * cover, then title, status, date and description, and the settings button on the right. Before
- * content exists (slice 7) the cover is an identity tile: the collection's initials in its own
- * tint (chosen from its id, the same on its page); once it has content the newest photo
- * replaces the tile. Under the meta, the default guest link's state (slice 2); sharing itself
- * lives on the collection page, so a row stays one link plus settings.
+ * One active collection on the dashboard (DESIGN-SYSTEM.md §5.10 `CollectionStrip`, §6.5; owner
+ * review 2026-10-02: the old row was dense and its statuses unclear). Top to bottom: the title
+ * (level with the settings button), the description (two lines at most), then one line of
+ * status: two labelled tags that read on their own, «Колекція активна» (a filled tag) and the
+ * main guest link's «Посилання активне / призупинене» (an outlined tag with a link icon, so the
+ * two never look like one), and last, quieter, what is in it and when it was made, apart from
+ * the statuses. Before content exists (slice 7) the cover is an identity tile: the collection's
+ * initials in its own tint; once it has content the newest photo replaces the tile.
  *
  * Cover left, settings right at every width (cover 56px on phones, 64px from `sm`). On phones
- * the meta and description run under the settings button too, so the date is not squeezed
- * into the narrow column next to it.
+ * everything under the title runs under the settings button too, so nothing is squeezed into
+ * the narrow column next to it.
  */
 export function CollectionStrip({ collection }: { collection: Collection }) {
   return (
@@ -67,7 +69,7 @@ function CollectionCover({ collection, size }: { collection: Collection; size: '
   );
 }
 
-/** The title (row 1, level with settings) and the meta under it (row 2). */
+/** The title (row 1, level with settings) and everything else under it (row 2). */
 function CollectionSummary({
   collection,
   titleClassName,
@@ -78,7 +80,7 @@ function CollectionSummary({
   const t = useTranslations('collections');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
-  const status = t(`status.${collection.status}`);
+  const status = t(`statusChip.${collection.status}`);
   const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
 
   return (
@@ -100,54 +102,55 @@ function CollectionSummary({
           {collection.title}
         </Link>
       </h3>
-      <div className="col-[2/span_2] row-[2] grid min-w-0 gap-2 sm:col-[2]">
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-            {status}
-          </Badge>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
-          </span>
-          {/* Until content exists (slice 7) every active collection is empty; said once, briefly. */}
-          {archived ? null : (
-            <span className="text-sm text-muted-foreground">{t('noContentYet')}</span>
-          )}
-        </p>
-        {archived || collection.defaultLinkStatus === null ? null : (
-          <LinkStatus status={collection.defaultLinkStatus} />
-        )}
+      <div className="col-[2/span_2] row-[2] grid min-w-0 gap-3 sm:col-[2]">
         {collection.description !== null && !archived ? (
-          <p className="line-clamp-2 text-sm leading-[1.45] whitespace-pre-line text-muted-foreground [overflow-wrap:anywhere]">
+          <p className="line-clamp-2 max-w-[72ch] text-[0.9375rem] leading-[1.45] whitespace-pre-line text-muted-foreground [overflow-wrap:anywhere]">
             {collection.description}
           </p>
         ) : null}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <p data-slot="collection-status" className="flex flex-wrap items-center gap-2">
+            <Badge variant={archived ? 'neutral' : 'success'} title={status}>
+              {status}
+            </Badge>
+            {archived || collection.defaultLinkStatus === null ? null : (
+              <LinkStatus status={collection.defaultLinkStatus} />
+            )}
+          </p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {/* Until content exists (slice 7) every active collection is empty; said once. */}
+            {archived ? null : <span>{t('noContentYet')}</span>}
+            <span className="tabular-nums">
+              {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
+            </span>
+          </p>
+        </div>
       </div>
     </>
   );
 }
 
 /**
- * The default guest link's state (§6.5): «● Посилання активне» / «◌ Посилання призупинене».
- * The dot (filled success, hollow warning) is decoration; the words carry the state. Absent for
- * archived rows and for collections whose default link was never ensured (pre-slice-2, G4).
+ * The main guest link's state (§6.5) as an outlined tag with a link icon: «Посилання активне»
+ * (success) / «Посилання призупинене» (warning). The icon's colour is decoration; the words
+ * carry the state. Absent for archived rows and for collections whose default link was never
+ * ensured (pre-slice-2, G4).
  */
 function LinkStatus({ status }: { status: 'ACTIVE' | 'INACTIVE' }) {
   const t = useTranslations('collections');
   const active = status === 'ACTIVE';
   return (
-    <p
+    <span
       data-slot="collection-link-status"
-      className="flex items-center gap-2 text-sm text-muted-foreground"
+      data-status={status}
+      className="inline-flex h-6 items-center gap-1.5 rounded-sheet border px-2 text-[0.8125rem] leading-[1.4] font-medium whitespace-nowrap text-foreground"
     >
-      <span
+      <Link2
         aria-hidden="true"
-        className={cn(
-          'size-2 shrink-0 rounded-full',
-          active ? 'bg-success' : 'border-[1.5px] border-warning',
-        )}
+        className={cn('size-3.5 shrink-0', active ? 'text-success' : 'text-warning')}
       />
       {active ? t('linkActive') : t('linkPaused')}
-    </p>
+    </span>
   );
 }
 

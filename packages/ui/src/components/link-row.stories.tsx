@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Ellipsis } from 'lucide-react';
+import { Ellipsis, Trash2 } from 'lucide-react';
 import { expect } from 'storybook/test';
 import { Button } from './button';
 import { LinkRow } from './link-row';
@@ -62,11 +62,23 @@ export const Paused: Story = {
   },
 };
 
-/** A revoked link stays as a record: struck through, no QR, no actions. */
+/** A revoked link stays as a record: struck through, no QR; its one action removes it. */
 export const Revoked: Story = {
-  args: { label: 'Old link', status: 'revoked', statusLabel: 'Revoked 2 Oct' },
+  args: {
+    label: 'Old link',
+    status: 'revoked',
+    statusLabel: 'Revoked 2 Oct',
+    menu: (
+      <Button variant="ghost" size="icon" aria-label="Remove “Old link” from the history">
+        <Trash2 aria-hidden="true" />
+      </Button>
+    ),
+  },
   play: async ({ canvas, canvasElement }) => {
-    await expect(canvas.queryByRole('button')).toBeNull();
+    await expect(canvas.getAllByRole('button')).toHaveLength(1);
+    await expect(
+      canvas.getByRole('button', { name: 'Remove “Old link” from the history' }),
+    ).toBeVisible();
     await expect(canvas.queryByRole('img')).toBeNull();
     const label = canvas.getByText('Old link');
     await expect(getComputedStyle(label).textDecorationLine).toBe('line-through');
@@ -117,7 +129,13 @@ export const List: Story = {
         />
       </li>
       <li>
-        <LinkRow {...args} label="Old link" status="revoked" statusLabel="Revoked 28 Sep" />
+        <LinkRow
+          {...args}
+          label="Old link"
+          status="revoked"
+          statusLabel="Revoked 28 Sep"
+          menu={undefined}
+        />
       </li>
     </ul>
   ),

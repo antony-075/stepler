@@ -17,7 +17,7 @@ type LinkRowProps = {
   date: string;
   /** A 48px QR code; a dashed empty frame when absent (a revoked or hidden link). */
   qr?: ReactNode;
-  /** The row's `⋯` menu; never shown for a revoked link. */
+  /** The row's action: a `⋯` menu, or for a revoked link «Прибрати з історії». */
   menu?: ReactNode;
   className?: string;
 };
@@ -26,7 +26,7 @@ type LinkRowProps = {
  * One additional guest link in a list (DESIGN-SYSTEM.md §5.15, §6.7). Phone: two lines (the
  * label, then what guests can do, the status and the date) beside a 48px QR and the menu; from a
  * 36rem list, one row. A revoked link stays as a record: muted, its label struck through, the
- * revocation date instead of a status tag, no QR and no actions (G8).
+ * revocation date instead of a status tag, no QR; its one action removes it from the list.
  */
 function LinkRow({
   label,
@@ -82,8 +82,8 @@ function LinkRow({
             {revoked ? null : <span className="type-data text-muted-foreground">{date}</span>}
           </div>
         </div>
-        {/* Keeps the column for revoked rows too, so every label starts at the same edge. */}
-        <div className="flex min-w-11 justify-end">{revoked ? null : menu}</div>
+        {/* Kept when empty, so every label starts at the same edge. */}
+        <div className="flex min-w-11 justify-end">{menu}</div>
       </div>
     </div>
   );

@@ -1,21 +1,25 @@
 'use client';
 
-// Design (direction C settings pattern, DESIGN-SYSTEM.md §6.8; the same column as /app/settings):
+// Design (direction C settings pattern, DESIGN-SYSTEM.md §6.8; owner review 2026-10-02: the
+// 640px column "looked odd" next to the full-width tabs):
 // - The shared admin page frame (DESIGN-SYSTEM.md §6.0): the header block at the same place as
-//   on the collection's other pages, then the sections in a 640px form column on the same left
-//   edge (not centred). Back link to the collection (its title, cut to one line), a compact
-//   header and three sections in order of how often they are used: Details, Guest
-//   access, Danger zone.
+//   on the collection's other pages, then the sections across the full column. From `lg` each
+//   section's heading sits in a column on the left and its panel takes the rest (the
+//   `SettingsSection` layout), so the page uses its width and every section starts at the same
+//   two edges. Three sections in order of how often they are used: Details, Guest access,
+//   Danger zone.
 // - Details uses `wide` rows: the label and hint on the left, the field taking the rest of the
 //   row from 600px; stacked on phones. Save and Cancel sit in the panel's own footer, so they
-//   belong to these two fields only; Save does nothing (aria-disabled) until something changed.
+//   belong to these two fields only; Save does nothing (aria-disabled) until something changed,
+//   and leaving the page with unsaved changes asks first.
 // - Archive is reversible, so it asks once in a plain ConfirmDialog; unarchive just happens.
 // - Delete is the only red on the page and reads as a danger area at a glance: the panel in the
 //   soft destructive fill with a solid destructive edge, a warning icon by the row's name, the
 //   hint in the foreground colour, and one filled destructive "Delete collection" button with
 //   the bin icon (§5.1 allows it here), which still opens a destructive ConfirmDialog that names
 //   the collection.
-// - Errors stay next to what caused them (inline Alerts); toasts only confirm.
+// - Errors stay next to what caused them (inline Alerts); toasts only confirm, in the colour of
+//   the new state (§5.17).
 
 import type { Collection } from '@stepler/contracts';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -44,8 +48,8 @@ import {
   updateCollection,
   useInvalidateCollections,
 } from '@/api/collections';
-import { AdminFormColumn } from '@/components/admin-page';
 import { BackLink } from '@/components/back-link';
+import { useLeaveGuard } from '@/components/use-leave-guard';
 import { errorMessageKey } from '@/errors/error-message';
 import {
   type CollectionFormValues,
@@ -116,11 +120,11 @@ function Settings({ collection, onDeleted }: { collection: Collection; onDeleted
           title={t('settingsPage.pageTitle')}
         />
       </div>
-      <AdminFormColumn>
+      <div className="grid gap-10 lg:gap-12">
         <DetailsSection collection={collection} />
         <AccessSection collection={collection} />
         <DangerSection collection={collection} onDeleted={onDeleted} />
-      </AdminFormColumn>
+      </div>
     </>
   );
 }
@@ -154,6 +158,7 @@ function DetailsSection({ collection }: { collection: Collection }) {
 
   const dirty = form.formState.isDirty;
   const inert = !dirty || save.isPending;
+  useLeaveGuard(dirty, t('leave'));
   const titleError = form.formState.errors.title;
   const descriptionError = form.formState.errors.description;
   const descriptionLength = useWatch({ control: form.control, name: 'description' }).length;
@@ -271,8 +276,9 @@ function AccessSection({ collection }: { collection: Collection }) {
       to === 'archive' ? archiveCollection(collection.id) : unarchiveCollection(collection.id),
     onSuccess: async (updated, to) => {
       queryClient.setQueryData(collectionKey(updated.id), updated);
+      // In the colour of the new state (§5.17): archived is neutral, back in use is success.
       toast({
-        variant: 'success',
+        variant: to === 'archive' ? 'info' : 'success',
         title: to === 'archive' ? t('archived') : tRoot('collection.unarchived'),
       });
       await invalidate();
@@ -357,7 +363,7 @@ function DangerSection({
     onSuccess: async () => {
       onDeleted();
       router.replace('/app');
-      toast({ variant: 'success', title: t('deleted') });
+      toast({ variant: 'info', title: t('deleted') });
       queryClient.removeQueries({ queryKey: collectionKey(collection.id) });
       await invalidate();
     },

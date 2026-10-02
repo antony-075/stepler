@@ -4,6 +4,7 @@ import { Alert } from '@stepler/ui/components/alert';
 import { Checkbox } from '@stepler/ui/components/checkbox';
 import { Label } from '@stepler/ui/components/label';
 import { RadioGroup, RadioGroupItem } from '@stepler/ui/components/radio-group';
+import { cn } from '@stepler/ui/lib/utils';
 import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
@@ -25,16 +26,27 @@ const ADD_OPTIONS = [
 export function PermissionFields({
   value,
   onChange,
+  layout = 'stacked',
 }: {
   value: PermissionForm;
   onChange: (next: PermissionForm) => void;
+  /**
+   * `wide`: inside a link card part, the two questions side by side once the part is 40rem
+   * wide (owner review 2026-10-02: one narrow column left the card half empty at 1440px).
+   */
+  layout?: 'stacked' | 'wide';
 }) {
   const t = useTranslations('links.permissions');
   const seeId = useId();
   const valid = isValidForm(value);
 
+  const wide = layout === 'wide';
   return (
-    <div className="grid gap-5">
+    <div
+      className={cn('grid gap-5', {
+        '@[40rem]/link-card-part:grid-cols-2 @[40rem]/link-card-part:gap-x-10': wide,
+      })}
+    >
       <fieldset className="grid gap-1">
         <legend className="mb-1 text-sm font-semibold">{t('addLegend')}</legend>
         <div className="grid max-w-md sm:grid-cols-2 sm:gap-x-6">
@@ -77,13 +89,17 @@ export function PermissionFields({
       {!valid ? (
         <p
           role="alert"
-          className="flex items-start gap-1.5 text-sm leading-[1.45] text-destructive"
+          className={cn('flex items-start gap-1.5 text-sm leading-[1.45] text-destructive', {
+            '@[40rem]/link-card-part:col-span-2': wide,
+          })}
         >
           <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <span className="min-w-0">{t('invalid')}</span>
         </p>
       ) : addsNothing(value) ? (
-        <Alert variant="warning">{t('viewOnly')}</Alert>
+        <Alert variant="warning" className={cn({ '@[40rem]/link-card-part:col-span-2': wide })}>
+          {t('viewOnly')}
+        </Alert>
       ) : null}
     </div>
   );

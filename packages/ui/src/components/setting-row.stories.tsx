@@ -8,7 +8,7 @@ import { Textarea } from './textarea';
 
 function Demo({ title = 'Olia and Taras, wedding' }: { title?: string }) {
   return (
-    <div className="mx-auto grid max-w-[640px] gap-8">
+    <div className="grid gap-10">
       <SettingsSection id="details" title="Details" description="Guests see these.">
         <SettingRow id="title" label="Title" hint="Up to 100 characters." control="wide">
           <Input aria-labelledby="title" aria-describedby="title-hint" defaultValue={title} />
@@ -98,6 +98,19 @@ export const WideLaptop: Story = {
     const archive = rowParts(canvasElement, 'archive');
     await expect(archive.control.width).toBeLessThan(200);
     await expect(archive.control.left).toBeGreaterThan(archive.label.left + 200);
+  },
+};
+
+/** From `lg` the section heading is a column on the left and the panel takes the rest. */
+export const TwoColumns: Story = {
+  globals: { viewport: { value: 'laptop' } },
+  play: async ({ canvas, canvasElement }) => {
+    const heading = canvas.getByRole('heading', { name: 'Details' }).getBoundingClientRect();
+    const panel = canvasElement
+      .querySelector('[data-slot="settings-section-panel"]')!
+      .getBoundingClientRect();
+    await expect(panel.left).toBeGreaterThan(heading.right);
+    await expect(panel.top).toBeLessThan(heading.bottom);
   },
 };
 
