@@ -1,7 +1,15 @@
 import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import type { FrameTint } from '@stepler/ui/lib/frame-tints';
-import { CalendarHeart, Images, LockKeyhole, Smartphone, type LucideIcon } from 'lucide-react';
+import {
+  CalendarHeart,
+  Gem,
+  Images,
+  LockKeyhole,
+  QrCode,
+  Smartphone,
+  type LucideIcon,
+} from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { fetchAuthMethods } from '@/api/server';
 import { SiteFooter } from '@/components/site-footer';
@@ -27,7 +35,11 @@ const BENEFITS = [
 ] as const satisfies readonly { key: string; Icon: LucideIcon; tint: FrameTint }[];
 
 // Plain facts about the product, not statistics: nothing here is a measured or invented number.
-const FACTS = ['apps', 'qr', 'original'] as const;
+const FACTS = [
+  { key: 'apps', Icon: Smartphone, tint: 'sky' },
+  { key: 'qr', Icon: QrCode, tint: 'sage' },
+  { key: 'original', Icon: Gem, tint: 'sand' },
+] as const satisfies readonly { key: string; Icon: LucideIcon; tint: FrameTint }[];
 
 /**
  * The main page (`/`, `/login`) after the owner's reference (2026-10-02). From `xl` three
@@ -47,7 +59,7 @@ export async function SignInLanding({ error }: { error?: unknown }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader container="landing-container" />
-      <main className="flex-1 pb-16 lg:pb-20">
+      <main className="flex-1 pb-12 lg:pb-16">
         <div className="landing-container grid gap-x-10 gap-y-8 pt-2 [grid-template-areas:'intro'_'auth'_'benefits'_'how'_'facts'] sm:pt-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] md:gap-y-10 md:[grid-template-areas:'intro_auth'_'benefits_auth'_'how_how'_'facts_facts'] xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,0.95fr)] xl:gap-x-12 xl:pt-8 xl:[grid-template-areas:'intro_how_auth'_'benefits_how_auth'_'facts_facts_auth'] 2xl:gap-x-16">
           <section className="grid content-start gap-4 @container/intro [grid-area:intro] md:gap-5">
             {/* Three deliberate lines; the spaces keep the accessible name one sentence. The size
@@ -108,16 +120,31 @@ export async function SignInLanding({ error }: { error?: unknown }) {
             <h2 id="facts-title" className="sr-only">
               {t('facts.title')}
             </h2>
-            <ul className="grid gap-4 border-t pt-6 sm:grid-cols-3 sm:gap-0 sm:divide-x">
-              {FACTS.map((fact) => (
-                <li key={fact} className="grid content-start gap-1 sm:px-6 sm:first:pl-0">
-                  <span className="type-h2 tabular-nums">{t(`facts.items.${fact}.value`)}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {t(`facts.items.${fact}.text`)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {/* One calm band: three cells split by hairlines, each a small tint tile, the figure in
+                Geologica display and its line. Stacked rows on phones; three across from `md`,
+                the worded figure in the wider third cell so it stays on one line. */}
+            <Panel>
+              <ul className="divide-y md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.6fr)] md:divide-x md:divide-y-0">
+                {FACTS.map(({ key, Icon, tint }) => (
+                  <li
+                    key={key}
+                    className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 p-4 sm:px-6 md:grid-cols-1 md:content-start md:items-start md:gap-y-4 md:py-6 lg:p-7"
+                  >
+                    <TintTile tint={tint} size="sm" className="[&_svg]:size-5">
+                      <Icon strokeWidth={1.75} />
+                    </TintTile>
+                    <div className="grid gap-1.5">
+                      <span className="font-display text-[1.75rem] leading-none font-semibold tracking-[-0.01em] tabular-nums md:whitespace-nowrap lg:text-4xl">
+                        {t(`facts.items.${key}.value`)}
+                      </span>
+                      <span className="type-small text-pretty text-muted-foreground">
+                        {t(`facts.items.${key}.text`)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
           </section>
         </div>
       </main>
