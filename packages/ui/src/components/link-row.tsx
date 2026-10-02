@@ -47,12 +47,12 @@ function LinkRow({
           'text-muted-foreground': revoked,
         })}
       >
-        {/* One row from a 36rem (576px) list. */}
+        {/* One row from a 36rem (576px) list; fixed status and date columns line up across rows. */}
         <QrFrame className="size-12 p-0.5">{revoked ? null : qr}</QrFrame>
         <div
           className={cn(
             'grid min-w-0 gap-1',
-            '@[36rem]/link-row:grid-cols-[minmax(0,1fr)_minmax(0,14rem)_auto_4.5rem] @[36rem]/link-row:items-center @[36rem]/link-row:gap-4',
+            '@[36rem]/link-row:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_8rem_4.5rem] @[36rem]/link-row:items-center @[36rem]/link-row:gap-4',
           )}
         >
           <p

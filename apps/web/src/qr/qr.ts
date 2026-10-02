@@ -121,3 +121,15 @@ export function downloadBlob(blob: Blob, fileName: string): void {
   // Revoked on the next task: some browsers start the download only after the click returns.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+export type QrFileFormat = 'png' | 'svg';
+
+/** Encodes `url` and saves it as `{fileBase}.png` (2048px, for print) or `{fileBase}.svg`. */
+export async function downloadQr(url: string, fileBase: string, format: QrFileFormat) {
+  const matrix = qrMatrix(url);
+  const blob =
+    format === 'png'
+      ? await qrPngBlob(matrix)
+      : new Blob([qrSvg(matrix)], { type: 'image/svg+xml' });
+  downloadBlob(blob, `${fileBase}.${format}`);
+}

@@ -183,3 +183,16 @@ export const LongValue: Story = {
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
 };
+
+/** Narrower than 22rem (a phone-width panel): the button goes under the field at full width. */
+export const Narrow: Story = {
+  globals: { viewport: { value: 'small' } },
+  args: { value: LONG_LINK },
+  play: async ({ canvas, canvasElement }) => {
+    const input = canvas.getByRole('textbox', { name: 'Guest link' }).getBoundingClientRect();
+    const button = canvas.getByRole('button', { name: 'Copy' }).getBoundingClientRect();
+    await expect(button.top).toBeGreaterThanOrEqual(input.bottom);
+    await expect(button.width).toBe(input.width);
+    await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
+  },
+};

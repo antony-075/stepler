@@ -88,9 +88,14 @@ function CopyField({
   const copied = status === 'copied';
 
   return (
-    <div data-slot="copy-field" className={cn('grid min-w-0 gap-2', className)}>
+    <div
+      data-slot="copy-field"
+      className={cn('@container/copy-field grid min-w-0 gap-2', className)}
+    >
       <Label htmlFor={id}>{label}</Label>
-      <div className="flex min-w-0 gap-2">
+      {/* Below 22rem (a phone-width panel) the button goes under the field at full width, so
+          the field keeps enough of the value to recognise it. */}
+      <div className="flex min-w-0 flex-col gap-2 @[22rem]/copy-field:flex-row">
         <Input
           ref={inputRef}
           id={id}

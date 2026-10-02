@@ -52,6 +52,7 @@ import {
   toCollectionRequest,
 } from '../../../collection-form';
 import { CollectionNotFound } from '../../collection-not-found';
+import { CollectionNav } from '../collection-nav';
 import { useCollection } from '../../use-collection';
 
 export function CollectionSettings({ id }: { id: string }) {
@@ -108,6 +109,7 @@ function Settings({ collection, onDeleted }: { collection: Collection; onDeleted
         }
         title={t('settingsPage.pageTitle')}
       />
+      <CollectionNav id={collection.id} current="settings" className="mt-4" />
       <div className="mt-8 grid gap-8">
         <DetailsSection collection={collection} />
         <AccessSection collection={collection} />

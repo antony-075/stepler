@@ -252,6 +252,102 @@
       "deletePending": "Deleting",
       "deleted": "Collection deleted"
     },
-    "contentEmptyText": "Once you share the link, guests can add their photos and videos."
+    "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
+    "nav": {
+      "label": "Collection sections",
+      "content": "Frames",
+      "access": "Access",
+      "settings": "Settings"
+    }
+  },
+  "guestLinks": {
+    "permissions": {
+      "uploads": "add photos and videos",
+      "texts": "write wishes",
+      "seeAll": "see every guest’s frames",
+      "ownOnly": "see only their own frames",
+      "viewOnly": "View only",
+      "guestsCan": "Guests can: {list}",
+      "allowed": "The organiser allows you to: {list}"
+    }
+  },
+  "access": {
+    "pageTitle": "Access",
+    "loading": "Loading links",
+    "loadFailed": "Couldn’t load the links.",
+    "retry": "Try again",
+    "defaultTitle": "Guest link",
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Paused"
+    },
+    "linkLabel": "Link",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Couldn’t copy. The link is selected: copy it with your keyboard.",
+    "qrLabel": "QR code for “{label}”",
+    "downloadQr": "Download QR",
+    "downloadPng": "PNG for print",
+    "downloadSvg": "SVG",
+    "downloadFailed": "Couldn’t create the QR file. Try again.",
+    "changeAccess": "Change access",
+    "pause": "Pause",
+    "resume": "Resume",
+    "pausedToast": "Link paused",
+    "resumedToast": "Link resumed",
+    "rotate": "Replace link",
+    "rotateConfirmTitle": "Replace the link?",
+    "rotateConfirmText": "The old link and any printed QR code stop working at once. Guests who have the old one will need the new one.",
+    "rotateConfirmPaused": "The new link will be paused too.",
+    "rotateConfirm": "Replace",
+    "rotatePending": "Replacing",
+    "rotatedToast": "Link replaced",
+    "cancel": "Cancel",
+    "pausedNotice": "The link is paused: guests can’t open it.",
+    "hiddenNotice": "The link is hidden. Replace it to see it again.",
+    "hiddenRowNotice": "The link is hidden. Revoke it and create a new one to see a link again.",
+    "archivedNotice": "The collection is archived: links don’t work until you unarchive it.",
+    "others": "Other links",
+    "othersEmpty": "Separate links, for example for a photographer or for viewing only after the event.",
+    "newLink": "New link",
+    "rowActions": "Actions for “{label}”",
+    "copyLink": "Copy link",
+    "copiedToast": "Link copied",
+    "copyFailedToast": "Couldn’t copy the link",
+    "revoke": "Revoke",
+    "revokeConfirmTitle": "Revoke “{label}”?",
+    "revokeConfirmText": "The link stops working for good. It can’t be brought back; you can only create a new one.",
+    "revokePending": "Revoking",
+    "revokedToast": "Link revoked",
+    "revokedOn": "Revoked {date}",
+    "permissions": {
+      "addLegend": "What guests can add",
+      "addFiles": "Photos, videos and documents",
+      "addTexts": "Wishes",
+      "seeLegend": "What guests see",
+      "seeAll": "Every guest’s frames",
+      "seeOwn": "Only their own",
+      "invalid": "That leaves guests nothing to do. Let them add something or see every guest’s frames."
+    },
+    "dialog": {
+      "createTitle": "New link",
+      "createDescription": "A separate link with its own permissions. You can pause or revoke it without touching the main one.",
+      "editTitle": "Change access",
+      "editDescription": "Changes apply at once to everyone who opens this link.",
+      "label": "Name",
+      "labelHint": "Only you see it. Up to {max} characters.",
+      "labelPlaceholder": "Photographer",
+      "labelRequired": "Enter a name",
+      "labelTooLong": "The name must be at most {max} characters",
+      "create": "Create",
+      "creating": "Creating…",
+      "createdToast": "Link created",
+      "save": "Save",
+      "saving": "Saving…",
+      "savedToast": "Access changed",
+      "close": "Close",
+      "cancel": "Cancel",
+      "limitTitle": "No more links can be created"
+    }
   }
 }
