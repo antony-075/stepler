@@ -4,27 +4,28 @@
 // - The h1 «Колекції», the live "{used} of {limit} active collections" sentence under it with a
 //   row of small squares, one per slot (filled = used), and one ink primary. No stat cards: the
 //   limit is a sentence, not a KPI.
-// - Active collections are rows of one white sheet (`CollectionStrip`), each row one link: title,
-//   status and date, then the collection's empty numbered frames in its own tint and one line;
-//   no counts, no QR or link buttons that do not work yet (plan D6, slice 2).
+// - Active collections are rows of one white sheet (`CollectionStrip`), each row one link: the
+//   collection's cover (its initials in its own tint until it has content), title, status and
+//   date; no counts, no QR or link buttons that do not work yet (plan D6, slice 2).
 // - The archive follows as its own titled list of compact rows without strips, on the page
 //   itself behind a dashed edge: set apart by shape, not by a second colour.
-// - Empty is an invitation: a headline, one line, the only "New collection" on the page (the
-//   header drops its own), three steps, and six empty frames in every tint. The limit is
-//   explained in the dialog (inline warning), never as a disabled button with no reason.
-// - Phones first: each row stacks (summary, strip, actions); from `lg` it is one line.
+// - Empty is an invitation, centred: a tinted tile with an icon (the same mark as an empty
+//   collection), a headline, one line, the only "New collection" on the page (the header drops
+//   its own) and three steps. The limit is explained in the dialog (inline warning), never as a
+//   disabled button with no reason.
+// - Phones first: a row is one line at every width (cover, summary, settings).
 
 import type { CollectionStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
-import { FrameSlots } from '@stepler/ui/components/frame-slots';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
+import { TintTile } from '@stepler/ui/components/tint-tile';
 import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Plus } from 'lucide-react';
+import { Images, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { collectionsListKey, fetchUsage, listCollections, USAGE_KEY } from '@/api/collections';
@@ -121,14 +122,14 @@ export function CollectionsDashboard() {
           {[0, 1].map((key) => (
             <div
               key={key}
-              className="grid gap-4 p-4 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)_auto] lg:items-center lg:gap-8"
+              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4 p-4 sm:gap-x-5 sm:px-6 sm:py-5"
             >
+              <Skeleton className="size-14 sm:size-16" />
               <div className="grid gap-2">
-                <Skeleton className="h-7 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-7 w-3/4 max-w-80" />
+                <Skeleton className="h-5 w-1/2 max-w-56" />
               </div>
-              <Skeleton className="h-14 w-full sm:w-72" />
-              <Skeleton className="hidden size-11 lg:block" />
+              <Skeleton className="size-11" />
             </div>
           ))}
         </Panel>
@@ -248,43 +249,52 @@ const STEP_TINTS: Record<(typeof STEPS)[number], FrameTint> = {
 
 /**
  * No collection yet: what a collection is, the one action, and how it works in three steps (a
- * real sequence, so numbered). Six empty frames in every tint stand for what will come; nothing
- * pretends to be content. Phones: frames on top, then the text; from `md` side by side.
+ * real sequence, so numbered). Centred in its panel under the same mark an empty collection
+ * shows (a tinted tile with an icon); nothing pretends to be content. Phones: one column with
+ * the steps as rows; from `sm` the steps sit side by side.
  */
 function EmptyDashboard({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations('collections');
   return (
     <Panel
       data-slot="collections-empty"
-      className="grid gap-8 p-5 sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] md:items-center md:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:p-12"
+      className="grid justify-items-center gap-10 px-5 py-10 sm:px-8 sm:py-14 lg:py-20"
     >
-      <FrameSlots count={6} columns={3} className="w-full max-w-60 md:order-2 md:max-w-none" />
-      <div className="grid min-w-0 justify-items-start gap-6">
+      <div className="grid max-w-[34rem] justify-items-center gap-6 text-center">
+        <TintTile tint="lavender" size="lg">
+          <Images aria-hidden="true" />
+        </TintTile>
         <div className="grid gap-3">
           <h2 className="type-h2 [overflow-wrap:anywhere]">{t('emptyTitle')}</h2>
-          <p className="max-w-[52ch] text-muted-foreground">{t('emptyText')}</p>
+          <p className="text-pretty text-muted-foreground">{t('emptyText')}</p>
         </div>
         <Button onClick={onCreate} className="w-full sm:w-auto">
           <Plus aria-hidden="true" />
           {t('new')}
         </Button>
-        <ol aria-label={t('stepsLabel')} className="grid w-full gap-3 border-t pt-6">
-          {STEPS.map((step, index) => (
-            <li key={step} className="flex items-center gap-3">
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'grid size-7 shrink-0 place-items-center rounded-sheet border text-sm font-semibold tabular-nums',
-                  FRAME_TINT_CLASSES[STEP_TINTS[step]],
-                )}
-              >
-                {index + 1}
-              </span>
-              <span>{t(`steps.${step}`)}</span>
-            </li>
-          ))}
-        </ol>
       </div>
+      <ol
+        aria-label={t('stepsLabel')}
+        className="grid w-full max-w-3xl gap-4 border-t pt-8 sm:grid-cols-3 sm:gap-6"
+      >
+        {STEPS.map((step, index) => (
+          <li
+            key={step}
+            className="flex items-center gap-3 sm:flex-col sm:items-center sm:gap-2.5 sm:text-center"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'grid size-7 shrink-0 place-items-center rounded-sheet border text-sm font-semibold tabular-nums',
+                FRAME_TINT_CLASSES[STEP_TINTS[step]],
+              )}
+            >
+              {index + 1}
+            </span>
+            <span className="max-w-[24ch] text-balance">{t(`steps.${step}`)}</span>
+          </li>
+        ))}
+      </ol>
     </Panel>
   );
 }

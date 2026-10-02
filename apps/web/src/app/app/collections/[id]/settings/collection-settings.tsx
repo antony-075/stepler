@@ -8,10 +8,11 @@
 //   row from 600px; stacked on phones. Save and Cancel sit in the panel's own footer, so they
 //   belong to these two fields only; Save does nothing (aria-disabled) until something changed.
 // - Archive is reversible, so it asks once in a plain ConfirmDialog; unarchive just happens.
-// - Delete is the only red on the page: a panel edged in the destructive colour with one outline
-//   button carrying the bin icon and the word in destructive text (a filled destructive button
-//   lives only inside ConfirmDialog, §5.1), then a destructive ConfirmDialog that names the
-//   collection.
+// - Delete is the only red on the page and reads as a danger area at a glance: the panel in the
+//   soft destructive fill with a solid destructive edge, a warning icon by the row's name, the
+//   hint in the foreground colour, and one filled destructive "Delete collection" button with
+//   the bin icon (§5.1 allows it here), which still opens a destructive ConfirmDialog that names
+//   the collection.
 // - Errors stay next to what caused them (inline Alerts); toasts only confirm.
 
 import type { Collection } from '@stepler/contracts';
@@ -26,7 +27,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { Textarea } from '@stepler/ui/components/textarea';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CircleAlert, Trash2 } from 'lucide-react';
+import { CircleAlert, Trash2, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -357,10 +358,19 @@ function DangerSection({
 
   return (
     <SettingsSection id="collection-danger" title={t('danger')} tone="danger">
-      <SettingRow id="collection-delete" label={t('delete')} hint={t('deleteHint')}>
+      <SettingRow
+        id="collection-delete"
+        label={
+          <span className="flex items-center gap-2">
+            <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+            {t('delete')}
+          </span>
+        }
+        hint={t('deleteHint')}
+      >
         <Button
-          variant="outline"
-          className="w-full text-destructive min-[600px]:w-auto"
+          variant="destructive"
+          className="w-full min-[600px]:w-auto"
           aria-describedby="collection-delete-hint"
           onClick={() => {
             remove.reset();

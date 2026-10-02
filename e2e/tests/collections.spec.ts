@@ -29,7 +29,7 @@ const T = {
   archiveAction: 'Архівувати',
   archivedTitle: 'Колекцію заархівовано',
   unarchive: 'Повернути з архіву',
-  deleteAction: 'Видалити',
+  deleteAction: 'Видалити колекцію',
   deleteConfirm: 'Видалити назавжди',
   deleted: 'Колекцію видалено',
   contentEmpty: 'Тут з’являться фото, відео й побажання гостей',
@@ -151,20 +151,24 @@ test.describe('dashboard', () => {
       ).toBeFocused();
     }
 
-    // A tap away from the title (on the empty frames) still opens the collection.
-    const frames = await row.locator('[data-slot="frame-slots"]').boundingBox();
-    await page.mouse.click(frames!.x + frames!.width / 2, frames!.y + frames!.height / 2);
+    // A tap away from the title (on the cover) still opens the collection.
+    const cover = await row.locator('[data-slot="tint-tile"]').boundingBox();
+    await page.mouse.click(cover!.x + cover!.width / 2, cover!.y + cover!.height / 2);
     await expect(page).toHaveURL(`/app/collections/${id}`);
   });
 
-  test('an empty collection shows empty frames and no actions that do not work yet', async ({
+  test('an empty collection shows its initials and no actions that do not work yet', async ({
     page,
   }) => {
     await signIn(page, newEmail());
-    await createCollectionViaApi(page, 'Ювілей');
+    await createCollectionViaApi(page, 'Ювілей бабусі');
     await page.reload();
-    const strip = page.getByRole('article').filter({ hasText: 'Ювілей' });
-    await expect(strip.getByText('Тут з’являться фото, відео й побажання гостей.')).toBeVisible();
+    const strip = page.getByRole('article').filter({ hasText: 'Ювілей бабусі' });
+    // The cover is decorative: the initials in the collection's tint, hidden from AT.
+    const cover = strip.locator('[data-slot="tint-tile"]');
+    await expect(cover).toHaveText('ЮБ');
+    await expect(cover).toHaveAttribute('aria-hidden', 'true');
+    await expect(strip.getByText('Поки без кадрів')).toBeVisible();
     // Guest links come in slice 2: no QR or copy-link buttons until they work.
     await expect(strip.getByRole('button')).toHaveCount(0);
     // The row link and settings: no separate Open button.

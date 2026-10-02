@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Trash2 } from 'lucide-react';
+import { Trash2, TriangleAlert } from 'lucide-react';
 import { expect } from 'storybook/test';
 import { Button } from './button';
 import { Input } from './input';
@@ -31,12 +31,17 @@ function Demo({ title = 'Olia and Taras, wedding' }: { title?: string }) {
       <SettingsSection id="danger" title="Danger zone" tone="danger">
         <SettingRow
           id="delete"
-          label="Delete collection"
+          label={
+            <span className="flex items-center gap-2">
+              <TriangleAlert aria-hidden="true" className="size-4 shrink-0 text-destructive" />
+              Delete collection
+            </span>
+          }
           hint="The collection and everything in it are deleted for good."
         >
-          <Button variant="outline" className="text-destructive" aria-describedby="delete-hint">
+          <Button variant="destructive" aria-describedby="delete-hint">
             <Trash2 aria-hidden="true" />
-            Delete
+            Delete collection
           </Button>
         </SettingRow>
       </SettingsSection>
@@ -108,7 +113,10 @@ export const LongText: Story = {
   },
 };
 
-/** The danger panel is edged in the destructive colour; axe checks its contrast. */
+/**
+ * The danger panel: soft destructive fill, solid destructive edge, a warning icon by the row's
+ * name and a filled destructive button (it opens a ConfirmDialog); axe checks its contrast.
+ */
 export const Danger: Story = {
   play: async ({ canvas, canvasElement }) => {
     const section = canvas.getByRole('region', { name: 'Danger zone' });

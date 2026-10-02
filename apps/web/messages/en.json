@@ -140,7 +140,7 @@
       "share": "Share the link or QR code",
       "collect": "Guests add photos, videos and messages"
     },
-    "emptyRow": "Photos, videos and messages from guests will appear here."
+    "noContentYet": "Nothing added yet"
   },
   "collection": {
     "pageTitle": "Collection",
@@ -178,7 +178,7 @@
       "danger": "Danger zone",
       "delete": "Delete collection",
       "deleteHint": "The collection and everything in it will be deleted for good.",
-      "deleteButton": "Delete",
+      "deleteButton": "Delete collection",
       "deleteConfirmTitle": "Delete “{title}”?",
       "deleteConfirmText": "Guests lose access at once, and everything they added is deleted. This can't be undone.",
       "deleteConfirm": "Delete for good",

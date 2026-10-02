@@ -8,8 +8,9 @@ type SettingsSectionProps = {
   title: ReactNode;
   description?: ReactNode;
   /**
-   * `danger` edges the panel in the destructive colour, for irreversible actions (deletion).
-   * The rows inside still carry the icon and the word: colour is never the only signal.
+   * `danger` is for irreversible actions (deletion): the panel takes the soft destructive fill
+   * and a solid destructive edge, and the rows' hints read in the foreground colour. The rows
+   * still carry the icon and the word: colour is never the only signal.
    */
   tone?: 'default' | 'danger';
   className?: string;
@@ -38,7 +39,10 @@ function SettingsSection({
       <Panel
         data-slot="settings-section-panel"
         data-tone={tone}
-        className={cn('mt-4 divide-y', { 'border-destructive/40': tone === 'danger' })}
+        className={cn('mt-4 divide-y', {
+          'divide-destructive/25 border-destructive bg-destructive-soft [&_[data-slot=setting-row-hint]]:text-foreground':
+            tone === 'danger',
+        })}
       >
         {children}
       </Panel>
@@ -99,6 +103,7 @@ function SettingRow({
         {hint ? (
           <p
             id={`${id}-hint`}
+            data-slot="setting-row-hint"
             className="mt-0.5 max-w-[40ch] text-sm leading-[1.45] text-muted-foreground [overflow-wrap:anywhere]"
           >
             {hint}
