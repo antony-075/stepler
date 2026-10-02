@@ -70,8 +70,9 @@ describe('collections API', () => {
         description: null,
         status: 'ACTIVE',
         archivedAt: null,
+        defaultLinkStatus: 'ACTIVE',
       });
-      const events = await prisma.auditEvent.findMany();
+      const events = await prisma.auditEvent.findMany({ where: { action: 'collection.create' } });
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
         action: 'collection.create',
@@ -84,6 +85,63 @@ describe('collections API', () => {
       });
       expect(events[0]?.requestId).toEqual(expect.any(String));
       expect(events[0]?.requestId).not.toBe('');
+    });
+
+    test('creates the default guest link in the same transaction, audited with the same request', async () => {
+      const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
+      const { id } = collectionSchema.parse(
+        (await create(cookie, { title: 'A' }).expect(201)).body,
+      );
+      const links = await prisma.guestLink.findMany({ where: { collectionId: id } });
+      expect(links).toHaveLength(1);
+      expect(links[0]).toMatchObject({
+        isDefault: true,
+        label: null,
+        status: 'ACTIVE',
+        canUploadFiles: true,
+        canSubmitText: true,
+        canViewGallery: false,
+        canDeleteOwn: true,
+      });
+      const [collectionEvent] = await prisma.auditEvent.findMany({
+        where: { action: 'collection.create' },
+      });
+      const [linkEvent] = await prisma.auditEvent.findMany({
+        where: { action: 'guest_link.create' },
+      });
+      expect(linkEvent).toMatchObject({
+        collectionId: id,
+        actorType: 'ADMIN',
+        actorId: userId,
+        targetType: 'guest_link',
+        targetId: links[0]?.id,
+        metadata: { isDefault: true },
+      });
+      expect(linkEvent?.requestId).toBe(collectionEvent?.requestId);
+    });
+
+    test('lists and reads show the default link status; legacy rows show null', async () => {
+      const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
+      const created = collectionSchema.parse(
+        (await create(cookie, { title: 'New' }).expect(201)).body,
+      );
+      await prisma.guestLink.updateMany({
+        where: { collectionId: created.id },
+        data: { status: 'INACTIVE' },
+      });
+      const legacy = await seed(userId, 'ACTIVE', 'Legacy');
+      const list = collectionListResponseSchema.parse(
+        (await request(server()).get('/api/v1/collections').set('Cookie', cookie).expect(200)).body,
+      );
+      expect(list.items.map((c) => [c.title, c.defaultLinkStatus])).toEqual([
+        ['Legacy', null],
+        ['New', 'INACTIVE'],
+      ]);
+      const one = await request(server())
+        .get(`/api/v1/collections/${legacy.id}`)
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(one.body).toMatchObject({ defaultLinkStatus: null });
     });
 
     test('requires a session and a same-origin request', async () => {
