@@ -172,9 +172,12 @@ LegalAcceptance            -- Phase 4 slice 10 (legal pages); not created in Pha
 
 ```text
 Collection
-  id, ownerId → User (restrict), title, description?,
-  status (ACTIVE|ARCHIVED|DELETING), blockedAt?, blockedReason?, createdAt, updatedAt
-  INDEX (ownerId, status)
+  id, ownerId → User (restrict), title (1–100), description? (1–1000),
+  status (ACTIVE|ARCHIVED|DELETING), archivedAt?, deletionRequestedAt?,
+  blockedAt?, blockedReason?, createdAt, updatedAt
+  SQL CHECK ((status = 'ARCHIVED') = (archivedAt IS NOT NULL))
+  SQL CHECK ((status = 'DELETING') = (deletionRequestedAt IS NOT NULL))
+  INDEX (ownerId, status, createdAt DESC, id DESC)
 
 GuestLink
   id, collectionId → Collection (cascade), isDefault, label?,
@@ -192,6 +195,8 @@ GuestSession
   tokenHash (unique), createdAt, lastSeenAt
   INDEX (collectionId)
 ```
+
+*`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` and the rest of this section are not implemented yet.
 
 - **Token:** 32 random bytes, base64url (43 chars). Lookup by SHA-256 hash (high-entropy token, no slow hash needed). The owner must be able to re-display the link/QR, so the token is also stored encrypted (AES-256-GCM, key from config, `tokenKeyId` for key rotation). Rejected alternatives: plaintext (DB leak exposes every gallery); HMAC-derived tokens (rotating the secret kills every printed QR).
 - **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time. The guest name is **not** stored on the session (privacy: the session must not become a hidden profile).
@@ -254,6 +259,8 @@ AuditEvent (append-only)
 ```
 
 `ContentReport` and `AuditEvent` reference content/collections by plain IDs **without foreign keys**: they must survive permanent deletion of content rows and collections (history and abuse evidence).
+
+*`AuditEvent` implemented in slice 1* (Phase 4), with a second index `(actorId, action, createdAt)` for the collection creation limit (§13.1). Slice 1 records `collection.create`, `collection.archive`, `collection.unarchive` and `collection.delete`.
 
 Audited actions: link create / permission change / deactivate / activate / revoke / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
 
@@ -454,6 +461,7 @@ Decision details: ADR 0009.
 - **Delete content:** transaction sets `deletedAt` + audit → immediately invisible and excluded from quota → job purges all storage objects (original and derivatives) → only after successful purge, the `ContentItem`/`MediaObject` rows are permanently deleted. Reports and audit events keep the original content ID (no FK).
 - **Archive collection:** `ARCHIVED`; guest access denied (`403 COLLECTION_UNAVAILABLE`); admin sees content; reversible.
 - **Delete collection:** confirmation in UI; `DELETING` + audit → guest API returns `410`; job aborts active uploads, deletes the collection prefix in resumable batches, then hard-deletes the collection (cascade).
+  - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3, the purge job that hard-deletes `DELETING` collections with slice 5.
 - **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
 - **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
 - No automatic retention in MVP.
@@ -476,8 +484,10 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Upload initiations per guest session | 300 / hour |
 | Magic link requests | 5 / hour per email, 20 / hour per IP |
 | Guest session creation | 30 / minute per IP |
-| Collection creation | 10 / day per account [assumption] |
+| Collection creation | 10 per rolling 24 hours per account |
 | Per-file size | §10.1 |
+
+*Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 
 ### 13.2 Usage accounting
 

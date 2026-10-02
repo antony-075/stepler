@@ -34,6 +34,8 @@
 
 **Status: all recommended defaults (D1–D9) and the deliberate choices approved by the owner on 2026-10-01.**
 
+**Web rebuilt in direction C (2026-10-02)** on `feat/phase-4-collections-c`: the same behaviour, tests and copy keys as Tasks 5–7, with the screens following `docs/design/DESIGN-SYSTEM.md` §6.5–6.8 instead of the v4 card grid (dashboard rows with an empty film strip, the C gallery header on the collection page). Design notes for the implemented screens: `docs/ux/design-system.md`.
+
 The product spec and the discovery answers do not settle these, and each one changes behaviour. The recommended default is in bold.
 
 1. **[D1] Do archived collections count toward the "3 active collections" limit (F1)?**
@@ -500,6 +502,7 @@ The rate check comes before the limit check. The list orders by `createdAt desc,
 - [ ] **Step 3: Full verification, once:** `pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm db:check && pnpm e2e`. Everything must pass; report failures as they are.
 - [ ] **Step 4:** Review the diff against `.claude/rules/11-code-review.md`, especially owner scoping in every query (`grep -n "collection\." apps/api/src/collections` shows `ownerId` in every `where`), no `ownerId` in DTOs, and no `meta` logging.
 - [ ] **Step 5:** Commit `docs: collections slice; spec and design-system updates`. Push and open the PR `feat/phase-4-collections` → `dev`. The body includes: summary, the owner decisions as answered, the open acceptance criterion [D3], the test evidence (commands and results), and the screenshots.
+  - PR checklist note: the acceptance criterion "A default guest link is created" (PRODUCT §5.3, [D3]) stays **open for slice 2**; slice 1 creates collections without links.
 
 ## Checkpoints
 
