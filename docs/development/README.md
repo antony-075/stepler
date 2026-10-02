@@ -141,6 +141,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
 | `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |
 | `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` | api | no | Default `3` |
+| `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
 | `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |

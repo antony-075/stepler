@@ -1,5 +1,6 @@
 'use client';
 
+import { Trash2 } from 'lucide-react';
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
 import { type MouseEvent, useEffect, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
@@ -211,7 +212,12 @@ function ConfirmDialog({
                 aria-disabled={pending || undefined}
                 onClick={(event) => void handleConfirm(event)}
               >
-                {pending ? <Spinner label={pendingLabel} className="size-4" /> : null}
+                {pending ? (
+                  <Spinner label={pendingLabel} className="size-4" />
+                ) : destructive ? (
+                  // Destructive and the pencil look alike in luminance: the icon says "delete".
+                  <Trash2 aria-hidden="true" />
+                ) : null}
                 {confirmLabel}
               </Button>
             </AlertDialogPrimitive.Action>

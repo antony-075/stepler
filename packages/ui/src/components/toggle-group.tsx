@@ -2,12 +2,13 @@
 
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui';
 import { type ComponentProps, type ReactNode, useState } from 'react';
+import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
 
 type ToggleGroupProps = Omit<ToggleGroupPrimitive.ToggleGroupSingleProps, 'type'>;
 
 /**
- * Single-select segmented control (the theme and language settings). Radix renders
+ * Single-select filter chips (direction C's FilterChips: content type, grid or rows). Radix renders
  * it as a `radiogroup` of `radio` items: arrows move focus, Space or Enter selects. Name it with
  * `aria-label` or `aria-labelledby`.
  *
@@ -36,12 +37,7 @@ function ToggleGroup({
       type="single"
       value={currentValue}
       onValueChange={handleValueChange}
-      // A recessed well: the page colour with an inset hairline, so it reads on a card in both
-      // themes without a grey fill.
-      className={cn(
-        'inline-flex w-fit items-center rounded-lg bg-control-track shadow-[inset_0_0_0_1px_var(--border)]',
-        className,
-      )}
+      className={cn('inline-flex w-fit max-w-full items-center gap-1', className)}
       {...props}
     />
   );
@@ -53,9 +49,11 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
 };
 
 /**
- * Each item is a full 44px touch target (rule 05); the raised thumb is drawn 3px inside it
- * (`before:`), lighter than the card in both themes, and the selected icon turns primary. Other
- * props (`lang`, `title`, …) pass through to the Radix item.
+ * A filter chip (DESIGN-SYSTEM.md §5.7): 36px for a fine pointer, 44px on touch
+ * (`pointer-coarse`), 8px radius, muted text; the selected chip has a 1px `--foreground` edge on
+ * the sheet colour (selection is also `aria-checked` and the text colour, never colour alone). A
+ * count goes in the children as data (`<span className="type-data">98</span>`). Other props
+ * (`lang`, `title`, …) pass through to the Radix item.
  *
  * Keep the visible text in the accessible name (WCAG 2.5.3 Label in Name): do not give a
  * text item an `aria-label` that drops what is on screen. For a language the visible name is
@@ -67,12 +65,10 @@ function ToggleGroupItem({ className, icon, children, ...props }: ToggleGroupIte
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
       className={cn(
-        'relative isolate inline-flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg px-3.5 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-colors outline-none motion-reduce:transition-none',
-        "before:absolute before:inset-[3px] before:-z-10 before:rounded-[9px] before:content-[''] before:transition-[background-color,box-shadow] motion-reduce:before:transition-none",
-        'hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70',
-        'data-[state=on]:text-foreground data-[state=on]:before:bg-control-thumb data-[state=on]:before:shadow-[var(--shadow-thumb),0_0_0_1px_color-mix(in_srgb,var(--foreground)_10%,transparent)]',
-        'data-[state=on]:[&_[data-slot=toggle-group-item-icon]]:text-primary',
-        'disabled:pointer-events-none disabled:opacity-50',
+        'inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
+        focusRing,
+        'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
+        'disabled:pointer-events-none disabled:text-muted-foreground',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { Input } from './input';
 import { Label } from './label';
 
@@ -40,4 +40,47 @@ export const Disabled: Story = {
   play: async ({ canvas }) => {
     await expect(canvas.getByLabelText('Email')).toBeDisabled();
   },
+};
+
+/** Focus turns the edge violet and adds the 2px violet ring: never the pencil (reads as an error). */
+export const Focused: Story = {
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText('Email');
+    await userEvent.click(input);
+    const style = getComputedStyle(input);
+    await expect(style.outlineStyle).toBe('solid');
+    await expect(style.outlineColor).toBe('rgb(90, 74, 140)'); // --link
+    // The edge colour transitions (120ms).
+    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(90, 74, 140)'));
+  },
+};
+
+export const FocusedDark: Story = {
+  globals: { theme: 'dark' },
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText('Email');
+    await userEvent.click(input);
+    await expect(getComputedStyle(input).outlineColor).toBe('rgb(182, 168, 232)'); // --link dark
+  },
+};
+
+/** An invalid field keeps the destructive edge and ring when focused. */
+export const InvalidFocused: Story = {
+  args: { 'aria-invalid': true, defaultValue: 'not-an-email' },
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText('Email');
+    await userEvent.click(input);
+    await expect(getComputedStyle(input).outlineColor).toBe('rgb(163, 32, 58)'); // --destructive
+    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(163, 32, 58)'));
+  },
+};
+
+export const Dark: Story = {
+  globals: { theme: 'dark' },
+  args: { defaultValue: 'anton@example.com' },
+};
+
+export const DisabledDark: Story = {
+  globals: { theme: 'dark' },
+  args: { disabled: true, defaultValue: 'anton@example.com' },
 };

@@ -1,8 +1,8 @@
 # Design system
 
-The reusable UI of Stepler lives in `packages/ui` (`@stepler/ui`): shadcn/ui (new-york) components on Radix primitives, styled with Tailwind CSS 4 and the v4 tokens in `packages/ui/src/styles/globals.css`. Every component has a story in Storybook (`pnpm storybook`, http://localhost:6006) with `play` tests and axe checks that run in `pnpm test`.
+The reusable UI of Stepler lives in `packages/ui` (`@stepler/ui`): shadcn/ui (new-york) components on Radix primitives, styled with Tailwind CSS 4 and the design tokens in `packages/ui/src/styles/globals.css`. Every component has a story in Storybook (`pnpm storybook`, http://localhost:6006) with `play` tests and axe checks that run in `pnpm test`.
 
-This page describes what is implemented (Phase 3, 2026-09-30). The visual direction and the reasons behind it are in [README.md](README.md#visual-direction-v4-approved-2026-09-30-may-still-change).
+This page describes what is implemented. The visual direction is C «Контактний аркуш» (owner decision 2026-10-02, [ADR 0015](../architecture/decisions/0015-visual-direction-c-fonts-frame-numbers.md)); its full specification, including parts not built yet, is [docs/design/DESIGN-SYSTEM.md](../design/DESIGN-SYSTEM.md). The migration from v4 follows its §10.4 step by step; until it is finished, some components below still carry v4 styling (noted where it matters).
 
 Import a component by its file: `import { Button } from '@stepler/ui/components/button'`. The stylesheet is `@stepler/ui/styles.css`.
 
@@ -12,37 +12,37 @@ Story paths are Storybook titles; the files are `packages/ui/src/components/<nam
 
 | Component | Purpose | Use when / not when | Key props (text props in bold) | Story |
 | --- | --- | --- | --- | --- |
-| `Button` (`buttonVariants`, `closeButtonClassName`) | Actions and links styled as buttons | Any action. `link` variant for inline text links that act; a real navigation link is `asChild` around `<a>`/`Link`. Not for toggles (ToggleGroup, Switch) | `variant`: default, destructive, outline, secondary, ghost, link; `size`: default (44px), `sm` (36px, dense pointer-first layouts only, never the primary action on touch), `lg` (48px), `icon` (44px, needs `aria-label`); `asChild` | Components/Button |
-| `Input` | Single-line text field, 48px, 16px font (no iOS zoom) | Inside `Field`. Not for multi-line text | Native input props; `aria-invalid` from Field | Components/Input |
+| `Button` (`buttonVariants`, `closeButtonClassName`) | Actions and navigation styled as buttons; 8px radius, 600 weight, pressed = scale 0.98 | Any action; a navigation link is `asChild` around `<a>`/`Link`. Ink `default` is the admin primary; `pencil` only the guest's main action; never an ink and a pencil button side by side. Text links are links, not buttons. Not for toggles (ToggleGroup, Switch) | `variant`: default (ink), pencil, outline, ghost, destructive (inside ConfirmDialog); `size`: default (44px, 15px text), `guest` (56px, 17px), `lg` (48px), `sm` (36px, dense pointer-first rows only, never the primary action on touch), `icon` (44px, needs `aria-label`); `asChild` | Components/Button |
+| `Input` (`fieldClassName`) | Single-line text field, 48px, 16px font (no iOS zoom); 1px `--input` edge, hover `--foreground`, focus violet edge + ring, invalid destructive, disabled muted fill | Inside `Field`. Not for multi-line text | Native input props; `aria-invalid` from Field | Components/Input |
 | `Textarea` | Multi-line field that grows with its text up to `max-h-72` | Notes, descriptions. Inside `Field` | Native textarea props | Components/Textarea |
-| `Label` | Radix label; dims when it wraps a disabled control | Used by Field, CopyField and Checkbox/Switch rows. Rarely on its own | Radix Label props | none (covered by Field, Checkbox, Switch) |
-| `Field` | Wires a label, a hint and an error to one control (`id`, `aria-describedby`, `aria-invalid`); error has `role="alert"` | Every form control a `<label for>` can name (Input, Textarea, Checkbox, Switch, a Radix trigger). **Not** RadioGroup | `id`, **`label`**, `description`, `error`, `children: (controlProps) => ReactNode` | Components/Field |
-| `Checkbox` | 20px box | Inside a `Label` row of `min-h-11` so the whole row is the 44px target | Radix Checkbox props | Components/Checkbox |
-| `Switch` | 24px track, on/off setting that applies at once | Inside a `Label` row of `min-h-11`. Not for a choice submitted with a form button (use Checkbox) | Radix Switch props | Components/Switch |
+| `Label` | Radix label, 14px/600; turns muted when it wraps a disabled control | Used by Field, CopyField and Checkbox/Switch rows. Rarely on its own | Radix Label props | none (covered by Field, Checkbox, Switch) |
+| `Field` | Wires a label, a hint and an error to one control (`id`, `aria-describedby`, `aria-invalid`); the error has `role="alert"` and a `CircleAlert` icon | Every form control a `<label for>` can name (Input, Textarea, Checkbox, Switch, a Radix trigger). **Not** RadioGroup | `id`, **`label`**, `description`, `error`, `children: (controlProps) => ReactNode` | Components/Field |
+| `Checkbox` | 20px box, 2px radius; checked = ink fill with a white check (not the pencil) | Inside a `Label` row of `min-h-11` so the whole row is the 44px target | Radix Checkbox props | Components/Checkbox |
+| `Switch` | 40×24 track: off = sheet with a 1px `--input` edge and an `--input` thumb, on = ink; an on/off setting that applies at once | Inside a `Label` row of `min-h-11`. Not for a choice submitted with a form button (use Checkbox) | Radix Switch props | Components/Switch |
 | `RadioGroup`, `RadioGroupItem` | One choice from a few visible options; each item is a full-row 44px label | 2–5 options that should all be visible. Name it with `aria-labelledby` or `fieldset`/`legend`, never `Field`. Not for a segmented switch (ToggleGroup) | Radix props; vertical by default; item `children` is its name | Components/RadioGroup |
-| `Select` family (`SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`, `SelectGroup`, `SelectLabel`, `SelectSeparator`) | One choice from a list behind an input-like trigger (theme and language on `/app/settings`). 44px trigger with the Input's border, 12px radius and focus ring, chevron; the list is a popover card (`popper`, at least the trigger's width, never wider than the viewport minus the gutters) with 44px items and a primary check on the selected one | Settings and form choices where the options need not all be visible. Name the trigger with `aria-labelledby` (the row label) or `aria-label`; hint via `aria-describedby`. Items inside `SelectGroup`. An option's icon goes in its `children`, so the trigger shows it too | Radix Select props; content `position` popper, `sideOffset` 4, `collisionPadding` 16; item `lang` | Components/Select |
-| `ToggleGroup`, `ToggleGroupItem` | Single-select segmented control that always has a value (not used by the app at the moment; settings use `Select`). Recessed track (`--control-track` + inset hairline), raised thumb (`--control-thumb`, `--shadow-thumb`) drawn 3px inside each 44px item, selected icon `text-primary` | Small sets of immediate settings. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon` (decorative, before the visible label), `lang` | Components/ToggleGroup |
-| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Switch between views of one page; the list scrolls inside itself when it does not fit | Sibling views on one page. Not for site navigation | Radix Tabs props | Components/Tabs |
+| `Select` family (`SelectTrigger`, `SelectValue`, `SelectContent`, `SelectItem`, `SelectGroup`, `SelectLabel`, `SelectSeparator`) | One choice from a list behind an input-like trigger (theme and language on `/app/settings`). 48px trigger with the Input's field look and a chevron; the list is a `--popover` surface (`popper`, at least the trigger's width, never wider than the viewport minus the gutters) with 44px items, a `--hover-popover` highlight, an inset violet outline for keyboard focus and a check on the selected one | Settings and form choices where the options need not all be visible. Name the trigger with `aria-labelledby` (the row label) or `aria-label`; hint via `aria-describedby`. Items inside `SelectGroup`. An option's icon goes in its `children`, so the trigger shows it too | Radix Select props; content `position` popper, `sideOffset` 4, `collisionPadding` 16; item `lang` | Components/Select |
+| `ToggleGroup`, `ToggleGroupItem` | Direction C's filter chips: single select that always has a value (not used by the app yet). Chips are 36px (fine pointer) / 44px (`pointer-coarse`), 8px radius, muted text; the selected one has a 1px `--foreground` edge on the sheet colour | Content-type filters, grid/rows switch. Needs `aria-label`/`aria-labelledby`. Not for form choices (RadioGroup) or navigation (Tabs) | `value`/`defaultValue`/`onValueChange` (never called with `''`); item `icon` (decorative, before the visible label), `lang`; counts as `type-data` children | Components/ToggleGroup |
+| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Switch between views of one page: 48px text tabs on a 1px base line, the active one foreground with a pencil underline that draws itself (180ms; whole under reduced motion); the list scrolls inside itself when it does not fit | Sibling views on one page. Not for site navigation | Radix Tabs props | Components/Tabs |
 | `CopyField` | Read-only value with a copy button and polite announcement; selects the value when the clipboard fails | Guest links and other values to share. Not for editable values | **`label`**, `value`, **`copyLabel`**, **`copiedLabel`**, **`failedLabel`** | Components/CopyField |
-| `Alert` | Inline message in the flow; `role="alert"` for `error`, `status` otherwise | Errors and warnings the user must read or act on, with an optional `action` (Retry). Not for confirming a finished action (toast) | `variant`: info, success, warning, error; `title`, `children`, `action` | Components/Alert |
-| `ToastProvider`, `Toaster`, `useToast` | Short, auto-dismissing confirmation of a completed action; max 3; error toasts are assertive and last 8s | "Saved", "Link copied". Never the only copy of an error the user must act on | Provider **`announcementLabel`**; Toaster **`label`**, **`closeLabel`**; `toast({ title, description?, variant?, durationMs? })` | Components/Toast |
-| `Dialog` family (`DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription`, `DialogClose`, `DialogTrigger`) | Modal task or detail; full width minus gutters on phones, `max-w-md` from `sm`, scrolls inside | A short focused task. Not for confirming a destructive action (ConfirmDialog) | `DialogContent` **`closeLabel`**, `showCloseButton` | Components/Dialog |
-| `ConfirmDialog` | Radix AlertDialog that asks before an action; focus starts on Cancel; closes only after `onConfirm` resolves; shows `errorMessage` on reject | Every destructive action, and any other action that needs an explicit yes. Can be opened from a `DropdownMenuItem` (focus returns to the menu trigger) | `open`, `onOpenChange`, **`title`**, **`description`**, **`confirmLabel`**, **`cancelLabel`**, **`pendingLabel`**, **`errorMessage`**, `onConfirm: () => Promise<void>`, `destructive` | Components/ConfirmDialog (`FromMenu`) |
-| `DropdownMenu` family (`Content`, `Item`, `CheckboxItem`, `RadioGroup`, `RadioItem`, `Label`, `Separator`, `Group`, `Trigger`, `Portal`) | Menu of actions behind a trigger; 44px items; keyboard focus ring | Secondary actions (row menus, account menu). Not for the primary action or for navigation that should be visible | Item `variant`: default / destructive, `inset`; content `sideOffset` 4, `collisionPadding` 16 | Components/DropdownMenu |
-| `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` | The 20px-radius surface; padding per section | Grouped content or one-step forms (`CardContent` alone is complete). `CardTitle` is `h2` (`asChild` for another level) | Div props | Components/Card |
-| `Badge` | One-line status text with a dot; truncates | Short status (Active, Revoked). Pass the full text as `title` too. Never a control | `variant`: neutral, info, success, warning, danger | Components/Badge |
+| `Alert` | Inline message in the flow on a soft fill (4px radius, no edge), icon in the status colour, text in `foreground`; `role="alert"` for `error`, `status` otherwise | Errors and warnings the user must read or act on, with an optional `action` (Retry). Not for confirming a finished action (toast) | `variant`: info, success, warning, error; `title`, `children`, `action` | Components/Alert |
+| `ToastProvider`, `Toaster`, `useToast` | Short, auto-dismissing confirmation of a completed action on the popover surface; max 3; error toasts are assertive and last 8s | "Saved", "Link copied". Never the only copy of an error the user must act on | Provider **`announcementLabel`**; Toaster **`label`**, **`closeLabel`**; `toast({ title, description?, variant?, durationMs? })` | Components/Toast |
+| `Dialog` family (`DialogContent`, `DialogHeader`, `DialogFooter`, `DialogTitle`, `DialogDescription`, `DialogClose`, `DialogTrigger`) | Modal task or detail: `--popover`, 12px radius, `--shadow-dialog` (light) over `--overlay`, 19px/600 title; full width minus gutters on phones, 480px from `sm`, scrolls inside. The footer stacks full-width buttons on phones with the primary action last (bottom); a row aligned right from `sm` | A short focused task. Not for confirming a destructive action (ConfirmDialog) | `DialogContent` **`closeLabel`**, `showCloseButton` | Components/Dialog |
+| `ConfirmDialog` | Radix AlertDialog that asks before an action; focus starts on Cancel; closes only after `onConfirm` resolves; shows `errorMessage` on reject; the destructive confirm button carries a trash icon | Every destructive action, and any other action that needs an explicit yes. Can be opened from a `DropdownMenuItem` (focus returns to the menu trigger) | `open`, `onOpenChange`, **`title`**, **`description`**, **`confirmLabel`**, **`cancelLabel`**, **`pendingLabel`**, **`errorMessage`**, `onConfirm: () => Promise<void>`, `destructive` | Components/ConfirmDialog (`FromMenu`) |
+| `DropdownMenu` family (`Content`, `Item`, `CheckboxItem`, `RadioGroup`, `RadioItem`, `Label`, `Separator`, `Group`, `Trigger`, `Portal`) | Menu of actions behind a trigger on the popover surface (`lib/surfaces`); 44px items with a 4px radius, `--hover-popover` highlight, inset violet outline for keyboard focus; destructive items in `--destructive` on `--destructive-soft` | Secondary actions (row menus, account menu). Not for the primary action or for navigation that should be visible | Item `variant`: default / destructive, `inset`; content `sideOffset` 4, `collisionPadding` 16 | Components/DropdownMenu |
+| `Panel`, `PanelHeader`, `PanelTitle`, `PanelDescription`, `PanelContent`, `PanelFooter` | The sheet: `--card`, 4px radius, 1px `--border` edge in both themes, no shadow; padding per section (16 / 24px) | `panel` (default): settings, forms, one-step pages (`PanelContent` alone is complete), rows with `divide-y`. `sheet`: no padding, a grid or rows fill it. `PanelTitle` is an `h2` sized as a panel heading (`asChild` for another level). | `variant`: panel, sheet; div props | Components/Panel |
+| `Badge` | One-line status tag: a soft fill (`--{status}-soft`, neutral `--muted`), 13px/500 text and a 6px dot in the status colour, 24px tall, 4px radius (not a pill); truncates. Owner feedback 2026-10-02: a dot alone did not say which colour the status was | Short status (Активне, Призупинене). Pass the full text as `title` too. Never a control | `variant`: neutral, info, success, warning, danger | Components/Badge |
 | `Separator` | Hairline | Visual division; `decorative={false}` only when assistive technology should hear the separation | Radix props, `orientation` | Components/Separator |
 | `Spinner` | Indeterminate activity; `role="status"`; static ring under reduced motion | Short waits inside a control or region | **`label`** (sr-only) | Components/Spinner |
-| `Skeleton` | Placeholder shape while content loads; `aria-hidden` | Layout-preserving loading. Announce loading elsewhere (Spinner, `aria-busy`) | Div props | Components/Skeleton |
-| `Progress` | Determinate or indeterminate (`value={null}`) bar | Uploads and other measurable work | `value` (0–100 or `null`), **`label`**, `valueText` | Components/Progress |
-| `EmptyState` | Centered "nothing here yet" with an optional next step | Empty lists and galleries. Not for errors (Alert) | **`title`**, `description`, `icon` (decorative), `action`, `headingLevel`: 2 / 3 | Components/EmptyState |
-| `PageHeader` | The page's only `h1` (`text-balance`), description, actions (under the title on phones, right from `sm`), optional back link | The top of every page. Admin pages use `size="compact"` (24px); public pages keep the default fluid size | **`title`**, `description`, `actions`, `back`, `size`: default, compact | Components/PageHeader |
-| `BrandMark` | The Stepler mark (decorative SVG) | Inside a labelled link or next to the wordmark | SVG props | Components/BrandMark |
-| `StapledStack` | The hero illustration (photo, video, PDF, note, QR, staple); motion runs once and is off under reduced motion | The sign-in landing only; the one place raw colours are allowed | **`label`**, **`photoCaption`**, **`videoCaption`**, **`videoDuration`**, **`documentKind`**, **`documentTitle`**, **`note`**, **`noteAuthor`** | Components/StapledStack |
+| `Skeleton` | Still `--muted` placeholder with the frame radius (no pulse or shimmer); `aria-hidden` | Layout-preserving loading. Announce loading elsewhere (Spinner, `aria-busy`) | Div props | Components/Skeleton |
+| `Progress` | 2px pencil line on `--border`, filled linearly; determinate or indeterminate (`value={null}`) | Uploads and other measurable work | `value` (0–100 or `null`), **`label`**, `valueText` | Components/Progress |
+| `TintTile` | A calm square in one tint (`FRAME_TINTS`): 2px radius, 1px tint edge, the mark (initials or one lucide icon) in the tint's ink (≥ 5.84 / 7.49); flat, decorative (`aria-hidden`) | A collection's cover before it has content (its initials; the newest photo replaces it in slice 7) and the mark of an empty state. The caller names the collection or the state in words. Replaces `FrameSlots` (owner feedback 2026-10-02: rows of empty frames read as noise) | **`tint`**, `size`: sm 44px, md 56/64px, lg 72px; children | Components/TintTile |
+| `EmptyState` (`formatFrameNumber`) | Centered "nothing here yet": an empty dashed frame with its number (`#001`, decorative), a panel heading, one line and an optional next step | Empty collections and galleries; without `frameNumber` for an empty filter. Not for errors (Alert) | **`title`**, `description`, `frameNumber` (number, shown as `#001`; four digits from 1000), `action`, `headingLevel`: 2 / 3 | Components/EmptyState |
+| `PageHeader` | The page's only `h1`, description (`max-w-[60ch]`), actions (under the title on phones, right from `sm`), optional back link | The top of every page. Admin pages use `size="compact"` (`type-h1`: 28 / 32 / 44px); public and guest pages the default `type-display` | **`title`**, `description`, `actions`, `back`, `size`: default, compact | Components/PageHeader |
+| `SettingsSection`, `SettingRow` | A settings group (an `h2` (`type-h2`), an optional muted line and one `Panel` of rows split by hairlines) and one row in it: label (15px/600) and hint (14px muted, `${id}-hint`) on the left, the control on the right from 600px; stacked on phones | Settings pages (`/app/settings`, collection settings). `control="compact"` for a button or select at its own width, `"wide"` for a text field that takes the rest of the row (`13rem` label column). `tone="danger"` (deletion) puts the panel on `--destructive-soft` with a solid `--destructive` edge and reads the hints in `--foreground`; the row still carries the warning icon and the word | `id`, **`title`** / **`label`**, `description` / `hint`, `control`, `tone` | Components/SettingRow |
 
-`Foundations/Tokens` shows the colour tokens with their live values in the current theme. `Tests/ReducedMotion` (hidden from the sidebar) holds the reduced-motion regression stories.
+`Foundations/Tokens` shows the colour tokens with their live values in the current theme; `Foundations/Contrast` computes the contrast pairs of the token tables from the live values and fails when one is under its minimum. `Tests/ReducedMotion` (hidden from the sidebar) holds the reduced-motion regression stories.
 
-Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` / `useThemePreference` and `ThemeSwitch` in `apps/web/src/theme/`, `useChangeLocale` and `LanguageSwitch` in `apps/web/src/i18n/language-switch.tsx`.
+Web-only building blocks (not in `packages/ui`): `ThemeProvider` / `useThemePreference` and `ThemeSwitch` in `apps/web/src/theme/`, `useChangeLocale` and `LanguageSwitch` in `apps/web/src/i18n/language-switch.tsx`, `BackLink` (`apps/web/src/components/back-link.tsx`, the `PageHeader` `back` link of admin pages: `ArrowLeft`, 14px/600 muted, 44px tall, truncates a long label with the full text in `title`), and `CollectionStrip` / `ArchivedCollectionRow` (`apps/web/src/app/app/collection-strip.tsx`, one use: the dashboard; they move to `packages/ui` with `FrameGrid` when the strip shows real frames).
 
 ## Rules
 
@@ -50,7 +50,7 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 
 - A component goes in `packages/ui` only when a second use exists or the pattern is stable (a primitive, a page scaffold). One-off UI stays in the app next to its page.
 - No user-facing text in `packages/ui`. Every label, message and accessible name comes in as a prop or children; the lint rules `react/jsx-no-literals` and `no-restricted-syntax` (`packages/config/eslint/react.js`) fail the build otherwise. Stories and tests may use literals. Web copy lives in `apps/web/messages/{uk,en}.json`.
-- Colours come only from the tokens below; no raw hex in components (StapledStack's illustration is the only exception).
+- Colours come only from the tokens below; no raw hex in components. Exceptions, all on the landing: Google's brand colours in its "G" mark (`apps/web/src/app/login/google-mark.tsx`) and the QR illustration's `#141614` modules on white (`how-it-works.tsx`; QR codes stay a light island in both themes, DESIGN-SYSTEM.md §5.15).
 - Components export named functions, forward `className` through `cn()` and set `data-slot`.
 
 ### Feedback
@@ -68,29 +68,35 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 
 - State animations (open/close of Dialog, ConfirmDialog, DropdownMenu, Select, Toast) use `motion-safe:` variants, for example `motion-safe:data-[state=open]:animate-in`. The reason is specificity: `data-[state=open]:animate-in` is (0,2,0) and outranks `motion-reduce:animate-none` (0,1,0), so the animation still ran under reduced motion. `motion-safe:` never emits the animation in the first place.
 - Simple transitions may keep `motion-reduce:transition-none` / `motion-reduce:animate-none` when nothing outranks them (Button, Input, Switch, Skeleton, Spinner, Progress).
-- Motion stays at or under 300ms.
+- Durations come from the motion tokens (`duration-(--duration-fast)` for hover and pressed). Set an animation's duration with `animation-duration-[var(--duration-base)]` (tw-animate), not `duration-*`: `duration-*` also sets `transition-duration`, and with the initial `transition-property: all` every property change of that element then transitions (it broke the reduced-motion test of Select).
+- Motion stays at or under 300ms, except the sign-in landing's one entrance (§8 of the spec: the pencil loop, 400ms after a 300ms delay).
+- Pencil strokes draw with the `pencil-draw` keyframes (`globals.css`): an SVG path with `pathLength="1"` and `stroke-dasharray: 1`, animated only under `motion-safe:` so reduced motion shows the stroke whole. Do not combine it with `vector-effect: non-scaling-stroke`: that moves the dash pattern to screen space and the stroke draws only part of the way.
 - Regression tests: stories tagged `reduced-motion` run only in the `storybook-reduced-motion` Vitest project (`packages/ui/vitest.config.ts`), whose Playwright context emulates `prefers-reduced-motion: reduce`. Both projects run in `pnpm test`. Tag a story `['!dev', '!autodocs', 'reduced-motion']` and first assert that the media query matches (see `reduced-motion.stories.tsx`), so a misconfigured project fails instead of passing vacuously.
 
 ### Focus, touch and layout
 
-- Focus ring: `focus-visible:ring-[3px] focus-visible:ring-ring/70` (the base outline is `outline-ring/70`); invalid and destructive controls use `ring-destructive/70`. Measured ratios are in the token table; `/50` was 2.33:1 on the card in light and failed WCAG 1.4.11. Menu items use a solid inset `ring-ring` because the hover background alone is about 1.2:1.
+- Focus ring: `focusRing` from `packages/ui/src/lib/focus.ts` — `outline: 2px solid var(--ring); outline-offset: 2px` on `:focus-visible` (Tailwind `outline-2 outline-solid outline-offset-2 outline-ring`; `outline-solid` is needed because `outline-none` sets `--tw-outline-style: none`). `--ring` is the violet `--link`, never the pencil (owner change 2026-10-02). Fields also turn their edge violet; invalid fields use `--destructive` for edge and ring. Rows inside a popover (menu and select items) use `focusRingInset` (`-outline-offset-2`) because their hover fill alone is about 1.1:1. The base outline colour is `outline-ring`.
 - A `DropdownMenu` session that saw pointer input returns focus to its trigger with `focus({ focusVisible: false })`, so no ring sticks after a mouse user closes the menu; a keyboard-only session keeps the ring. Safari ignores the option and may still show it. `Select` does the same after a pointer-opened list closes (a pick, Escape or an outside click).
-- Surfaces drawn straight on the page (ghost buttons, the account menu trigger) hover and open with `bg-foreground/[0.06]`, not `bg-muted`: the cool grey clashes with the warm `stepler-atmosphere`. Cards and inputs keep `bg-muted`.
+- Hover fills follow the surface: `--hover` for things on the page (ghost buttons, the account menu trigger, also their open state), `--hover-card` inside a sheet (rows, close buttons), `--hover-popover` inside a popover (menu items, select options). Never `bg-muted` for hover: muted is the disabled and placeholder fill.
 - Touch targets are at least 44×44px. Button `sm` (36px) is not for touch; Checkbox and Switch sit in a `min-h-11` Label row.
 - A fixed bottom bar (for example an upload bar) gets `data-toast-avoid`; the Toaster lifts its viewport above it while toasts are open.
 - `RadioGroup` is not wrapped in `Field`: it is a `role="radiogroup"` div that `<label for>` cannot name. Use `aria-labelledby` or `fieldset`/`legend`.
-- `CardContent` wraps long unbroken text only inside `p` elements (`[&_p]:[overflow-wrap:anywhere]`); flex rows and controls keep their normal sizing, so put free text in a `p`.
+- `PanelContent` wraps long unbroken text only inside `p` elements (`[&_p]:[overflow-wrap:anywhere]`); flex rows and controls keep their normal sizing, so put free text in a `p`.
 - `ToggleGroup` never deselects: pressing the selected item keeps it selected, and `onValueChange` is never called with `''`.
+- Overlays set their own layer from the z tokens (`z-(--z-overlay)`, `z-(--z-modal)`, `z-(--z-popover)`, `z-(--z-toast)`); pages never set a z-index on them.
 - Language options keep the visible text as the accessible name (WCAG 2.5.3 Label in Name) and carry `lang` on the item and on the text, because the trigger shows a copy of the text outside the option: `<SelectItem value="uk" lang="uk"><span lang="uk">Українська</span></SelectItem>`. No `aria-label` that drops what is on screen.
 - Page width: the `stepler-container` utility (1240px content, 1320px from 1600px, gutter 16 / 24 / 40px at base / `sm` / `lg`). The gutter is `--stepler-gutter`, so a child can bleed into it with `-mx-(--stepler-gutter) px-(--stepler-gutter)`.
 - Turnstile renders `compact` below 300px container width (centred in the form), `flexible` otherwise, so the widget never overflows the card.
-- Page atmosphere: the `stepler-atmosphere` utility (key light, cool fill, dot grid). Decorative; never behind text that needs contrast.
-- **Admin vs public surface.** Public pages (`/`, `/login`, `/auth/verify`) sit on `stepler-atmosphere` with the floating brand header. The admin area (`/app/*`) is flat `bg-background` in every state (loading, error, loaded) with `SiteHeader variant="app"`: 64px, `border-b border-border`, on the same `stepler-container` as the page so the brand, the `h1` and the content share one left edge. Admin pages use `PageHeader size="compact"`, `pt-8 pb-16 lg:pt-10 lg:pb-20` (`pt-5 lg:pt-8` when the header has a 44px back link, so the title lands at the same height), and group content in panels (`rounded-2xl border bg-card shadow-xs`, rows split by `divide-y`) rather than floating cards.
+- **Sign-in landing** (`/`, `/login`, DESIGN-SYSTEM.md §6.9; the owner's board L2 «editorial split», 2026-10-02). Its own page column `landing-container` (`apps/web/src/app/globals.css`: up to 1600px of content, the `stepler-container` gutters; `SiteHeader`/`SiteFooter` take it through their `container` prop), so the photos fill 1440 and 1920px screens. Phones: the `h1`, the lede, a sheet of four square frames, the sign-in `Panel` (its email field is in the first screen at 320–430px), then frame #005 at 16:9. 640–1023px: one column, frame #001 at 3:2 across the sheet and a strip of six under it, the panel at most 560px. From `lg` a 12-column grid: the promise (top) and the sign-in panel (bottom) in columns 1–5, the sheet in 6–12; frame #001 is 1:1 at `lg`, 5:4 at `xl`, 4:3 at `2xl`, 3:2 from `3xl`, so the sheet stays about as tall as the left column. The `h1` is three deliberate lines (`landing.titleLines.{one,two,three}`, one `block` span each, spaces between so the accessible name is one sentence, no wrapping from `sm`); from `lg` its size follows its column (`min(5rem, 11cqi)` on an `@container`), so the longest line (English "Photos and videos") fits the column at any width. Frames (`landing-sheet.tsx`) are real photos (Unsplash License, `apps/web/src/assets/landing/CREDITS.md`, not shown on the page) through `next/image` with static imports: AVIF/WebP (`images.formats` in `next.config.ts`), responsive `sizes`, frame #001 `preload`, the rest lazy; numbers and times in Geist Mono (`translate="no"`), each photo with its own `alt`, the sheet a `section` with an `aria-label`. One pencil loop rings frame #003 once on load (`pencil.tsx` `PencilLoop`, `data-pencil-mark="loop"`; it reaches 4px into the frame margin, never past the sheet; its stroke width steps with the frame's container width because `non-scaling-stroke` breaks the draw). The sign-in panel is `LoginForm`: `h2`, email field, Turnstile, ink submit, "or", the outline Google button with Google's "G" mark, the no-password line last. Then **Why it's easy**: four plain benefits (h3 + one muted line, a hairline above each; one column on phones, two from `sm`, four from `xl`). Then **How it works** (`how-it-works.tsx`): three numbered steps (numbers in Geist Mono inside the dashboard's step tints lavender / sky / sage), each with a small real fragment of the product built from the library: a collection row as the dashboard shows it before content (a sand `TintTile` with the initials, `Badge`, date, "Nothing added yet"), the guest link (a QR-like illustration that encodes nothing, `qr-pattern.ts`, the field look and an outline Copy button), and four guest frames arriving (photo, video, a wish as text, and the newest photo with a pencil underline and «нове» in pencil words, not mono). Each fragment is one `role="img"` with a label and `inert` inside, so its controls are never focusable. Phones and tablets: a vertical sequence joined by a 1px rail (fragments beside the text from `md`); from `lg` three columns under a strong top rule, the fragments sharing one row (`grid-rows-subgrid`). The section reveals once (`reveal.tsx`: `data-reveal` armed → shown on first intersection; the steps rise 12px and fade in, 300ms, then the newest frame arrives and its underline draws); without JavaScript, under reduced motion or when it is on screen at load, nothing hides or moves. Footer: the copyright line on the same column. `/` has its own title and description (and Open Graph title/description); `/login` is `noindex, follow` because it renders the same page. e2e: `sign-in-motion.spec.ts` (loop inside the sheet and no sideways scroll at 320/360/393, the email field in the first screen, the loop drawn once, the reveal once and never replayed, both static under reduced motion), `smoke.spec.ts` (the `h1` in uk and en).
+- **Admin and public pages.** Every page is the flat light table (`bg-background`), no decoration. Public pages (`/`, `/login`, `/auth/verify`) use `SiteHeader` (56px, no edge); the admin area (`/app/*`) uses `SiteHeader variant="app"` (56px, `border-b border-border`) in every state (loading, error, loaded), on the same `stepler-container` as the page so the wordmark, the `h1` and the content share one left edge. The header shows the text wordmark «stepler» (`font-wordmark`, 20px, `translate="no"`); there is no graphic mark in direction C yet. Admin pages use `PageHeader size="compact"`, `pt-8 pb-16 lg:pt-10 lg:pb-20` (`pt-5 lg:pt-8` when the header has a 44px back link, so the title lands at the same height), and group content in a `Panel` (rows split by `divide-y`); an account with no collections gets the invitation described below.
 - Admin header: no section nav (owner decision, 2026-10-01). The brand on the left links to `/app` (the collections; public pages link it to `/`), the account menu sits on the right. Each destination has one entry point: settings live only in the account menu, and a page below the collections offers a back link (`PageHeader` `back`) to `/app`.
-- Account menu: the trigger is a 32px avatar initial (`bg-primary/14 text-primary`, decorative) plus the email from `md` (`max-w-[26ch]`, truncated, `title`); on phones the email is `sr-only`, so it stays the accessible name. The menu label is two lines: "Signed in as" (small, muted) above the truncated address, then Settings (gear icon), a separator and Sign out.
-- Settings page: one centred column (`mx-auto max-w-[640px]`) with a compact `PageHeader` whose `back` slot links to the collections (`ArrowLeft`, 14px/600 muted, 44px tall). Sections are an `h2` plus a muted description over one panel.
-- Settings rows: label (15px/600) and a helper line (14px muted, `max-w-[40ch]`, linked with `aria-describedby`) on the left, a `Select` on the right from 600px (`grid-cols-[minmax(0,1fr)_auto]`, the select 12rem wide so the panel's controls line up), labelled by the row label (`aria-labelledby`); on phones they stack and the select fills the row. Theme options carry their icon (`Monitor`, `Sun`, `Moon`), which the trigger shows too.
-- Disabled primary button: solid `bg-muted text-muted-foreground` (5.42 / 6.35), not half-transparent primary, so a reason such as "Wait, checking…" stays readable. Other variants keep `opacity-50`.
+- Account menu: the trigger is a 28px violet avatar initial (`bg-link text-primary-foreground`, decorative) plus the email from `md` (`max-w-[26ch]`, truncated, `title`); on phones the email is `sr-only`, so it stays the accessible name. The menu label is two lines: "Signed in as" (small, muted) above the truncated address, then Settings (gear icon), a separator and Sign out.
+- Settings page: one centred column (`mx-auto max-w-[640px]`) with a compact `PageHeader` whose `back` slot links to the collections (`ArrowLeft`, 14px/600 muted, 44px tall, `focusRing`). Sections are an `h2` (`type-h2`) plus a muted description over one `Panel`.
+- Settings rows (`SettingRow`): label (15px/600) and a helper line (14px muted, `max-w-[40ch]`, linked with `aria-describedby`) on the left, a `Select` on the right from 600px (`grid-cols-[minmax(0,1fr)_auto]`, the select 12rem wide so the panel's controls line up), labelled by the row label (`aria-labelledby`); on phones they stack and the select fills the row. Theme options carry their icon (`Monitor`, `Sun`, `Moon`), which the trigger shows too.
+- Collections dashboard (`/app`, DESIGN-SYSTEM.md §6.5): `PageHeader` with the h1, the sentence "{used} of {limit} active collections" (`tabular-nums`, not mono: a number inside a sentence) after one 12px square per slot (a used slot in its collection's tint ink, a free one an empty `--input` outline; `aria-hidden`, the sentence says it) and the ink "New collection" (full width on phones). Active collections are rows of one `Panel variant="sheet"` split by hairlines (`CollectionStrip`). **Each row is one link:** the title link (`type-h2`, wraps anywhere, up to 3 lines, full text in `title`) is stretched over the row with `::after`, so a tap anywhere opens the collection while its accessible name stays the title; hover is `--hover-card` plus the title's underline, keyboard focus is the violet ring drawn inset around the whole row. On the left the collection's cover: a `TintTile` (56px on phones, 64px from `sm`) with its initials (`collectionInitials(title)`: the first letters of the first two words, digits only when there is no letter) in its tint (`collectionTint(id)`: FNV-1a of the id over `FRAME_TINTS`, so it is the same on every device and on the collection page); once the collection has content the newest photo replaces it (slice 7). Then status `Badge`, "Created {date}" and a short muted "Nothing added yet", the description (2 lines, muted), and a 44px outline settings icon button (`aria-label` and `title` "Settings for “{title}”", above the stretched link). No separate Open button (owner feedback 2026-10-02: Open next to the gear looked odd) and no "⋯" menu: settings is the only other action, so it stays one tap away. At every width a row is `cover | title, meta | settings`; on phones the meta and description also run under the settings button, so the date is not squeezed. No QR or copy-link actions until guest links exist (plan D6). The archive is its own section (`h2`, a muted hint) of compact rows with a 44px cover (also whole-row links, hover `--hover`), on the page itself behind a 1px dashed `--input` edge: told apart by shape, not by colour. Loading is skeleton rows in the same sheet. **Empty** (no collection at all) is an invitation centred in one `Panel`: a 72px lavender `TintTile` with the `Images` icon (the same mark as an empty collection), the h2 "Start with your first collection", one line on what a collection is, the page's only "New collection" (the header drops its own while empty or loading), a numbered list of three steps (create → share the link or QR code → guests add photos, videos and messages; numbers in tinted squares, `aria-hidden`, the `<ol>` carries the order; side by side from `sm`, rows on phones). No decorative side: sample tiles with made-up initials would read as someone's collections. The "Active" heading is visually hidden while the archive is empty.
+- Collection page (`/app/collections/{id}`, §6.6): `BackLink` to the collections, the title as h1 (`type-h1`, capped at 32px from `xl`), status and date, the description under the header (line breaks kept, `max-w-[60ch]`) and an outline "Settings" action level with the title. Archived: an info `Alert` with "Unarchive" (no confirmation; at the limit it turns into a warning with the limit message). The content is one quiet panel, centred: a 72px `TintTile` in the collection's tint with the `ImagePlus` icon, the h3 "Photos, videos and messages from guests will appear here" and, unless archived, "Once you share the link, guests can add their photos and videos." No film wording anywhere in the copy (owner feedback 2026-10-02). A missing, foreign or deleted collection (or a malformed id) is one "Collection not found" header with no error toast.
+- Danger zone (collection settings): the last `SettingsSection`, `tone="danger"`, holds the only red on the page and reads as a danger area at a glance: the panel on `--destructive-soft` with a solid destructive edge, a `TriangleAlert` icon by the row's name, the hint in the foreground colour, and one filled destructive "Delete collection" button with the `Trash2` icon (owner feedback 2026-10-02; DESIGN-SYSTEM.md §5.1 allows the filled button here as well as in `ConfirmDialog`), which opens a destructive `ConfirmDialog` that names the collection. Reversible actions (archive) sit in an ordinary section above it with an outline button and a plain `ConfirmDialog`; undoing them (unarchive) needs no confirmation. The details form saves from the panel's own footer (ghost Cancel, ink Save, both `aria-disabled` until something changed). Errors from these actions show as an inline `Alert` in the panel; toasts only confirm.
+- Disabled: every filled or outline button is solid `bg-muted text-muted-foreground` (5.32 / 5.48), ghost buttons turn muted text; fields get the muted fill; nothing is half-transparent, so a reason such as "Wait, checking…" stays readable.
 - Stories are checked at the Storybook viewports `phone` (360), `tablet` (768) and `laptop` (1280).
 
 ### Theme and language
@@ -102,76 +108,121 @@ Web-only building blocks (not in `packages/ui`, one use each): `ThemeProvider` /
 
 ## Tokens
 
-All custom properties in `packages/ui/src/styles/globals.css`. Dark values apply under `prefers-color-scheme: dark` (unless `data-theme="light"`) and under `data-theme="dark"`. Tailwind exposes the colours as `bg-*`, `text-*`, `border-*` and so on through `@theme inline`.
+All custom properties in `packages/ui/src/styles/globals.css`, direction C (specification: [DESIGN-SYSTEM.md §2](../design/DESIGN-SYSTEM.md#2-токены)). Dark values apply under `prefers-color-scheme: dark` (unless `data-theme="light"`) and under `data-theme="dark"`. Tailwind exposes the colours as `bg-*`, `text-*`, `border-*` and so on through `@theme inline`; shadcn names are kept.
 
-Contrast is WCAG 2 (sRGB relative luminance), light / dark. Text pairs need 4.5:1, non-text (field edges, focus rings) 3:1. The ring values were measured in the browser; everything else was computed from the hex values with the WCAG formula (2026-09-30).
+Contrast is WCAG 2.x (sRGB relative luminance), light / dark, computed from the hex values. Text pairs need 4.5:1, non-text (field edges, focus ring, button shapes) 3:1. `Foundations/Contrast` recomputes every pair below from the live values in both themes and fails `pnpm test` when one drops under its minimum.
 
 ### Surfaces and text
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--background` | `#F4F4F7` | `#13141B` | page | |
-| `--foreground` | `#16182A` | `#EEEEF3` | text | on background 15.97 / 15.88; on card 17.53 / 14.51; on muted 14.86 / 12.65 |
-| `--card` | `#FFFFFF` | `#1B1D27` | cards, tiles, dialogs, menus, fields | |
-| `--card-foreground` | `#16182A` | `#EEEEF3` | text on card | as `--foreground` on card |
-| `--popover` | `#FFFFFF` | `#1B1D27` | unused (shadcn default; menus use `card`) | |
-| `--popover-foreground` | `#16182A` | `#EEEEF3` | unused | |
-| `--muted` | `#EBECF1` | `#252836` | fills: tabs list, skeleton, hover, disabled primary button | |
-| `--muted-foreground` | `#5A5E73` | `#A7AABC` | secondary text | on background 5.83 / 7.97; on card 6.40 / 7.29; on muted 5.42 / 6.35 |
-| `--secondary` | `#EBECF1` | `#252836` | secondary button, neutral badge | |
-| `--secondary-foreground` | `#16182A` | `#EEEEF3` | text on secondary | 14.86 / 12.65 |
-| `--accent` | `#EBECF1` | `#252836` | unused (shadcn default) | |
-| `--accent-foreground` | `#16182A` | `#EEEEF3` | unused | |
-| `--border` | `#DFE1E9` | `#2C2F3D` | hairlines (decorative) | on card 1.31 / 1.26 (not relied on to identify controls) |
-| `--input` | `#868A9E` | `#6A6E85` | field edges, unchecked switch track | on card 3.42 / 3.34; on background 3.11 / 3.66 |
-| `--control-track` | `var(--background)` | `var(--background)` | ToggleGroup track: a recessed well (with an inset `--border` hairline) | vs card 1.10 / 1.09 (decorative; the labels identify the items); muted-foreground on it 5.83 / 7.97 |
-| `--control-thumb` | `#FFFFFF` | `#2C2F3D` | ToggleGroup selected thumb; lighter than the card in dark | vs track 1.10 / 1.38 (plus `--shadow-thumb` and a `foreground/10` ring; selection is also `aria-checked` and foreground text); foreground on it 17.53 / 11.49; primary icon 6.60 / 6.31 |
+| `--background` | `#F0F1EE` | `#141615` | the light table: page | |
+| `--card` (sheet) | `#FFFFFF` | `#1C1F1D` | grids, panels, fields | |
+| `--popover` (raised) | `#FFFFFF` | `#232724` | menus, select, toast, dialog; in dark lighter than a sheet instead of a shadow | |
+| `--foreground` (`--card-`, `--popover-foreground`) | `#141614` | `#E9EBE6` | text, ink | on background 16.04 / 15.14; on card 18.19 / 13.85; on popover — / 12.61 |
+| `--muted-foreground` | `#5A5D58` | `#9CA099` | secondary text, time, hints | on background 5.90 / 6.84; on card 6.68 / 6.26; on muted 5.32 / 5.48 |
+| `--muted` | `#E4E6E1` | `#262A27` | fills: skeleton, disabled, frame placeholder | |
+| `--border` | `#D6D8D2` | `#2D312E` | grid lines, hairlines (decorative) | on card 1.44 / 1.26 (never identifies a control) |
+| `--input` | `#83877F` | `#6C716B` | field, checkbox and outline-button edges, empty-frame dash | on card 3.66 / 3.33; on background 3.23 / 3.65; on popover — / 3.04 |
 
-### Actions and focus
+### Actions
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--primary` | `#3B4BD8` | `#A3ADFF` | actions, links, selected states | links on card 6.60 / 7.97; on background 6.01 / 8.73; on muted 5.59 / 6.95 |
-| `--primary-hover` | `#2F3DB8` | `#BAC2FF` | primary button on hover | |
-| `--primary-foreground` | `#FFFFFF` | `#13141B` | text on primary | on primary 6.60 / 8.73; on hover 8.47 / 10.71 |
-| `--ring` | `#3B4BD8` | `#A3ADFF` | focus ring, used at `/70` | `ring/70` on card 3.49 / 4.60, on background 3.31 / 4.85; solid ring on a highlighted menu item (muted) 5.59 / 6.95 |
+| `--primary` (ink) | `#141614` | `#E9EBE6` | admin primary button | shape on background 16.04 / 15.14 |
+| `--primary-hover` / `--primary-active` | `#2E312D` / `#454944` | `#FFFFFF` / `#CDD0CA` | ink on hover / pressed | |
+| `--primary-foreground` | `#FFFFFF` | `#141615` | text on ink | on primary / hover / active 18.19 / 13.18 / 9.17 and 15.14 / 18.18 / 11.66 |
+| `--pencil` | `#B83E26` | `#F08766` | wax pencil: guest primary, selection, "new", active tab; never focus | text on background 4.93 / 7.24; on card 5.59 / 6.62 |
+| `--pencil-hover` / `--pencil-active` | `#A33520` / `#8E2D1B` | `#F59B7E` / `#DD7556` | | |
+| `--pencil-foreground` | `#FFFFFF` | `#141615` | text on pencil | 5.59 / 6.80 / 8.26 and 7.24 / 8.54 / 5.85 |
+| `--pencil-soft` | `#FBECE8` | `#33201A` | selected row or chip | foreground on it 15.82 / 12.84; pencil 4.86 / 6.14 |
+| `--link` (violet) | `#5A4A8C` | `#B6A8E8` | links (underlined), information, focus (`--ring`) | on background 6.63 / 8.44; on card 7.52 / 7.72 |
+| `--link-hover` | `#463870` | `#CABFF0` | | on background 8.99 / 10.58 |
+| `--info-soft` | `#EEEBF5` | `#242036` | info Alert | foreground 15.45 / 13.10; link 6.39 / 7.31 |
+| `--destructive` | `#A3203A` | `#FF8DA0` | errors, deletion; always with an icon and a word | on background 6.56 / 8.28; on card 7.43 / 7.58 |
+| `--destructive-hover` / `--destructive-active` | `#8A1A31` / `#731429` | `#FFA3B3` / `#F07A8E` | | |
+| `--destructive-foreground` | `#FFFFFF` | `#141615` | text on destructive | 7.43 / 9.24 / 11.28 and 8.28 / 9.64 / 6.82 |
+| `--destructive-soft` | `#F8E7EA` | `#33191E` | error Alert | foreground 15.25 / 13.47; destructive 6.23 / 7.37 |
 
-### Status
+Pencil and destructive are 1.33 / 1.14 apart in luminance: they are never told apart by colour (destructive always has an icon and a word; pencil never means an error). Ink and pencil buttons are not placed side by side (3.25 / 2.09).
+
+### Status and states
 
 | Token | Light | Dark | Role | Contrast (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--success` | `#1A7F4B` | `#5FD39A` | success icon, edge, dot, text on card | on card 5.02 / 9.00; on success-soft 4.38 / 7.32 (below 4.5 in light, so success Badge and Alert keep `foreground` text) |
-| `--success-soft` | `#E4F3EA` | `#173327` | success tint | foreground on it 15.28 / 11.80; muted-foreground 5.58 / 5.92 |
-| `--destructive` | `#C23A2E` | `#FF8A7D` | destructive button, error icon/text, destructive menu item | on card 5.33 / 7.34; on background 4.86 / 8.03; on its `/10` tint 4.60 / 6.20; `ring-destructive/70` on card 3.19 / 4.25, on background 3.03 / 4.49 |
-| `--destructive-foreground` | `#FFFFFF` | `#13141B` | text on a destructive button | 5.33 / 8.03 |
+| `--success` | `#2C7350` | `#77C79C` | "added", active link | on card 5.71 / 8.26; on success-soft 4.93 / 7.51 |
+| `--success-soft` | `#E5F1EA` | `#172A20` | success Alert | foreground 15.68 / 12.60 |
+| `--warning` | `#8A6100` | `#E2B550` | large file, paused link | on card 5.54 / 8.68; on warning-soft 4.80 / 8.03; on `--hover` exactly 4.50, so warning text never sits on a hover fill |
+| `--warning-soft` | `#F7EEDA` | `#2B2414` | warning Alert | foreground 15.76 / 12.81 |
+| `--hover` | `#E7E8E5` | `#1F211F` | hover of things on the page (foreground 4% / 5% over background) | foreground 14.79 / 13.50; pencil 4.55 / 6.45 |
+| `--hover-card` | `#F6F6F6` | `#262927` | hover inside a sheet (rows, menu items) | foreground 16.83 / 12.24 |
+| `--hover-popover` | `#F6F6F6` | `#2D312E` | hover inside a popover (select options, menu items); in dark the popover is lighter than a sheet, so `--hover-card` would not show | foreground 16.83 / 11.00; muted-foreground 6.19 / 4.97 |
+| `--ring` | `var(--link)` | `var(--link)` | focus ring, 2px solid, offset 2px; a focused field's edge turns violet too. Never the pencil: red-orange around a field reads as an error (owner change 2026-10-02) | on background 6.63 / 8.44; on card 7.52 / 7.72; on popover 7.52 / 7.03; on hover 6.11 / 7.53; on muted 5.98 / 6.76 |
 
-Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 and on the warning tint (`accent-warm/10`) 16.37 / 11.87.
+### Frame tints
 
-### Warm accent and illustration (decorative)
+Calm fills for empty frames, one per collection (chosen from its id), and the step markers of the empty dashboard. Added on owner feedback 2026-10-02 ("too grey, a bit more colour"). Never status, never a large surface or a sheet; a photo, once there, replaces the fill. Each tint has a fill, an edge (decorative) and an ink for the frame number.
 
-| Token | Light | Dark | Role | Contrast (light / dark) |
+| Tint | Fill light / dark | Edge light / dark | Ink light / dark | Ink on fill (light / dark) |
 | --- | --- | --- | --- | --- |
-| `--accent-warm` | `#F0A04B` | `#F4B26A` | decoration only: note tile, brand-mark staple, QR dot, warning fill | decorative; on card 2.14 / 9.13, so never text or a line icon on its own in light |
-| `--accent-warm-foreground` | `#2A1605` | `#2A1605` | text and icon strokes on accent-warm (warning Badge, warning Alert icon) | 8.09 / 9.40 |
-| `--staple` | `#A3A7B6` | `#7E8296` | the staple (StapledStack, sign-in landing) | decorative |
-| `--staple-shine` | `#ECEDF2` | `#C9CBD6` | highlight on the staple | decorative |
-| `--dot` | `#D6D8E0` | `#262834` | `stepler-atmosphere` dot grid | decorative |
-| `--glow-warm` | `rgb(255 186 120 / 0.42)` | `rgb(255 168 96 / 0.15)` | atmosphere key light | decorative |
-| `--glow-cool` | `rgb(150 162 255 / 0.16)` | `rgb(120 132 255 / 0.07)` | atmosphere cool fill | decorative |
+| `sage` | `#D8EADF` / `#22352B` | `#B1D0BD` / `#355544` | `#2B5F46` / `#9AD3B2` | 5.92 / 7.65 |
+| `lavender` | `#E5DFF6` / `#2D2746` | `#C5BBE8` / `#463D6C` | `#52438A` / `#C4B8F0` | 6.41 / 7.69 |
+| `sand` | `#F2E4CA` / `#352E1E` | `#D9C39B` / `#55492E` | `#71501A` / `#E2C688` | 5.84 / 8.12 |
+| `sky` | `#D9E7F3` / `#20303C` | `#B2CBE1` / `#35505F` | `#2A5876` / `#9CC6E3` | 6.05 / 7.49 |
 
-### Shape, elevation and type
+Badge text on its fill: success 4.93 / 7.51, neutral (muted-foreground on muted) 5.32 / 5.48, info 6.39 / 7.31, warning 4.80 / 8.03, danger 6.23 / 7.37.
+
+### Overlays and media
 
 | Token | Light | Dark | Role |
 | --- | --- | --- | --- |
-| `--radius` | `0.75rem` | same | controls (`rounded-lg`); `--radius-sm` −4px, `--radius-md` −2px, `--radius-xl` +8px (20px) |
-| `--shadow-card` | `0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2)` | `inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75)` | cards, dialogs, menus, toasts (`shadow-card`) |
-| `--shadow-tile` | `0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3)` | `inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8)` | StapledStack tiles (`shadow-tile`) |
-| `--shadow-thumb` | `0 1px 2px rgb(22 24 42 / 0.1), 0 1px 1px rgb(22 24 42 / 0.04)` | `inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5)` | ToggleGroup thumb (`shadow-thumb`) |
-| `--font-sans` | Manrope (`--font-manrope` from `next/font`), system fallbacks | same | body text |
-| `--font-display` | Unbounded (`--font-unbounded`), then Manrope | same | wordmark and headings (`font-display`) |
-| `--stepler-gutter` / `--stepler-content` | 1rem / 1240px (1.5rem from `sm`, 2.5rem from `lg`, 1320px from 1600px) | same | set by `stepler-container` |
+| `--overlay` | `rgb(20 22 20 / 0.48)` | `rgb(0 0 0 / 0.64)` | under a dialog or sheet |
+| `--scrim` | `linear-gradient(to top, rgb(0 0 0 / 0.60), transparent 70%)` | same | under text or icons over a photo (white on it ≥ 4.74 in the worst case) |
+| `--veil` | `rgb(255 255 255 / 0.68)` | `rgb(20 22 21 / 0.68)` | "not uploaded yet" over a frame; never text on it |
+| `--viewer` / `--viewer-foreground` | `#0F110F` / `#E9EBE6` | same | full-screen frame viewer (15.79) |
+
+### Shape, elevation, layers, motion and type
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `--radius-frame` / `-sheet` / `-control` / `-dialog` | 2 / 4 / 8 / 12px (`rounded-frame` …) | photo in a frame, thumbnails, QR / sheets, panels, Alert / buttons, fields, chips, menu items, toast / dialog, bottom sheet. Pills only for dots, avatars and switch thumbs |
+| `--shadow-popover` | light `0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06)`; dark none (popover colour + 1px border) | menus, select, toast (`shadow-popover`) |
+| `--shadow-dialog` | light `0 24px 48px -16px rgb(20 22 20 / 0.32)`; dark none | dialog, sheet (`shadow-dialog`) |
+| `--shadow-print` | light `0 1px 1px rgb(20 22 20 / 0.10), 0 8px 18px -8px rgb(20 22 20 / 0.28)`; dark `inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6)` | only the top print of the guest success stack |
+| `--z-base` … `--z-skip` | 0 / 1 frame mark / 20 sticky / 30 dock / 40 overlay / 50 modal / 60 popover / 70 toast / 80 skip link | used inside `packages/ui` (`z-(--z-modal)`); pages never set z-index on overlays |
+| `--duration-instant` … `--duration-stack` | 0 / 120 fast / 180 base / 240 slow / 300 develop / 400 stack ms | `duration-(--duration-fast)` |
+| `--ease-out` / `--ease-in` / `--ease-in-out` | `cubic-bezier(0.2, 0.7, 0.3, 1)` / `(0.4, 0, 1, 1)` / `(0.4, 0, 0.2, 1)` | replace Tailwind's defaults (`ease-out` …) |
+| `--breakpoint-3xl` | 120rem (1920px) | adds `3xl:` |
+| `--font-sans` | Geologica (`--font-geologica` from `next/font/local` in apps/web, the `Geologica` family from `src/fonts/fonts.css` in Storybook), system fallbacks | all text |
+| `--font-mono` | Geist Mono (`--font-geist-mono` / `Geist Mono`), then `ui-monospace` | data only, through `type-data` / `type-data-lg` or `font-mono` |
+| `--stepler-gutter` / `--stepler-content` | 16 / 24 / 32 / 40px (base / `sm` / `lg` / `2xl`); 1240px (1320px from 1600px) | set by `stepler-container` |
 
 `color-scheme` is `light` / `dark` with the theme, so native scrollbars and form parts follow it.
+
+### Type
+
+The files are committed in `packages/ui/src/fonts/` with their OFL licences (ADR 0015): `geologica-wght-shrp.woff2` (Geologica, `wght` 100–900 and `SHRP` 0–100; `CRSV` and `slnt` dropped; 40.8 KB) and `geist-mono-wght.woff2` (Geist Mono, `wght` 100–900; 29.2 KB), each latin + cyrillic in one file (Ukrainian і ї є ґ, ’, «», № included; no `latin-ext` / `cyrillic-ext`). apps/web loads them with `next/font/local` (`apps/web/src/app/fonts.ts`; Geologica is preloaded, Geist Mono is not), Storybook with `@font-face` (`packages/ui/src/fonts/fonts.css`, imported by `.storybook/preview.tsx`). Nothing fetches fonts over the network. The rebuild recipe (fontTools instancer + `pyftsubset`) is in ADR 0015.
+
+| Utility | base / md (768) / xl (1280) | Line height | Weight · SHRP | Use |
+| --- | --- | --- | --- | --- |
+| `type-display` | 32 (28 under 360px) / 44 / 64px, −0.01em from 44 | 1.12 | 600 · 80 | h1 of guest pages and the sign-in landing |
+| `type-h1` | 28 / 32 / 44px, −0.01em at 44 | 1.15 | 600 · 80 | h1 of admin pages |
+| `type-h2` | 19 / 24 / 24px | 1.2 | 600 · 60 | sections, dialog titles |
+| `type-h3` | 16 / 17 / 17px | 1.3 | 600 · 0 | panel headings |
+| `type-body-lg` | 17px | 1.5 | — | guest texts, guest main button |
+| `type-body` | 16 / 15 / 15px | 1.5 | — | admin body; fields stay 16px |
+| `type-small` | 14px | 1.45 | — | hints, meta, `sm` buttons |
+| `type-caption` | 13px | 1.4 | — | captions under a frame, terms line |
+| `type-data` | Geist Mono 12px, `tabular-nums` | 1.35 | — | frame number, time, duration, size |
+| `type-data-lg` | Geist Mono 16 / 20px | 1.2 | — | a range such as `#087–#116` |
+| `font-wordmark` | — | — | 600 · 100, −0.01em | the text wordmark «stepler» |
+| `font-display` | — | — | SHRP 80 | sharp terminals on a heading sized elsewhere |
+
+h1–h3 get `text-wrap: balance`, paragraphs `text-wrap: pretty` (base layer). SHRP is only used at 19px and above (sharp terminals turn to noise on small text), so `type-h3` has none although the spec's role table lists SHRP 60 for h3; whether SHRP holds up on low-density Android screens is not verified. Words are never smaller than 13px; 12px is for mono digits only. `Foundations/Type` shows the scale, the SHRP steps and a Ukrainian sample, and checks that both files load and cover it.
+
+Ukrainian copy: the apostrophe is always ’ (U+2019) and the ellipsis one character (…); `apps/web/src/i18n/ukrainian-copy.test.ts` fails on `'`, `ʼ` or `...` in `messages/uk.json`.
+
+The v4 tokens `--accent-warm*`, `--staple*`, `--dot`, `--glow-*`, `--shadow-tile`, the `stepler-atmosphere` utility and the `StapledStack`, `BrandMark` and `Card` components were removed with the sign-in landing redesign (DESIGN-SYSTEM.md §10.4, step 6). Radii come only from the four tokens; Tailwind's own `rounded-sm` … `rounded-2xl` are not used.
 
 ## How to add a component
 
@@ -184,8 +235,8 @@ Foreground text on the error tint (`destructive/10` over card) is 15.11 / 12.25 
 ## Known issues and deferred items
 
 - **Turnstile keeps its initial language and theme** until the page reloads. By design: re-rendering the widget would drop the token of a half-filled form.
-- **Raw values** still in components: `rounded-[20px]` (Card), `rounded-[6px]` (Checkbox), `min-w-[12rem]` (DropdownMenuContent), `min-w-[min(var(--radix-select-trigger-width),calc(100vw-2rem))]` (SelectContent), `rounded-[9px]` (ToggleGroupItem thumb: the 12px control radius minus its 3px inset).
-- **Overlay colour:** dialogs use `bg-black/50`; there is no `--overlay` token.
-- **Unused tokens:** `--popover`, `--popover-foreground` (and `--accent`, `--accent-foreground`) are kept from the shadcn defaults but nothing uses them.
+- **Raw values** still in components: `min-w-[12rem]` (DropdownMenuContent), `min-w-[min(var(--radix-select-trigger-width),calc(100vw-2rem))]` (SelectContent), the switch thumb offsets (`translate-x-[3px]` / `[19px]`), the dialog's 160ms exit (no token between 120 and 180).
+- **Menu and option items** use a 4px radius (the popover's 8px minus its 4px padding), not the 8px the spec lists for them (§5.5): an 8px item inside an 8px popover with 4px padding bulges at the corners.
+- **`--hover-popover`** is not in the spec: in dark the popover is lighter than a sheet, so `--hover-card` would not show on it.
 - **No DOM prop pass-through:** `Alert`, `EmptyState`, `PageHeader`, `Progress`, `Spinner`, `CopyField` and `ConfirmDialog` take only their typed props (plus `className`), not extra DOM attributes such as `id` or `data-*`.
-- **Missing dark stories:** `BrandMark` and `Input` have no dark-theme story; `Label` has no story of its own.
+- **Missing stories:** `Label` has no story of its own.

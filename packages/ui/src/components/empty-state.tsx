@@ -2,8 +2,12 @@ import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 
 type EmptyStateProps = {
-  /** A lucide icon element; it is decorative. */
-  icon?: ReactNode;
+  /**
+   * The number of the frame that will come first, drawn as an empty dashed frame (`#001`): the
+   * invitation of a contact sheet waiting for its first frame. Decorative; omit it for an
+   * empty filter result.
+   */
+  frameNumber?: number;
   title: ReactNode;
   description?: ReactNode;
   /** The next step, usually a Button. */
@@ -13,8 +17,15 @@ type EmptyStateProps = {
   className?: string;
 };
 
+/** `#` and at least three digits (`#001`); four from 1000 (DESIGN-SYSTEM.md §3.4). */
+function formatFrameNumber(value: number): string {
+  return `#${String(value).padStart(3, '0')}`;
+}
+
+// Direction C (DESIGN-SYSTEM.md §5.16): an empty frame instead of an icon in a circle, then a
+// panel heading, one line and the next step.
 function EmptyState({
-  icon,
+  frameNumber,
   title,
   description,
   action,
@@ -27,27 +38,23 @@ function EmptyState({
     <div
       data-slot="empty-state"
       className={cn(
-        'mx-auto grid w-full max-w-md justify-items-center gap-3 px-4 py-10 text-center [overflow-wrap:anywhere]',
+        'mx-auto grid w-full max-w-md justify-items-center gap-2 px-4 py-10 text-center [overflow-wrap:anywhere]',
         className,
       )}
     >
-      {icon ? (
-        <div
-          data-slot="empty-state-icon"
-          aria-hidden="true"
-          className="mb-1 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground [&_svg:not([class*='size-'])]:size-6"
-        >
-          {icon}
+      {frameNumber === undefined ? null : (
+        <div data-slot="empty-state-frame" aria-hidden="true" className="mb-1 grid w-24 gap-1">
+          <div className="aspect-square rounded-frame border border-dashed border-input" />
+          <span className="type-data text-left text-muted-foreground" translate="no">
+            {formatFrameNumber(frameNumber)}
+          </span>
         </div>
-      ) : null}
-      <Heading
-        data-slot="empty-state-title"
-        className="font-display text-lg leading-tight font-medium tracking-tight"
-      >
+      )}
+      <Heading data-slot="empty-state-title" className="type-h3">
         {title}
       </Heading>
       {description ? (
-        <p data-slot="empty-state-description" className="text-muted-foreground">
+        <p data-slot="empty-state-description" className="max-w-[44ch] text-muted-foreground">
           {description}
         </p>
       ) : null}
@@ -60,4 +67,4 @@ function EmptyState({
   );
 }
 
-export { EmptyState, type EmptyStateProps };
+export { EmptyState, formatFrameNumber, type EmptyStateProps };

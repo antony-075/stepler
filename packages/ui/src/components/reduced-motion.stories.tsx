@@ -11,6 +11,7 @@ import {
 import { Input } from './input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Toaster, ToastProvider, useToast } from './toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
 
 /**
@@ -157,7 +158,7 @@ export const Controls: Story = {
   },
 };
 
-/** ToggleGroup: the item colour and the thumb (`::before`) switch without a fade. */
+/** ToggleGroup: the chip's edge and text colour switch without a fade. */
 export const ToggleGroup_: Story = {
   render: () => (
     <ToggleGroup aria-label="Theme" defaultValue="light">
@@ -169,8 +170,31 @@ export const ToggleGroup_: Story = {
     await expectReducedMotion();
     const dark = canvas.getByRole('radio', { name: 'Dark' });
     await expect(getComputedStyle(dark).transitionProperty).toBe('none');
-    await expect(getComputedStyle(dark, '::before').transitionProperty).toBe('none');
     await userEvent.click(dark);
     await expectStill(canvas.getByRole('radiogroup'));
+  },
+};
+
+/** Tabs: the pencil underline of the active tab appears whole, without drawing itself. */
+export const Tabs_: Story = {
+  name: 'Tabs',
+  render: () => (
+    <Tabs defaultValue="frames">
+      <TabsList aria-label="Collection">
+        <TabsTrigger value="frames">Frames</TabsTrigger>
+        <TabsTrigger value="access">Access</TabsTrigger>
+      </TabsList>
+      <TabsContent value="frames">Frames</TabsContent>
+      <TabsContent value="access">Access</TabsContent>
+    </Tabs>
+  ),
+  play: async ({ canvas }) => {
+    await expectReducedMotion();
+    const access = canvas.getByRole('tab', { name: 'Access' });
+    await userEvent.click(access);
+    const path = access.querySelector('[data-slot="tabs-underline"] path')!;
+    await expect(getComputedStyle(path).transitionDuration).toBe('0s');
+    await expect(getComputedStyle(path).strokeDashoffset).toBe('0px');
+    await expectStill(canvas.getByRole('tablist'));
   },
 };

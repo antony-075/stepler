@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ImagePlus } from 'lucide-react';
 import { expect, fn, userEvent } from 'storybook/test';
 import { Button } from './button';
 import { EmptyState } from './empty-state';
@@ -8,7 +7,7 @@ const meta = {
   title: 'Components/EmptyState',
   component: EmptyState,
   args: {
-    icon: <ImagePlus />,
+    frameNumber: 1,
     title: 'No photos yet',
     description: 'Share the link with guests, or upload the first photos yourself.',
   },
@@ -20,10 +19,10 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('heading', { level: 2, name: 'No photos yet' })).toBeVisible();
-    await expect(canvasElement.querySelector('[data-slot="empty-state-icon"]')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
+    // The empty frame "#001" is decorative.
+    const frame = canvasElement.querySelector('[data-slot="empty-state-frame"]');
+    await expect(frame).toHaveAttribute('aria-hidden', 'true');
+    await expect(frame).toHaveTextContent('#001');
   },
 };
 
@@ -51,5 +50,23 @@ export const Dark: Story = {
   play: async ({ canvas }) => {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await expect(canvas.getByRole('heading', { name: 'No photos yet' })).toBeVisible();
+  },
+};
+
+/** An empty filter result: no frame, just the line. */
+export const WithoutFrame: Story = {
+  args: { frameNumber: undefined, title: 'No videos yet', description: undefined },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-slot="empty-state-frame"]')).toBeNull();
+  },
+};
+
+/** From 1000 the number has four digits and no leading zero. */
+export const LargeFrameNumber: Story = {
+  args: { frameNumber: 1000 },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-slot="empty-state-frame"]')).toHaveTextContent(
+      '#1000',
+    );
   },
 };

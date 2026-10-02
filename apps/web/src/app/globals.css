@@ -1,1 +1,36 @@
 @import '@stepler/ui/styles.css';
+
+/* The landing's page column (DESIGN-SYSTEM.md §7.1: up to 1600px of content from 1920px), wider
+   than `stepler-container` so the photos fill a 1440px screen; the same gutters. */
+@utility landing-container {
+  --stepler-gutter: 1rem;
+  width: 100%;
+  max-width: calc(100rem + 2 * var(--stepler-gutter));
+  margin-inline: auto;
+  padding-inline: var(--stepler-gutter);
+  @variant sm {
+    --stepler-gutter: 1.5rem;
+  }
+  @variant lg {
+    --stepler-gutter: 2rem;
+  }
+  @variant 2xl {
+    --stepler-gutter: 2.5rem;
+  }
+}
+
+/* The once-only reveal of «Як це працює» (`login/reveal.tsx`): the steps rise in, then the
+   newest guest frame arrives. Only opacity and transform. */
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes landing-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}

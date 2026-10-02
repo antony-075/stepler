@@ -4,34 +4,27 @@ import { cn } from '../lib/utils';
 
 type BadgeVariant = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
-// Based on shadcn/ui (new-york). Deviations: status variants on the v4 tokens instead of
-// default/secondary/destructive/outline, a decorative status dot, and no `asChild`: a badge is
-// status text, never a control. `success` and `destructive` text on their own tints falls just
-// under 4.5:1 at 12px in light, so those variants keep `foreground` text and carry the colour
-// in the tint, edge and dot (as Alert does). Long text truncates to one line; the caller
-// passes the full text as `title`.
+// Based on shadcn/ui (new-york), restyled for direction C (DESIGN-SYSTEM.md §5.8): a status tag,
+// a soft tinted fill with text in the status colour and a 6px dot of the same colour. Owner
+// feedback 2026-10-02: a dot alone did not say which colour the status was. Radius 4 like a
+// sheet, not a pill (the system has no pills). Every text-on-fill pair passes 4.5:1 in both
+// themes (DESIGN-SYSTEM.md §2.2). No `asChild`: a badge is status text, never a control. Long text
+// truncates to one line; pass the full text as `title`.
 const badgeVariants = cva(
-  'inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-2 py-0.5 align-middle text-xs leading-4 font-bold whitespace-nowrap',
+  'inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-sheet px-2 align-middle text-[0.8125rem] leading-[1.4] font-medium whitespace-nowrap',
   {
     variants: {
       variant: {
-        neutral: 'border-border bg-secondary text-secondary-foreground',
-        info: 'border-primary/25 bg-primary/10 text-primary',
-        success: 'border-success/40 bg-success-soft text-foreground',
-        warning: 'border-accent-warm bg-accent-warm text-accent-warm-foreground',
-        danger: 'border-destructive/40 bg-destructive/10 text-foreground',
+        neutral: 'bg-muted text-muted-foreground',
+        info: 'bg-info-soft text-link',
+        success: 'bg-success-soft text-success',
+        warning: 'bg-warning-soft text-warning',
+        danger: 'bg-destructive-soft text-destructive',
       },
     },
+    defaultVariants: { variant: 'neutral' },
   },
 );
-
-const DOT_CLASSES: Record<BadgeVariant, string> = {
-  neutral: 'bg-muted-foreground',
-  info: 'bg-primary',
-  success: 'bg-success',
-  warning: 'bg-accent-warm-foreground',
-  danger: 'bg-destructive',
-};
 
 type BadgeProps = ComponentProps<'span'> & { variant?: BadgeVariant };
 
@@ -43,10 +36,7 @@ function Badge({ variant = 'neutral', className, children, ...props }: BadgeProp
       className={cn(badgeVariants({ variant }), className)}
       {...props}
     >
-      <span
-        aria-hidden="true"
-        className={cn('size-1.5 shrink-0 rounded-full', DOT_CLASSES[variant])}
-      />
+      <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-current" />
       <span data-slot="badge-text" className="min-w-0 truncate">
         {children}
       </span>

@@ -3,7 +3,9 @@
 import { Check, ChevronDown } from 'lucide-react';
 import { Select as SelectPrimitive } from 'radix-ui';
 import { createContext, useContext, useState, type ComponentProps } from 'react';
+import { popoverSurfaceClassName } from '../lib/surfaces';
 import { cn } from '../lib/utils';
+import { fieldClassName } from './input';
 
 /**
  * Whether the open select was driven by a pointer, for two rings a mouse user should not see.
@@ -57,9 +59,9 @@ function SelectValue(props: ComponentProps<typeof SelectPrimitive.Value>) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
-// Based on shadcn/ui (new-york). Deviations: a 44px trigger (rule 05) with a 16px font so iOS
-// Safari does not zoom, the input's border and focus ring, v4 tokens, and the trigger's icons
-// muted like the chevron.
+// Based on shadcn/ui (new-york). Deviations: the Input's field look and 48px height (a 16px
+// font so iOS Safari does not zoom), the edge stays dark while the list is open, and the
+// trigger's icons are muted like the chevron.
 function SelectTrigger({
   className,
   children,
@@ -82,10 +84,8 @@ function SelectTrigger({
         onKeyDown?.(event);
       }}
       className={cn(
-        'flex h-11 min-h-11 w-full min-w-0 items-center justify-between gap-2 rounded-lg border border-input bg-card px-3.5 text-base font-medium whitespace-nowrap transition-[color,box-shadow,border-color] outline-none motion-reduce:transition-none',
-        'hover:border-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70 data-[state=open]:border-ring',
-        'disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-muted-foreground',
-        'aria-invalid:border-destructive aria-invalid:ring-destructive/70',
+        fieldClassName,
+        'flex h-12 items-center justify-between gap-2 px-3.5 text-left whitespace-nowrap data-[state=open]:border-foreground data-placeholder:text-muted-foreground',
         '*:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 *:data-[slot=select-value]:truncate',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className,
@@ -136,9 +136,8 @@ function SelectContent({
           trigger.focus({ preventScroll: true, focusVisible: false });
         }}
         className={cn(
-          'relative z-50 max-h-(--radix-select-content-available-height) max-w-[calc(100vw-2rem)] min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border bg-card text-card-foreground shadow-card',
-          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
-          'motion-safe:data-[side=bottom]:slide-in-from-top-2 motion-safe:data-[side=left]:slide-in-from-right-2 motion-safe:data-[side=right]:slide-in-from-left-2 motion-safe:data-[side=top]:slide-in-from-bottom-2',
+          popoverSurfaceClassName,
+          'relative max-h-(--radix-select-content-available-height) max-w-[calc(100vw-2rem)] min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto',
           popper && 'min-w-[min(var(--radix-select-trigger-width),calc(100vw-2rem))]',
           className,
         )}
@@ -146,7 +145,7 @@ function SelectContent({
       >
         <SelectPrimitive.Viewport
           data-slot="select-viewport"
-          className={cn('p-1', popper && 'w-full scroll-my-1')}
+          className={cn(popper && 'w-full scroll-my-1')}
         >
           {children}
         </SelectPrimitive.Viewport>
@@ -159,7 +158,7 @@ function SelectLabel({ className, ...props }: ComponentProps<typeof SelectPrimit
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn('px-3 py-2 text-sm font-bold text-muted-foreground', className)}
+      className={cn('px-3 py-2 text-sm font-semibold text-muted-foreground', className)}
       {...props}
     />
   );
@@ -169,7 +168,7 @@ function SelectLabel({ className, ...props }: ComponentProps<typeof SelectPrimit
  * A 44px option with a check on the right when selected. Icons before the text are muted unless
  * they set a colour; whatever is inside `SelectPrimitive.ItemText` (pass it as `children`) is
  * also what the trigger shows, so put an option's icon there too. Keyboard focus adds a solid
- * inset ring, as in DropdownMenu, because the muted highlight alone is ~1.2:1 (not after a pointer
+ * inset ring, as in DropdownMenu, because the hover fill alone is ~1.1:1 (not after a pointer
  * open, see SelectInput).
  */
 function SelectItem({
@@ -181,7 +180,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-md py-2 pr-9 pl-3 text-base outline-hidden select-none [overflow-wrap:anywhere] focus:bg-muted [[data-input=keyboard]_&]:focus-visible:ring-2 [[data-input=keyboard]_&]:focus-visible:ring-ring [[data-input=keyboard]_&]:focus-visible:ring-inset data-disabled:pointer-events-none data-disabled:opacity-50',
+        'relative flex min-h-11 w-full items-center gap-2 rounded-sheet py-2 pr-9 pl-3 text-base outline-none select-none [overflow-wrap:anywhere] focus:bg-hover-popover [[data-input=keyboard]_&]:focus-visible:outline-2 [[data-input=keyboard]_&]:focus-visible:outline-solid [[data-input=keyboard]_&]:focus-visible:-outline-offset-2 [[data-input=keyboard]_&]:focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:text-muted-foreground',
         'data-[state=checked]:font-semibold',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className,
@@ -190,7 +189,7 @@ function SelectItem({
     >
       <span className="pointer-events-none absolute right-3 flex size-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Check aria-hidden="true" className="size-4 text-primary" />
+          <Check aria-hidden="true" className="size-4 text-foreground" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>

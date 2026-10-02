@@ -69,9 +69,12 @@ export const Keyboard: Story = {
     // Keyboard focus is shown with a ring, not only the faint muted background.
     await expect(system).toHaveAttribute('data-highlighted');
     await expect(system.matches(':focus-visible')).toBe(true);
-    await expect(getComputedStyle(system).boxShadow).not.toBe('none');
-    await expect(getComputedStyle(settings).boxShadow).toBe('none');
+    await expect(getComputedStyle(system).outlineStyle).toBe('solid');
+    await expect(getComputedStyle(settings).outlineStyle).toBe('none');
     await expect(menu).toBeVisible();
+    // Items show the hand on hover like any other clickable.
+    await expect(getComputedStyle(settings).cursor).toBe('pointer');
+    await expect(getComputedStyle(system).cursor).toBe('pointer');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     await waitFor(() => expect(trigger).toHaveFocus());

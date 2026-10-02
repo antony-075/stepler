@@ -1,20 +1,20 @@
-import { Card, CardContent } from '@stepler/ui/components/card';
+import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import type { ReactNode } from 'react';
 import { SiteHeader } from './site-header';
 
 /**
- * Header + one card on the page atmosphere, centred horizontally and top-aligned like the
- * sign-in card on /login (a vertically centred card jumps when its content changes height); for
- * verify and similar single steps.
+ * Header + one panel on the light table, centred horizontally and top-aligned like the sign-in
+ * panel on /login (a vertically centred panel jumps when its content changes height); for verify
+ * and similar single steps.
  */
 export function CenteredPage({ children }: { children: ReactNode }) {
   return (
-    <div className="stepler-atmosphere flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader />
-      <main className="stepler-container flex-1 pt-2 pb-16 sm:pt-6 lg:pt-12">
-        <Card className="mx-auto w-full max-w-md">
-          <CardContent>{children}</CardContent>
-        </Card>
+      <main className="stepler-container flex-1 pt-4 pb-16 sm:pt-8 lg:pt-16">
+        <Panel className="mx-auto w-full max-w-md">
+          <PanelContent>{children}</PanelContent>
+        </Panel>
       </main>
     </div>
   );

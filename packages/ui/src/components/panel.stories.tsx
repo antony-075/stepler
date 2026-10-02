@@ -1,12 +1,19 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
 import { Button } from './button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './card';
+import {
+  Panel,
+  PanelContent,
+  PanelDescription,
+  PanelFooter,
+  PanelHeader,
+  PanelTitle,
+} from './panel';
 import { Separator } from './separator';
 
 const meta = {
-  title: 'Components/Card',
-  component: Card,
+  title: 'Components/Panel',
+  component: Panel,
   decorators: [
     (Story) => (
       <div className="w-md max-w-full">
@@ -14,31 +21,31 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Card>;
+} satisfies Meta<typeof Panel>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>Anna and Taras, wedding</CardTitle>
-        <CardDescription>Created on 12 September</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>Anna and Taras, wedding</PanelTitle>
+        <PanelDescription>Created on 12 September</PanelDescription>
+      </PanelHeader>
+      <PanelContent>
         <p>128 photos, 6 videos and 14 notes from 37 guests.</p>
-      </CardContent>
-      <CardFooter>
+      </PanelContent>
+      <PanelFooter>
         <Button>Open collection</Button>
-      </CardFooter>
-    </Card>
+      </PanelFooter>
+    </Panel>
   ),
   play: async ({ canvas, canvasElement }) => {
     await expect(
       canvas.getByRole('heading', { level: 2, name: 'Anna and Taras, wedding' }),
     ).toBeVisible();
-    await expect(canvasElement.querySelector('[data-slot="card"]')).toBeVisible();
+    await expect(canvasElement.querySelector('[data-slot="panel"]')).toBeVisible();
     await expect(canvas.getByRole('button', { name: 'Open collection' })).toBeVisible();
   },
 };
@@ -52,14 +59,14 @@ export const Dark: Story = {
   },
 };
 
-/** `CardContent` alone is the single-step card used by sign-in and verify. */
+/** `PanelContent` alone is the single-step card used by sign-in and verify. */
 export const ContentOnly: Story = {
   render: () => (
-    <Card>
-      <CardContent>
+    <Panel>
+      <PanelContent>
         <p>Check your inbox: we sent a sign-in link.</p>
-      </CardContent>
-    </Card>
+      </PanelContent>
+    </Panel>
   ),
   play: async ({ canvas }) => {
     await expect(canvas.getByText('Check your inbox: we sent a sign-in link.')).toBeVisible();
@@ -68,16 +75,16 @@ export const ContentOnly: Story = {
 
 export const TitleAsChild: Story = {
   render: () => (
-    <Card>
-      <CardHeader>
-        <CardTitle asChild>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle asChild>
           <h3>Guest link</h3>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+        </PanelTitle>
+      </PanelHeader>
+      <PanelContent>
         <p>Anyone with this link can upload.</p>
-      </CardContent>
-    </Card>
+      </PanelContent>
+    </Panel>
   ),
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('heading', { level: 3, name: 'Guest link' })).toBeVisible();
@@ -86,37 +93,37 @@ export const TitleAsChild: Story = {
 };
 
 /**
- * Only a following card section trims the bottom padding: content before a Separator keeps it,
+ * Only a following panel section trims the bottom padding: content before a Separator keeps it,
  * and a footer after content still gets its top spacing.
  */
 export const SeparatedContent: Story = {
   render: () => (
-    <Card>
-      <CardContent>
+    <Panel>
+      <PanelContent>
         <p>Guests can see earlier uploads.</p>
-      </CardContent>
+      </PanelContent>
       <Separator />
-      <CardContent>
+      <PanelContent>
         <p>Uploads are open until 20 September.</p>
-      </CardContent>
-      <CardFooter>
+      </PanelContent>
+      <PanelFooter>
         <Button>Save</Button>
-      </CardFooter>
-    </Card>
+      </PanelFooter>
+    </Panel>
   ),
   play: async ({ canvasElement }) => {
     const contents = Array.from(
-      canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-content"]'),
+      canvasElement.querySelectorAll<HTMLElement>('[data-slot="panel-content"]'),
     );
     const footers = Array.from(
-      canvasElement.querySelectorAll<HTMLElement>('[data-slot="card-footer"]'),
+      canvasElement.querySelectorAll<HTMLElement>('[data-slot="panel-footer"]'),
     );
     await expect(contents).toHaveLength(2);
     await expect(footers).toHaveLength(1);
     const [first, second] = contents as [HTMLElement, HTMLElement];
     await expect(getComputedStyle(first).paddingBottom).not.toBe('0px');
     await expect(getComputedStyle(second).paddingBottom).toBe('0px');
-    await expect(getComputedStyle(footers[0]!).paddingTop).toBe('20px');
+    await expect(getComputedStyle(footers[0]!).paddingTop).toBe('16px');
   },
 };
 
@@ -126,15 +133,15 @@ const LONG_TITLE = 'a'.repeat(40) + '@' + 'example-collection.com';
 export const LongText: Story = {
   globals: { viewport: { value: 'phone' } },
   render: () => (
-    <Card>
-      <CardHeader>
-        <CardTitle>{LONG_TITLE}</CardTitle>
-        <CardDescription>{LONG_TITLE}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Panel>
+      <PanelHeader>
+        <PanelTitle>{LONG_TITLE}</PanelTitle>
+        <PanelDescription>{LONG_TITLE}</PanelDescription>
+      </PanelHeader>
+      <PanelContent>
         <p>{LONG_TITLE}</p>
-      </CardContent>
-    </Card>
+      </PanelContent>
+    </Panel>
   ),
   play: async ({ canvas, canvasElement }) => {
     await expect(window.innerWidth).toBe(360);
@@ -143,4 +150,28 @@ export const LongText: Story = {
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
   },
+};
+
+/** `sheet`: no padding, rows or a grid fill it edge to edge; rows split with `divide-y`. */
+export const Sheet: Story = {
+  render: () => (
+    <Panel variant="sheet" className="divide-y">
+      {['Весілля Олі та Тараса', 'Ювілей бабусі Галини', 'Випускний 11-Б'].map((title) => (
+        <div key={title} className="flex min-h-14 items-center px-4">
+          {title}
+        </div>
+      ))}
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const sheet = canvasElement.querySelector<HTMLElement>('[data-slot="panel"]')!;
+    await expect(sheet).toHaveAttribute('data-variant', 'sheet');
+    await expect(getComputedStyle(sheet).borderTopLeftRadius).toBe('4px');
+    await expect(getComputedStyle(sheet).boxShadow).toBe('none');
+  },
+};
+
+export const SheetDark: Story = {
+  ...Sheet,
+  globals: { theme: 'dark' },
 };

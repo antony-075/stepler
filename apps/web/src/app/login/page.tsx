@@ -5,8 +5,13 @@ import { getSessionUser } from '@/api/server';
 import { SignInLanding } from './sign-in-landing';
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('login');
-  return { title: t('pageTitle') };
+  const [t, tl] = await Promise.all([getTranslations('login'), getTranslations('landing')]);
+  // The same page as `/`, which is the one to index.
+  return {
+    title: t('pageTitle'),
+    description: tl('metaDescription'),
+    robots: { index: false, follow: true },
+  };
 }
 
 export default async function LoginPage({

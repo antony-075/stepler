@@ -43,20 +43,24 @@ export function AppShell({ children }: { children: ReactNode }) {
     return (
       <main className="grid min-h-dvh place-items-center bg-background px-4">
         {failed ? (
-          <div className="grid gap-4 text-center">
-            <p role="alert">{t(errorMessageKey(failure))}</p>
+          <div className="grid max-w-sm justify-items-center gap-4 text-center">
+            <p role="alert" className="text-pretty">
+              {t(errorMessageKey(failure))}
+            </p>
             <Button onClick={() => void me.refetch()}>{t('verify.retry')}</Button>
           </div>
         ) : (
-          <p role="status">{t('app.loading')}</p>
+          <p role="status" className="text-muted-foreground">
+            {t('app.loading')}
+          </p>
         )}
       </main>
     );
   }
 
-  // The admin area is a flat surface (no stepler-atmosphere): it is a tool, and the glow is kept
-  // for the public pages. No section nav: the brand goes back to the collections and settings
-  // live in the account menu.
+  // The admin area is the light table itself: flat, no decoration. No section nav (owner decision
+  // 2026-10-01; the C-dashboard artboard's «Колекції / Налаштування» is not followed): the
+  // wordmark goes back to the collections and settings live in the account menu.
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader variant="app" brandHref="/app">

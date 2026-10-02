@@ -1,3 +1,4 @@
+import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import { Label } from './label';
@@ -22,7 +23,7 @@ type FieldProps = {
  * The one way forms wire a label, a hint and an error to a control. The control is rendered
  * through the render prop so any input (Input, Textarea, a Radix trigger) receives the same
  * `id`, `aria-describedby` and `aria-invalid`. The error has `role="alert"` so it is announced
- * when it appears.
+ * when it appears, and a `CircleAlert` icon so it never relies on colour alone.
  *
  * Only for controls a `<label for>` can name (Input, Textarea, Checkbox, Switch, a Radix trigger).
  * Do not wrap a RadioGroup in Field: it is a `role="radiogroup"` div, so name it with
@@ -45,7 +46,7 @@ function Field({ id, label, description, error, className, children }: FieldProp
         <p
           id={descriptionId}
           data-slot="field-description"
-          className="text-sm text-muted-foreground"
+          className="text-sm leading-[1.45] text-muted-foreground"
         >
           {description}
         </p>
@@ -55,9 +56,11 @@ function Field({ id, label, description, error, className, children }: FieldProp
           id={errorId}
           role="alert"
           data-slot="field-error"
-          className="text-sm font-medium text-destructive"
+          className="flex items-start gap-1.5 text-sm leading-[1.45] text-destructive"
         >
-          {error}
+          {/* An icon too: destructive and pencil are not told apart by colour. */}
+          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span className="min-w-0">{error}</span>
         </p>
       ) : null}
     </div>

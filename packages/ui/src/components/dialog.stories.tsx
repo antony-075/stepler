@@ -86,7 +86,7 @@ export const CloseButton: Story = {
   },
 };
 
-/** Full width minus the 16px gutters on a phone; `max-w-md` from `sm`. */
+/** Full width minus the 16px gutters on a phone; 480px from `sm`. */
 export const Phone: Story = {
   globals: { viewport: { value: 'phone' } },
   play: async ({ canvas }) => {
@@ -106,8 +106,8 @@ export const Laptop: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Rename collection' }));
     const dialog = await screen.findByRole('dialog');
     await settled(dialog);
-    // max-w-md = 28rem.
-    await expect(Math.round(dialog.getBoundingClientRect().width)).toBe(448);
+    // 480px (DESIGN-SYSTEM.md §5.4).
+    await expect(Math.round(dialog.getBoundingClientRect().width)).toBe(480);
   },
 };
 

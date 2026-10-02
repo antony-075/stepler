@@ -1,189 +1,478 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './stapled-stack.css';
 
 /* Scan ui sources wherever this stylesheet is imported (e.g. apps/web). */
 @source '../';
 
 /*
- * Design tokens, direction v4 (approved 2026-09-30; direction in docs/ux/README.md, the token
- * and contrast table in docs/ux/design-system.md). Cool ink-blue for everything you act on, warm apricot only as
- * decoration (light and memories), near-neutral greys between. Dark is "the same room at night".
- * Every text pair passes WCAG AA in both themes; input edges are >= 3:1 against the card.
+ * Design tokens, direction C «Контактний аркуш» (owner decision 2026-10-02; specification in
+ * docs/design/DESIGN-SYSTEM.md §2, implemented state and contrast in docs/ux/design-system.md).
+ * A light table with white sheets, ink for admin actions, a rare red-orange wax pencil for
+ * selection, "new", the active tab and the guest's main action, dusty violet for links,
+ * information and focus (never the pencil). Dark is "the light table at night": greenish
+ * black, sheets half a tone lighter, popovers lighter still instead of a shadow. Every text pair passes 4.5:1 and every control edge 3:1 (Foundations/Contrast).
+ * shadcn names are kept, so `bg-card`, `text-muted-foreground` and friends keep working.
  */
 :root {
   color-scheme: light;
-  --radius: 0.75rem;
-  --background: #f4f4f7;
-  --foreground: #16182a;
+
+  /* Surfaces and text */
+  --background: #f0f1ee;
+  --foreground: #141614;
   --card: #ffffff;
-  --card-foreground: #16182a;
+  --card-foreground: #141614;
   --popover: #ffffff;
-  --popover-foreground: #16182a;
-  --primary: #3b4bd8;
-  --primary-hover: #2f3db8;
+  --popover-foreground: #141614;
+  --muted: #e4e6e1;
+  --muted-foreground: #5a5d58;
+  --border: #d6d8d2;
+  --input: #83877f;
+
+  /* Actions */
+  --primary: #141614;
+  --primary-hover: #2e312d;
+  --primary-active: #454944;
   --primary-foreground: #ffffff;
-  --secondary: #ebecf1;
-  --secondary-foreground: #16182a;
-  --muted: #ebecf1;
-  --muted-foreground: #5a5e73;
-  --accent: #ebecf1;
-  --accent-foreground: #16182a;
-  --accent-warm: #f0a04b;
-  --accent-warm-foreground: #2a1605;
-  --success: #1a7f4b;
-  --success-soft: #e4f3ea;
-  --destructive: #c23a2e;
+  --pencil: #b83e26;
+  --pencil-hover: #a33520;
+  --pencil-active: #8e2d1b;
+  --pencil-foreground: #ffffff;
+  --pencil-soft: #fbece8;
+  --link: #5a4a8c;
+  --link-hover: #463870;
+  --info-soft: #eeebf5;
+  --destructive: #a3203a;
+  --destructive-hover: #8a1a31;
+  --destructive-active: #731429;
   --destructive-foreground: #ffffff;
-  --border: #dfe1e9;
-  --input: #868a9e;
-  --ring: #3b4bd8;
-  --staple: #a3a7b6;
-  --staple-shine: #ecedf2;
-  --dot: #d6d8e0;
-  --glow-warm: rgb(255 186 120 / 0.42);
-  --glow-cool: rgb(150 162 255 / 0.16);
-  --shadow-card: 0 1px 2px rgb(22 24 42 / 0.05), 0 18px 44px -16px rgb(22 24 42 / 0.2);
-  --shadow-tile: 0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3);
-  /* Segmented control: a recessed well in the page colour and a raised thumb. */
-  --control-track: var(--background);
-  --control-thumb: #ffffff;
-  --shadow-thumb: 0 1px 2px rgb(22 24 42 / 0.1), 0 1px 1px rgb(22 24 42 / 0.04);
+  --destructive-soft: #f8e7ea;
+
+  /* Status */
+  --success: #2c7350;
+  --success-soft: #e5f1ea;
+  --warning: #8a6100;
+  --warning-soft: #f7eeda;
+
+  /* Frame tints: the calm fill of empty frame slots, one per collection, chosen from its id
+     (DESIGN-SYSTEM.md §2.1 «Відтінки кадрів»). Fill, edge and ink (the frame number on the fill,
+     ≥ 5.7:1). Never status, never a large surface: only empty frames and step markers. */
+  --tint-sage: #d8eadf;
+  --tint-sage-edge: #b1d0bd;
+  --tint-sage-ink: #2b5f46;
+  --tint-lavender: #e5dff6;
+  --tint-lavender-edge: #c5bbe8;
+  --tint-lavender-ink: #52438a;
+  --tint-sand: #f2e4ca;
+  --tint-sand-edge: #d9c39b;
+  --tint-sand-ink: #71501a;
+  --tint-sky: #d9e7f3;
+  --tint-sky-edge: #b2cbe1;
+  --tint-sky-ink: #2a5876;
+
+  /* Interactive states: foreground at 4% (light) / 5% (dark) over the page, a sheet, a popover. */
+  --hover: #e7e8e5;
+  --hover-card: #f6f6f6;
+  --hover-popover: #f6f6f6;
+  /* Focus is violet, never the pencil: red-orange around a field reads as an error. */
+  --ring: var(--link);
+
+  /* Overlays and media */
+  --overlay: rgb(20 22 20 / 0.48);
+  --scrim: linear-gradient(to top, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 70%);
+  --veil: rgb(255 255 255 / 0.68);
+  --viewer: #0f110f;
+  --viewer-foreground: #e9ebe6;
+
+  /* Elevation: flat by default; only layers above the content get depth. */
+  --shadow-popover: 0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06);
+  --shadow-dialog: 0 24px 48px -16px rgb(20 22 20 / 0.32);
+  --shadow-print: 0 1px 1px rgb(20 22 20 / 0.1), 0 8px 18px -8px rgb(20 22 20 / 0.28);
+
+  /* Layers */
+  --z-base: 0;
+  --z-frame-mark: 1;
+  --z-sticky: 20;
+  --z-dock: 30;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-skip: 80;
+
+  /* Motion */
+  --duration-instant: 0ms;
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+  --duration-develop: 300ms;
+  --duration-stack: 400ms;
 }
 
+/* Dark is written twice: for the system setting (unless the page chose light) and for an
+   explicit choice. Keep both blocks identical. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --background: #13141b;
-    --foreground: #eeeef3;
-    --card: #1b1d27;
-    --card-foreground: #eeeef3;
-    --popover: #1b1d27;
-    --popover-foreground: #eeeef3;
-    --primary: #a3adff;
-    --primary-hover: #bac2ff;
-    --primary-foreground: #13141b;
-    --secondary: #252836;
-    --secondary-foreground: #eeeef3;
-    --muted: #252836;
-    --muted-foreground: #a7aabc;
-    --accent: #252836;
-    --accent-foreground: #eeeef3;
-    --accent-warm: #f4b26a;
-    --accent-warm-foreground: #2a1605;
-    --success: #5fd39a;
-    --success-soft: #173327;
-    --destructive: #ff8a7d;
-    --destructive-foreground: #13141b;
-    --border: #2c2f3d;
-    --input: #6a6e85;
-    --ring: #a3adff;
-    --staple: #7e8296;
-    --staple-shine: #c9cbd6;
-    --dot: #262834;
-    --glow-warm: rgb(255 168 96 / 0.15);
-    --glow-cool: rgb(120 132 255 / 0.07);
-    --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
-    --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
-    /* Darker than the card = recessed; the thumb is lighter than the card = raised. */
-    --control-track: var(--background);
-    --control-thumb: #2c2f3d;
-    --shadow-thumb: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5);
+    --background: #141615;
+    --foreground: #e9ebe6;
+    --card: #1c1f1d;
+    --card-foreground: #e9ebe6;
+    --popover: #232724;
+    --popover-foreground: #e9ebe6;
+    --muted: #262a27;
+    --muted-foreground: #9ca099;
+    --border: #2d312e;
+    --input: #6c716b;
+    --primary: #e9ebe6;
+    --primary-hover: #ffffff;
+    --primary-active: #cdd0ca;
+    --primary-foreground: #141615;
+    --pencil: #f08766;
+    --pencil-hover: #f59b7e;
+    --pencil-active: #dd7556;
+    --pencil-foreground: #141615;
+    --pencil-soft: #33201a;
+    --link: #b6a8e8;
+    --link-hover: #cabff0;
+    --info-soft: #242036;
+    --destructive: #ff8da0;
+    --destructive-hover: #ffa3b3;
+    --destructive-active: #f07a8e;
+    --destructive-foreground: #141615;
+    --destructive-soft: #33191e;
+    --success: #77c79c;
+    --success-soft: #172a20;
+    --warning: #e2b550;
+    --warning-soft: #2b2414;
+    --tint-sage: #22352b;
+    --tint-sage-edge: #355544;
+    --tint-sage-ink: #9ad3b2;
+    --tint-lavender: #2d2746;
+    --tint-lavender-edge: #463d6c;
+    --tint-lavender-ink: #c4b8f0;
+    --tint-sand: #352e1e;
+    --tint-sand-edge: #55492e;
+    --tint-sand-ink: #e2c688;
+    --tint-sky: #20303c;
+    --tint-sky-edge: #35505f;
+    --tint-sky-ink: #9cc6e3;
+    --hover: #1f211f;
+    --hover-card: #262927;
+    --hover-popover: #2d312e;
+    --overlay: rgb(0 0 0 / 0.64);
+    --veil: rgb(20 22 21 / 0.68);
+    --shadow-popover: none;
+    --shadow-dialog: none;
+    --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
   }
 }
 
-/* An explicit choice (a future theme switch) wins over the system setting. */
+/* An explicit choice (the theme switch) wins over the system setting. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --background: #13141b;
-  --foreground: #eeeef3;
-  --card: #1b1d27;
-  --card-foreground: #eeeef3;
-  --popover: #1b1d27;
-  --popover-foreground: #eeeef3;
-  --primary: #a3adff;
-  --primary-hover: #bac2ff;
-  --primary-foreground: #13141b;
-  --secondary: #252836;
-  --secondary-foreground: #eeeef3;
-  --muted: #252836;
-  --muted-foreground: #a7aabc;
-  --accent: #252836;
-  --accent-foreground: #eeeef3;
-  --accent-warm: #f4b26a;
-  --accent-warm-foreground: #2a1605;
-  --success: #5fd39a;
-  --success-soft: #173327;
-  --destructive: #ff8a7d;
-  --destructive-foreground: #13141b;
-  --border: #2c2f3d;
-  --input: #6a6e85;
-  --ring: #a3adff;
-  --staple: #7e8296;
-  --staple-shine: #c9cbd6;
-  --dot: #262834;
-  --glow-warm: rgb(255 168 96 / 0.15);
-  --glow-cool: rgb(120 132 255 / 0.07);
-  --shadow-card: inset 0 1px 0 rgb(255 236 214 / 0.05), 0 24px 52px -20px rgb(0 0 0 / 0.75);
-  --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
-  --control-track: var(--background);
-  --control-thumb: #2c2f3d;
-  --shadow-thumb: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.5);
+  --background: #141615;
+  --foreground: #e9ebe6;
+  --card: #1c1f1d;
+  --card-foreground: #e9ebe6;
+  --popover: #232724;
+  --popover-foreground: #e9ebe6;
+  --muted: #262a27;
+  --muted-foreground: #9ca099;
+  --border: #2d312e;
+  --input: #6c716b;
+  --primary: #e9ebe6;
+  --primary-hover: #ffffff;
+  --primary-active: #cdd0ca;
+  --primary-foreground: #141615;
+  --pencil: #f08766;
+  --pencil-hover: #f59b7e;
+  --pencil-active: #dd7556;
+  --pencil-foreground: #141615;
+  --pencil-soft: #33201a;
+  --link: #b6a8e8;
+  --link-hover: #cabff0;
+  --info-soft: #242036;
+  --destructive: #ff8da0;
+  --destructive-hover: #ffa3b3;
+  --destructive-active: #f07a8e;
+  --destructive-foreground: #141615;
+  --destructive-soft: #33191e;
+  --success: #77c79c;
+  --success-soft: #172a20;
+  --warning: #e2b550;
+  --warning-soft: #2b2414;
+  --hover: #1f211f;
+  --hover-card: #262927;
+  --hover-popover: #2d312e;
+  --tint-sage: #22352b;
+  --tint-sage-edge: #355544;
+  --tint-sage-ink: #9ad3b2;
+  --tint-lavender: #2d2746;
+  --tint-lavender-edge: #463d6c;
+  --tint-lavender-ink: #c4b8f0;
+  --tint-sand: #352e1e;
+  --tint-sand-edge: #55492e;
+  --tint-sand-ink: #e2c688;
+  --tint-sky: #20303c;
+  --tint-sky-edge: #35505f;
+  --tint-sky-ink: #9cc6e3;
+  --overlay: rgb(0 0 0 / 0.64);
+  --veil: rgb(20 22 21 / 0.68);
+  --shadow-popover: none;
+  --shadow-dialog: none;
+  --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+}
+
+@theme {
+  --breakpoint-3xl: 120rem;
+  /* Almost square shapes: paper and film. No pills except dots, avatars and switch thumbs. */
+  --radius-frame: 2px;
+  --radius-sheet: 4px;
+  --radius-control: 8px;
+  --radius-dialog: 12px;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
-  /* next/font sets --font-manrope / --font-unbounded in apps/web; Storybook uses the fallbacks. */
-  --font-sans: var(--font-manrope, 'Manrope'), system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display:
-    var(--font-unbounded, 'Unbounded'), var(--font-manrope, 'Manrope'), system-ui, sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 8px);
+  /* next/font/local sets --font-geologica / --font-geist-mono in apps/web; Storybook declares the
+     same files under these family names (src/fonts/fonts.css). */
+  --font-sans: var(--font-geologica, 'Geologica'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    var(--font-geist-mono, 'Geist Mono'), ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent-warm: var(--accent-warm);
-  --color-accent-warm-foreground: var(--accent-warm-foreground);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-pencil: var(--pencil);
+  --color-pencil-hover: var(--pencil-hover);
+  --color-pencil-active: var(--pencil-active);
+  --color-pencil-foreground: var(--pencil-foreground);
+  --color-pencil-soft: var(--pencil-soft);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-info-soft: var(--info-soft);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-destructive-active: var(--destructive-active);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-tint-sage: var(--tint-sage);
+  --color-tint-sage-edge: var(--tint-sage-edge);
+  --color-tint-sage-ink: var(--tint-sage-ink);
+  --color-tint-lavender: var(--tint-lavender);
+  --color-tint-lavender-edge: var(--tint-lavender-edge);
+  --color-tint-lavender-ink: var(--tint-lavender-ink);
+  --color-tint-sand: var(--tint-sand);
+  --color-tint-sand-edge: var(--tint-sand-edge);
+  --color-tint-sand-ink: var(--tint-sand-ink);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-sky-edge: var(--tint-sky-edge);
+  --color-tint-sky-ink: var(--tint-sky-ink);
+  --color-hover: var(--hover);
+  --color-hover-card: var(--hover-card);
+  --color-hover-popover: var(--hover-popover);
   --color-ring: var(--ring);
-  --color-staple: var(--staple);
-  --shadow-card: var(--shadow-card);
-  --color-control-track: var(--control-track);
-  --color-control-thumb: var(--control-thumb);
-  --shadow-tile: var(--shadow-tile);
-  --shadow-thumb: var(--shadow-thumb);
+  --color-overlay: var(--overlay);
+  --color-veil: var(--veil);
+  --color-viewer: var(--viewer);
+  --color-viewer-foreground: var(--viewer-foreground);
+  --shadow-popover: var(--shadow-popover);
+  --shadow-dialog: var(--shadow-dialog);
+  --shadow-print: var(--shadow-print);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/70;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* Tailwind 4 leaves buttons on the default arrow; anything that acts on click shows the hand,
+     and a control that can't be used says so. Utilities still override this per component. */
+  :where(
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    a[href],
+    label[for],
+    summary,
+    select:not(:disabled),
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [role='option'],
+    [role='tab'],
+    [role='radio'],
+    [role='switch'],
+    [role='checkbox']
+  ) {
+    cursor: pointer;
+  }
+  :where(
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled]:is(
+      [role='menuitem'],
+      [role='menuitemradio'],
+      [role='menuitemcheckbox'],
+      [role='option'],
+      [role='tab'],
+      [role='radio'],
+      [role='switch'],
+      [role='checkbox']
+    )
+  ) {
+    cursor: not-allowed;
+  }
 }
 
-/* The page column: a 1240px content width (1320px from 1600px) inside a 16 / 24 / 40px gutter.
-   The gutter is exposed as --stepler-gutter so a child can bleed into it
-   (`-mx-(--stepler-gutter) px-(--stepler-gutter)`) and stay in step with it. */
+/*
+ * Type scale (DESIGN-SYSTEM.md §3.2): Geologica for all text, the SHRP axis (sharp terminals)
+ * only at 19px and above, Geist Mono only for data (frame numbers, times, sizes, counters).
+ * Sizes step up at md (768px) and xl (1280px). Each `type-*` utility sets size, line height and,
+ * for headings, weight and sharpness, so a heading is one class.
+ */
+@utility font-wordmark {
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 100;
+  letter-spacing: -0.01em;
+}
+
+/* Sharp terminals for display text without a size (e.g. a heading sized by its context). */
+@utility font-display {
+  font-variation-settings: 'SHRP' 80;
+}
+
+/* h1 of guest pages and the sign-in landing: 28 (under 360px) / 32 / 44 / 64px. */
+@utility type-display {
+  font-size: 2rem;
+  line-height: 1.12;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 80;
+  text-wrap: balance;
+  @media (width < 360px) {
+    font-size: 1.75rem;
+  }
+  @variant md {
+    font-size: 2.75rem;
+    letter-spacing: -0.01em;
+  }
+  @variant xl {
+    font-size: 4rem;
+  }
+}
+
+/* h1 of admin pages: 28 / 32 / 44px. */
+@utility type-h1 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 80;
+  text-wrap: balance;
+  @variant md {
+    font-size: 2rem;
+  }
+  @variant xl {
+    font-size: 2.75rem;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Section headings: 19 / 24px. */
+@utility type-h2 {
+  font-size: 1.1875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 60;
+  text-wrap: balance;
+  @variant md {
+    font-size: 1.5rem;
+  }
+}
+
+/* Panel headings: 16 / 17px; too small for SHRP. */
+@utility type-h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 600;
+  text-wrap: balance;
+  @variant md {
+    font-size: 1.0625rem;
+  }
+}
+
+/* Guest texts and the guest's main button: 17px. */
+@utility type-body-lg {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+/* Admin body: 16 / 15px. Fields stay 16px everywhere (no iOS zoom). */
+@utility type-body {
+  font-size: 1rem;
+  line-height: 1.5;
+  @variant md {
+    font-size: 0.9375rem;
+  }
+}
+
+@utility type-small {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Captions under a frame, the terms line: the smallest size for words. */
+@utility type-caption {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Data in Geist Mono: frame number, time, duration, size. 12px only for digits. */
+@utility type-data {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A range or count as the heading's data, e.g. "#087–#116": 16 / 20px. */
+@utility type-data-lg {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  @variant md {
+    font-size: 1.25rem;
+  }
+}
+
+/* The page column: a 1240px content width (1320px from 1600px) inside a 16 / 24 / 32 / 40px
+   gutter (base / sm / lg / 2xl). The gutter is exposed as --stepler-gutter so a child can bleed
+   into it (`-mx-(--stepler-gutter) px-(--stepler-gutter)`) and stay in step with it. */
 @utility stepler-container {
   --stepler-gutter: 1rem;
   --stepler-content: 1240px;
@@ -195,6 +484,9 @@
     --stepler-gutter: 1.5rem;
   }
   @variant lg {
+    --stepler-gutter: 2rem;
+  }
+  @variant 2xl {
     --stepler-gutter: 2.5rem;
   }
   @media (width >= 100rem) {
@@ -202,34 +494,14 @@
   }
 }
 
-/* Page atmosphere: a warm key light (top right), a faint cool fill (bottom left) and the dot
-   grid, faded towards the edges. Decorative only; never behind text that needs contrast. */
-@utility stepler-atmosphere {
-  position: relative;
-  isolation: isolate;
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
-    background-size: 22px 22px;
-    background-position: 11px 11px;
-    mask-image: radial-gradient(ellipse 70% 55% at 30% 30%, #000 20%, transparent 80%);
+/* The wax-pencil stroke drawing itself (DESIGN-SYSTEM.md §8). For an SVG path with
+   `pathLength="1"` and `stroke-dasharray: 1`; without the animation (reduced motion) the stroke
+   is simply there. Duration, easing and delay belong to the caller. */
+@keyframes pencil-draw {
+  from {
+    stroke-dashoffset: 1;
   }
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        min(900px, 120vw) min(640px, 90vw) at 92% -4%,
-        var(--glow-warm),
-        transparent 70%
-      ),
-      radial-gradient(min(700px, 100vw) 520px at -6% 104%, var(--glow-cool), transparent 70%);
+  to {
+    stroke-dashoffset: 0;
   }
 }

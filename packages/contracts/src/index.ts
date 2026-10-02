@@ -19,6 +19,23 @@ export {
   type UpdateMeRequest,
 } from './auth.js';
 export {
+  collectionDescriptionSchema,
+  collectionIdParamsSchema,
+  collectionListResponseSchema,
+  collectionSchema,
+  collectionStatusSchema,
+  collectionTitleSchema,
+  createCollectionRequestSchema,
+  listCollectionsQuerySchema,
+  updateCollectionRequestSchema,
+  type Collection,
+  type CollectionListResponse,
+  type CollectionStatus,
+  type CreateCollectionRequest,
+  type ListCollectionsQuery,
+  type UpdateCollectionRequest,
+} from './collections.js';
+export {
   ERROR_CODES,
   problemDetailsSchema,
   type ErrorCode,
@@ -30,3 +47,4 @@ export {
   type HealthLiveResponse,
   type HealthReadyResponse,
 } from './health.js';
+export { usageResponseSchema, type UsageResponse } from './usage.js';
