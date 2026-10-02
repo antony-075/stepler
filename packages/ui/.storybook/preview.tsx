@@ -51,6 +51,7 @@ const preview: Preview = {
     // Stories are checked at these widths (mobile-first).
     viewport: {
       options: {
+        small: { name: 'Small 320', styles: { width: '320px', height: '640px' }, type: 'mobile' },
         phone: { name: 'Phone 360', styles: { width: '360px', height: '780px' }, type: 'mobile' },
         tablet: {
           name: 'Tablet 768',
