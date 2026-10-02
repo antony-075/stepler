@@ -84,3 +84,53 @@ test.describe('access page', () => {
     }
   });
 });
+
+test.describe('sharing from the collection page', () => {
+  test('Share shows the same link as Access; a paused link is flagged on the dashboard and in Share', async ({
+    page,
+  }) => {
+    const collection = await openAccess(page, 'Хрестини Марійки');
+    const accessUrl = await page
+      .locator('[data-slot="link-panel"]')
+      .getByRole('textbox', { name: T.link })
+      .inputValue();
+
+    // Share from the overview: the same URL and its QR.
+    await page.getByRole('link', { name: 'Кадри' }).click();
+    const share = page.getByRole('button', { name: 'Поділитися', exact: true });
+    await share.click();
+    const dialog = page.getByRole('dialog', { name: 'Поділіться з гостями' });
+    await expect(
+      dialog.getByRole('img', { name: `QR-код посилання “${T.guestLink}”` }),
+    ).toBeVisible();
+    await expect(dialog.getByRole('textbox', { name: T.link })).toHaveValue(accessUrl);
+    // Keyboard: Escape closes it and focus goes back to the button that opened it.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(share).toBeFocused();
+
+    // Pause on Access; the dashboard says so without a reload.
+    await page.getByRole('link', { name: T.access }).click();
+    await page.getByRole('button', { name: 'Призупинити' }).click();
+    await expect(
+      page.locator('[data-slot="link-panel"]').getByText('Призупинене', { exact: true }),
+    ).toBeVisible();
+    await page.getByRole('link', { name: 'Колекції' }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    const row = page.locator('[data-slot="collection-strip"]', { hasText: 'Хрестини Марійки' });
+    await expect(row.getByText('Посилання призупинене')).toBeVisible();
+
+    // The Share dialog warns and resumes in place; the row is active again.
+    await page.goto(`/app/collections/${collection.id}`);
+    await page.getByRole('button', { name: 'Поділитися', exact: true }).click();
+    await expect(
+      dialog.getByText('Посилання призупинене — гості його не відкриють.'),
+    ).toBeVisible();
+    await dialog.getByRole('button', { name: 'Відновити' }).click();
+    await expect(dialog.getByText('Посилання призупинене — гості його не відкриють.')).toBeHidden();
+    // Escape would first dismiss the «resumed» toast (the top layer); close the dialog itself.
+    await dialog.getByRole('button', { name: 'Закрити' }).first().click();
+    await page.getByRole('link', { name: 'Колекції' }).click();
+    await expect(row.getByText('Посилання активне')).toBeVisible();
+  });
+});

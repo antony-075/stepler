@@ -207,7 +207,9 @@
       "share": "Share the link or QR code",
       "collect": "Guests add photos, videos and messages"
     },
-    "noContentYet": "Nothing added yet"
+    "noContentYet": "Nothing added yet",
+    "linkActive": "Link active",
+    "linkPaused": "Link paused"
   },
   "collection": {
     "pageTitle": "Collection",
@@ -258,7 +260,9 @@
       "content": "Frames",
       "access": "Access",
       "settings": "Settings"
-    }
+    },
+    "share": "Share",
+    "shareLink": "Share the link"
   },
   "guestLinks": {
     "permissions": {
@@ -349,5 +353,15 @@
       "cancel": "Cancel",
       "limitTitle": "No more links can be created"
     }
+  },
+  "share": {
+    "title": "Share with guests",
+    "description": "Guests open the link or scan the QR code, no sign-up needed.",
+    "pausedNotice": "The link is paused: guests can’t open it.",
+    "manage": "Manage access",
+    "close": "Close",
+    "loading": "Loading the link",
+    "loadFailed": "Couldn’t load the link.",
+    "retry": "Try again"
   }
 }

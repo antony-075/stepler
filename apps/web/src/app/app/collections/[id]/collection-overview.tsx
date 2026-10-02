@@ -23,6 +23,7 @@ import { errorMessageKey } from '@/errors/error-message';
 import { collectionTint } from '../../collection-tint';
 import { CollectionNotFound } from '../collection-not-found';
 import { CollectionHeader } from './collection-header';
+import { ShareButton } from './share-dialog';
 import { useCollection } from '../use-collection';
 
 /**
@@ -31,7 +32,8 @@ import { useCollection } from '../use-collection';
  * collection name at 44px would push the sheet off the first screen), status and date, the
  * description, the archive state with its one action, and the empty sheet: centred and quiet, a
  * tile in the collection's tint (the same as its cover on the dashboard) with an icon, what will
- * appear there and, unless archived, how. The section nav under the header leads to Access and
+ * appear there and, unless archived, how, with «Поділитися посиланням» (outline: the same Share dialog
+ * as the header's ink «Поділитися», §6.6). The section nav under the header leads to Access and
  * Settings (G9).
  */
 export function CollectionOverview({ id }: { id: string }) {
@@ -71,7 +73,18 @@ function Overview({ collection }: { collection: Collection }) {
 
   return (
     <>
-      <CollectionHeader collection={collection} current="content">
+      <CollectionHeader
+        collection={collection}
+        current="content"
+        actions={
+          // Archived, guests can't open it: the notice below says so, so there is nothing to share.
+          archived ? undefined : (
+            <ShareButton collection={collection} className="w-full sm:w-auto">
+              {t('share')}
+            </ShareButton>
+          )
+        }
+      >
         {/* Below the header, not inside it: the actions stay level with the title. */}
         {collection.description !== null ? (
           <p className="max-w-[60ch] whitespace-pre-line [overflow-wrap:anywhere]">
@@ -98,6 +111,11 @@ function Overview({ collection }: { collection: Collection }) {
               <p className="text-pretty text-muted-foreground">{t('contentEmptyText')}</p>
             )}
           </div>
+          {archived ? null : (
+            <ShareButton collection={collection} variant="outline" className="w-full sm:w-auto">
+              {t('shareLink')}
+            </ShareButton>
+          )}
         </Panel>
       </section>
     </>
