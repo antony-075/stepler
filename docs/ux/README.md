@@ -18,6 +18,10 @@ Admin experience is responsive and optimized for desktop while remaining fully u
 
 Use installed upstream UX/design skills for substantial design work.
 
+## Design exploration
+
+Design exploration in progress: [docs/design/DESIGN-DIRECTIONS.md](../design/DESIGN-DIRECTIONS.md) (four visual directions; none chosen yet).
+
 ## Design system
 
 Component inventory, rules, tokens and how to add a component: [design-system.md](design-system.md).
