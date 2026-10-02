@@ -10,11 +10,11 @@ const EN = {
   email: 'Email',
   submit: 'Get sign-in link',
   sent: 'Check your email',
-  appTitle: 'Your collections',
+  appTitle: 'Collections',
   settings: 'Settings',
   subject: 'Sign in to Stepler',
 };
-const UK_APP_TITLE = 'Ваші колекції';
+const UK_APP_TITLE = 'Колекції';
 
 const UK_SETTINGS = 'Налаштування';
 
@@ -38,14 +38,14 @@ test('a signed-in admin switches to English: it persists and emails follow', asy
 }) => {
   const email = newEmail();
   await signIn(page, email);
-  await expect(page.getByRole('heading', { name: UK_APP_TITLE })).toBeVisible();
+  await expect(page.getByRole('heading', { name: UK_APP_TITLE, level: 1 })).toBeVisible();
 
   await openSettings(page, email);
   await choose(page, 'English');
   await expect(page.getByRole('heading', { name: EN.settings, level: 1 })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.goto('/app');
-  await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
+  await expect(page.getByRole('heading', { name: EN.appTitle, level: 1 })).toBeVisible();
 
   // Signed out, with no locale cookie and a Ukrainian page, the profile still picks the email
   // language.
@@ -70,7 +70,7 @@ test('the profile locale wins over the cookie on /app', async ({ page, context, 
   await context.addCookies([{ name: 'st_locale', value: 'uk', url: baseURL! }]);
 
   await page.goto('/app');
-  await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
+  await expect(page.getByRole('heading', { name: EN.appTitle, level: 1 })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect((await context.cookies()).find((c) => c.name === 'st_locale')?.value).toBe('en');
 });
@@ -96,7 +96,7 @@ test('/login and /app fit a 360px screen in both languages', async ({ page, cont
   await expect(page.getByRole('heading', { name: EN.settings, level: 1 })).toBeVisible();
   expect(await overflow()).toBeLessThanOrEqual(0);
   await page.goto('/app');
-  await expect(page.getByRole('heading', { name: EN.appTitle })).toBeVisible();
+  await expect(page.getByRole('heading', { name: EN.appTitle, level: 1 })).toBeVisible();
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
 

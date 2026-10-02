@@ -148,3 +148,24 @@ export const CompactPhone: Story = {
     await expect(getComputedStyle(title).fontSize).toBe('28px');
   },
 };
+
+/** A back link with a long unbroken label (a collection title) truncates on a phone. */
+export const LongBackPhone: Story = {
+  args: {
+    back: (
+      <a href="#collection" className="inline-flex min-h-11 max-w-full items-center gap-1">
+        <ChevronLeft aria-hidden="true" className="size-4 shrink-0" />
+        <span className="min-w-0 truncate">{'Ж'.repeat(100)}</span>
+      </a>
+    ),
+    title: 'Collection settings',
+    description: undefined,
+    actions: undefined,
+  },
+  globals: { viewport: { value: 'phone' } },
+  play: async ({ canvas }) => {
+    const back = canvas.getByRole('link');
+    await expect(back.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth - 16);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};

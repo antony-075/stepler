@@ -59,6 +59,12 @@ const PAIRS: Pair[] = [
   { fg: 'muted-foreground', bg: 'pencil-soft', min: 4.5 },
   { fg: 'link', bg: 'info-soft', min: 4.5 },
   { fg: 'muted-foreground', bg: 'muted', min: 4.5 },
+  // Frame tints: the number on an empty frame, and step numbers.
+  ...['sage', 'lavender', 'sand', 'sky'].map((tint) => ({
+    fg: `tint-${tint}-ink`,
+    bg: `tint-${tint}`,
+    min: 4.5 as const,
+  })),
   { fg: 'viewer-foreground', bg: 'viewer', min: 4.5 },
   // Non-text: control edges, the focus ring, button shapes and status icons.
   ...['card', 'background', 'popover'].map((bg) => ({ fg: 'input', bg, min: 3 as const })),

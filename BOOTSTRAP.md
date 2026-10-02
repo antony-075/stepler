@@ -65,6 +65,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 9. Content reports + operator flow
 10. Legal pages and acceptance recording
 
+**Slice 1 status: implemented on branch `feat/phase-4-collections-c` (2026-10-02, web in direction C), PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-01-phase-4-slice-1-collections.md` (owner decisions D1–D9). Open acceptance criterion: "A default guest link is created" with a new collection (D3) is delivered by slice 2, which adds the link to the create transaction and backfills existing collections.
+
 Each slice should be fully tested before moving on.
 
 Not in MVP (post-MVP per `PRODUCT.md`): folders, billing, retention policies, analytics, downloads/ZIP, custom form builder.

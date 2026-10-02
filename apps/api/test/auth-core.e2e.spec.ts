@@ -8,6 +8,7 @@ import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
+import { signInAs } from './support/sessions.js';
 
 const ORIGIN = 'http://localhost:3000';
 const prisma = createTestPrisma();
@@ -32,16 +33,8 @@ describe('auth core', () => {
     await resetDatabase(prisma);
   });
 
-  async function signedIn(
-    email = 'a@stepler.test',
-    verified = true,
-  ): Promise<{ cookie: string; userId: string }> {
-    const user = await prisma.user.create({
-      data: { email, ...(verified ? { emailVerifiedAt: new Date() } : {}) },
-    });
-    const { token } = await sessions.create(user.id);
-    return { cookie: `st_session=${token}`, userId: user.id };
-  }
+  const signedIn = (email = 'a@stepler.test', verified = true) =>
+    signInAs(app, prisma, email, verified);
 
   test('no cookie → 401 UNAUTHENTICATED', async () => {
     const res = await request(server()).get('/api/v1/me').expect(401);

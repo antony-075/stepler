@@ -72,6 +72,9 @@ export const Keyboard: Story = {
     await expect(getComputedStyle(system).outlineStyle).toBe('solid');
     await expect(getComputedStyle(settings).outlineStyle).toBe('none');
     await expect(menu).toBeVisible();
+    // Items show the hand on hover like any other clickable.
+    await expect(getComputedStyle(settings).cursor).toBe('pointer');
+    await expect(getComputedStyle(system).cursor).toBe('pointer');
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     await waitFor(() => expect(trigger).toHaveFocus());

@@ -22,7 +22,7 @@ type Story = StoryObj<typeof meta>;
 /** Every variant on the card surface, where badges usually sit; axe checks the contrast. */
 export const AllVariants: Story = {
   render: () => (
-    <div className="flex flex-wrap gap-2 rounded-[20px] bg-card p-4">
+    <div className="flex flex-wrap gap-2 rounded-sheet bg-card p-4">
       {VARIANTS.map(({ variant, text }) => (
         <Badge key={variant} variant={variant}>
           {text}

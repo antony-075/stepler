@@ -12,7 +12,8 @@
     "ACCOUNT_BLOCKED": "This account is blocked.",
     "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
     "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
-    "INTERNAL": "Something went wrong. Try again."
+    "INTERNAL": "Something went wrong. Try again.",
+    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -51,10 +52,7 @@
     "loading": "Loading…",
     "signedInAs": "Signed in as",
     "logout": "Sign out",
-    "placeholderTitle": "Your collections",
-    "logoutFailed": "Couldn't sign out. Try again.",
-    "emptyTitle": "No collections yet",
-    "emptyText": "Your collections, and everything guests add to them, will appear here."
+    "logoutFailed": "Couldn't sign out. Try again."
   },
   "brand": {
     "name": "Stepler",
@@ -93,5 +91,100 @@
     "appearanceHint": "Changes apply right away, no reload needed.",
     "themeHint": "System follows your device setting. The choice applies to this browser.",
     "languageHint": "The language of the interface and of the emails Stepler sends you."
+  },
+  "collections": {
+    "pageTitle": "Collections",
+    "usage": "{used} of {limit} active collections",
+    "new": "New collection",
+    "active": "Active",
+    "archive": "Archive",
+    "archiveHint": "Guests can't open these collections. You still see everything in them.",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "createdOn": "Created {date}",
+    "archivedOn": "Archived {date}",
+    "cardSettings": "Settings for “{title}”",
+    "noActive": "No active collections. Create one or bring one back from the archive.",
+    "showMore": "Show more",
+    "loading": "Loading collections",
+    "loadFailed": "Couldn't load your collections.",
+    "retry": "Try again",
+    "emptyTitle": "Start with your first collection",
+    "emptyText": "One collection per event: a wedding, a birthday, a graduation. Guests add photos, videos and messages through a link or a QR code, and you see it all in one place.",
+    "limitTitle": "Active collection limit reached",
+    "limitReached": "You can have up to {limit} active collections at a time. Archive one to create a new one: everything in it is kept.",
+    "create": {
+      "title": "New collection",
+      "description": "Guests will see the title and description. You can change them at any time.",
+      "submit": "Create",
+      "pending": "Creating…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done": "Collection created"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Olia and Taras's wedding",
+      "description": "Description",
+      "optional": "(optional)",
+      "counter": "{count, number} / {max, number}",
+      "titleRequired": "Enter a title",
+      "titleTooLong": "The title can be at most {max} characters",
+      "descriptionTooLong": "The description can be at most {max} characters"
+    },
+    "stepsLabel": "How it works",
+    "steps": {
+      "create": "Create a collection",
+      "share": "Share the link or QR code",
+      "collect": "Guests add photos, videos and messages"
+    },
+    "noContentYet": "Nothing added yet"
+  },
+  "collection": {
+    "pageTitle": "Collection",
+    "back": "Collections",
+    "settings": "Settings",
+    "archivedTitle": "Collection archived",
+    "archivedText": "Guests can't open it. Everything in it is kept.",
+    "unarchive": "Unarchive",
+    "unarchived": "Collection unarchived",
+    "content": "Content",
+    "contentEmpty": "Photos, videos and messages from guests will appear here",
+    "notFoundTitle": "Collection not found",
+    "notFoundText": "It may have been deleted, or the link has a mistake in it.",
+    "loadFailed": "Couldn't load the collection.",
+    "loading": "Loading the collection",
+    "retry": "Try again",
+    "settingsPage": {
+      "pageTitle": "Collection settings",
+      "details": "Details",
+      "detailsHint": "Guests see the title and description.",
+      "titleHint": "Up to 100 characters.",
+      "descriptionHint": "Optional. Line breaks are kept.",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "access": "Guest access",
+      "archive": "Archive",
+      "archiveHint": "Guests lose access, everything is kept. You can bring it back at any time.",
+      "unarchiveHint": "Guests can open the collection again.",
+      "archiveConfirmTitle": "Archive “{title}”?",
+      "archiveConfirmText": "Guests won't be able to open the collection. Everything in it is kept, and you can unarchive it at any time.",
+      "archivePending": "Archiving",
+      "archived": "Collection archived",
+      "danger": "Danger zone",
+      "delete": "Delete collection",
+      "deleteHint": "The collection and everything in it will be deleted for good.",
+      "deleteButton": "Delete collection",
+      "deleteConfirmTitle": "Delete “{title}”?",
+      "deleteConfirmText": "Guests lose access at once, and everything they added is deleted. This can't be undone.",
+      "deleteConfirm": "Delete for good",
+      "deletePending": "Deleting",
+      "deleted": "Collection deleted"
+    },
+    "contentEmptyText": "Once you share the link, guests can add their photos and videos."
   }
 }

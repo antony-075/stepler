@@ -53,6 +53,22 @@
   --warning: #8a6100;
   --warning-soft: #f7eeda;
 
+  /* Frame tints: the calm fill of empty frame slots, one per collection, chosen from its id
+     (DESIGN-SYSTEM.md §2.1 «Відтінки кадрів»). Fill, edge and ink (the frame number on the fill,
+     ≥ 5.7:1). Never status, never a large surface: only empty frames and step markers. */
+  --tint-sage: #d8eadf;
+  --tint-sage-edge: #b1d0bd;
+  --tint-sage-ink: #2b5f46;
+  --tint-lavender: #e5dff6;
+  --tint-lavender-edge: #c5bbe8;
+  --tint-lavender-ink: #52438a;
+  --tint-sand: #f2e4ca;
+  --tint-sand-edge: #d9c39b;
+  --tint-sand-ink: #71501a;
+  --tint-sky: #d9e7f3;
+  --tint-sky-edge: #b2cbe1;
+  --tint-sky-ink: #2a5876;
+
   /* Interactive states: foreground at 4% (light) / 5% (dark) over the page, a sheet, a popover. */
   --hover: #e7e8e5;
   --hover-card: #f6f6f6;
@@ -128,6 +144,18 @@
     --success-soft: #172a20;
     --warning: #e2b550;
     --warning-soft: #2b2414;
+    --tint-sage: #22352b;
+    --tint-sage-edge: #355544;
+    --tint-sage-ink: #9ad3b2;
+    --tint-lavender: #2d2746;
+    --tint-lavender-edge: #463d6c;
+    --tint-lavender-ink: #c4b8f0;
+    --tint-sand: #352e1e;
+    --tint-sand-edge: #55492e;
+    --tint-sand-ink: #e2c688;
+    --tint-sky: #20303c;
+    --tint-sky-edge: #35505f;
+    --tint-sky-ink: #9cc6e3;
     --hover: #1f211f;
     --hover-card: #262927;
     --hover-popover: #2d312e;
@@ -176,6 +204,18 @@
   --hover: #1f211f;
   --hover-card: #262927;
   --hover-popover: #2d312e;
+  --tint-sage: #22352b;
+  --tint-sage-edge: #355544;
+  --tint-sage-ink: #9ad3b2;
+  --tint-lavender: #2d2746;
+  --tint-lavender-edge: #463d6c;
+  --tint-lavender-ink: #c4b8f0;
+  --tint-sand: #352e1e;
+  --tint-sand-edge: #55492e;
+  --tint-sand-ink: #e2c688;
+  --tint-sky: #20303c;
+  --tint-sky-edge: #35505f;
+  --tint-sky-ink: #9cc6e3;
   --overlay: rgb(0 0 0 / 0.64);
   --veil: rgb(20 22 21 / 0.68);
   --shadow-popover: none;
@@ -232,6 +272,18 @@
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
+  --color-tint-sage: var(--tint-sage);
+  --color-tint-sage-edge: var(--tint-sage-edge);
+  --color-tint-sage-ink: var(--tint-sage-ink);
+  --color-tint-lavender: var(--tint-lavender);
+  --color-tint-lavender-edge: var(--tint-lavender-edge);
+  --color-tint-lavender-ink: var(--tint-lavender-ink);
+  --color-tint-sand: var(--tint-sand);
+  --color-tint-sand-edge: var(--tint-sand-edge);
+  --color-tint-sand-ink: var(--tint-sand-ink);
+  --color-tint-sky: var(--tint-sky);
+  --color-tint-sky-edge: var(--tint-sky-edge);
+  --color-tint-sky-ink: var(--tint-sky-ink);
   --color-hover: var(--hover);
   --color-hover-card: var(--hover-card);
   --color-hover-popover: var(--hover-popover);
@@ -259,6 +311,42 @@
   }
   p {
     text-wrap: pretty;
+  }
+  /* Tailwind 4 leaves buttons on the default arrow; anything that acts on click shows the hand,
+     and a control that can't be used says so. Utilities still override this per component. */
+  :where(
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    a[href],
+    label[for],
+    summary,
+    select:not(:disabled),
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [role='option'],
+    [role='tab'],
+    [role='radio'],
+    [role='switch'],
+    [role='checkbox']
+  ) {
+    cursor: pointer;
+  }
+  :where(
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled]:is(
+      [role='menuitem'],
+      [role='menuitemradio'],
+      [role='menuitemcheckbox'],
+      [role='option'],
+      [role='tab'],
+      [role='radio'],
+      [role='switch'],
+      [role='checkbox']
+    )
+  ) {
+    cursor: not-allowed;
   }
 }
 

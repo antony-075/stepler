@@ -15,7 +15,10 @@ export const Default: Story = {
   play: async ({ args, canvas }) => {
     // The decorator applies the default global.
     await expect(document.documentElement.dataset.theme).toBe('light');
-    await userEvent.click(canvas.getByRole('button', { name: 'Upload photos' }));
+    const button = canvas.getByRole('button', { name: 'Upload photos' });
+    // Tailwind 4 resets buttons to the arrow; the base layer gives clickables the hand.
+    await expect(getComputedStyle(button).cursor).toBe('pointer');
+    await userEvent.click(button);
     await expect(args.onClick).toHaveBeenCalledTimes(1);
   },
 };
@@ -25,6 +28,7 @@ export const Disabled: Story = {
   play: async ({ args, canvas }) => {
     const button = canvas.getByRole('button', { name: 'Upload photos' });
     await expect(button).toBeDisabled();
+    await expect(getComputedStyle(button).cursor).toBe('not-allowed');
     await userEvent.click(button, { pointerEventsCheck: 0 });
     await expect(args.onClick).not.toHaveBeenCalled();
   },
@@ -38,6 +42,7 @@ export const AriaDisabled: Story = {
     button.focus();
     await expect(button).toHaveFocus();
     await expect(getComputedStyle(button).pointerEvents).toBe('none');
+    await expect(getComputedStyle(button).cursor).toBe('not-allowed');
     // The primary button turns solid muted rather than half-transparent, so its label stays
     // readable.
     await expect(getComputedStyle(button).opacity).toBe('1');

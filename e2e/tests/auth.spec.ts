@@ -8,7 +8,7 @@ test.use({ locale: 'de-DE' });
 const T = {
   ...SIGN_IN_UK,
   logout: 'Вийти',
-  appTitle: 'Ваші колекції',
+  appTitle: 'Колекції',
   settings: 'Налаштування',
   back: 'Колекції',
   invalid: 'Посилання недійсне або вже використане. Отримайте нове.',

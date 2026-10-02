@@ -55,6 +55,14 @@ const GROUPS: { title: string; tokens: Token[] }[] = [
     ],
   },
   {
+    title: 'Frame tints',
+    tokens: ['sage', 'lavender', 'sand', 'sky'].flatMap((tint) => [
+      { name: `--tint-${tint}`, role: 'empty frame fill' },
+      { name: `--tint-${tint}-edge`, role: 'empty frame edge' },
+      { name: `--tint-${tint}-ink`, role: 'frame number on the fill' },
+    ]),
+  },
+  {
     title: 'Overlays and media',
     tokens: [
       { name: '--overlay', role: 'under a dialog or sheet' },
