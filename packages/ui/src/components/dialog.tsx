@@ -25,13 +25,16 @@ function DialogClose(props: ComponentProps<typeof DialogPrimitive.Close>) {
 // Overlay, panel, title and description classes are shared with `ConfirmDialog` (Radix
 // AlertDialog) so both dialogs match.
 const dialogOverlayClassName = cn(
-  'fixed inset-0 z-50 bg-black/50',
+  'fixed inset-0 z-(--z-overlay) bg-overlay',
+  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
   'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
 );
 
-const dialogTitleClassName = 'text-lg leading-6 font-bold';
+// A 19px/600 heading with SHRP 60 (DESIGN-SYSTEM.md §5.4), fixed at every width.
+const dialogTitleClassName =
+  "text-[1.1875rem] leading-[1.2] font-semibold text-balance [font-variation-settings:'SHRP'_60]";
 
-const dialogDescriptionClassName = 'text-sm text-muted-foreground';
+const dialogDescriptionClassName = 'text-[0.9375rem] leading-normal text-muted-foreground';
 
 function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
@@ -43,9 +46,13 @@ function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrim
   );
 }
 
+// The modal layer: `--popover`, a 12px radius, `--shadow-dialog` in light (dark relies on the
+// lighter popover and the edge), over `--overlay`. Opens with a fade and a 0.98 → 1 scale (240ms),
+// closes with a fade (160ms); no motion under reduced motion.
 const dialogContentClassName = cn(
-  'fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl border bg-card p-6 text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] sm:max-w-md',
-  'duration-200 motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
+  'fixed top-1/2 left-1/2 z-(--z-modal) grid ease-out max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-dialog border bg-popover p-5 text-popover-foreground shadow-dialog outline-none [overflow-wrap:anywhere] sm:max-w-[480px] sm:p-6',
+  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
+  'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-98 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
 );
 
 type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
@@ -56,8 +63,8 @@ type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
 };
 
 // Based on shadcn/ui (new-york). Deviations: full width minus the 16px gutters on phones and
-// `max-w-md` from `sm`, scrolls inside when taller than the screen, a 44px close button whose
-// label is a prop, v4 tokens, and no motion under reduced motion.
+// 480px from `sm`, scrolls inside when taller than the screen, a 44px close button whose label is
+// a prop, direction C surface and motion (above), and no motion under reduced motion.
 function DialogContent({
   className,
   children,
@@ -98,12 +105,16 @@ function DialogHeader({ className, ...props }: ComponentProps<'div'>) {
   );
 }
 
-// Stacked on phones with the primary action first (on top); a row aligned right from `sm`.
+// Full-width buttons in a column on phones, the primary action last (at the bottom, nearest the
+// thumb; put it last in the markup); a row aligned right from `sm`.
 function DialogFooter({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn('flex flex-col-reverse gap-2 sm:flex-row sm:justify-end', className)}
+      className={cn(
+        'flex flex-col gap-2 *:w-full sm:flex-row sm:justify-end sm:*:w-auto',
+        className,
+      )}
       {...props}
     />
   );

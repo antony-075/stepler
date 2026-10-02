@@ -3,6 +3,8 @@
 import { Check, Circle } from 'lucide-react';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 import { createContext, useContext, useEffect, useState, type ComponentProps } from 'react';
+import { focusRingInset } from '../lib/focus';
+import { popoverSurfaceClassName } from '../lib/surfaces';
 import { cn } from '../lib/utils';
 
 /**
@@ -92,9 +94,9 @@ function DropdownMenuTrigger({
 }
 
 // Based on shadcn/ui (new-york). Deviations: items are 44px tall (rule 05) with 16px text, the
-// menu never exceeds the viewport width minus the gutters, v4 tokens, no motion under reduced
-// motion, no submenus or shortcuts until a slice needs them, and no focus ring left on the
-// trigger after a pointer session (see MenuSession).
+// menu never exceeds the viewport width minus the gutters, the direction C popover surface
+// (lib/surfaces), no motion under reduced motion, no submenus or shortcuts until a slice needs
+// them, and no focus ring left on the trigger after a pointer session (see MenuSession).
 function DropdownMenuContent({
   className,
   sideOffset = 4,
@@ -127,9 +129,8 @@ function DropdownMenuContent({
           target.focus({ focusVisible: false });
         }}
         className={cn(
-          'z-50 max-h-(--radix-dropdown-menu-content-available-height) max-w-[calc(100vw-2rem)] min-w-[12rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border bg-card p-1 text-card-foreground shadow-card',
-          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-95',
-          'motion-safe:data-[side=bottom]:slide-in-from-top-2 motion-safe:data-[side=left]:slide-in-from-right-2 motion-safe:data-[side=right]:slide-in-from-left-2 motion-safe:data-[side=top]:slide-in-from-bottom-2',
+          popoverSurfaceClassName,
+          'max-h-(--radix-dropdown-menu-content-available-height) max-w-[calc(100vw-2rem)] min-w-[12rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto',
           className,
         )}
         {...props}
@@ -142,10 +143,13 @@ function DropdownMenuGroup(props: ComponentProps<typeof DropdownMenuPrimitive.Gr
   return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
-// Pointer hover highlights with the muted background only; keyboard focus adds a solid inset ring
-// (≥ 5.5:1 against the highlighted item in both themes) because the background alone is ~1.2:1.
-const itemClassName =
-  "relative flex min-h-11 cursor-default items-center gap-2 rounded-md px-3 py-2 text-base outline-hidden select-none [overflow-wrap:anywhere] focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground";
+// Pointer hover highlights with `--hover-popover` only; keyboard focus adds the violet ring
+// inside the item (≥ 6:1 against the highlight in both themes) because the fill alone is ~1.1:1.
+// A 4px radius: the popover's 8px minus its 4px padding.
+const itemClassName = cn(
+  "relative flex min-h-11 cursor-default items-center gap-2.5 rounded-sheet px-3 py-2 text-base select-none [overflow-wrap:anywhere] focus:bg-hover-popover data-disabled:pointer-events-none data-disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+  focusRingInset,
+);
 
 function DropdownMenuItem({
   className,
@@ -164,7 +168,7 @@ function DropdownMenuItem({
       className={cn(
         itemClassName,
         'data-inset:pl-9',
-        'data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:*:[svg]:text-destructive!',
+        'data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive-soft data-[variant=destructive]:*:[svg]:text-destructive!',
         className,
       )}
       {...props}
@@ -212,7 +216,7 @@ function DropdownMenuRadioItem({
     >
       <span className="pointer-events-none absolute left-3 flex size-4 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Circle aria-hidden="true" className="size-2 fill-primary text-primary" />
+          <Circle aria-hidden="true" className="size-2 fill-foreground text-foreground" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -230,7 +234,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        'px-3 py-2 text-sm font-bold text-muted-foreground [overflow-wrap:anywhere] data-inset:pl-9',
+        'px-3 py-2 text-sm font-semibold text-muted-foreground [overflow-wrap:anywhere] data-inset:pl-9',
         className,
       )}
       {...props}

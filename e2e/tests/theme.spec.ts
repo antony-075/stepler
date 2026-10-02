@@ -205,7 +205,7 @@ test.describe('sign-in card at 360px', () => {
     // The widget is in once the always-pass test key has produced a token.
     await expect(submit).toBeEnabled({ timeout: 20_000 });
     const { contentRight, buttonRight } = await submit.evaluate((button) => {
-      const content = button.closest<HTMLElement>('[data-slot="card-content"]')!;
+      const content = button.closest<HTMLElement>('[data-slot="panel-content"]')!;
       const style = getComputedStyle(content);
       return {
         contentRight: content.getBoundingClientRect().right - parseFloat(style.paddingRight),

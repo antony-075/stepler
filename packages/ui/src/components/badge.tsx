@@ -4,32 +4,19 @@ import { cn } from '../lib/utils';
 
 type BadgeVariant = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
-// Based on shadcn/ui (new-york). Deviations: status variants on the v4 tokens instead of
-// default/secondary/destructive/outline, a decorative status dot, and no `asChild`: a badge is
-// status text, never a control. `success` and `destructive` text on their own tints falls just
-// under 4.5:1 at 12px in light, so those variants keep `foreground` text and carry the colour
-// in the tint, edge and dot (as Alert does). Long text truncates to one line; the caller
-// passes the full text as `title`.
+// Based on shadcn/ui (new-york), restyled for direction C (DESIGN-SYSTEM.md §5.8): a status is
+// a 6px dot plus 13px text, with no fill and no edge. The text is `foreground`, so it reads on
+// any surface; the dot carries the colour and never stands alone. No `asChild`: a badge is
+// status text, never a control. Long text truncates to one line; pass the full text as `title`.
 const badgeVariants = cva(
-  'inline-flex max-w-full min-w-0 items-center gap-1.5 rounded-md border px-2 py-0.5 align-middle text-xs leading-4 font-bold whitespace-nowrap',
-  {
-    variants: {
-      variant: {
-        neutral: 'border-border bg-secondary text-secondary-foreground',
-        info: 'border-primary/25 bg-primary/10 text-primary',
-        success: 'border-success/40 bg-success-soft text-foreground',
-        warning: 'border-accent-warm bg-accent-warm text-accent-warm-foreground',
-        danger: 'border-destructive/40 bg-destructive/10 text-foreground',
-      },
-    },
-  },
+  'inline-flex max-w-full min-w-0 items-center gap-1.5 align-middle text-[0.8125rem] leading-[1.4] font-medium whitespace-nowrap text-foreground',
 );
 
 const DOT_CLASSES: Record<BadgeVariant, string> = {
   neutral: 'bg-muted-foreground',
-  info: 'bg-primary',
+  info: 'bg-link',
   success: 'bg-success',
-  warning: 'bg-accent-warm-foreground',
+  warning: 'bg-warning',
   danger: 'bg-destructive',
 };
 
@@ -40,7 +27,7 @@ function Badge({ variant = 'neutral', className, children, ...props }: BadgeProp
     <span
       data-slot="badge"
       data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
+      className={cn(badgeVariants(), className)}
       {...props}
     >
       <span

@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
 import { closeButtonClassName } from './button';
 
@@ -98,7 +99,7 @@ function useToast(): { toast: (input: ToastInput) => void } {
 }
 
 const ICONS: Record<ToastVariant, { icon: LucideIcon; className: string }> = {
-  info: { icon: Info, className: 'text-primary' },
+  info: { icon: Info, className: 'text-link' },
   success: { icon: CircleCheck, className: 'text-success' },
   error: { icon: CircleAlert, className: 'text-destructive' },
 };
@@ -167,8 +168,10 @@ type ToasterProps = {
 
 // Based on shadcn/ui (new-york) toast. Deviations: rendered from context by one `Toaster`,
 // bottom-centre on phones (full width minus the 16px gutter, above the safe area) and
-// bottom-right from `sm`, a built-in icon per variant, a 44px close button, `error` toasts use
-// Radix's `foreground` type (announced assertively), and motion is off under reduced motion.
+// bottom-right from `sm`, the popover surface (8px radius, `--shadow-popover`), a built-in icon
+// per variant, a 44px close button, `error` toasts use Radix's `foreground` type (announced
+// assertively), and motion is off under reduced motion: enter = fade + 8px rise (180ms), exit =
+// fade (120ms).
 function Toaster({ label, closeLabel, className }: ToasterProps) {
   const { toasts, dismiss } = useToastContext();
   const openKey = toasts
@@ -193,21 +196,18 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
               if (!next) dismiss(id);
             }}
             className={cn(
-              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-lg border bg-card p-4 pr-2 text-sm text-card-foreground shadow-card outline-none [overflow-wrap:anywhere] focus-visible:ring-[3px] focus-visible:ring-ring/70',
-              'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:duration-200 motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
-              'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:duration-150 motion-safe:data-[state=closed]:fade-out',
+              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-control border bg-popover p-4 pr-2 text-sm text-popover-foreground shadow-popover [overflow-wrap:anywhere]',
+              focusRing,
+              'ease-out animation-duration-[var(--duration-base)] data-[state=closed]:animation-duration-[var(--duration-fast)]',
+              'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
+              'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out',
               // The swipe itself follows the finger; only the snap-back and the exit are animated.
               'data-[swipe=cancel]:translate-x-0 motion-safe:data-[swipe=cancel]:transition-transform data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) motion-safe:data-[swipe=end]:animate-out motion-safe:data-[swipe=end]:fade-out data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) data-[swipe=move]:transition-none',
-              {
-                'border-border': variant === 'info',
-                'border-success/40': variant === 'success',
-                'border-destructive/50': variant === 'error',
-              },
             )}
           >
             <Icon aria-hidden="true" className={cn('mt-px size-5 shrink-0', iconClassName)} />
             <div className="grid min-w-0 gap-1 pt-px">
-              <ToastPrimitive.Title data-slot="toast-title" className="leading-5 font-bold">
+              <ToastPrimitive.Title data-slot="toast-title" className="leading-5 font-semibold">
                 {title}
               </ToastPrimitive.Title>
               {description ? (
@@ -233,7 +233,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
         label={label}
         style={{ bottom: offset }}
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-50 m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none sm:left-auto sm:w-[420px] sm:max-w-full',
+          'pointer-events-none fixed inset-x-0 z-(--z-toast) m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none sm:left-auto sm:w-[420px] sm:max-w-full',
           // Above a bottom bar the bar already clears the safe area; only the gutter remains.
           { 'pb-[max(1rem,env(safe-area-inset-bottom))]': offset === 0 },
           className,

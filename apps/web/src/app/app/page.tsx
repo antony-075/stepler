@@ -1,6 +1,5 @@
 import { EmptyState } from '@stepler/ui/components/empty-state';
 import { PageHeader } from '@stepler/ui/components/page-header';
-import { FolderOpen } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 // Placeholder dashboard until collections arrive (Phase 4).
@@ -11,7 +10,7 @@ export default async function AppHomePage() {
       <PageHeader size="compact" title={t('placeholderTitle')} />
       <div className="rounded-2xl border bg-card shadow-xs">
         <EmptyState
-          icon={<FolderOpen />}
+          frameNumber={1}
           title={t('emptyTitle')}
           description={t('emptyText')}
           className="py-14"
