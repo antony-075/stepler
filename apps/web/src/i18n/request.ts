@@ -13,6 +13,11 @@ export default getRequestConfig(async () => {
     default: Record<string, unknown>;
   };
   // Explicit zone keeps server and client rendering identical. Per-user zones come with
-  // features that display dates.
-  return { locale, messages: messages.default, timeZone: DEFAULT_TIME_ZONE };
+  // features that display dates. `short` is the one date format (date only, e.g. "1 жовт. 2026 р.").
+  return {
+    locale,
+    messages: messages.default,
+    timeZone: DEFAULT_TIME_ZONE,
+    formats: { dateTime: { short: { day: 'numeric', month: 'short', year: 'numeric' } } },
+  };
 });

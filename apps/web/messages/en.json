@@ -52,10 +52,7 @@
     "loading": "Loading…",
     "signedInAs": "Signed in as",
     "logout": "Sign out",
-    "placeholderTitle": "Your collections",
-    "logoutFailed": "Couldn't sign out. Try again.",
-    "emptyTitle": "No collections yet",
-    "emptyText": "Your collections, and everything guests add to them, will appear here."
+    "logoutFailed": "Couldn't sign out. Try again."
   },
   "brand": {
     "name": "Stepler",
@@ -94,5 +91,52 @@
     "appearanceHint": "Changes apply right away, no reload needed.",
     "themeHint": "System follows your device setting. The choice applies to this browser.",
     "languageHint": "The language of the interface and of the emails Stepler sends you."
+  },
+  "collections": {
+    "pageTitle": "Collections",
+    "usage": "{used} of {limit} active collections",
+    "new": "New collection",
+    "active": "Active",
+    "archive": "Archive",
+    "archiveHint": "Guests can't open these collections. You still see everything in them.",
+    "status": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived"
+    },
+    "createdOn": "Created {date}",
+    "archivedOn": "Archived {date}",
+    "cardSettings": "Settings for “{title}”",
+    "noActive": "No active collections. Create one or bring one back from the archive.",
+    "showMore": "Show more",
+    "loading": "Loading collections",
+    "loadFailed": "Couldn't load your collections.",
+    "retry": "Try again",
+    "emptyTitle": "No collections yet",
+    "emptyText": "A collection gathers guests' photos, videos, documents and notes from one event. Guests add them through a link or a QR code.",
+    "createFirst": "Create your first collection",
+    "limitTitle": "Active collection limit reached",
+    "limitReached": "You can have up to {limit} active collections at a time. Archive one to create a new one: everything in it is kept.",
+    "create": {
+      "title": "New collection",
+      "description": "Guests will see the title and description. You can change them at any time.",
+      "submit": "Create",
+      "pending": "Creating…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done": "Collection created"
+    },
+    "form": {
+      "title": "Title",
+      "titlePlaceholder": "Olia and Taras's wedding",
+      "description": "Description",
+      "optional": "(optional)",
+      "counter": "{count, number} / {max, number}",
+      "titleRequired": "Enter a title",
+      "titleTooLong": "The title can be at most {max} characters",
+      "descriptionTooLong": "The description can be at most {max} characters"
+    },
+    "emptyStrip": "The film is empty. What guests add will appear here.",
+    "open": "Open",
+    "openLabel": "Open “{title}”"
   }
 }

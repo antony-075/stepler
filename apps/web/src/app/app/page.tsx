@@ -1,23 +1,17 @@
-import { EmptyState } from '@stepler/ui/components/empty-state';
-import { PageHeader } from '@stepler/ui/components/page-header';
-import { Panel } from '@stepler/ui/components/panel';
+import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { CollectionsDashboard } from './collections-dashboard';
 
-// Placeholder dashboard until collections arrive (Phase 4): an empty sheet waiting for its first
-// frame, as an empty collection will look (DESIGN-SYSTEM.md §5.16).
-export default async function AppHomePage() {
-  const t = await getTranslations('app');
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('collections');
+  return { title: t('pageTitle') };
+}
+
+/** The admin's collections: the active ones, then the archive. */
+export default function AppHomePage() {
   return (
     <main className="stepler-container grid gap-6 pt-8 pb-16 lg:gap-8 lg:pt-10 lg:pb-20">
-      <PageHeader size="compact" title={t('placeholderTitle')} />
-      <Panel variant="sheet">
-        <EmptyState
-          frameNumber={1}
-          title={t('emptyTitle')}
-          description={t('emptyText')}
-          className="py-12 sm:py-16"
-        />
-      </Panel>
+      <CollectionsDashboard />
     </main>
   );
 }
