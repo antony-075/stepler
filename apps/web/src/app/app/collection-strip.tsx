@@ -75,12 +75,14 @@ function CollectionSummary({
 
   return (
     <div className="grid min-w-0 content-start gap-1.5">
-      <h3 className={cn('line-clamp-3 [overflow-wrap:anywhere]', titleClassName)}>
+      {/* The clamp sits on the link, not the heading: a clamped heading hides overflow and
+          would clip the link's focus outline. */}
+      <h3 className={cn('[overflow-wrap:anywhere]', titleClassName)}>
         <Link
           href={`/app/collections/${collection.id}`}
           title={collection.title}
           className={cn(
-            'rounded-frame text-foreground no-underline decoration-1 underline-offset-4 hover:underline',
+            'line-clamp-3 rounded-frame text-foreground no-underline decoration-1 underline-offset-4 hover:underline',
             focusRing,
           )}
         >
