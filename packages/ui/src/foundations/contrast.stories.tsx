@@ -18,7 +18,7 @@ const TEXT_COLOURS = [
   'warning',
   'destructive',
 ];
-const SURFACES = ['background', 'card', 'popover', 'hover', 'hover-card'];
+const SURFACES = ['background', 'card', 'popover', 'hover', 'hover-card', 'hover-popover'];
 
 const PAIRS: Pair[] = [
   // Text on surfaces. Warning text never sits on --hover (warning rows are not interactive).
@@ -62,7 +62,16 @@ const PAIRS: Pair[] = [
   { fg: 'viewer-foreground', bg: 'viewer', min: 4.5 },
   // Non-text: control edges, the focus ring, button shapes and status icons.
   ...['card', 'background', 'popover'].map((bg) => ({ fg: 'input', bg, min: 3 as const })),
-  ...['background', 'card', 'popover', 'pencil-soft'].map((bg) => ({
+  ...[
+    'background',
+    'card',
+    'popover',
+    'pencil-soft',
+    'hover',
+    'hover-card',
+    'hover-popover',
+    'muted',
+  ].map((bg) => ({
     fg: 'ring',
     bg,
     min: 3 as const,

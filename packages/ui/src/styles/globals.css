@@ -54,10 +54,12 @@
   --warning: #8a6100;
   --warning-soft: #f7eeda;
 
-  /* Interactive states: foreground at 4% over the page and over a sheet. */
+  /* Interactive states: foreground at 4% (light) / 5% (dark) over the page, a sheet, a popover. */
   --hover: #e7e8e5;
   --hover-card: #f6f6f6;
-  --ring: var(--pencil);
+  --hover-popover: #f6f6f6;
+  /* Focus is violet, never the pencil: red-orange around a field reads as an error. */
+  --ring: var(--link);
 
   /* Overlays and media */
   --overlay: rgb(20 22 20 / 0.48);
@@ -149,6 +151,7 @@
     --warning-soft: #2b2414;
     --hover: #1f211f;
     --hover-card: #262927;
+    --hover-popover: #2d312e;
     --overlay: rgb(0 0 0 / 0.64);
     --veil: rgb(20 22 21 / 0.68);
     --shadow-popover: none;
@@ -202,6 +205,7 @@
   --warning-soft: #2b2414;
   --hover: #1f211f;
   --hover-card: #262927;
+  --hover-popover: #2d312e;
   --overlay: rgb(0 0 0 / 0.64);
   --veil: rgb(20 22 21 / 0.68);
   --shadow-popover: none;
@@ -273,6 +277,7 @@
   --color-warning-soft: var(--warning-soft);
   --color-hover: var(--hover);
   --color-hover-card: var(--hover-card);
+  --color-hover-popover: var(--hover-popover);
   --color-ring: var(--ring);
   --color-overlay: var(--overlay);
   --color-veil: var(--veil);
@@ -298,7 +303,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/70;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;

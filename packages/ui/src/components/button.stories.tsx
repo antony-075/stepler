@@ -45,12 +45,54 @@ export const AriaDisabled: Story = {
   },
 };
 
-/** Other variants keep the half-transparent disabled look. */
+/** Every filled variant turns solid muted when disabled; nothing is half-transparent. */
 export const AriaDisabledOutline: Story = {
   args: { 'aria-disabled': true, variant: 'outline' },
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Upload photos' });
-    await expect(getComputedStyle(button).opacity).toBe('0.5');
+    await expect(getComputedStyle(button).opacity).toBe('1');
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(228, 230, 225)'); // --muted
+  },
+};
+
+/** Keyboard focus draws a 2px violet outline 2px outside the button (`--ring` = `--link`). */
+export const FocusRing: Story = {
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Upload photos' });
+    await userEvent.tab();
+    await expect(button).toHaveFocus();
+    const style = getComputedStyle(button);
+    await expect(style.outlineStyle).toBe('solid');
+    await expect(style.outlineWidth).toBe('2px');
+    await expect(style.outlineOffset).toBe('2px');
+    await expect(style.outlineColor).toBe('rgb(90, 74, 140)'); // --link, never the pencil
+  },
+};
+
+/** The guest's main action: pencil, 56px. */
+export const Guest: Story = {
+  args: { variant: 'pencil', size: 'guest', children: 'Додати фото', className: 'w-full' },
+  parameters: { layout: 'fullscreen' },
+  globals: { viewport: { value: 'phone' } },
+  render: (args) => (
+    <div className="bg-background p-4">
+      <Button {...args} />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Додати фото' });
+    await expect(button.getBoundingClientRect().height).toBe(56);
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(184, 62, 38)'); // --pencil
+  },
+};
+
+export const GuestDark: Story = {
+  ...Guest,
+  globals: { viewport: { value: 'phone' }, theme: 'dark' },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'Додати фото' });
+    // Dark text on the peach pencil.
+    await expect(getComputedStyle(button).color).toBe('rgb(20, 22, 21)');
   },
 };
 
@@ -73,20 +115,19 @@ export const IconOnly: Story = {
 
 const VARIANTS = [
   'default',
+  'pencil',
   'destructive',
   'outline',
-  'secondary',
   'ghost',
-  'link',
 ] as const satisfies readonly NonNullable<ButtonProps['variant']>[];
-const SIZES = ['default', 'sm', 'lg'] as const satisfies readonly NonNullable<
+const SIZES = ['default', 'sm', 'lg', 'guest'] as const satisfies readonly NonNullable<
   ButtonProps['size']
 >[];
 
 /** Every variant at every size, enabled and disabled, on a card, so axe checks them all. */
 export const AllVariants: Story = {
   render: () => (
-    <div className="grid gap-3 rounded-[20px] bg-card p-4">
+    <div className="grid gap-3 rounded-sheet bg-card p-4">
       {SIZES.map((size) => (
         <div key={size} className="flex flex-wrap items-center gap-2">
           {VARIANTS.map((variant) => (
@@ -134,14 +175,11 @@ export const AllVariantsDark: Story = {
   },
 };
 
-/**
- * Ghost buttons sit directly on the page atmosphere: hover and open use a translucent foreground
- * tint that blends with the warm background instead of the cool grey muted surface.
- */
-export const GhostOnAtmosphere: Story = {
-  args: { variant: 'ghost', children: 'anna@example.com', className: 'text-foreground' },
+/** Ghost buttons sit on the page: transparent at rest, `--hover` when hovered or open. */
+export const GhostOnPage: Story = {
+  args: { variant: 'ghost', children: 'anna@example.com' },
   render: (args) => (
-    <div className="stepler-atmosphere flex min-h-40 items-center justify-center bg-background p-6">
+    <div className="flex min-h-40 items-center justify-center bg-background p-6">
       <Button {...args} />
     </div>
   ),
@@ -149,17 +187,22 @@ export const GhostOnAtmosphere: Story = {
     const button = canvas.getByRole('button', { name: 'anna@example.com' });
     await expect(getComputedStyle(button).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     // Synthetic hover does not reach CSS `:hover`; the open state (a menu trigger) uses the same
-    // tint, so assert it there.
+    // fill, so assert it there.
     button.dataset.state = 'open';
-    // A translucent tint, never an opaque surface.
     await waitFor(() =>
-      expect(getComputedStyle(button).backgroundColor).toMatch(/\/ 0\.06\)$|, 0\.06\)$/),
+      expect(getComputedStyle(button).backgroundColor).toBe('rgb(231, 232, 229)'),
     );
     delete button.dataset.state;
   },
 };
 
-export const GhostOnAtmosphereDark: Story = {
-  ...GhostOnAtmosphere,
+export const GhostOnPageDark: Story = {
+  ...GhostOnPage,
   globals: { theme: 'dark' },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: 'anna@example.com' });
+    button.dataset.state = 'open';
+    await waitFor(() => expect(getComputedStyle(button).backgroundColor).toBe('rgb(31, 33, 31)'));
+    delete button.dataset.state;
+  },
 };

@@ -80,9 +80,9 @@ export const Keyboard: Story = {
     await userEvent.keyboard('{ArrowDown}{ArrowDown}');
     const dark = screen.getByRole('option', { name: 'Dark' });
     await expect(dark).toHaveFocus();
-    // Keyboard focus is shown with a ring, not only the faint muted background.
+    // Keyboard focus is shown with an inset outline, not only the faint hover fill.
     await expect(dark.matches(':focus-visible')).toBe(true);
-    await expect(getComputedStyle(dark).boxShadow).not.toBe('none');
+    await expect(getComputedStyle(dark).outlineStyle).toBe('solid');
     await expect(list).toBeVisible();
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
@@ -111,7 +111,7 @@ export const Pointer: Story = {
     // The selected option gets focus on open, but a pointer user sees no ring on it.
     const system = screen.getByRole('option', { name: 'System' });
     await waitFor(() => expect(system).toHaveFocus());
-    await expect(getComputedStyle(system).boxShadow).toBe('none');
+    await expect(getComputedStyle(system).outlineStyle).toBe('none');
     for (const option of screen.getAllByRole('option')) {
       await expect(option.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
     }

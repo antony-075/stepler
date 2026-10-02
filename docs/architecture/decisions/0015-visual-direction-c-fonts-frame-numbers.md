@@ -17,7 +17,7 @@ Three parts of that choice reach beyond styling:
 
 ### Visual direction
 
-- **Direction C «Контактний аркуш»** (contact sheet) is the visual direction of the whole product: light-table background, white sheets, a flat 1px grid of equal frames, frame number and time under each frame, ink for admin actions, a rare red-orange "wax pencil" for selection, "new", focus and the guest's main action.
+- **Direction C «Контактний аркуш»** (contact sheet) is the visual direction of the whole product: light-table background, white sheets, a flat 1px grid of equal frames, frame number and time under each frame, ink for admin actions, a rare red-orange "wax pencil" for selection, "new", the active tab and the guest's main action, dusty violet for links, information and **focus**. The focus ring (and a focused field's edge) is never the pencil: red-orange around a field reads as an error (owner change 2026-10-02).
 - **Plus one moment from Direction B «Відбиток»:** on the guest success screen, the guest's own last frames lie as a small stack of prints (±1.5° rotation, one shadow, a "develop" fade). This is the only place in the product with rotation, overlap or a shadow on a frame.
 - Everything else from A, B and D is not used. Tokens, components, layouts and motion follow DESIGN-SYSTEM.md; `docs/ux/design-system.md` records what is implemented.
 - shadcn component and token names are kept (`--background`, `--primary`, `Button`, …) so existing code keeps working while values change.

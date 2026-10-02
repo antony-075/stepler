@@ -1,37 +1,56 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Slot } from 'radix-ui';
 import type { ComponentProps } from 'react';
+import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
 
-// Based on shadcn/ui (new-york), styled with the v4 tokens. Deviation: default, lg and icon meet a 44px touch target
-// (rule 05); the xs sizes are removed. `sm` (36px) is for dense pointer-first layouts only
-// (e.g. admin tables) and must not be the primary action on touch screens.
+// Based on shadcn/ui (new-york), styled for direction C (DESIGN-SYSTEM.md §5.1). Deviations:
+// - variants: `default` (ink, the admin primary), `pencil` (only the guest's main action),
+//   `outline`, `ghost`, `destructive` (inside ConfirmDialog); no `secondary` (use `outline`) and
+//   no `link` (text links are links);
+// - sizes: default 44px, `guest` 56px (the guest's main action), `lg` 48px, `icon` 44×44, `sm`
+//   36px for dense pointer-first rows only, never the primary action on touch; no xs sizes;
+// - 8px radius, a 2px focus outline (lib/focus), pressed = scale 0.98 (no colour of its own);
+// - disabled is a solid muted fill with muted text, not half-transparent, so a label such as
+//   "Wait, checking…" stays readable; `aria-disabled` looks the same.
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg text-base font-bold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] active:translate-y-px motion-reduce:transition-none motion-reduce:active:translate-y-0 outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/70 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  cn(
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-control font-semibold whitespace-nowrap transition-[color,background-color,border-color,transform] duration-(--duration-fast) ease-out select-none active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    focusRing,
+    'disabled:pointer-events-none aria-disabled:pointer-events-none',
+  ),
   {
     variants: {
       variant: {
-        // Disabled: a solid muted fill instead of a half-transparent primary, so the label (often
-        // the reason, "Wait, checking…") stays readable.
         default:
-          'bg-primary text-primary-foreground shadow-sm hover:bg-primary-hover disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none aria-disabled:bg-muted aria-disabled:text-muted-foreground aria-disabled:opacity-100 aria-disabled:shadow-none',
+          'bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active',
+        pencil: 'bg-pencil text-pencil-foreground hover:bg-pencil-hover active:bg-pencil-active',
         destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/70',
-        outline: 'border border-input bg-card hover:bg-muted',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        // A translucent foreground tint rather than `bg-muted`: ghost buttons sit on the page
-        // (often the warm `stepler-atmosphere`), where the cool grey muted surface clashes.
-        ghost:
-          'text-primary hover:bg-foreground/[0.06] active:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.06]',
-        link: 'text-primary underline-offset-4 hover:underline',
+          'bg-destructive text-destructive-foreground hover:bg-destructive-hover active:bg-destructive-active',
+        outline:
+          'border border-input bg-card text-foreground hover:border-foreground data-[state=open]:border-foreground',
+        ghost: 'text-foreground hover:bg-hover active:bg-hover data-[state=open]:bg-hover',
       },
       size: {
-        default: 'h-11 px-4 py-2 has-[>svg]:px-3',
+        default: 'h-11 px-4 text-[0.9375rem] has-[>svg]:px-3.5',
         sm: 'h-9 gap-1.5 px-3 text-sm has-[>svg]:px-2.5',
-        lg: 'h-12 px-6 has-[>svg]:px-4',
+        lg: 'h-12 px-5 text-base has-[>svg]:px-4',
+        guest: 'h-14 px-6 type-body-lg font-semibold',
         icon: 'size-11',
       },
     },
+    compoundVariants: [
+      {
+        variant: ['default', 'pencil', 'destructive', 'outline'],
+        className:
+          'disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground aria-disabled:border-transparent aria-disabled:bg-muted aria-disabled:text-muted-foreground',
+      },
+      {
+        variant: 'ghost',
+        className:
+          'disabled:bg-transparent disabled:text-muted-foreground aria-disabled:bg-transparent aria-disabled:text-muted-foreground',
+      },
+    ],
     defaultVariants: {
       variant: 'default',
       size: 'default',
@@ -40,8 +59,10 @@ const buttonVariants = cva(
 );
 
 /** The 44px icon-only close button of dialogs and toasts (muted, not a primary action). */
-const closeButtonClassName =
-  'inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70';
+const closeButtonClassName = cn(
+  'inline-flex size-11 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-colors duration-(--duration-fast) hover:bg-hover-card hover:text-foreground motion-reduce:transition-none',
+  focusRing,
+);
 
 type ButtonProps = ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
