@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 import { Input } from './input';
-import { RotatingQr } from './link-panel';
+import { RotatingQr } from './qr-frame';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Toaster, ToastProvider, useToast } from './toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';

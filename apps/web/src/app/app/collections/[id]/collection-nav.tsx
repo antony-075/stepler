@@ -5,17 +5,17 @@ import { cn } from '@stepler/ui/lib/utils';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 
-type Section = 'content' | 'access' | 'settings';
+type Section = 'content' | 'links';
 
 const SECTIONS: { section: Section; path: string }[] = [
   { section: 'content', path: '' },
-  { section: 'access', path: '/access' },
-  { section: 'settings', path: '/settings' },
+  { section: 'links', path: '/links' },
 ];
 
 /**
  * The collection's sections under its header (G9; DESIGN-SYSTEM.md §6.6 tab row without the tabs
- * that do not exist yet): «Кадри · Доступ · Налаштування» as links, because each is its own page.
+ * that do not exist yet): «Вміст · Посилання» as links, because each is its own page. Settings
+ * are not a section but a page of their own, opened from the header (owner review 2026-10-02).
  * They look like `Tabs` (48px, 15px/600, muted until current; the current one in foreground with
  * the pencil underline) but are a `nav` of links with `aria-current="page"`, not a tablist. The
  * row scrolls inside itself when it does not fit (320px, long translations).

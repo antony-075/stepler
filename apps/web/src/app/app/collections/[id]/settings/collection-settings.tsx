@@ -55,7 +55,7 @@ import {
   toCollectionRequest,
 } from '../../../collection-form';
 import { CollectionNotFound } from '../../collection-not-found';
-import { CollectionNav } from '../collection-nav';
+import { COLLECTION_TITLE } from '../collection-header';
 import { useCollection } from '../../use-collection';
 
 export function CollectionSettings({ id }: { id: string }) {
@@ -102,11 +102,12 @@ function Settings({ collection, onDeleted }: { collection: Collection; onDeleted
   const t = useTranslations('collection');
   return (
     <>
-      {/* The same header block as the collection's other pages (CollectionHeader): back link,
-          h1 and nav at the same place, so switching pages does not move them (§6.0). */}
+      {/* At the same place as the collection's own header (§6.0): back link and h1 (capped at
+          32px from `xl` like the collection title) do not move when you open settings. */}
       <div className="grid gap-4">
         <PageHeader
           size="compact"
+          className={COLLECTION_TITLE}
           back={
             <BackLink href={`/app/collections/${collection.id}`} title={collection.title}>
               {collection.title}
@@ -114,7 +115,6 @@ function Settings({ collection, onDeleted }: { collection: Collection; onDeleted
           }
           title={t('settingsPage.pageTitle')}
         />
-        <CollectionNav id={collection.id} current="settings" />
       </div>
       <AdminFormColumn>
         <DetailsSection collection={collection} />

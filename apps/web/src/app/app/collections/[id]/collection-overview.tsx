@@ -33,8 +33,8 @@ import { useCollection } from '../use-collection';
  * description, the archive state with its one action, and the empty sheet: centred and quiet, a
  * tile in the collection's tint (the same as its cover on the dashboard) with an icon, what will
  * appear there and, unless archived, how, with «Поділитися посиланням» (outline: the same Share dialog
- * as the header's ink «Поділитися», §6.6). The section nav under the header leads to Access and
- * Settings (G9).
+ * as the header's ink «Поділитися», §6.6). The section nav under the header leads to the links
+ * (G9); settings are a header button.
  */
 export function CollectionOverview({ id }: { id: string }) {
   const t = useTranslations('collection');

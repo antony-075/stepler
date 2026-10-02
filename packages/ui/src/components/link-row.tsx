@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import { Badge, type BadgeVariant } from './badge';
-import { QrFrame } from './link-panel';
+import { QrFrame } from './qr-frame';
 
 type LinkRowStatus = 'active' | 'paused' | 'revoked';
 
@@ -52,7 +52,7 @@ function LinkRow({
         <div
           className={cn(
             'grid min-w-0 gap-1',
-            '@[36rem]/link-row:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_8rem_4.5rem] @[36rem]/link-row:items-center @[36rem]/link-row:gap-4',
+            '@[36rem]/link-row:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_10rem_6rem] @[36rem]/link-row:items-center @[36rem]/link-row:gap-4',
           )}
         >
           <p

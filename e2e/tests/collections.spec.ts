@@ -168,7 +168,7 @@ test.describe('dashboard', () => {
     const cover = strip.locator('[data-slot="tint-tile"]');
     await expect(cover).toHaveText('ЮБ');
     await expect(cover).toHaveAttribute('aria-hidden', 'true');
-    await expect(strip.getByText('Поки без кадрів')).toBeVisible();
+    await expect(strip.getByText('Поки нічого не додано')).toBeVisible();
     // Guest links come in slice 2: no QR or copy-link buttons until they work.
     await expect(strip.getByRole('button')).toHaveCount(0);
     // The row link and settings: no separate Open button.

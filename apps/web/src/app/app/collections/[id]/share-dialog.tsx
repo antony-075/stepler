@@ -3,11 +3,11 @@
 // Design (DESIGN-SYSTEM.md §6.6 «Поділитися», §5.15; plan Task 10):
 // - The fastest path to the one thing an admin does before an event: show or send the link.
 //   The dialog holds only that: the QR (200px, the white frame, light in dark mode), the link with
-//   Copy, «Завантажити QR ▾», and a way to everything else («Керувати доступом» → Access).
+//   Copy, «Завантажити QR ▾», and a way to everything else («Усі посилання» → the Links tab).
 // - At 320px it is the full-width dialog: QR centred, the field and its button stacked
 //   (CopyField below 22rem), the download and close buttons full width; nothing scrolls sideways.
 // - A paused link is the one state that makes sharing pointless, so it is a warning Alert at the
-//   top with «Відновити» right there; a link that cannot be shown says to replace it on Access.
+//   top with «Відновити» right there; a link that cannot be shown says how to replace it.
 // - Opened from the header («Поділитися», ink) and from the empty content sheet; each has its own
 //   trigger, so Escape returns focus to the button that opened it.
 
@@ -24,7 +24,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@stepler/ui/components/dialog';
-import { QrFrame } from '@stepler/ui/components/link-panel';
+import { QrFrame } from '@stepler/ui/components/qr-frame';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -108,19 +108,20 @@ function ShareBody({ collection }: { collection: Collection }) {
 
 function SharedLink({ collection, link }: { collection: Collection; link: GuestLink }) {
   const t = useTranslations('share');
-  const tAccess = useTranslations('access');
+  const tLinks = useTranslations('links');
+  const tShare = useTranslations('links.share');
   const tRoot = useTranslations();
   const { toast } = useToast();
   const invalidate = useInvalidateCollections();
   const resume = useMutation({
     mutationFn: () => activateGuestLink(link.id),
     onSuccess: async () => {
-      toast({ variant: 'success', title: tAccess('resumedToast') });
+      toast({ variant: 'success', title: tLinks('state.resumed') });
       await invalidate();
     },
   });
   const failure = isApiError(resume.error) ? resume.error.code : null;
-  const title = tAccess('defaultTitle');
+  const title = tLinks('defaultTitle');
   const alertVariant: AlertVariant = failure === null ? 'warning' : 'error';
 
   return (
@@ -136,7 +137,7 @@ function SharedLink({ collection, link }: { collection: Collection; link: GuestL
                 if (!resume.isPending) resume.mutate();
               }}
             >
-              {tAccess('resume')}
+              {tShare('resume')}
             </Button>
           }
         >
@@ -144,24 +145,24 @@ function SharedLink({ collection, link }: { collection: Collection; link: GuestL
         </Alert>
       ) : null}
       {link.url === null ? (
-        <Alert variant="info">{tAccess('hiddenNotice')}</Alert>
+        <Alert variant="info">{tShare('hidden')}</Alert>
       ) : (
         <>
           <QrFrame className="size-[180px] justify-self-center min-[375px]:size-[200px]">
-            <QrCode value={link.url} label={tAccess('qrLabel', { label: title })} size={200} />
+            <QrCode value={link.url} label={tShare('qrLabel', { name: title })} size={200} />
           </QrFrame>
           <CopyField
-            label={tAccess('linkLabel')}
+            label={tShare('link')}
             value={link.url}
-            copyLabel={tAccess('copy')}
-            copiedLabel={tAccess('copied')}
-            failedLabel={tAccess('copyFailed')}
+            copyLabel={tShare('copy')}
+            copiedLabel={tShare('copied')}
+            failedLabel={tShare('copyFailed')}
           />
         </>
       )}
       <DialogFooter className="sm:justify-between">
         <Button asChild variant="ghost">
-          <Link href={`/app/collections/${collection.id}/access`} className="no-underline">
+          <Link href={`/app/collections/${collection.id}/links`} className="no-underline">
             {t('manage')}
           </Link>
         </Button>

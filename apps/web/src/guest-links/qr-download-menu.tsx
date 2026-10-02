@@ -25,7 +25,7 @@ export function QrDownloadMenu({
   fileBase: string;
   variant?: 'default' | 'outline';
 }) {
-  const t = useTranslations('access');
+  const t = useTranslations('links.share');
   const { toast } = useToast();
 
   const save = async (format: QrFileFormat) => {
@@ -41,13 +41,13 @@ export function QrDownloadMenu({
       <DropdownMenuTrigger asChild>
         <Button variant={variant}>
           <Download aria-hidden="true" />
-          {t('downloadQr')}
+          {t('download')}
           <ChevronDown aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem onSelect={() => void save('png')}>{t('downloadPng')}</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void save('svg')}>{t('downloadSvg')}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void save('png')}>{t('png')}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void save('svg')}>{t('svg')}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
