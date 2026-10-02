@@ -7,6 +7,18 @@ import type { GoogleClaims } from './google-identity.js';
 const MAX_DISPLAY_NAME = 80;
 
 /**
+ * Google's profile name as a display name: control characters dropped, trimmed, cut to 80
+ * characters; `undefined` when nothing is left.
+ */
+export function displayNameFromGoogle(name: string | undefined): string | undefined {
+  // Removing control characters is the point of this pattern.
+  // eslint-disable-next-line no-control-regex
+  const clean = name?.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (clean === undefined || clean === '') return undefined;
+  return Array.from(clean).slice(0, MAX_DISPLAY_NAME).join('').trim();
+}
+
+/**
  * Maps a Google identity to a user (ADR 0006). An unverified Google email never creates or
  * links an account: otherwise someone could pre-register a victim's address through Google.
  */
@@ -19,7 +31,11 @@ export class GoogleSignInService {
       where: { provider_providerAccountId: { provider: 'GOOGLE', providerAccountId: claims.sub } },
       select: { user: { select: { id: true, status: true } } },
     });
-    if (linked !== null) return this.active(linked.user);
+    if (linked !== null) {
+      const userId = this.active(linked.user);
+      await this.fillDisplayName(userId, claims.name);
+      return userId;
+    }
 
     if (!claims.emailVerified) throw new AppError('OAUTH_FAILED', 400);
     const email = claims.email.trim().toLowerCase();
@@ -42,7 +58,22 @@ export class GoogleSignInService {
         update: {},
       }),
     ]);
+    await this.fillDisplayName(userId, claims.name);
     return userId;
+  }
+
+  /**
+   * Takes the verified Google name only while the user has none: a name the user set (or
+   * cleared and then got again here) is never overwritten. One conditional update, so a
+   * concurrent PATCH /me cannot be lost.
+   */
+  private async fillDisplayName(userId: string, name: string | undefined): Promise<void> {
+    const displayName = displayNameFromGoogle(name);
+    if (displayName === undefined) return;
+    await this.prisma.user.updateMany({
+      where: { id: userId, displayName: null },
+      data: { displayName },
+    });
   }
 
   private active(user: { id: string; status: 'ACTIVE' | 'BLOCKED' }): string {
@@ -51,13 +82,13 @@ export class GoogleSignInService {
   }
 
   private async createUser(email: string, name: string | undefined) {
-    const displayName = name?.trim().slice(0, MAX_DISPLAY_NAME);
+    const displayName = displayNameFromGoogle(name);
     try {
       return await this.prisma.user.create({
         data: {
           email,
           emailVerifiedAt: new Date(),
-          ...(displayName === undefined || displayName === '' ? {} : { displayName }),
+          ...(displayName === undefined ? {} : { displayName }),
         },
         select: { id: true, status: true },
       });

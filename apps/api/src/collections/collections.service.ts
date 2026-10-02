@@ -18,7 +18,7 @@ import { UsageService } from '../limits/usage.service.js';
 import {
   type CollectionWithDefaultLink,
   toCollectionDto,
-  WITH_DEFAULT_LINK_STATUS,
+  WITH_DEFAULT_LINK,
 } from './collection-dto.js';
 
 const DAY_MS = 24 * 3600_000;
@@ -76,7 +76,7 @@ export class CollectionsService {
       });
       // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
-      return toCollectionDto({ ...row, guestLinks: [{ status: link.status }] });
+      return toCollectionDto({ ...row, guestLinks: [link] });
     });
   }
 
@@ -103,7 +103,7 @@ export class CollectionsService {
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
-      include: WITH_DEFAULT_LINK_STATUS,
+      include: WITH_DEFAULT_LINK,
     });
     const items = rows.slice(0, query.limit);
     const last = items.at(-1);
@@ -130,7 +130,7 @@ export class CollectionsService {
           ...(body.title === undefined ? {} : { title: body.title }),
           ...(body.description === undefined ? {} : { description: body.description }),
         },
-        include: WITH_DEFAULT_LINK_STATUS,
+        include: WITH_DEFAULT_LINK,
       });
       return toCollectionDto(row);
     } catch (error) {
@@ -248,7 +248,7 @@ export class CollectionsService {
   ): Promise<CollectionWithDefaultLink> {
     const row = await tx.collection.findFirst({
       where: { id, ownerId: userId, status: { not: 'DELETING' } },
-      include: WITH_DEFAULT_LINK_STATUS,
+      include: WITH_DEFAULT_LINK,
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
     return row;

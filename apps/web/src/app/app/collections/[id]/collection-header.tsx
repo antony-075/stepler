@@ -2,36 +2,17 @@
 
 import type { Collection } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
-import { Button } from '@stepler/ui/components/button';
-import { PageHeader } from '@stepler/ui/components/page-header';
-import { Settings } from 'lucide-react';
-import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
-import { BackLink } from '@/components/back-link';
-import { CollectionNav } from './collection-nav';
-
-// The collection's name is the page's h1 at the admin scale, but capped at 32px from `xl`
-// (DESIGN-SYSTEM.md §3.2: "название в коллекции 32").
-export const COLLECTION_TITLE = 'xl:[&_[data-slot=page-header-title]]:text-[2rem]';
+import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
+import { EditableDescription, EditableTitle } from './inline-edit';
 
 /**
- * The header every page of a collection shares (DESIGN-SYSTEM.md §6.6): back to the collections,
- * the title as h1, status and date, the page's actions and «Налаштування», `children` (the
- * overview's description) and the section nav (G9).
+ * The collection page's header (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02): the breadcrumbs
+ * («Колекції › {title}»), the title as h1 and the description, each edited in place with a
+ * visible pencil (read-only when archived), and the status and date. No actions menu: sharing is
+ * per link, archive and delete are on the «Параметри» tab.
  */
-export function CollectionHeader({
-  collection,
-  current,
-  actions,
-  children,
-}: {
-  collection: Collection;
-  current: 'content' | 'links';
-  actions?: ReactNode;
-  children?: ReactNode;
-}) {
-  const t = useTranslations('collection');
+export function CollectionHeader({ collection }: { collection: Collection }) {
   const tList = useTranslations('collections');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
@@ -40,35 +21,18 @@ export function CollectionHeader({
   const dated = archived ? tList('archivedOn', { date }) : tList('createdOn', { date });
 
   return (
-    <div className="grid gap-4">
-      <PageHeader
-        size="compact"
-        className={COLLECTION_TITLE}
-        back={<BackLink href="/app">{t('back')}</BackLink>}
-        title={collection.title}
-        description={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-              {status}
-            </Badge>
-            <span className="text-sm tabular-nums">{dated}</span>
-          </span>
-        }
-        actions={
-          <>
-            {actions}
-            {/* Settings are a page of their own, not a tab: one outline button, on every tab. */}
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/app/collections/${collection.id}/settings`} className="no-underline">
-                <Settings aria-hidden="true" />
-                {t('settings')}
-              </Link>
-            </Button>
-          </>
-        }
-      />
-      {children}
-      <CollectionNav id={collection.id} current={current} />
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
+      <header data-slot="page-header" className="grid grid-cols-[minmax(0,1fr)] gap-2">
+        <CollectionBreadcrumbs collection={collection} />
+        <EditableTitle collection={collection} />
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+          <Badge variant={archived ? 'neutral' : 'success'} title={status}>
+            {status}
+          </Badge>
+          <span className="text-sm tabular-nums">{dated}</span>
+        </p>
+        <EditableDescription collection={collection} />
+      </header>
     </div>
   );
 }

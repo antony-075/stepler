@@ -181,13 +181,14 @@ Collection
 
 GuestLink
   id, collectionId → Collection (cascade), isDefault, label?,
-  status (ACTIVE|INACTIVE|REVOKED), revokedAt?, replacedById? → GuestLink,
+  status (ACTIVE|INACTIVE|REVOKED), revokedAt?, hiddenAt?, replacedById? → GuestLink,
   tokenHash (unique), tokenCiphertext, tokenKeyId,
   canUploadPhotos, canUploadVideos, canUploadDocuments, canSubmitText, canViewGallery, canDeleteOwn,
   createdAt, updatedAt
   SQL CHECK (canUploadPhotos OR canUploadVideos OR canUploadDocuments OR canSubmitText OR canViewGallery)
   SQL CHECK (NOT canDeleteOwn OR canUploadPhotos OR canUploadVideos OR canUploadDocuments OR canSubmitText)
   SQL CHECK ((status = 'REVOKED') = (revokedAt IS NOT NULL))
+  SQL CHECK (hiddenAt IS NULL OR (status = 'REVOKED' AND NOT isDefault))   -- deleted = revoked + hidden
   SQL UNIQUE (collectionId) WHERE isDefault AND status <> 'REVOKED'   -- exactly one live default
 
 GuestSession
@@ -262,7 +263,7 @@ AuditEvent (append-only)
 
 *`AuditEvent` implemented in slice 1* (Phase 4), with a second index `(actorId, action, createdAt)` for the collection creation limit (§13.1). Slice 1 records `collection.create`, `collection.archive`, `collection.unarchive` and `collection.delete`.
 
-Audited actions: link create / permission change / deactivate / activate / revoke / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
+Audited actions: link create / permission change / deactivate / activate / revoke / delete / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
 
 ---
 
@@ -319,7 +320,7 @@ Admin
   GET/PATCH/DELETE    /collections/{id}
   POST                /collections/{id}/archive | /unarchive
   GET/POST            /collections/{id}/guest-links
-  PATCH               /guest-links/{id}                 (label, permissions)
+  PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
   POST                /collections/{id}/guest-links/default/rotate
   GET                 /collections/{id}/content?kind=&cursor=

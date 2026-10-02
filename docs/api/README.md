@@ -65,7 +65,7 @@ Every error is RFC 9457 `application/problem+json`:
 | `GET /api/v1/auth/google/start` | public | 302 to Google; 404 when Google is not configured |
 | `GET /api/v1/auth/google/callback` | public | 302 to `returnTo` (an `/app` path) or `/login?error=…` |
 | `POST /api/v1/auth/logout` | public | 204, clears the cookie, idempotent |
-| `GET /api/v1/me`, `PATCH /api/v1/me` | session | `{ id, email, displayName, locale, isOperator }`; PATCH `{ displayName?, locale? }` |
+| `GET /api/v1/me`, `PATCH /api/v1/me` | session | `{ id, email, displayName, locale, isOperator }`; PATCH `{ displayName?, locale? }`; `displayName` is 1–80 characters on one line (trimmed, no control characters) or `null` to clear it. Google sign-in fills an empty name from the verified Google profile once and never overwrites one the user set |
 | `GET /api/v1/health/live`, `GET /api/v1/health/ready` | public | readiness: 200 or 503 with `database`/`storage` checks, cached 5 s |
 
 All unsafe methods, public ones included, require `Origin` equal to `APP_ORIGIN`.

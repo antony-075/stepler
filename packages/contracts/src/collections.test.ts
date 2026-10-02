@@ -96,6 +96,14 @@ describe('collectionSchema', () => {
     updatedAt: '2026-10-01T10:00:00.000Z',
     archivedAt: null,
     defaultLinkStatus: 'ACTIVE',
+    defaultLinkPermissions: {
+      canUploadPhotos: true,
+      canUploadVideos: true,
+      canUploadDocuments: true,
+      canSubmitText: true,
+      canViewGallery: false,
+      canDeleteOwn: true,
+    },
   };
 
   test('accepts a collection', () => {
@@ -111,6 +119,29 @@ describe('collectionSchema', () => {
     ).toBe(true);
     expect(
       collectionSchema.safeParse({ ...collection, defaultLinkStatus: 'REVOKED' }).success,
+    ).toBe(false);
+  });
+
+  test("defaultLinkPermissions are the live default link's permissions, or null without one", () => {
+    expect(
+      collectionSchema.safeParse({ ...collection, defaultLinkPermissions: null }).success,
+    ).toBe(true);
+    // The same rules as a link's own permissions: a link that allows nothing is not valid.
+    expect(
+      collectionSchema.safeParse({
+        ...collection,
+        defaultLinkPermissions: {
+          canUploadPhotos: false,
+          canUploadVideos: false,
+          canUploadDocuments: false,
+          canSubmitText: false,
+          canViewGallery: false,
+          canDeleteOwn: false,
+        },
+      }).success,
+    ).toBe(false);
+    expect(
+      collectionSchema.safeParse({ ...collection, defaultLinkPermissions: undefined }).success,
     ).toBe(false);
   });
 

@@ -2,12 +2,12 @@ import { type BrowserContext, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 
 // Ukrainian UI (no supported browser language → default locale). The theme switch is on
-// /app/settings; public pages have none, so anonymous tests set the `st_theme` cookie directly.
+// /app/account; public pages have none, so anonymous tests set the `st_theme` cookie directly.
 test.use({ locale: 'de-DE', viewport: { width: 1024, height: 768 } });
 
 const DARK_BACKGROUND = 'rgb(20, 22, 21)';
 const LIGHT_BACKGROUND = 'rgb(240, 241, 238)';
-const T = { group: 'Тема', light: 'Світла', dark: 'Темна', system: 'Системна' };
+const T = { group: 'Вигляд', light: 'Світла', dark: 'Темна', system: 'Системна' };
 
 async function setThemeCookie(context: BrowserContext, baseURL: string, value: string) {
   await context.addCookies([{ name: 'st_theme', value, url: baseURL }]);
@@ -16,9 +16,14 @@ async function setThemeCookie(context: BrowserContext, baseURL: string, value: s
 const bodyBackground = (page: Page) =>
   page.locator('body').evaluate((body) => getComputedStyle(body).backgroundColor);
 
-/** The theme select, named by its row label. */
-const themeSelect = (page: Page, label = T.group) =>
-  page.getByRole('combobox', { name: label, exact: true });
+/** One of the theme cards (a radio group named «Тема»). */
+const themeCard = (page: Page, name: string, group = T.group) =>
+  page.getByRole('radiogroup', { name: group }).getByRole('radio', { name, exact: true });
+
+async function chooseTheme(page: Page, name: string) {
+  await themeCard(page, name).click();
+  await expect(themeCard(page, name)).toBeChecked();
+}
 
 async function choose(page: Page, select: string, option: string) {
   await page.getByRole('combobox', { name: select, exact: true }).click();
@@ -28,8 +33,8 @@ async function choose(page: Page, select: string, option: string) {
 
 async function openSettings(page: Page) {
   await signIn(page, newEmail());
-  await page.goto('/app/settings');
-  await expect(page.getByRole('heading', { name: 'Налаштування', level: 1 })).toBeVisible();
+  await page.goto('/app/account');
+  await expect(page.getByRole('heading', { name: 'Акаунт', level: 1 })).toBeVisible();
 }
 
 test.describe('on a light OS', () => {
@@ -85,7 +90,7 @@ test.describe('on a dark OS', () => {
       (window as unknown as { themeMarker: boolean }).themeMarker = true;
     });
 
-    await choose(page, T.group, T.light);
+    await chooseTheme(page, T.light);
 
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expect.poll(() => bodyBackground(page)).toBe(LIGHT_BACKGROUND);
@@ -96,11 +101,29 @@ test.describe('on a dark OS', () => {
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     expect(await bodyBackground(page)).toBe(LIGHT_BACKGROUND);
-    await expect(themeSelect(page)).toHaveText(T.light);
+    await expect(themeCard(page, T.light)).toBeChecked();
 
     // Back to System removes the override and the OS (dark) applies again.
-    await choose(page, T.group, T.system);
+    await chooseTheme(page, T.system);
     await expect(page.locator('html')).not.toHaveAttribute('data-theme');
+    await expect.poll(() => bodyBackground(page)).toBe(DARK_BACKGROUND);
+  });
+});
+
+test.describe('theme cards from the keyboard', () => {
+  test.use({ colorScheme: 'light' });
+
+  test('one tab stop; arrows choose and apply the theme', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard path on desktop');
+    await openSettings(page);
+    await themeCard(page, T.system).focus();
+    // Radix selects on focus while an arrow key is down and moves focus on the next tick, so
+    // hold the key until focus lands, as a real key press does.
+    await page.keyboard.down('ArrowLeft');
+    await expect(themeCard(page, T.dark)).toBeFocused();
+    await page.keyboard.up('ArrowLeft');
+    await expect(themeCard(page, T.dark)).toBeChecked();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect.poll(() => bodyBackground(page)).toBe(DARK_BACKGROUND);
   });
 });
@@ -114,35 +137,42 @@ test.describe('after another tab changed the theme', () => {
     baseURL,
   }) => {
     await openSettings(page);
-    await expect(themeSelect(page)).toHaveText(T.system);
+    await expect(themeCard(page, T.system)).toBeChecked();
 
     // Another tab picks Dark; this tab only learns it from the server on the next refresh,
     // which the language switch triggers.
     await setThemeCookie(context, baseURL!, 'dark');
     await choose(page, 'Мова', 'English');
 
-    await expect(themeSelect(page, 'Theme')).toHaveText('Dark');
+    await expect(themeCard(page, 'Dark', 'Appearance')).toBeChecked();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 });
 
 test.describe('settings on a phone', () => {
   for (const width of [320, 360]) {
-    test(`fit ${width}px: full-width selects, every option visible`, async ({ page }) => {
+    test(`fit ${width}px: stacked theme cards, a full-width language select`, async ({ page }) => {
       await page.setViewportSize({ width, height: 780 });
       await openSettings(page);
       const overflow = () =>
         page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-      for (const [select, options] of [
-        [T.group, [T.system, T.light, T.dark]],
-        ['Мова', ['Українська', 'English']],
-      ] as const) {
+      // The three theme cards stack inside the gutters, each a touch target.
+      let previousBottom = 0;
+      for (const name of [T.light, T.dark, T.system]) {
+        const box = (await themeCard(page, name).boundingBox())!;
+        expect(box.x).toBeGreaterThanOrEqual(16);
+        expect(box.x + box.width).toBeLessThanOrEqual(width - 16 + 0.5);
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.y).toBeGreaterThanOrEqual(previousBottom);
+        previousBottom = box.y + box.height;
+      }
+      for (const [select, options] of [['Мова', ['Українська', 'English']]] as const) {
         const trigger = page.getByRole('combobox', { name: select, exact: true });
         const box = (await trigger.boundingBox())!;
         // The row stacks and the select fills it, inside the 16px gutters.
         expect(box.x).toBeGreaterThanOrEqual(16);
         expect(box.x + box.width).toBeLessThanOrEqual(width - 16 + 0.5);
-        expect(box.width).toBeGreaterThan(width - 2 * 16 - 2 * 24);
+        expect(box.width).toBeGreaterThan(width - 2 * 16 - 2 * 24 - 1);
         await trigger.click();
         for (const name of options) {
           const option = page.getByRole('option', { name, exact: true });

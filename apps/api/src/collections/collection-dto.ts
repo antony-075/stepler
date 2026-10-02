@@ -2,22 +2,42 @@ import type { Collection } from '@stepler/contracts';
 import { AppError } from '../errors/app-error.js';
 import type {
   Collection as CollectionRow,
-  GuestLinkStatus,
+  GuestLink as GuestLinkRow,
   Prisma,
 } from '../generated/prisma/client.js';
 
-/** Reads include the live default link's status, in the same query (no N+1). */
-export const WITH_DEFAULT_LINK_STATUS = {
+/**
+ * Reads include the live default link's status and permissions, in the same query (no N+1): the
+ * dashboard shows what guests may add per collection.
+ */
+export const WITH_DEFAULT_LINK = {
   guestLinks: {
     where: { isDefault: true, status: { not: 'REVOKED' } },
-    select: { status: true },
+    select: {
+      status: true,
+      canUploadPhotos: true,
+      canUploadVideos: true,
+      canUploadDocuments: true,
+      canSubmitText: true,
+      canViewGallery: true,
+      canDeleteOwn: true,
+    },
     take: 1,
   },
 } satisfies Prisma.CollectionInclude;
 
-export type CollectionWithDefaultLink = CollectionRow & {
-  guestLinks: { status: GuestLinkStatus }[];
-};
+type DefaultLinkFields = Pick<
+  GuestLinkRow,
+  | 'status'
+  | 'canUploadPhotos'
+  | 'canUploadVideos'
+  | 'canUploadDocuments'
+  | 'canSubmitText'
+  | 'canViewGallery'
+  | 'canDeleteOwn'
+>;
+
+export type CollectionWithDefaultLink = CollectionRow & { guestLinks: DefaultLinkFields[] };
 
 /** Explicit mapping: `ownerId` and `deletionRequestedAt` never reach the API. */
 export function toCollectionDto(row: CollectionWithDefaultLink): Collection {
@@ -31,12 +51,27 @@ export function toCollectionDto(row: CollectionWithDefaultLink): Collection {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     archivedAt: row.archivedAt?.toISOString() ?? null,
-    defaultLinkStatus: defaultLinkStatus(row.guestLinks[0]?.status),
+    ...defaultLink(row.guestLinks[0]),
   };
 }
 
-/** `null` for a collection from before guest links that has not been given its default yet. */
-function defaultLinkStatus(status: GuestLinkStatus | undefined): Collection['defaultLinkStatus'] {
+/** Both `null` for a collection from before guest links that has not been given its default yet. */
+function defaultLink(
+  link: DefaultLinkFields | undefined,
+): Pick<Collection, 'defaultLinkStatus' | 'defaultLinkPermissions'> {
   // The include filters out REVOKED; treating one as "no live default" keeps the mapping total.
-  return status === undefined || status === 'REVOKED' ? null : status;
+  if (link === undefined || link.status === 'REVOKED') {
+    return { defaultLinkStatus: null, defaultLinkPermissions: null };
+  }
+  return {
+    defaultLinkStatus: link.status,
+    defaultLinkPermissions: {
+      canUploadPhotos: link.canUploadPhotos,
+      canUploadVideos: link.canUploadVideos,
+      canUploadDocuments: link.canUploadDocuments,
+      canSubmitText: link.canSubmitText,
+      canViewGallery: link.canViewGallery,
+      canDeleteOwn: link.canDeleteOwn,
+    },
+  };
 }

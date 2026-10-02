@@ -9,8 +9,8 @@ const T = {
   ...SIGN_IN_UK,
   logout: 'Вийти',
   appTitle: 'Колекції',
-  settings: 'Налаштування',
-  back: 'Колекції',
+  settings: 'Акаунт',
+  back: 'До колекцій',
   invalid: 'Посилання недійсне або вже використане. Отримайте нове.',
   invalidTitle: 'Посилання не спрацювало',
   newLink: 'Отримати нове посилання',
@@ -38,8 +38,7 @@ test('magic link: prefetching the link does not use it up (Review Focus 1)', asy
 test('logout ends the session and /app sends you back to /login', async ({ page }) => {
   const email = newEmail();
   await signIn(page, email);
-  await page.getByRole('button', { name: email }).click();
-  await page.getByRole('menuitem', { name: T.logout }).click();
+  await page.getByRole('button', { name: T.logout }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto('/app');
   await expect(page).toHaveURL(/\/login$/);
@@ -108,21 +107,12 @@ test('the sign-in form works with the keyboard only', async ({ page, isMobile })
   await expect(page.getByRole('heading', { name: T.sent })).toBeVisible();
 });
 
-test('the account menu works with the keyboard only', async ({ page, isMobile }) => {
+test('«Вийти» works with the keyboard only', async ({ page, isMobile }) => {
   test.skip(isMobile, 'keyboard navigation is a desktop concern');
-  const email = newEmail();
-  await signIn(page, email);
-  const trigger = page.getByRole('button', { name: email });
-  // Tab from the start of the page to the account menu.
-  for (let i = 0; i < 10 && !(await trigger.evaluate((el) => el === document.activeElement)); i++) {
+  await signIn(page, newEmail());
+  const logout = page.getByRole('button', { name: T.logout });
+  for (let i = 0; i < 12 && !(await logout.evaluate((el) => el === document.activeElement)); i++) {
     await page.keyboard.press('Tab');
-  }
-  await expect(trigger).toBeFocused();
-  await page.keyboard.press('Enter');
-  const logout = page.getByRole('menuitem', { name: T.logout });
-  await expect(logout).toBeVisible();
-  for (let i = 0; i < 10 && !(await logout.evaluate((el) => el === document.activeElement)); i++) {
-    await page.keyboard.press('ArrowDown');
   }
   await expect(logout).toBeFocused();
   await page.keyboard.press('Enter');
@@ -137,52 +127,91 @@ test('a 60-character email fits the header, truncated (Review Focus 5)', async (
   const overflow = () =>
     page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(await overflow()).toBeLessThanOrEqual(0);
-  // On a phone the trigger is the avatar initial; the address stays its accessible name.
-  const trigger = page.getByRole('button', { name: email });
-  await expect(trigger).toHaveText(/^E/);
-  const box = await trigger.boundingBox();
+  // On a phone: the avatar initial and an icon «Вийти» named by its label, inside the screen.
+  const block = page.locator('[data-slot="account-block"]');
+  await expect(block.locator('[aria-hidden="true"]').first()).toHaveText('E');
+  const logout = block.getByRole('button', { name: T.logout });
+  const box = await logout.boundingBox();
+  expect(box!.width).toBeGreaterThanOrEqual(44);
   expect(box!.x + box!.width).toBeLessThanOrEqual(360);
-  // The menu shows the whole address (truncated with a title) and fits too.
-  await trigger.click();
-  const full = page.getByRole('menu').getByText(email);
-  await expect(full).toBeVisible();
-  await expect(full).toHaveAttribute('title', email);
-  expect(await overflow()).toBeLessThanOrEqual(0);
-  await page.keyboard.press('Escape');
 
-  // From md the address is shown, cut to 26ch: only the text is cut, the button stays inside.
+  // From md the address is shown, truncated with a title, and nothing leaves the bar.
   await page.setViewportSize({ width: 768, height: 1024 });
-  const text = trigger.locator('span[title]');
+  const text = block.getByText(email);
   await expect(text).toBeVisible();
   await expect(text).toHaveAttribute('title', email);
   expect(await text.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-  const wide = await trigger.boundingBox();
+  const wide = await block.boundingBox();
   expect(wide!.x + wide!.width).toBeLessThanOrEqual(768);
   expect(await overflow()).toBeLessThanOrEqual(0);
 });
 
-test('the admin header has no section nav: settings via the account menu, back via the brand', async ({
-  page,
-}) => {
+test('a name set on «Акаунт» shows in the header above the email', async ({ page, isMobile }) => {
   const email = newEmail();
   await signIn(page, email);
-  const header = page.getByRole('banner');
-  await expect(header.getByRole('navigation')).toHaveCount(0);
-  // Settings has one entry point: the account menu.
-  await expect(header.getByRole('link', { name: T.settings })).toHaveCount(0);
-  await page.getByRole('button', { name: email }).click();
-  await page.getByRole('menuitem', { name: T.settings }).click();
-  await expect(page).toHaveURL(/\/app\/settings$/);
+  const block = page.locator('[data-slot="account-block"]');
+  // No name yet: the email alone, the avatar its first letter.
+  await expect(block.locator('[aria-hidden="true"]').first()).toHaveText('E');
+
+  await page.goto('/app/account');
+  const profile = page.getByRole('form', { name: 'Профіль' });
+  const field = profile.getByRole('textbox', { name: 'Ім’я' });
+  await expect(field).toHaveValue('');
+  const save = profile.getByRole('button', { name: 'Зберегти' });
+  await expect(save).toHaveAttribute('aria-disabled', 'true');
+  await field.fill('Я'.repeat(81));
+  await expect(field).toHaveValue('Я'.repeat(80));
+  await field.fill('Оля Коваль');
+  await save.click();
+  await expect(page.locator('[data-slot="toast-title"]')).toHaveText('Ім’я збережено');
+  await expect(block.locator('[aria-hidden="true"]').first()).toHaveText('О');
+  if (!isMobile) {
+    await expect(block.getByText('Оля Коваль')).toBeVisible();
+    await expect(block.getByText(email)).toBeVisible();
+  }
+  await page.reload();
+  await expect(field).toHaveValue('Оля Коваль');
+
+  // Cancel puts it back; clearing it saves no name.
+  await field.fill('Ольга');
+  await profile.getByRole('button', { name: 'Скасувати' }).click();
+  await expect(field).toHaveValue('Оля Коваль');
+  await field.fill('');
+  await save.click();
+  await expect(block.locator('[aria-hidden="true"]').first()).toHaveText('E');
+  const me = (await (await page.request.get('/api/v1/me')).json()) as { displayName: unknown };
+  expect(me.displayName).toBeNull();
+});
+
+test('the header has no dropdown; «Акаунт» is in the sidebar', async ({ page, isMobile }) => {
+  const email = newEmail();
+  await signIn(page, email);
+  // The sections are in the sidebar (a sheet on phones), not in the top bar.
+  await expect(page.getByRole('banner').getByRole('navigation')).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('button', { name: email })).toHaveCount(0);
+  await expect(page.getByRole('banner').getByRole('button', { name: T.logout })).toBeVisible();
+
+  if (isMobile) await page.getByRole('button', { name: 'Відкрити меню' }).click();
+  await page
+    .getByRole('navigation', { name: 'Розділи' })
+    .getByRole('link', { name: T.settings })
+    .click();
+  await expect(page).toHaveURL(/\/app\/account$/);
   await expect(page.getByRole('heading', { name: T.settings, level: 1 })).toBeVisible();
 
-  // The back link above the title returns to the collections.
-  await page.getByRole('main').getByRole('link', { name: T.back }).click();
+  // No back link on «Акаунт» (the sidebar is the navigation): «Колекції» returns.
+  await expect(page.getByRole('main').getByRole('link', { name: T.back })).toHaveCount(0);
+  if (isMobile) await page.getByRole('button', { name: 'Відкрити меню' }).click();
+  await page
+    .getByRole('navigation', { name: 'Розділи' })
+    .getByRole('link', { name: T.appTitle })
+    .click();
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByRole('heading', { name: T.appTitle, level: 1 })).toBeVisible();
 
   // The brand goes to the collections too, not to the landing page.
-  await page.goto('/app/settings');
-  const brand = header.getByRole('link', { name: 'Stepler' });
+  await page.goto('/app/account');
+  const brand = page.getByRole('link', { name: 'Stepler' });
   await expect(brand).toHaveAttribute('href', '/app');
   await brand.click();
   await expect(page).toHaveURL(/\/app$/);

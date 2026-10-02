@@ -1,5 +1,6 @@
 export {
   authMethodsResponseSchema,
+  displayNameSchema,
   localeSchema,
   magicLinkPreviewResponseSchema,
   magicLinkRequestResponseSchema,
@@ -27,6 +28,7 @@ export {
   collectionTitleSchema,
   createCollectionRequestSchema,
   listCollectionsQuerySchema,
+  NO_CONTROL_CHARACTERS,
   updateCollectionRequestSchema,
   type Collection,
   type CollectionListResponse,

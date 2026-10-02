@@ -487,6 +487,39 @@
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
+                          "defaultLinkPermissions": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "canDeleteOwn": {
+                                "type": "boolean"
+                              },
+                              "canSubmitText": {
+                                "type": "boolean"
+                              },
+                              "canUploadDocuments": {
+                                "type": "boolean"
+                              },
+                              "canUploadPhotos": {
+                                "type": "boolean"
+                              },
+                              "canUploadVideos": {
+                                "type": "boolean"
+                              },
+                              "canViewGallery": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "canUploadPhotos",
+                              "canUploadVideos",
+                              "canUploadDocuments",
+                              "canSubmitText",
+                              "canViewGallery",
+                              "canDeleteOwn"
+                            ],
+                            "type": "object"
+                          },
                           "defaultLinkStatus": {
                             "enum": [
                               "ACTIVE",
@@ -528,7 +561,8 @@
                           "createdAt",
                           "updatedAt",
                           "archivedAt",
-                          "defaultLinkStatus"
+                          "defaultLinkStatus",
+                          "defaultLinkPermissions"
                         ],
                         "type": "object"
                       },
@@ -619,6 +653,39 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
                     "defaultLinkStatus": {
                       "enum": [
                         "ACTIVE",
@@ -660,7 +727,8 @@
                     "createdAt",
                     "updatedAt",
                     "archivedAt",
-                    "defaultLinkStatus"
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -766,6 +834,39 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
                     "defaultLinkStatus": {
                       "enum": [
                         "ACTIVE",
@@ -807,7 +908,8 @@
                     "createdAt",
                     "updatedAt",
                     "archivedAt",
-                    "defaultLinkStatus"
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -893,6 +995,39 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
                     "defaultLinkStatus": {
                       "enum": [
                         "ACTIVE",
@@ -934,7 +1069,8 @@
                     "createdAt",
                     "updatedAt",
                     "archivedAt",
-                    "defaultLinkStatus"
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -996,6 +1132,39 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
                     "defaultLinkStatus": {
                       "enum": [
                         "ACTIVE",
@@ -1037,7 +1206,8 @@
                     "createdAt",
                     "updatedAt",
                     "archivedAt",
-                    "defaultLinkStatus"
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -1599,6 +1769,39 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
                     "defaultLinkStatus": {
                       "enum": [
                         "ACTIVE",
@@ -1640,7 +1843,8 @@
                     "createdAt",
                     "updatedAt",
                     "archivedAt",
-                    "defaultLinkStatus"
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -1673,6 +1877,50 @@
       }
     },
     "/api/v1/guest-links/{id}": {
+      "delete": {
+        "operationId": "GuestLinksController_remove_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted: revoked if it was live, and no longer listed. The record stays for the audit trail. Deleting again is a no-op."
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      },
       "patch": {
         "operationId": "GuestLinksController_update_v1",
         "parameters": [
@@ -2648,6 +2896,7 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "nullable": true,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
                     "type": "string"
                   },
                   "locale": {

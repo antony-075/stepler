@@ -41,6 +41,13 @@ export const activateGuestLink = (id: string): Promise<GuestLink> =>
 export const revokeGuestLink = (id: string): Promise<GuestLink> =>
   apiRequest(`${linkPath(id)}/revoke`, { method: 'POST', schema: guestLinkSchema });
 
+/**
+ * Deletes an additional link: revoked if it is still live, and no longer listed (the record
+ * stays on the server for the audit trail). Also removes a revoked link from the list.
+ */
+export const deleteGuestLink = (id: string): Promise<void> =>
+  apiRequest(linkPath(id), { method: 'DELETE' });
+
 /** A retried or doubled rotate returns the current default instead of rotating twice. */
 export const rotateDefaultLink = (
   collectionId: string,

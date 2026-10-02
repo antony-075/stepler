@@ -1,12 +1,11 @@
 import { z } from 'zod';
+import { guestLinkPermissionsSchema } from './guest-links.js';
+import {
+  NO_CONTROL_CHARACTERS,
+  NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS,
+} from './text.js';
 
-// PostgreSQL text cannot store NUL, and other C0 control characters have no place in plain text.
-// Matching control characters is the point of these patterns, hence the lint exceptions.
-// eslint-disable-next-line no-control-regex
-export const NO_CONTROL_CHARACTERS = /^[^\u0000-\u001f]*$/;
-const NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS =
-  // eslint-disable-next-line no-control-regex
-  /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f]*$/;
+export { NO_CONTROL_CHARACTERS } from './text.js';
 
 /** Plain text on one line, rendered escaped. Mirrored by `Collection_title_length` in the database. */
 export const collectionTitleSchema = z
@@ -40,6 +39,11 @@ export const collectionSchema = z
     archivedAt: z.iso.datetime().nullable(),
     /** The live default guest link's status; `null` until a pre-slice-2 collection gets one. */
     defaultLinkStatus: z.enum(['ACTIVE', 'INACTIVE']).nullable(),
+    /**
+     * What the live default link lets guests do (the dashboard and the settings summary show
+     * it); `null` with `defaultLinkStatus`. Permissions stay per link: this is a read-only copy.
+     */
+    defaultLinkPermissions: guestLinkPermissionsSchema.nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

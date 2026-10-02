@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -141,5 +151,25 @@ export class GuestLinksController {
     @RequestId() requestId: string | undefined,
   ): Promise<GuestLink> {
     return this.links.revoke(principal, params.id, requestId);
+  }
+
+  @Delete('guest-links/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({
+    status: 204,
+    description:
+      'Deleted: revoked if it was live, and no longer listed. The record stays for the audit trail. Deleting again is a no-op.',
+  })
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description: 'DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not deleted',
+  })
+  remove(
+    @CurrentPrincipal() principal: Principal,
+    @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<void> {
+    return this.links.remove(principal, params.id, requestId);
   }
 }

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import {
   archiveCollectionViaApi,
@@ -17,13 +17,12 @@ const T = {
   description: 'Опис',
   create: 'Створити',
   created: 'Колекцію створено',
-  active: 'Активна',
+  active: 'Колекція активна',
   archived: 'В архіві',
-  archive: 'Архів',
   back: 'Колекції',
   limitTitle: 'Ліміт активних колекцій вичерпано',
-  settings: 'Налаштування',
-  settingsTitle: 'Налаштування колекції',
+  settings: 'Редагувати колекцію',
+  settingsTitle: 'Параметри колекції',
   save: 'Зберегти',
   saved: 'Збережено',
   archiveAction: 'Архівувати',
@@ -34,11 +33,35 @@ const T = {
   deleted: 'Колекцію видалено',
   contentEmpty: 'Тут з’являться фото, відео й побажання гостей',
   notFound: 'Колекцію не знайдено',
+  filterLabel: 'Показати',
+  details: 'Основна інформація',
 };
 
 const LIMIT_ERROR = 'Досягнуто ліміту активних колекцій. Заархівуйте одну, щоб звільнити місце.';
 
 const toast = (page: Page) => page.locator('[data-slot="toast-title"]');
+
+/** The collection page's «Параметри» tab (archive, delete, guest access). */
+async function openOptions(page: Page, id: string): Promise<void> {
+  await page.goto(`/app/collections/${id}?tab=settings`);
+  await expect(page.getByRole('tab', { name: 'Параметри' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+}
+
+/** Opens a collection's «⋯» (on its card) or «Дії» (its page) and picks an item. */
+async function act(scope: Page | Locator, title: string, item: string): Promise<void> {
+  await scope.getByRole('button', { name: `Дії з колекцією «${title}»` }).click();
+  const page = 'page' in scope && typeof scope.page === 'function' ? scope.page() : (scope as Page);
+  await page.getByRole('menuitem', { name: item }).click();
+}
+
+/** A collection's card on the dashboard. */
+const card = (page: Page, title: string): Locator =>
+  page.locator('[data-slot="collection-card"]').filter({
+    has: page.getByRole('link', { name: title, exact: true }),
+  });
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 
@@ -75,8 +98,9 @@ test.describe('dashboard', () => {
 
     await page.goBack();
     await expect(page).toHaveURL(/\/app$/);
-    const card = page.getByRole('article').filter({ hasText: 'Весілля Олі та Тараса' });
-    await expect(card.getByText(T.active, { exact: true })).toBeVisible();
+    await expect(
+      card(page, 'Весілля Олі та Тараса').getByText(T.active, { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText('1 з 3 активних колекцій')).toBeVisible();
   });
 
@@ -89,7 +113,7 @@ test.describe('dashboard', () => {
     await expect(dialog.getByLabel(T.title)).toHaveAttribute('aria-invalid', 'true');
   });
 
-  test('active and archived collections are listed apart, with a link per card', async ({
+  test('active and archived collections share one list; the chips filter it by status', async ({
     page,
   }) => {
     await signIn(page, newEmail());
@@ -99,56 +123,152 @@ test.describe('dashboard', () => {
     await page.reload();
 
     await expect(page.getByText('1 з 3 активних колекцій')).toBeVisible();
-    const archive = page.getByRole('region', { name: T.archive });
+    const filter = page.getByRole('radiogroup', { name: T.filterLabel });
+    // Counts are of what is loaded, as data next to each chip.
+    await expect(filter.getByRole('radio')).toHaveText(['Усі2', 'Активні1', 'Архів1']);
+    await expect(filter.getByRole('radio', { name: /^Усі/ })).toBeChecked();
+    const archivedCard = card(page, 'Випускний 2025');
+    await expect(archivedCard.getByText(T.archived, { exact: true })).toBeVisible();
     await expect(
-      archive.getByRole('link', { name: 'Випускний 2025', exact: true }),
+      archivedCard.getByRole('link', { name: 'Випускний 2025', exact: true }),
     ).toHaveAttribute('href', `/app/collections/${old.id}`);
-    await expect(archive.getByText(T.archived, { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Ювілей бабусі', exact: true })).toHaveAttribute(
       'href',
       `/app/collections/${kept.id}`,
     );
+
+    await filter.getByRole('radio', { name: /^Архів/ }).click();
+    await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
+    await expect(archivedCard).toBeVisible();
+    await filter.getByRole('radio', { name: /^Активні/ }).click();
+    await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
+    await expect(card(page, 'Ювілей бабусі')).toBeVisible();
   });
 
-  test('settings open straight from a card, active or archived', async ({ page }) => {
+  test('search finds by title and says when nothing matches; sort reorders', async ({ page }) => {
     await signIn(page, newEmail());
-    const kept = await createCollectionViaApi(page, 'Ювілей бабусі');
-    const old = await createCollectionViaApi(page, 'Випускний 2025');
-    await archiveCollectionViaApi(page, old.id);
+    await createCollectionViaApi(page, 'Весілля Олі');
+    await createCollectionViaApi(page, 'Ювілей бабусі');
     await page.reload();
+    const titles = page.locator('[data-slot="collection-link"]');
+    // Newest first by default.
+    await expect(titles).toHaveText(['Ювілей бабусі', 'Весілля Олі']);
 
-    const archived = page.getByRole('link', { name: 'Налаштування колекції «Випускний 2025»' });
-    await expect(archived).toHaveAttribute('href', `/app/collections/${old.id}/settings`);
-    const box = await archived.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    const search = page.getByRole('searchbox', { name: 'Пошук колекцій' });
+    await search.fill('БАБУС');
+    await expect(titles).toHaveText(['Ювілей бабусі']);
+    await search.fill('хрестини');
+    await expect(page.getByText('Немає колекцій з «хрестини» у назві.')).toBeVisible();
+    await page.getByRole('button', { name: 'Показати всі' }).click();
+    await expect(search).toHaveValue('');
+    await expect(titles).toHaveCount(2);
 
-    // The settings link sits above the card's stretched link, so a click lands on it.
-    await page.getByRole('link', { name: 'Налаштування колекції «Ювілей бабусі»' }).click();
-    await expect(page).toHaveURL(`/app/collections/${kept.id}/settings`);
-    await expect(page.getByRole('heading', { name: T.settingsTitle, level: 1 })).toBeVisible();
-    await expect(page.getByLabel(T.title)).toHaveValue('Ювілей бабусі');
+    await page.getByRole('combobox', { name: 'Сортувати:' }).click();
+    await page.getByRole('option', { name: 'Найстаріші' }).click();
+    await expect(titles).toHaveText(['Весілля Олі', 'Ювілей бабусі']);
   });
 
-  test('the whole row opens the collection; Tab goes from it to settings', async ({
+  test('a card: «Поділитися» and a «⋯» with archive and delete', async ({ page }) => {
+    await signIn(page, newEmail());
+    await createCollectionViaApi(page, 'Залишиться');
+    await createCollectionViaApi(page, 'Ювілей бабусі');
+    await page.reload();
+    const strip = card(page, 'Ювілей бабусі');
+    await expect(strip.getByRole('button')).toHaveCount(2);
+    for (const name of ['Поділитися', 'Дії з колекцією «Ювілей бабусі»']) {
+      const box = await strip.getByRole('button', { name }).boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+    }
+
+    // Archive asks once; the card turns archived in place.
+    // The «⋯» sits right of the status, on its row.
+    const badge = await strip.getByText(T.active, { exact: true }).boundingBox();
+    const menu = await strip
+      .getByRole('button', { name: 'Дії з колекцією «Ювілей бабусі»' })
+      .boundingBox();
+    if (page.viewportSize()!.width >= 768) {
+      expect(menu!.x).toBeGreaterThan(badge!.x + badge!.width - 1);
+      expect(Math.abs(menu!.y + menu!.height / 2 - (badge!.y + badge!.height / 2))).toBeLessThan(8);
+    }
+    await act(strip, 'Ювілей бабусі', T.archiveAction);
+    const archive = page.getByRole('alertdialog', { name: 'Архівувати «Ювілей бабусі»?' });
+    await archive.getByRole('button', { name: T.archiveAction }).click();
+    await expect(archive).toBeHidden();
+    await expect(toast(page).filter({ hasText: T.archivedTitle })).toBeVisible();
+    await expect(strip.getByText(T.archived, { exact: true })).toBeVisible();
+    await expect(page.getByText('1 з 3 активних колекцій')).toBeVisible();
+
+    // Bringing it back asks once too.
+    await act(strip, 'Ювілей бабусі', T.unarchive);
+    const unarchive = page.getByRole('alertdialog', {
+      name: 'Повернути «Ювілей бабусі» з архіву?',
+    });
+    await unarchive.getByRole('button', { name: T.unarchive }).click();
+    await expect(unarchive).toBeHidden();
+    await expect(strip.getByText(T.active, { exact: true })).toBeVisible();
+
+    // Delete asks for the title typed.
+    await act(strip, 'Ювілей бабусі', T.deleteAction);
+    const remove = page.getByRole('alertdialog', { name: 'Видалити «Ювілей бабусі»?' });
+    const confirm = remove.getByRole('button', { name: T.deleteConfirm });
+    await expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    await remove
+      .getByRole('textbox', { name: 'Щоб підтвердити, введіть «Ювілей бабусі»' })
+      .fill('Ювілей бабусі');
+    await confirm.click();
+    await expect(toast(page).filter({ hasText: T.deleted })).toBeVisible();
+    await expect(strip).toHaveCount(0);
+    await expect(card(page, 'Залишиться')).toBeVisible();
+  });
+
+  test('unarchiving at the limit from a card says why inside the dialog', async ({ page }) => {
+    await signIn(page, newEmail());
+    const old = await createCollectionViaApi(page, 'Стара');
+    await archiveCollectionViaApi(page, old.id);
+    for (const title of ['Перша', 'Друга', 'Третя']) await createCollectionViaApi(page, title);
+    await page.reload();
+    await act(card(page, 'Стара'), 'Стара', T.unarchive);
+    const dialog = page.getByRole('alertdialog', { name: 'Повернути «Стара» з архіву?' });
+    await dialog.getByRole('button', { name: T.unarchive }).click();
+    await expect(dialog.getByText(LIMIT_ERROR)).toBeVisible();
+    // Nothing changed: still archived once the dialog is closed.
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    await expect(card(page, 'Стара').getByText(T.archived, { exact: true })).toBeVisible();
+  });
+
+  test('the «Параметри» tab deletes and returns to the collections', async ({ page }) => {
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Зайва');
+    await openOptions(page, id);
+    await page.getByRole('button', { name: T.deleteAction, exact: true }).click();
+    const remove = page.getByRole('alertdialog', { name: 'Видалити «Зайва»?' });
+    await remove.getByRole('button', { name: T.deleteConfirm }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(toast(page).filter({ hasText: T.deleted })).toBeVisible();
+    await expect(page.getByRole('heading', { name: T.emptyTitle })).toBeVisible();
+  });
+
+  test('the whole card opens the collection; Tab goes from it to «Поділитися»', async ({
     page,
     isMobile,
   }) => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Хрестини');
     await page.reload();
-    const row = page.getByRole('article').filter({ hasText: 'Хрестини' });
+    const row = card(page, 'Хрестини');
     const titleLink = row.getByRole('link', { name: 'Хрестини', exact: true });
     await expect(titleLink).toHaveAttribute('href', `/app/collections/${id}`);
 
     if (!isMobile) {
-      // One link per row and settings, nothing in between; the row shows the focus ring.
+      // The title link, then the card's «Поділитися»; the card shows the focus ring.
       await titleLink.focus();
       await expect(row).toHaveCSS('outline-style', 'solid');
       await page.keyboard.press('Tab');
-      await expect(
-        page.getByRole('link', { name: 'Налаштування колекції «Хрестини»' }),
-      ).toBeFocused();
+      await expect(row.getByRole('button', { name: 'Дії з колекцією «Хрестини»' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(row.getByRole('button', { name: 'Поділитися' })).toBeFocused();
     }
 
     // A tap away from the title (on the cover) still opens the collection.
@@ -157,22 +277,45 @@ test.describe('dashboard', () => {
     await expect(page).toHaveURL(`/app/collections/${id}`);
   });
 
-  test('an empty collection shows its initials and no actions that do not work yet', async ({
+  test('a card shows its initials, what guests may add, and opens the link and its QR', async ({
     page,
   }) => {
     await signIn(page, newEmail());
-    await createCollectionViaApi(page, 'Ювілей бабусі');
+    const { id } = await createCollectionViaApi(page, 'Ювілей бабусі');
     await page.reload();
-    const strip = page.getByRole('article').filter({ hasText: 'Ювілей бабусі' });
+    const strip = card(page, 'Ювілей бабусі');
     // The cover is decorative: the initials in the collection's tint, hidden from AT.
     const cover = strip.locator('[data-slot="tint-tile"]');
     await expect(cover).toHaveText('ЮБ');
     await expect(cover).toHaveAttribute('aria-hidden', 'true');
-    await expect(strip.getByText('Поки нічого не додано')).toBeVisible();
-    // Guest links come in slice 2: no QR or copy-link buttons until they work.
-    await expect(strip.getByRole('button')).toHaveCount(0);
-    // The row link and settings: no separate Open button.
-    await expect(strip.getByRole('link')).toHaveCount(2);
+    // The main link's real permissions (G3: everything to add), no invented counts.
+    await expect(
+      strip.getByRole('list', { name: 'Гості можуть додавати' }).getByRole('listitem'),
+    ).toHaveText(['Фото', 'Відео', 'Документи', 'Побажання']);
+    await expect(strip).not.toContainText('гост');
+
+    // One share action (owner 2026-10-02): the QR with its download, the link, its state.
+    await strip.getByRole('button', { name: 'Поділитися' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Поділитися з гостями' });
+    // The card shares the main link, and the dialog says so.
+    // One live link: it is named as plain text, no one-option select.
+    await expect(dialog.locator('[data-slot="share-link-status"]')).toContainText(
+      'Основне посилання',
+    );
+    await expect(dialog.getByRole('combobox')).toHaveCount(0);
+    await expect(
+      dialog.getByRole('img', { name: 'QR-код посилання “Основне посилання”' }),
+    ).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Завантажити для друку (PNG)' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Копіювати' })).toBeVisible();
+    await expect(dialog.getByRole('link', { name: /^Відкрити/ })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    await expect(dialog.locator('[data-slot="share-link-status"]')).toHaveText(/Активне$/);
+    // No way out to other screens from here: the dialog is about sharing only.
+    await expect(dialog.getByRole('link', { name: 'Керувати посиланнями' })).toHaveCount(0);
+    expect(id).toBeTruthy();
   });
 
   test('at the limit the dialog explains it instead of showing the form', async ({ page }) => {
@@ -189,30 +332,59 @@ test.describe('dashboard', () => {
 });
 
 test.describe('collection page and settings', () => {
-  test('editing the title in settings updates the collection page', async ({ page }) => {
+  test('the title and description are edited in place in the header', async ({ page }) => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Ювілей');
     await page.goto(`/app/collections/${id}`);
     await expect(page.getByRole('heading', { name: 'Ювілей', level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: T.contentEmpty })).toBeVisible();
+    // No actions menu in the header any more.
+    await expect(page.getByRole('button', { name: /^Дії з колекцією/ })).toHaveCount(0);
 
-    await page.getByRole('link', { name: T.settings }).click();
-    await expect(page.getByRole('heading', { name: T.settingsTitle, level: 1 })).toBeVisible();
-    const title = page.getByRole('textbox', { name: T.title });
-    await title.fill('Ювілей бабусі Галини');
-    await page.getByRole('button', { name: T.save }).click();
-    await expect(toast(page)).toHaveText(T.saved);
-
-    await page.getByRole('link', { name: 'Ювілей бабусі Галини', exact: true }).click();
+    // Title: the pencil turns it into a field, selected; Escape cancels, Enter saves.
+    const pencil = page.getByRole('button', { name: 'Редагувати назву' });
+    expect((await pencil.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+    await pencil.click();
+    const field = page.getByRole('textbox', { name: 'Назва колекції' });
+    await expect(field).toBeFocused();
+    await expect(field).toHaveValue('Ювілей');
+    await page.keyboard.type('Зміна');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('heading', { name: 'Ювілей', level: 1 })).toBeVisible();
+    await pencil.click();
+    await field.fill('');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('alert').filter({ hasText: 'Введіть назву' })).toBeVisible();
+    await field.fill('Ювілей бабусі Галини');
+    await page.keyboard.press('Enter');
     await expect(
       page.getByRole('heading', { name: 'Ювілей бабусі Галини', level: 1 }),
     ).toBeVisible();
+    await expect(toast(page).filter({ hasText: 'Збережено' })).toBeVisible();
+    // The breadcrumbs follow.
+    await expect(page.getByRole('navigation', { name: 'Де ви зараз' })).toContainText(
+      'Ювілей бабусі Галини',
+    );
+
+    // Description: none yet, so «Додати опис»; Ctrl+Enter saves, line breaks kept.
+    await page.getByRole('button', { name: 'Додати опис' }).click();
+    const area = page.getByRole('textbox', { name: 'Опис колекції' });
+    await expect(area).toBeFocused();
+    await area.fill('Субота, 14:00\nРесторан «Липа»');
+    await page.keyboard.press('Control+Enter');
+    await expect(page.getByText('Ресторан «Липа»')).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByRole('heading', { name: 'Ювілей бабусі Галини', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Субота, 14:00')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Редагувати опис' })).toBeVisible();
   });
 
   test('archive from settings, then unarchive from the collection page', async ({ page }) => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Випускний');
-    await page.goto(`/app/collections/${id}/settings`);
+    await openOptions(page, id);
     await page.getByRole('button', { name: T.archiveAction }).click();
     const confirm = page.getByRole('alertdialog');
     await confirm.getByRole('button', { name: T.archiveAction }).click();
@@ -222,22 +394,21 @@ test.describe('collection page and settings', () => {
     await page.goto(`/app/collections/${id}`);
     await expect(page.getByText(T.archivedTitle)).toBeVisible();
     await page.goto('/app');
-    const card = page.getByRole('article').filter({ hasText: 'Випускний' });
-    await expect(card.getByText(T.archived, { exact: true })).toBeVisible();
+    const archived = card(page, 'Випускний');
+    await expect(archived.getByText(T.archived, { exact: true })).toBeVisible();
 
-    await card.getByRole('link', { name: 'Випускний', exact: true }).click();
+    await archived.getByRole('link', { name: 'Випускний', exact: true }).click();
     await page.getByRole('button', { name: T.unarchive }).click();
     await expect(page.getByText(T.archivedTitle)).toBeHidden();
-    await page.getByRole('link', { name: T.back }).click();
-    await expect(card.getByText(T.active, { exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: T.archive })).toHaveCount(0);
+    await page.locator('main').getByRole('link', { name: T.back }).click();
+    await expect(archived.getByText(T.active, { exact: true })).toBeVisible();
   });
 
   test('delete asks first; Escape cancels and returns focus to the button', async ({ page }) => {
     await signIn(page, newEmail());
     await createCollectionViaApi(page, 'Залишиться');
     const { id } = await createCollectionViaApi(page, 'Зайва');
-    await page.goto(`/app/collections/${id}/settings`);
+    await openOptions(page, id);
     const remove = page.getByRole('button', { name: T.deleteAction, exact: true });
     // The keyboard path (Safari does not focus a tapped button, so there is nothing to return to).
     await remove.focus();
@@ -322,7 +493,7 @@ test.describe('isolation and stale screens', () => {
     await createCollectionViaApi(page, 'Друга');
     const { id } = await createCollectionViaApi(page, 'Третя');
 
-    await page.goto(`/app/collections/${id}/settings`);
+    await openOptions(page, id);
     await page.getByRole('button', { name: T.archiveAction }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: T.archiveAction }).click();
     await expect(page.getByRole('button', { name: T.unarchive })).toBeVisible();
@@ -351,8 +522,8 @@ test.describe('isolation and stale screens', () => {
     await page.reload();
     await page.getByRole('link', { name: 'Зайва', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Зайва', level: 1 })).toBeVisible();
+    await page.getByRole('tab', { name: 'Параметри' }).click();
     const overview = page.url();
-    await page.getByRole('link', { name: T.settings }).click();
     await page.getByRole('button', { name: T.deleteAction, exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: T.deleteConfirm }).click();
     await expect(page).toHaveURL(/\/app$/);
@@ -375,6 +546,133 @@ test.describe('isolation and stale screens', () => {
     const { used, limit } = usage.activeCollections;
     await expect(page.getByText(`${used} з ${limit} активних колекцій`)).toBeVisible();
     expect(used).toBe(1);
+  });
+});
+
+test.describe('dashboard card and settings layout (owner review 2026-10-02)', () => {
+  test('a card shows its status, then the description, the date and the link state', async ({
+    page,
+  }) => {
+    await signIn(page, newEmail());
+    await createCollectionViaApi(page, 'Хрестини Марка', 'Неділя, 12:00');
+    await page.reload();
+    const strip = card(page, 'Хрестини Марка');
+    await expect(strip.getByText(T.active, { exact: true })).toBeVisible();
+    const meta = strip.locator('[data-slot="collection-meta"]');
+    await expect(meta.getByText('Посилання активне', { exact: true })).toBeVisible();
+    await expect(meta).toContainText('Створено');
+    // The description sits under the title, above the date and link state.
+    const description = await strip.getByText('Неділя, 12:00').boundingBox();
+    const metaBox = await meta.boundingBox();
+    expect(description!.y + description!.height).toBeLessThanOrEqual(metaBox!.y);
+  });
+
+  test('«Параметри» sums up guest access and opens the main link to change it', async ({
+    page,
+  }) => {
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Ювілей');
+    // The old address lands on the tab.
+    await page.goto(`/app/collections/${id}/settings`);
+    await expect(page).toHaveURL(`/app/collections/${id}?tab=settings`);
+    const access = page.getByRole('region', { name: 'Доступ гостей' });
+    await expect(
+      access.getByRole('list', { name: 'Гості можуть додавати' }).getByRole('listitem'),
+    ).toHaveText(['Фото', 'Відео', 'Документи', 'Побажання']);
+    await expect(access.getByText('Лише своє')).toBeVisible();
+    await access.getByRole('link', { name: 'Змінити доступ гостей' }).click();
+    await expect(page).toHaveURL(`/app/collections/${id}?tab=links&link=main`);
+    await expect(page.getByRole('dialog', { name: 'Основне посилання' })).toBeVisible();
+  });
+});
+
+test.describe('admin navigation (owner decisions 2026-10-02)', () => {
+  test('the sidebar has the two sections only; breadcrumbs say where you are', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'the sidebar is a sheet on phones (next test)');
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Ювілей');
+    const nav = page.getByRole('navigation', { name: 'Розділи' });
+    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт']);
+    await expect(nav.getByRole('link', { name: 'Колекції' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+
+    // Inside a collection: «Колекції» is the current section; no sub-group duplicates the tabs.
+    await openOptions(page, id);
+    await expect(nav.getByRole('link', { name: 'Колекції' })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт']);
+    await expect(
+      page.getByRole('navigation', { name: 'Де ви зараз' }).getByRole('listitem'),
+    ).toHaveText(['Колекції', 'Ювілей']);
+
+    await nav.getByRole('link', { name: 'Акаунт' }).click();
+    await expect(page).toHaveURL(/\/app\/account$/);
+    await expect(page.getByRole('heading', { name: 'Акаунт', level: 1 })).toBeVisible();
+    await expect(nav.getByRole('link', { name: 'Акаунт' })).toHaveAttribute('aria-current', 'page');
+    await expect(nav.getByRole('link', { name: 'Колекції' })).not.toHaveAttribute('aria-current');
+    // The old address still works.
+    await page.goto('/app/settings');
+    await expect(page).toHaveURL(/\/app\/account$/);
+  });
+
+  test('the sidebar folds to an icon rail, keeps the names, and remembers it', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'desktop only: phones use the menu sheet');
+    await signIn(page, newEmail());
+    const nav = page.getByRole('navigation', { name: 'Розділи' });
+    const toggle = page.getByRole('button', { name: 'Згорнути бічну панель' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const wide = (await page.locator('#admin-sidebar').boundingBox())!.width;
+    await toggle.click();
+    const expand = page.getByRole('button', { name: 'Розгорнути бічну панель' });
+    await expect(expand).toHaveAttribute('aria-expanded', 'false');
+    await expect
+      .poll(async () => (await page.locator('#admin-sidebar').boundingBox())!.width)
+      .toBeLessThan(wide);
+    // The names stay for screen readers and show as a tooltip on focus.
+    await expect(nav.getByRole('link', { name: 'Колекції' })).toBeVisible();
+    await nav.getByRole('link', { name: 'Акаунт' }).focus();
+    await expect(page.getByRole('tooltip')).toHaveText('Акаунт');
+
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Розгорнути бічну панель' })).toBeVisible();
+    await page.getByRole('button', { name: 'Розгорнути бічну панель' }).click();
+    await expect(page.getByRole('button', { name: 'Згорнути бічну панель' })).toBeVisible();
+  });
+
+  test('on phones the sections open from the menu button', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'phones only');
+    await signIn(page, newEmail());
+    await page.getByRole('button', { name: 'Відкрити меню' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Розділи' });
+    const nav = sheet.getByRole('navigation', { name: 'Розділи' });
+    await expect(nav.getByRole('link', { name: 'Колекції' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await nav.getByRole('link', { name: 'Акаунт' }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page).toHaveURL(/\/app\/account$/);
+  });
+
+  test('the skip link moves focus to the page content', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard path on desktop');
+    await signIn(page, newEmail());
+    await page.keyboard.press('Tab');
+    const skip = page.getByRole('link', { name: 'Перейти до вмісту' });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeVisible();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('main#main')).toBeFocused();
   });
 });
 
@@ -403,8 +701,7 @@ test.describe('long text on every screen (Review Focus 4)', () => {
     await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 
-    await page.goto(`/app/collections/${id}/settings`);
-    await expect(page.getByRole('heading', { name: T.settingsTitle, level: 1 })).toBeVisible();
+    await openOptions(page, id);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   });
 });

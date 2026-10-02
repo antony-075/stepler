@@ -57,6 +57,18 @@ const PAIRS: Pair[] = [
   { fg: 'destructive', bg: 'destructive-soft', min: 4.5 },
   { fg: 'pencil', bg: 'pencil-soft', min: 4.5 },
   { fg: 'muted-foreground', bg: 'pencil-soft', min: 4.5 },
+  // A toast's description on its variant's soft fill (owner review 2026-10-02: tinted toasts).
+  ...['success-soft', 'warning-soft', 'destructive-soft', 'info-soft'].map((bg) => ({
+    fg: 'muted-foreground',
+    bg,
+    min: 4.5 as const,
+  })),
+  // The focus ring around a tinted toast.
+  ...['success-soft', 'warning-soft', 'destructive-soft', 'info-soft'].map((bg) => ({
+    fg: 'ring',
+    bg,
+    min: 3 as const,
+  })),
   { fg: 'link', bg: 'info-soft', min: 4.5 },
   { fg: 'muted-foreground', bg: 'muted', min: 4.5 },
   // Frame tints: the number on an empty frame, and step numbers.

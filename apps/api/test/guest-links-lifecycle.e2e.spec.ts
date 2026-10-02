@@ -81,6 +81,11 @@ describe('guest link management', () => {
       .set('Cookie', cookie)
       .set('Origin', ORIGIN)
       .send(body);
+  const del = (cookie: string, id: string) =>
+    request(server())
+      .delete(`/api/v1/guest-links/${id}`)
+      .set('Cookie', cookie)
+      .set('Origin', ORIGIN);
   const list = async (cookie: string, collectionId: string) =>
     guestLinkListResponseSchema
       .parse(
@@ -292,6 +297,70 @@ describe('guest link management', () => {
     });
   });
 
+  describe('delete', () => {
+    test('the default link cannot be deleted', async () => {
+      const { cookie, defaultLink } = await ownerWithCollection();
+      const res = await del(cookie, defaultLink.id).expect(409);
+      expect(res.body).toMatchObject({ code: 'DEFAULT_LINK_NOT_REVOCABLE' });
+      const row = await prisma.guestLink.findUniqueOrThrow({ where: { id: defaultLink.id } });
+      expect(row).toMatchObject({ status: 'ACTIVE', hiddenAt: null });
+    });
+
+    test('deleting a live link revokes it and hides it; the record stays; again is a no-op', async () => {
+      const { cookie, collectionId } = await ownerWithCollection();
+      const link = parseLink((await createLink(cookie, collectionId).expect(201)).body);
+      await post(cookie, `/guest-links/${link.id}/deactivate`).expect(200);
+      const res = await del(cookie, link.id).expect(204);
+      expect(res.text).toBe('');
+
+      const row = await prisma.guestLink.findUniqueOrThrow({ where: { id: link.id } });
+      expect(row).toMatchObject({ status: 'REVOKED', tokenCiphertext: null, tokenKeyId: null });
+      expect(row.revokedAt).not.toBeNull();
+      expect(row.hiddenAt).not.toBeNull();
+      expect((await list(cookie, collectionId)).map((item) => item.id)).not.toContain(link.id);
+
+      await del(cookie, link.id).expect(204);
+      const events = await prisma.auditEvent.findMany({
+        where: { action: 'guest_link.delete', targetId: link.id },
+      });
+      expect(events).toHaveLength(1);
+      expect(events[0]?.metadata).toEqual({ fromStatus: 'INACTIVE' });
+      // A deleted link is revoked: nothing else can change it.
+      const refused = await post(cookie, `/guest-links/${link.id}/activate`).expect(409);
+      expect(refused.body).toMatchObject({ code: 'LINK_REVOKED' });
+    });
+
+    test('a revoked link can be removed from the list of revoked links', async () => {
+      const { cookie, collectionId } = await ownerWithCollection();
+      const kept = parseLink((await createLink(cookie, collectionId, 'Kept').expect(201)).body);
+      const gone = parseLink((await createLink(cookie, collectionId, 'Gone').expect(201)).body);
+      await post(cookie, `/guest-links/${kept.id}/revoke`).expect(200);
+      const revoked = parseLink(
+        (await post(cookie, `/guest-links/${gone.id}/revoke`).expect(200)).body,
+      );
+      await del(cookie, gone.id).expect(204);
+
+      const ids = (await list(cookie, collectionId)).map((item) => item.id);
+      expect(ids).toContain(kept.id);
+      expect(ids).not.toContain(gone.id);
+      const row = await prisma.guestLink.findUniqueOrThrow({ where: { id: gone.id } });
+      // Still revoked when it was: deleting does not rewrite the revocation.
+      expect(row.revokedAt?.toISOString()).toBe(revoked.revokedAt);
+    });
+
+    test('concurrent deletes are audited once', async () => {
+      const { cookie, collectionId } = await ownerWithCollection();
+      const link = parseLink((await createLink(cookie, collectionId).expect(201)).body);
+      const results = await Promise.all([del(cookie, link.id), del(cookie, link.id)]);
+      expect(results.map((res) => res.status)).toEqual([204, 204]);
+      expect(
+        await prisma.auditEvent.count({
+          where: { action: 'guest_link.delete', targetId: link.id },
+        }),
+      ).toBe(1);
+    });
+  });
+
   describe('rotate the default link', () => {
     const rotate = (cookie: string, collectionId: string, expectedLinkId: string) =>
       post(cookie, `/collections/${collectionId}/guest-links/default/rotate`, { expectedLinkId });
@@ -447,6 +516,7 @@ describe('guest link management', () => {
         post(cookie, `/guest-links/${linkId}/activate`),
       'POST /guest-links/:id/revoke': (cookie, { linkId }) =>
         post(cookie, `/guest-links/${linkId}/revoke`),
+      'DELETE /guest-links/:id': (cookie, { linkId }) => del(cookie, linkId),
       'POST /collections/:id/guest-links/default/rotate': (cookie, { collectionId, linkId }) =>
         post(cookie, `/collections/${collectionId}/guest-links/default/rotate`, {
           expectedLinkId: linkId,

@@ -20,10 +20,13 @@ export function QrDownloadMenu({
   url,
   fileBase,
   variant = 'outline',
+  size = 'default',
 }: {
   url: string;
   fileBase: string;
   variant?: 'default' | 'outline';
+  /** `lg` (48px) next to a `CopyField`, so the two line up. */
+  size?: 'default' | 'lg';
 }) {
   const t = useTranslations('links.share');
   const { toast } = useToast();
@@ -39,7 +42,7 @@ export function QrDownloadMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant}>
+        <Button variant={variant} size={size}>
           <Download aria-hidden="true" />
           {t('download')}
           <ChevronDown aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NO_CONTROL_CHARACTERS } from './collections.js';
+import { NO_CONTROL_CHARACTERS } from './text.js';
 
 /** `REVOKED` is terminal: a revoked link never works again and its token is no longer stored. */
 export const guestLinkStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'REVOKED']);

@@ -7,7 +7,8 @@ import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
 import { useMutation } from '@tanstack/react-query';
-import { CircleAlert, MailCheck } from 'lucide-react';
+import { TintTile } from '@stepler/ui/components/tint-tile';
+import { CircleAlert, Mail, MailCheck, UserRound } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -93,7 +94,13 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
 
   return (
     <div className="grid gap-4">
-      <h2 className="type-h2">{t('login.title')}</h2>
+      <div className="grid justify-items-center gap-2 text-center sm:gap-3">
+        <TintTile tint="sage" className="max-sm:hidden [&_svg]:size-7">
+          <UserRound strokeWidth={1.75} />
+        </TintTile>
+        <h2 className="type-h2">{t('login.title')}</h2>
+        <p className="max-w-[40ch] text-pretty text-muted-foreground">{t('login.lead')}</p>
+      </div>
 
       {shownError !== null && <Alert variant="error">{t(errorMessageKey(shownError))}</Alert>}
 
@@ -104,18 +111,25 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
       >
         <div className="grid gap-2">
           <Label htmlFor="email">{t('login.emailLabel')}</Label>
-          <Input
-            id="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            spellCheck={false}
-            placeholder={t('login.emailPlaceholder')}
-            aria-invalid={emailError !== undefined}
-            aria-describedby={emailError === undefined ? undefined : 'email-error'}
-            disabled={request.isPending}
-            {...form.register('email')}
-          />
+          <div className="relative">
+            <Mail
+              aria-hidden="true"
+              className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              spellCheck={false}
+              placeholder={t('login.emailPlaceholder')}
+              aria-invalid={emailError !== undefined}
+              aria-describedby={emailError === undefined ? undefined : 'email-error'}
+              disabled={request.isPending}
+              className="pl-11"
+              {...form.register('email')}
+            />
+          </div>
           {emailError !== undefined && (
             <p
               id="email-error"
