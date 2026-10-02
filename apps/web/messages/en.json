@@ -111,9 +111,8 @@
     "loading": "Loading collections",
     "loadFailed": "Couldn't load your collections.",
     "retry": "Try again",
-    "emptyTitle": "No collections yet",
-    "emptyText": "A collection gathers guests' photos, videos, documents and notes from one event. Guests add them through a link or a QR code.",
-    "createFirst": "Create your first collection",
+    "emptyTitle": "Start with your first collection",
+    "emptyText": "One collection per event: a wedding, a birthday, a graduation. Guests add photos, videos and messages through a link or a QR code, and you see it all in one place.",
     "limitTitle": "Active collection limit reached",
     "limitReached": "You can have up to {limit} active collections at a time. Archive one to create a new one: everything in it is kept.",
     "create": {
@@ -135,9 +134,13 @@
       "titleTooLong": "The title can be at most {max} characters",
       "descriptionTooLong": "The description can be at most {max} characters"
     },
-    "emptyStrip": "The film is empty. What guests add will appear here.",
-    "open": "Open",
-    "openLabel": "Open “{title}”"
+    "stepsLabel": "How it works",
+    "steps": {
+      "create": "Create a collection",
+      "share": "Share the link or QR code",
+      "collect": "Guests add photos, videos and messages"
+    },
+    "emptyRow": "Photos, videos and messages from guests will appear here."
   },
   "collection": {
     "pageTitle": "Collection",
@@ -148,7 +151,7 @@
     "unarchive": "Unarchive",
     "unarchived": "Collection unarchived",
     "content": "Content",
-    "contentEmpty": "The film is empty",
+    "contentEmpty": "Photos, videos and messages from guests will appear here",
     "notFoundTitle": "Collection not found",
     "notFoundText": "It may have been deleted, or the link has a mistake in it.",
     "loadFailed": "Couldn't load the collection.",
@@ -182,6 +185,6 @@
       "deletePending": "Deleting",
       "deleted": "Collection deleted"
     },
-    "contentEmptyText": "What guests add will appear here."
+    "contentEmptyText": "Once you share the link, guests can add their photos and videos."
   }
 }

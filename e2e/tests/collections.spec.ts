@@ -11,8 +11,7 @@ test.use({ locale: 'de-DE' });
 
 const T = {
   pageTitle: 'Колекції',
-  emptyTitle: 'Колекцій поки немає',
-  createFirst: 'Створити першу колекцію',
+  emptyTitle: 'Почніть з першої колекції',
   newCollection: 'Нова колекція',
   title: 'Назва',
   description: 'Опис',
@@ -33,7 +32,7 @@ const T = {
   deleteAction: 'Видалити',
   deleteConfirm: 'Видалити назавжди',
   deleted: 'Колекцію видалено',
-  contentEmpty: 'Плівка порожня',
+  contentEmpty: 'Тут з’являться фото, відео й побажання гостей',
   notFound: 'Колекцію не знайдено',
 };
 
@@ -49,8 +48,17 @@ test.describe('dashboard', () => {
     await expect(page.getByRole('heading', { name: T.pageTitle, level: 1 })).toBeVisible();
     await expect(page.getByRole('heading', { name: T.emptyTitle })).toBeVisible();
     await expect(page.getByText('0 з 3 активних колекцій')).toBeVisible();
+    // One invitation, one action: the header drops its own "New collection" while empty.
+    await expect(page.getByRole('button', { name: T.newCollection })).toHaveCount(1);
+    const steps = page.getByRole('list', { name: 'Як це працює' }).getByRole('listitem');
+    // The step numbers are drawn (aria-hidden); the list itself carries the order.
+    await expect(steps).toHaveText([
+      /Створіть колекцію$/,
+      /Поділіться посиланням або QR-кодом$/,
+      /Гості додають фото, відео й побажання$/,
+    ]);
 
-    await page.getByRole('button', { name: T.createFirst }).click();
+    await page.getByRole('button', { name: T.newCollection }).click();
     const dialog = page.getByRole('dialog', { name: T.newCollection });
     await expect(dialog.getByLabel(T.title)).toBeFocused();
     await dialog.getByLabel(T.title).fill('Весілля Олі та Тараса');
@@ -122,35 +130,45 @@ test.describe('dashboard', () => {
     await expect(page.getByLabel(T.title)).toHaveValue('Ювілей бабусі');
   });
 
-  test('Tab goes from the title to Open, then to settings', async ({ page, isMobile }) => {
-    test.skip(isMobile, 'keyboard path on desktop');
+  test('the whole row opens the collection; Tab goes from it to settings', async ({
+    page,
+    isMobile,
+  }) => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Хрестини');
     await page.reload();
-    const titleLink = page.getByRole('link', { name: 'Хрестини', exact: true });
-    await expect(titleLink).toBeVisible();
-    await titleLink.focus();
-    await page.keyboard.press('Tab');
-    const open = page.getByRole('link', { name: 'Відкрити «Хрестини»' });
-    await expect(open).toBeFocused();
-    await expect(open).toHaveAttribute('href', `/app/collections/${id}`);
-    await page.keyboard.press('Tab');
-    await expect(
-      page.getByRole('link', { name: 'Налаштування колекції «Хрестини»' }),
-    ).toBeFocused();
+    const row = page.getByRole('article').filter({ hasText: 'Хрестини' });
+    const titleLink = row.getByRole('link', { name: 'Хрестини', exact: true });
+    await expect(titleLink).toHaveAttribute('href', `/app/collections/${id}`);
+
+    if (!isMobile) {
+      // One link per row and settings, nothing in between; the row shows the focus ring.
+      await titleLink.focus();
+      await expect(row).toHaveCSS('outline-style', 'solid');
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('link', { name: 'Налаштування колекції «Хрестини»' }),
+      ).toBeFocused();
+    }
+
+    // A tap away from the title (on the empty frames) still opens the collection.
+    const frames = await row.locator('[data-slot="frame-slots"]').boundingBox();
+    await page.mouse.click(frames!.x + frames!.width / 2, frames!.y + frames!.height / 2);
+    await expect(page).toHaveURL(`/app/collections/${id}`);
   });
 
-  test('an empty collection shows an empty film strip and no actions that do not work yet', async ({
+  test('an empty collection shows empty frames and no actions that do not work yet', async ({
     page,
   }) => {
     await signIn(page, newEmail());
     await createCollectionViaApi(page, 'Ювілей');
     await page.reload();
     const strip = page.getByRole('article').filter({ hasText: 'Ювілей' });
-    await expect(strip.getByText('Плівка порожня', { exact: false })).toBeVisible();
+    await expect(strip.getByText('Тут з’являться фото, відео й побажання гостей.')).toBeVisible();
     // Guest links come in slice 2: no QR or copy-link buttons until they work.
     await expect(strip.getByRole('button')).toHaveCount(0);
-    await expect(strip.getByRole('link')).toHaveCount(3);
+    // The row link and settings: no separate Open button.
+    await expect(strip.getByRole('link')).toHaveCount(2);
   });
 
   test('at the limit the dialog explains it instead of showing the form', async ({ page }) => {

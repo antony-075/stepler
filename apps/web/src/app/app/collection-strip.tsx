@@ -3,59 +3,75 @@
 import type { Collection } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
-import { formatFrameNumber } from '@stepler/ui/components/empty-state';
-import { focusRing } from '@stepler/ui/lib/focus';
+import { FrameSlots } from '@stepler/ui/components/frame-slots';
 import { cn } from '@stepler/ui/lib/utils';
 import { Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
+import { collectionTint } from './collection-tint';
+
+/** How many empty frames an active row shows before content exists (slice 7). */
+const EMPTY_ROW_FRAMES = 5;
+
+// The whole row is the link to the collection: the title link is stretched over the row with
+// `::after`, so a tap anywhere opens it, while the accessible name stays the title alone. The row
+// shows hover and the violet focus ring (inset: the sheet clips overflow); the settings button
+// sits above the stretched link (`z-1`), so it keeps its own click and focus.
+const ROW = cn(
+  'group relative grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-4 p-4 sm:px-6 sm:py-5',
+  'transition-colors duration-(--duration-fast) motion-reduce:transition-none',
+  'has-[[data-slot=collection-link]:focus-visible]:outline-2 has-[[data-slot=collection-link]:focus-visible]:-outline-offset-2 has-[[data-slot=collection-link]:focus-visible]:outline-ring has-[[data-slot=collection-link]:focus-visible]:outline-solid',
+);
 
 /**
- * One collection on the dashboard (DESIGN-SYSTEM.md §5.10 `CollectionStrip`, §6.5): a row of the
- * active sheet. Title, status and date on the left; the film strip in the middle; Open and the
- * settings link on the right (from `lg`; stacked on phones). Before content exists (slice 7) the
- * strip is the honest empty frame «#001» with one line, and no QR or link actions: guest links
- * arrive in slice 2, and nothing here pretends otherwise (plan D6).
+ * One active collection on the dashboard (DESIGN-SYSTEM.md §5.10 `CollectionStrip`, §6.5): title,
+ * status and date; then the collection's empty frames in its own tint (chosen from its id) with
+ * one plain line; the settings button on the right. Before content exists (slice 7) there are no
+ * counts, QR or link actions: guest links arrive in slice 2 (plan D6).
  *
- * The title is a link and wraps anywhere, up to 3 lines, with the full text in `title`.
+ * Phones: summary and settings on the first line, the frames under them across the full width.
+ * From `lg` it is one line.
  */
 export function CollectionStrip({ collection }: { collection: Collection }) {
   const t = useTranslations('collections');
   return (
     <article
       data-slot="collection-strip"
-      className="grid gap-4 p-4 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)_auto] lg:items-center lg:gap-8"
+      className={cn(
+        ROW,
+        'hover:bg-hover-card lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)_auto] lg:items-center lg:gap-x-8',
+      )}
     >
-      <CollectionSummary collection={collection} titleClassName="type-h2" />
-      <div className="flex min-w-0 items-center gap-4">
-        <div aria-hidden="true" className="grid w-12 shrink-0 gap-1 sm:w-16 lg:w-20">
-          <div className="aspect-square rounded-frame border border-dashed border-input" />
-          <span className="type-data text-muted-foreground" translate="no">
-            {formatFrameNumber(1)}
-          </span>
-        </div>
-        <p className="max-w-[46ch] text-sm leading-[1.45] text-muted-foreground sm:text-[0.9375rem]">
-          {t('emptyStrip')}
-        </p>
+      <CollectionSummary
+        collection={collection}
+        titleClassName="type-h2"
+        className="col-start-1 row-start-1"
+      />
+      <SettingsLink collection={collection} className="col-start-2 row-start-1 lg:col-start-3" />
+      <div className="col-span-2 row-start-2 grid gap-3 sm:flex sm:items-center sm:gap-5 lg:col-span-1 lg:col-start-2 lg:row-start-1">
+        <FrameSlots
+          count={EMPTY_ROW_FRAMES}
+          tint={collectionTint(collection.id)}
+          className="w-full shrink-0 sm:w-72"
+        />
+        <p className="max-w-[40ch] text-sm leading-[1.45] text-muted-foreground">{t('emptyRow')}</p>
       </div>
-      <CollectionActions collection={collection} />
     </article>
   );
 }
 
 /**
- * An archived collection: a compact row without a film strip, drawn on the page itself (the
- * archive list has a dashed edge and no fill), so it reads apart from the active sheet by shape,
- * not by another colour.
+ * An archived collection: a compact row without frames, on the page itself (the archive list
+ * has a dashed edge and no fill), so it reads apart from the active sheet by shape, not colour.
  */
 export function ArchivedCollectionRow({ collection }: { collection: Collection }) {
   return (
     <article
       data-slot="collection-row"
-      className="grid gap-3 p-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-8"
+      className={cn(ROW, 'items-center hover:bg-hover lg:gap-x-8')}
     >
       <CollectionSummary collection={collection} titleClassName="type-h3" />
-      <CollectionActions collection={collection} />
+      <SettingsLink collection={collection} />
     </article>
   );
 }
@@ -63,9 +79,11 @@ export function ArchivedCollectionRow({ collection }: { collection: Collection }
 function CollectionSummary({
   collection,
   titleClassName,
+  className,
 }: {
   collection: Collection;
   titleClassName: string;
+  className?: string;
 }) {
   const t = useTranslations('collections');
   const format = useFormatter();
@@ -74,22 +92,20 @@ function CollectionSummary({
   const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
 
   return (
-    <div className="grid min-w-0 content-start gap-1.5">
-      {/* The clamp sits on the link, not the heading: a clamped heading hides overflow and
-          would clip the link's focus outline. */}
+    <div className={cn('grid min-w-0 content-start gap-2', className)}>
+      {/* The clamp sits on the link, not the heading: a clamped heading would hide overflow. The
+          focus ring is drawn by the row, around everything the link covers. */}
       <h3 className={cn('[overflow-wrap:anywhere]', titleClassName)}>
         <Link
+          data-slot="collection-link"
           href={`/app/collections/${collection.id}`}
           title={collection.title}
-          className={cn(
-            'line-clamp-3 rounded-frame text-foreground no-underline decoration-1 underline-offset-4 hover:underline',
-            focusRing,
-          )}
+          className="line-clamp-3 text-foreground no-underline decoration-1 underline-offset-4 outline-none group-hover:underline after:absolute after:inset-0 after:content-['']"
         >
           {collection.title}
         </Link>
       </h3>
-      <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+      <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <Badge variant={archived ? 'neutral' : 'success'} title={status}>
           {status}
         </Badge>
@@ -106,30 +122,26 @@ function CollectionSummary({
   );
 }
 
-/** Open (the main path on phones) and a 44px settings link; both name the collection. */
-function CollectionActions({ collection }: { collection: Collection }) {
+/**
+ * A 44px outline icon button to the collection's settings, named after the collection (and shown
+ * as a tooltip). The only other action of a row, so it stays visible instead of hiding in a menu.
+ */
+function SettingsLink({ collection, className }: { collection: Collection; className?: string }) {
   const t = useTranslations('collections');
-  const settingsLabel = t('cardSettings', { title: collection.title });
+  const label = t('cardSettings', { title: collection.title });
   return (
-    <div className="flex items-center justify-between gap-2 lg:justify-end">
-      <Button asChild variant="outline">
-        <Link
-          href={`/app/collections/${collection.id}`}
-          aria-label={t('openLabel', { title: collection.title })}
-          className="no-underline"
-        >
-          {t('open')}
-        </Link>
-      </Button>
-      <Button asChild variant="ghost" size="icon" className="text-muted-foreground">
-        <Link
-          href={`/app/collections/${collection.id}/settings`}
-          aria-label={settingsLabel}
-          title={settingsLabel}
-        >
-          <Settings aria-hidden="true" className="size-5" />
-        </Link>
-      </Button>
-    </div>
+    <Button
+      asChild
+      variant="outline"
+      size="icon"
+      className={cn(
+        'relative z-1 self-start text-muted-foreground hover:text-foreground lg:self-center',
+        className,
+      )}
+    >
+      <Link href={`/app/collections/${collection.id}/settings`} aria-label={label} title={label}>
+        <Settings aria-hidden="true" className="size-5" />
+      </Link>
+    </Button>
   );
 }

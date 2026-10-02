@@ -1,24 +1,27 @@
 'use client';
 
 // Design (direction C, DESIGN-SYSTEM.md §6.5, artboard C-dashboard):
-// - The h1 «Колекції», the live "{used} of {limit} active collections" sentence under it and one
-//   ink primary. No stat cards: the limit is a sentence, not a KPI.
-// - Active collections are rows of one white sheet (`CollectionStrip`): title, status and date,
-//   then the film strip. Before content exists the strip is the empty dashed frame «#001» and one
-//   line; no counts, no QR or link buttons that do not work yet (plan D6, slice 2).
+// - The h1 «Колекції», the live "{used} of {limit} active collections" sentence under it with a
+//   row of small squares, one per slot (filled = used), and one ink primary. No stat cards: the
+//   limit is a sentence, not a KPI.
+// - Active collections are rows of one white sheet (`CollectionStrip`), each row one link: title,
+//   status and date, then the collection's empty numbered frames in its own tint and one line;
+//   no counts, no QR or link buttons that do not work yet (plan D6, slice 2).
 // - The archive follows as its own titled list of compact rows without strips, on the page
 //   itself behind a dashed edge: set apart by shape, not by a second colour.
-// - Empty is the empty frame of a contact sheet waiting for its first collection; the limit is
+// - Empty is an invitation: a headline, one line, the only "New collection" on the page (the
+//   header drops its own), three steps, and six empty frames in every tint. The limit is
 //   explained in the dialog (inline warning), never as a disabled button with no reason.
 // - Phones first: each row stacks (summary, strip, actions); from `lg` it is one line.
 
 import type { CollectionStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
-import { EmptyState } from '@stepler/ui/components/empty-state';
+import { FrameSlots } from '@stepler/ui/components/frame-slots';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
+import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
@@ -26,6 +29,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { collectionsListKey, fetchUsage, listCollections, USAGE_KEY } from '@/api/collections';
 import { ArchivedCollectionRow, CollectionStrip } from './collection-strip';
+import { collectionTint } from './collection-tint';
 import { CreateCollectionDialog } from './create-collection-dialog';
 
 function useCollectionList(status: CollectionStatus) {
@@ -69,16 +73,26 @@ export function CollectionsDashboard() {
               {t('usage', { used: 0, limit: 0 })}
             </span>
           ) : (
-            <span className="tabular-nums">
-              {t('usage', { used: slots.used, limit: slots.limit })}
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+              <UsageSquares
+                used={slots.used}
+                limit={slots.limit}
+                tints={activeItems.map((collection) => collectionTint(collection.id))}
+              />
+              <span className="tabular-nums">
+                {t('usage', { used: slots.used, limit: slots.limit })}
+              </span>
             </span>
           )
         }
         actions={
-          <Button onClick={openCreate} className="w-full sm:w-auto">
-            <Plus aria-hidden="true" />
-            {t('new')}
-          </Button>
+          // Empty, the invitation below holds the only "New collection"; loading, neither is known yet.
+          loading || empty ? null : (
+            <Button onClick={openCreate} className="w-full sm:w-auto">
+              <Plus aria-hidden="true" />
+              {t('new')}
+            </Button>
+          )
         }
       />
 
@@ -107,27 +121,19 @@ export function CollectionsDashboard() {
           {[0, 1].map((key) => (
             <div
               key={key}
-              className="grid gap-4 p-4 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)_auto] lg:items-center lg:gap-8"
+              className="grid gap-4 p-4 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)_auto] lg:items-center lg:gap-8"
             >
               <div className="grid gap-2">
                 <Skeleton className="h-7 w-3/4" />
                 <Skeleton className="h-4 w-1/2" />
               </div>
-              <Skeleton className="aspect-square w-12 sm:w-16 lg:w-20" />
-              <Skeleton className="h-11 w-28" />
+              <Skeleton className="h-14 w-full sm:w-72" />
+              <Skeleton className="hidden size-11 lg:block" />
             </div>
           ))}
         </Panel>
       ) : empty ? (
-        <Panel variant="sheet">
-          <EmptyState
-            frameNumber={1}
-            title={t('emptyTitle')}
-            description={t('emptyText')}
-            action={<Button onClick={openCreate}>{t('createFirst')}</Button>}
-            className="py-12 sm:py-16"
-          />
-        </Panel>
+        <EmptyDashboard onCreate={openCreate} />
       ) : (
         <div className="grid gap-10 lg:gap-12">
           <section aria-labelledby="collections-active" className="grid gap-3">
@@ -192,5 +198,93 @@ function ShowMore({ list }: { list: CollectionList }) {
     >
       {t('showMore')}
     </Button>
+  );
+}
+
+const USAGE_FREE = 'border-input';
+const USAGE_UNKNOWN_TINT = 'border-foreground bg-foreground';
+// At 12px the soft fill would vanish: a used slot is drawn in the tint's ink.
+const USAGE_TINT: Record<FrameTint, string> = {
+  sage: 'border-tint-sage-ink bg-tint-sage-ink',
+  lavender: 'border-tint-lavender-ink bg-tint-lavender-ink',
+  sand: 'border-tint-sand-ink bg-tint-sand-ink',
+  sky: 'border-tint-sky-ink bg-tint-sky-ink',
+};
+
+/**
+ * One small square per active-collection slot: a used slot in its collection's tint (ink until
+ * the list arrives), a free one as an empty outline. The limit at a glance; the sentence next to
+ * it says the same in words.
+ */
+function UsageSquares({
+  used,
+  limit,
+  tints,
+}: {
+  used: number;
+  limit: number;
+  tints: readonly FrameTint[];
+}) {
+  return (
+    <span aria-hidden="true" data-slot="usage-squares" className="inline-flex gap-1">
+      {Array.from({ length: limit }, (_, index) => {
+        const tint = tints[index];
+        const tone =
+          index >= used ? USAGE_FREE : tint === undefined ? USAGE_UNKNOWN_TINT : USAGE_TINT[tint];
+        return <span key={index} className={cn('size-3 rounded-[1px] border', tone)} />;
+      })}
+    </span>
+  );
+}
+
+const STEPS = ['create', 'share', 'collect'] as const;
+
+// The step numbers pass 4.5:1 on their tint.
+const STEP_TINTS: Record<(typeof STEPS)[number], FrameTint> = {
+  create: 'lavender',
+  share: 'sky',
+  collect: 'sage',
+};
+
+/**
+ * No collection yet: what a collection is, the one action, and how it works in three steps (a
+ * real sequence, so numbered). Six empty frames in every tint stand for what will come; nothing
+ * pretends to be content. Phones: frames on top, then the text; from `md` side by side.
+ */
+function EmptyDashboard({ onCreate }: { onCreate: () => void }) {
+  const t = useTranslations('collections');
+  return (
+    <Panel
+      data-slot="collections-empty"
+      className="grid gap-8 p-5 sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] md:items-center md:gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:p-12"
+    >
+      <FrameSlots count={6} columns={3} className="w-full max-w-60 md:order-2 md:max-w-none" />
+      <div className="grid min-w-0 justify-items-start gap-6">
+        <div className="grid gap-3">
+          <h2 className="type-h2 [overflow-wrap:anywhere]">{t('emptyTitle')}</h2>
+          <p className="max-w-[52ch] text-muted-foreground">{t('emptyText')}</p>
+        </div>
+        <Button onClick={onCreate} className="w-full sm:w-auto">
+          <Plus aria-hidden="true" />
+          {t('new')}
+        </Button>
+        <ol aria-label={t('stepsLabel')} className="grid w-full gap-3 border-t pt-6">
+          {STEPS.map((step, index) => (
+            <li key={step} className="flex items-center gap-3">
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'grid size-7 shrink-0 place-items-center rounded-sheet border text-sm font-semibold tabular-nums',
+                  FRAME_TINT_CLASSES[STEP_TINTS[step]],
+                )}
+              >
+                {index + 1}
+              </span>
+              <span>{t(`steps.${step}`)}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </Panel>
   );
 }

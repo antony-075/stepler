@@ -4,7 +4,7 @@ import type { Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
-import { EmptyState } from '@stepler/ui/components/empty-state';
+import { FrameSlots } from '@stepler/ui/components/frame-slots';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
@@ -22,6 +22,7 @@ import {
 } from '@/api/collections';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
+import { collectionTint } from '../../collection-tint';
 import { CollectionNotFound } from '../collection-not-found';
 import { useCollection } from '../use-collection';
 
@@ -29,8 +30,8 @@ import { useCollection } from '../use-collection';
  * The collection's page (DESIGN-SYSTEM.md §6.6, artboard C-gallery). Before guest links (slice 2)
  * and content (slice 7) exist it shows only what is real: the title (32px from `xl`: a long
  * collection name at 44px would push the sheet off the first screen), status and date, the
- * description, the archive state with its one action, and the empty contact sheet waiting for
- * frame «#001». No Share or QR button yet: they would not work. Settings are one outline button
+ * description, the archive state with its one action, and the empty sheet: six numbered empty
+ * frames in the collection's tint (the same as on the dashboard) and what will appear there. No Share or QR button yet: they would not work. Settings are one outline button
  * away in the header.
  */
 export function CollectionOverview({ id }: { id: string }) {
@@ -114,14 +115,20 @@ function Overview({ collection }: { collection: Collection }) {
         <h2 id="collection-content" className="type-h3">
           {t('content')}
         </h2>
-        <Panel variant="sheet">
-          <EmptyState
-            frameNumber={1}
-            title={t('contentEmpty')}
-            description={t('contentEmptyText')}
-            headingLevel={3}
-            className="py-12 sm:py-16"
+        <Panel data-slot="collection-empty" className="grid gap-6 p-5 sm:p-8 lg:p-10">
+          <FrameSlots
+            count={6}
+            columns={6}
+            tint={collectionTint(collection.id)}
+            className="max-w-2xl max-sm:grid-cols-3"
           />
+          <div className="grid gap-2">
+            <h3 className="type-h3 [overflow-wrap:anywhere]">{t('contentEmpty')}</h3>
+            {/* Archived, guests can't add anything: the notice above says so. */}
+            {archived ? null : (
+              <p className="max-w-[56ch] text-muted-foreground">{t('contentEmptyText')}</p>
+            )}
+          </div>
         </Panel>
       </section>
     </>
