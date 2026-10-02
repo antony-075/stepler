@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  displayNameSchema,
   magicLinkRequestSchema,
   magicLinkVerifyRequestSchema,
   meResponseSchema,
@@ -59,5 +60,18 @@ describe('magicLinkVerifyRequestSchema', () => {
     expect(magicLinkVerifyRequestSchema.safeParse({ token: `${'A'.repeat(42)}=` }).success).toBe(
       false,
     );
+  });
+});
+
+describe('displayNameSchema', () => {
+  test('trims and accepts 1–80 characters on one line', () => {
+    expect(displayNameSchema.parse('  Оля Коваль ')).toBe('Оля Коваль');
+    expect(displayNameSchema.safeParse('я'.repeat(80)).success).toBe(true);
+  });
+
+  test('rejects blank, too long and control characters', () => {
+    for (const value of ['   ', 'я'.repeat(81), 'Оля\nКоваль', 'A\u0000']) {
+      expect(displayNameSchema.safeParse(value).success).toBe(false);
+    }
   });
 });

@@ -18,10 +18,11 @@ export default defineConfig({
     { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
     { name: 'desktop-chrome', use: { ...devices['Desktop Chrome'] } },
   ],
-  // Runs the production builds (turbo builds them first via ^build).
+  // Runs the production builds (turbo builds them first). The API is built into
+  // its own dist-e2e so a running `pnpm dev` (which owns apps/api/dist) is never touched.
   webServer: [
     {
-      command: 'node ../apps/api/dist/main.js',
+      command: 'node ../apps/api/dist-e2e/main.js',
       url: `http://127.0.0.1:${API_PORT}/api/v1/health/live`,
       env: {
         NODE_ENV: 'production',
@@ -46,6 +47,7 @@ export default defineConfig({
         // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
         LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
         LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
+        LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
       },
       reuseExistingServer: false,
     },

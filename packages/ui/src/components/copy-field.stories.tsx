@@ -56,6 +56,8 @@ export const Copy: Story = {
     await expect(input).toHaveValue(LINK);
     const status = canvasElement.querySelector('[aria-live="polite"]');
     await expect(status).toBeEmptyDOMElement();
+    // Measure only with the real fonts loaded; a late font swap would change the width.
+    await document.fonts.ready;
     const button = canvas.getByRole('button', { name: 'Copy' });
     // The button lines up with the input, and its width does not change with the label.
     await expect(button.getBoundingClientRect().height).toBe(input.getBoundingClientRect().height);
@@ -181,5 +183,18 @@ export const LongValue: Story = {
     );
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};
+
+/** Narrower than 22rem (a phone-width panel): the button goes under the field at full width. */
+export const Narrow: Story = {
+  globals: { viewport: { value: 'small' } },
+  args: { value: LONG_LINK },
+  play: async ({ canvas, canvasElement }) => {
+    const input = canvas.getByRole('textbox', { name: 'Guest link' }).getBoundingClientRect();
+    const button = canvas.getByRole('button', { name: 'Copy' }).getBoundingClientRect();
+    await expect(button.top).toBeGreaterThanOrEqual(input.bottom);
+    await expect(button.width).toBe(input.width);
+    await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
   },
 };

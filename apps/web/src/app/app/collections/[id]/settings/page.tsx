@@ -1,23 +1,11 @@
-import type { Metadata } from 'next';
-import { getTranslations } from 'next-intl/server';
-import { CollectionSettings } from './collection-settings';
+import { redirect } from 'next/navigation';
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations('collection.settingsPage');
-  return { title: t('pageTitle') };
-}
-
-export default async function CollectionSettingsPage({
+/** The collection's options are its «Параметри» tab now (owner review 2026-10-02). */
+export default async function OldCollectionSettingsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return (
-    <main className="stepler-container pt-5 pb-16 lg:pt-8 lg:pb-20">
-      <div className="mx-auto max-w-[640px]">
-        <CollectionSettings id={id} />
-      </div>
-    </main>
-  );
+  redirect(`/app/collections/${id}?tab=settings`);
 }

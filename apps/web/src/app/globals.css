@@ -18,19 +18,3 @@
     --stepler-gutter: 2.5rem;
   }
 }
-
-/* The once-only reveal of «Як це працює» (`login/reveal.tsx`): the steps rise in, then the
-   newest guest frame arrives. Only opacity and transform. */
-@keyframes landing-rise {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-}
-
-@keyframes landing-arrive {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-}

@@ -2,17 +2,18 @@
 
 import type { Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
-import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
+import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { useToast } from '@stepler/ui/components/toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Settings } from 'lucide-react';
-import Link from 'next/link';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ImagePlus, Images, Link2, SlidersHorizontal } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { isApiError } from '@/api/client';
 import {
   collectionKey,
@@ -20,26 +21,35 @@ import {
   unarchiveCollection,
   useInvalidateCollections,
 } from '@/api/collections';
+import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
 import { collectionTint } from '../../collection-tint';
 import { CollectionNotFound } from '../collection-not-found';
+import { CollectionHeader } from './collection-header';
+import { CollectionSettingsPanel } from './settings/collection-settings';
+import { LinksList } from './links/links-list';
+import { LinksSheet, useLinksSheet } from './links/links-sheet';
 import { useCollection } from '../use-collection';
 
 /**
- * The collection's page (DESIGN-SYSTEM.md §6.6, artboard C-gallery). Before guest links (slice 2)
- * and content (slice 7) exist it shows only what is real: the title (32px from `xl`: a long
- * collection name at 44px would push the sheet off the first screen), status and date, the
- * description, the archive state with its one action, and the empty sheet: centred and quiet, a
- * tile in the collection's tint (the same as its cover on the dashboard) with an icon, what will
- * appear there and, unless archived, how. No Share or QR button yet: they would not work.
- * Settings are one outline button away in the header.
+ * The collection's page (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02). The header (title,
+ * status, date, «Дії»), the description, the archive state with its one action, then a
+ * segmented control between «Вміст» and «Посилання» (`?tab=links` in the URL). Until content
+ * exists (slice 7) «Вміст» is one quiet centred panel: a tile in the collection's tint, what will
+ * appear there and, unless archived, how (no button: sharing is per link, on the other tab).
+ * A link's settings open in a sheet (`?link=`).
  */
 export function CollectionOverview({ id }: { id: string }) {
   const t = useTranslations('collection');
   const tList = useTranslations('collections');
-  const query = useCollection(id);
+  // Once deleted (the «Параметри» tab), the page is on its way to /app: stop refetching.
+  const [deleted, setDeleted] = useState(false);
+  const query = useCollection(id, !deleted);
 
+  if (query.data !== undefined) {
+    return <Overview collection={query.data} onDeleted={() => setDeleted(true)} />;
+  }
   if (query.isPending) return <OverviewSkeleton label={t('loading')} />;
   if (query.isError) {
     if (isCollectionNotFound(query.error)) return <CollectionNotFound />;
@@ -63,75 +73,118 @@ export function CollectionOverview({ id }: { id: string }) {
       </>
     );
   }
-  return <Overview collection={query.data} />;
+  return <OverviewSkeleton label={t('loading')} />;
 }
 
-// The collection's name is the page's h1 at the admin scale, but capped at 32px from `xl`
-// (DESIGN-SYSTEM.md §3.2: "название в коллекции 32").
-const COLLECTION_TITLE = 'xl:[&_[data-slot=page-header-title]]:text-[2rem]';
+export type CollectionTab = 'content' | 'links' | 'settings';
 
-function Overview({ collection }: { collection: Collection }) {
+/** `?tab=links` / `?tab=settings` open those tabs; anything else (or nothing) the content. */
+export const tabOf = (value: string | null): CollectionTab =>
+  value === 'links' || value === 'settings' ? value : 'content';
+
+function Overview({ collection, onDeleted }: { collection: Collection; onDeleted: () => void }) {
   const t = useTranslations('collection');
-  const tList = useTranslations('collections');
-  const format = useFormatter();
+  const tLinks = useTranslations('links');
+  const router = useRouter();
+  const params = useSearchParams();
+  // `?links=all` was the «Усі посилання» sheet: it is the tab now.
+  const tab = params.get('links') === 'all' ? 'links' : tabOf(params.get('tab'));
   const archived = collection.status === 'ARCHIVED';
-  const status = tList(`status.${collection.status}`);
-  const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
-  const dated = archived ? tList('archivedOn', { date }) : tList('createdOn', { date });
+  const links = useQuery({
+    queryKey: guestLinksKey(collection.id),
+    queryFn: () => listGuestLinks(collection.id),
+  });
+  const sheet = useLinksSheet(collection.id);
+  const live = links.data?.items.filter((link) => link.status !== 'REVOKED').length;
+
+  // The tab lives in the URL (a history entry each), so refresh, Back and links keep it; an open
+  // link sheet's `?link=` stays as it is.
+  const selectTab = (next: string) => {
+    const query = new URLSearchParams(params.toString());
+    if (next === 'links' || next === 'settings') query.set('tab', next);
+    else query.delete('tab');
+    const search = query.toString();
+    router.push(`/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`, {
+      scroll: false,
+    });
+  };
 
   return (
     <>
-      <div className="grid gap-4">
-        <PageHeader
-          size="compact"
-          className={COLLECTION_TITLE}
-          back={<BackLink href="/app">{t('back')}</BackLink>}
-          title={collection.title}
-          description={
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-                {status}
-              </Badge>
-              <span className="text-sm tabular-nums">{dated}</span>
-            </span>
-          }
-          actions={
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/app/collections/${collection.id}/settings`} className="no-underline">
-                <Settings aria-hidden="true" />
-                {t('settings')}
-              </Link>
-            </Button>
-          }
-        />
-        {/* Below the header, not inside it: the actions stay level with the title. */}
-        {collection.description !== null ? (
-          <p className="max-w-[60ch] whitespace-pre-line [overflow-wrap:anywhere]">
-            {collection.description}
-          </p>
-        ) : null}
-      </div>
-      {archived ? <ArchivedNotice id={collection.id} /> : null}
-      <section aria-labelledby="collection-content" className="grid gap-3">
-        <h2 id="collection-content" className="type-h3">
-          {t('content')}
-        </h2>
-        <Panel
-          data-slot="collection-empty"
-          className="grid justify-items-center gap-5 px-5 py-14 text-center sm:px-8 sm:py-20 lg:py-24"
-        >
-          <TintTile tint={collectionTint(collection.id)} size="lg">
-            <ImagePlus aria-hidden="true" />
-          </TintTile>
-          <div className="grid max-w-[44ch] gap-2">
-            <h3 className="type-h3 [overflow-wrap:anywhere]">{t('contentEmpty')}</h3>
-            {/* Archived, guests can't add anything: the notice above says so. */}
-            {archived ? null : (
-              <p className="text-pretty text-muted-foreground">{t('contentEmptyText')}</p>
-            )}
-          </div>
-        </Panel>
-      </section>
+      <CollectionHeader collection={collection} />
+      {/* On «Параметри» the archiving card says the same with its own button: never two. */}
+      {archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null}
+      <Tabs value={tab} onValueChange={selectTab} className="gap-6">
+        <TabsList variant="segmented" aria-label={t('tabs.label')}>
+          <TabsTrigger value="content">
+            <Images aria-hidden="true" />
+            <span className="min-w-0 truncate">{t('tabs.content')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="links">
+            <Link2 aria-hidden="true" />
+            <span className="min-w-0 truncate">{t('tabs.links')}</span>
+            {live === undefined ? null : <TabsCount>{live}</TabsCount>}
+          </TabsTrigger>
+          <TabsTrigger value="settings">
+            <SlidersHorizontal aria-hidden="true" />
+            <span className="min-w-0 truncate">{t('tabs.settings')}</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="content">
+          <section aria-labelledby="collection-content" className="grid gap-3">
+            <h2 id="collection-content" className="sr-only">
+              {t('content')}
+            </h2>
+            <Panel
+              data-slot="collection-empty"
+              // A flex column centred on its cross axis: centred in the card at every width.
+              className="items-center justify-center gap-5 px-5 py-14 text-center sm:px-8 sm:py-20 lg:py-24"
+            >
+              <TintTile tint={collectionTint(collection.id)} size="lg">
+                <ImagePlus aria-hidden="true" />
+              </TintTile>
+              <div className="grid max-w-[44ch] gap-2">
+                <h3 className="type-h3 [overflow-wrap:anywhere]">{t('contentEmpty')}</h3>
+                {/* Archived, guests can't add anything: the notice above says so. */}
+                {archived ? null : (
+                  <p className="text-pretty text-muted-foreground">{t('contentEmptyText')}</p>
+                )}
+              </div>
+            </Panel>
+          </section>
+        </TabsContent>
+        <TabsContent value="links">
+          {links.isError ? (
+            <Alert
+              variant="error"
+              action={
+                <Button variant="outline" onClick={() => void links.refetch()}>
+                  {tLinks('retry')}
+                </Button>
+              }
+            >
+              {tLinks('loadFailed')}
+            </Alert>
+          ) : links.data === undefined ? (
+            <div role="status" aria-label={tLinks('loading')} className="grid gap-3">
+              <Skeleton className="h-28 w-full rounded-sheet" />
+              <Skeleton className="h-28 w-full rounded-sheet" />
+            </div>
+          ) : (
+            <LinksList
+              collection={collection}
+              items={links.data.items}
+              onSettings={sheet.openLink}
+            />
+          )}
+        </TabsContent>
+        <TabsContent value="settings">
+          <CollectionSettingsPanel collection={collection} onDeleted={onDeleted} />
+        </TabsContent>
+      </Tabs>
+      {links.data === undefined ? null : (
+        <LinksSheet collection={collection} links={links.data.items} sheet={sheet} />
+      )}
     </>
   );
 }

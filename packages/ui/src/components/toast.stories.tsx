@@ -8,7 +8,7 @@ import { Toaster, ToastProvider, useToast } from './toast';
 type TriggerProps = {
   title?: string;
   description?: string;
-  variant?: 'info' | 'success' | 'error';
+  variant?: 'info' | 'success' | 'warning' | 'error';
   count?: number;
   durationMs?: number;
 };
@@ -66,6 +66,7 @@ export const Success: Story = {
     const [toast] = toasts();
     await expect(toast).toBeVisible();
     await expect(toast).toHaveTextContent('Guests can open it now.');
+    await expect(toast).toHaveClass('bg-success-soft');
     await expect(screen.getByRole('region', { name: /Notifications/ })).toBeInTheDocument();
   },
 };
@@ -81,11 +82,31 @@ export const Error: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     await expect(await screen.findByRole('status')).toHaveAttribute('aria-live', 'assertive');
     await expect(toasts()[0]).toHaveAttribute('data-variant', 'error');
+    await expect(toasts()[0]).toHaveClass('bg-destructive-soft');
   },
 };
 
 export const ErrorDark: Story = {
   ...Error,
+  globals: { theme: 'dark' },
+};
+
+/** A thing put on hold (a paused link): the warning icon, announced politely like success. */
+export const Warning: Story = {
+  args: { variant: 'warning', title: 'Link paused' },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    await expect(await screen.findByRole('status')).toHaveAttribute('aria-live', 'polite');
+    const [toast] = toasts();
+    await expect(toast).toHaveAttribute('data-variant', 'warning');
+    await expect(toast?.querySelector('svg')).toHaveClass('text-warning');
+    // Tinted in the variant's soft fill (owner review 2026-10-02), not the white popover.
+    await expect(toast).toHaveClass('bg-warning-soft');
+  },
+};
+
+export const WarningDark: Story = {
+  ...Warning,
   globals: { theme: 'dark' },
 };
 
@@ -95,7 +116,13 @@ export const Info: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     await waitFor(() => expect(toasts()).toHaveLength(1));
     await expect(toasts()[0]).toHaveAttribute('data-variant', 'info');
+    await expect(toasts()[0]).toHaveClass('bg-info-soft');
   },
+};
+
+export const InfoDark: Story = {
+  ...Info,
+  globals: { theme: 'dark' },
 };
 
 export const Dismiss: Story = {

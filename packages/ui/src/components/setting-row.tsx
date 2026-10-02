@@ -20,7 +20,11 @@ type SettingsSectionProps = {
 
 /**
  * One group of settings (DESIGN-SYSTEM.md §6.8): an `h2`, an optional muted description and one
- * panel whose rows are split by hairlines. Pages stack several of these in a centred 640px column.
+ * panel whose rows are split by hairlines. Pages stack several of these across the full admin
+ * column (owner review 2026-10-02: a 640px column "looked odd" next to the full-width tabs). From
+ * `lg` the heading and description sit in a 17rem column on the left and the panel takes the
+ * rest, so the page uses its width without stretching a form field across 1200px; below `lg`
+ * the heading is above the panel.
  */
 function SettingsSection({
   id,
@@ -31,15 +35,26 @@ function SettingsSection({
   children,
 }: SettingsSectionProps) {
   return (
-    <section data-slot="settings-section" aria-labelledby={id} className={className}>
-      <h2 id={id} className="type-h2">
-        {title}
-      </h2>
-      {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+    <section
+      data-slot="settings-section"
+      aria-labelledby={id}
+      className={cn(
+        'grid min-w-0 gap-4 lg:grid-cols-[minmax(0,17rem)_minmax(0,1fr)] lg:gap-10',
+        className,
+      )}
+    >
+      <div className="grid content-start gap-1 lg:pt-4">
+        <h2 id={id} className="type-h2">
+          {title}
+        </h2>
+        {description ? (
+          <p className="text-sm text-pretty text-muted-foreground">{description}</p>
+        ) : null}
+      </div>
       <Panel
         data-slot="settings-section-panel"
         data-tone={tone}
-        className={cn('mt-4 divide-y', {
+        className={cn('min-w-0 divide-y', {
           'divide-destructive/25 border-destructive bg-destructive-soft [&_[data-slot=setting-row-hint]]:text-foreground':
             tone === 'danger',
         })}
@@ -104,7 +119,7 @@ function SettingRow({
           <p
             id={`${id}-hint`}
             data-slot="setting-row-hint"
-            className="mt-0.5 max-w-[40ch] text-sm leading-[1.45] text-muted-foreground [overflow-wrap:anywhere]"
+            className="mt-0.5 max-w-[60ch] text-sm leading-[1.45] text-muted-foreground [overflow-wrap:anywhere]"
           >
             {hint}
           </p>

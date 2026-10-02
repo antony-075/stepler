@@ -181,13 +181,14 @@ Collection
 
 GuestLink
   id, collectionId → Collection (cascade), isDefault, label?,
-  status (ACTIVE|INACTIVE|REVOKED), revokedAt?, replacedById? → GuestLink,
+  status (ACTIVE|INACTIVE|REVOKED), revokedAt?, hiddenAt?, replacedById? → GuestLink,
   tokenHash (unique), tokenCiphertext, tokenKeyId,
-  canUploadFiles, canSubmitText, canViewGallery, canDeleteOwn,
+  canUploadPhotos, canUploadVideos, canUploadDocuments, canSubmitText, canViewGallery, canDeleteOwn,
   createdAt, updatedAt
-  SQL CHECK (canUploadFiles OR canSubmitText OR canViewGallery)
-  SQL CHECK (NOT canDeleteOwn OR canUploadFiles OR canSubmitText)
+  SQL CHECK (canUploadPhotos OR canUploadVideos OR canUploadDocuments OR canSubmitText OR canViewGallery)
+  SQL CHECK (NOT canDeleteOwn OR canUploadPhotos OR canUploadVideos OR canUploadDocuments OR canSubmitText)
   SQL CHECK ((status = 'REVOKED') = (revokedAt IS NOT NULL))
+  SQL CHECK (hiddenAt IS NULL OR (status = 'REVOKED' AND NOT isDefault))   -- deleted = revoked + hidden
   SQL UNIQUE (collectionId) WHERE isDefault AND status <> 'REVOKED'   -- exactly one live default
 
 GuestSession
@@ -262,7 +263,7 @@ AuditEvent (append-only)
 
 *`AuditEvent` implemented in slice 1* (Phase 4), with a second index `(actorId, action, createdAt)` for the collection creation limit (§13.1). Slice 1 records `collection.create`, `collection.archive`, `collection.unarchive` and `collection.delete`.
 
-Audited actions: link create / permission change / deactivate / activate / revoke / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
+Audited actions: link create / permission change / deactivate / activate / revoke / delete / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
 
 ---
 
@@ -275,7 +276,7 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 | Collection metadata | own only | reported items' collections | public fields via any active link |
 | List gallery | own collections | — | `canViewGallery` → all visible items; otherwise own items only |
 | Get item / signed URL | own collections | reported items | same visibility rule as list |
-| Upload files | — (MVP) | — | `canUploadFiles` |
+| Upload files | — (MVP) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
 | Submit text | — (MVP) | — | `canSubmitText` |
 | Delete item | any in own collection | any | `canDeleteOwn` AND contributor = this session |
 | Hide item | own collection | any | — |
@@ -319,7 +320,7 @@ Admin
   GET/PATCH/DELETE    /collections/{id}
   POST                /collections/{id}/archive | /unarchive
   GET/POST            /collections/{id}/guest-links
-  PATCH               /guest-links/{id}                 (label, permissions)
+  PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
   POST                /collections/{id}/guest-links/default/rotate
   GET                 /collections/{id}/content?kind=&cursor=
@@ -391,7 +392,7 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 
 ### 10.3 Initiate — `POST .../uploads`
 
-1. Resolve guest principal; require `canUploadFiles`.
+1. Resolve guest principal; require the upload permission for the file's type (`canUploadPhotos`, `canUploadVideos` or `canUploadDocuments`).
 2. Validate extension/declared MIME/size against §10.1.
 3. Rate limits: initiations per guest session per hour; concurrent `INITIATED` sessions per guest session.
 4. In a transaction, lock the owner `User` row (`SELECT … FOR UPDATE`) and check collection quota (10 GB) and account quota (20 GB) against usage **including reservations** (§13.2).
@@ -401,7 +402,7 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 ### 10.4 Complete — `POST .../uploads/{uid}/complete`
 
 1. If already `COMPLETED` → return the existing content item (duplicate completion is safe).
-2. Re-check the guest context **now** (link active, `canUploadFiles`, collection active). If not authorized → `REJECTED` and enqueue object deletion (D8: bytes may exist in storage; completion is refused; cleanup removes them).
+2. Re-check the guest context **now** (link active, the upload permission for the file's type, collection active). If not authorized → `REJECTED` and enqueue object deletion (D8: bytes may exist in storage; completion is refused; cleanup removes them).
 3. Multipart: the server calls `ListParts` and then `CompleteMultipartUpload` — client-supplied ETags are not trusted.
 4. `HeadObject`: size must equal the declared size and be within limits.
 5. Range-GET the first bytes (≤ 4 KB) → detect type; must be allowed and match the kind.

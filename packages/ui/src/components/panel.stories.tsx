@@ -167,11 +167,32 @@ export const Sheet: Story = {
     const sheet = canvasElement.querySelector<HTMLElement>('[data-slot="panel"]')!;
     await expect(sheet).toHaveAttribute('data-variant', 'sheet');
     await expect(getComputedStyle(sheet).borderTopLeftRadius).toBe('4px');
-    await expect(getComputedStyle(sheet).boxShadow).toBe('none');
   },
 };
 
 export const SheetDark: Story = {
   ...Sheet,
   globals: { theme: 'dark' },
+};
+
+/** Lifted paper: a soft two-layer shadow in light, none at night (the edge does the work). */
+export const Elevation: Story = {
+  render: () => (
+    <Panel>
+      <PanelContent>A panel on the light table.</PanelContent>
+    </Panel>
+  ),
+  play: async ({ canvasElement }) => {
+    const panel = canvasElement.querySelector<HTMLElement>('[data-slot="panel"]')!;
+    await expect(getComputedStyle(panel).boxShadow).not.toBe('none');
+  },
+};
+
+export const ElevationDark: Story = {
+  ...Elevation,
+  globals: { theme: 'dark' },
+  play: async ({ canvasElement }) => {
+    const panel = canvasElement.querySelector<HTMLElement>('[data-slot="panel"]')!;
+    await expect(getComputedStyle(panel).boxShadow).toBe('none');
+  },
 };

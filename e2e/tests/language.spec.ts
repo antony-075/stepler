@@ -11,18 +11,22 @@ const EN = {
   submit: 'Get sign-in link',
   sent: 'Check your email',
   appTitle: 'Collections',
-  settings: 'Settings',
+  settings: 'Account',
   subject: 'Sign in to Stepler',
 };
 const UK_APP_TITLE = 'Колекції';
 
-const UK_SETTINGS = 'Налаштування';
+const UK_SETTINGS = 'Акаунт';
 
-/** The language switch is on /app/settings, reached from the account menu. */
-async function openSettings(page: Page, email: string) {
-  await page.getByRole('button', { name: email }).click();
-  await page.getByRole('menuitem', { name: UK_SETTINGS }).click();
-  await expect(page).toHaveURL(/\/app\/settings$/);
+/** The language switch is on /app/account: «Акаунт» in the sidebar (the menu sheet on phones). */
+async function openSettings(page: Page) {
+  const menu = page.getByRole('button', { name: 'Відкрити меню' });
+  if (await menu.isVisible()) await menu.click();
+  await page
+    .getByRole('navigation', { name: 'Розділи' })
+    .getByRole('link', { name: UK_SETTINGS })
+    .click();
+  await expect(page).toHaveURL(/\/app\/account$/);
   await expect(page.getByRole('heading', { name: UK_SETTINGS, level: 1 })).toBeVisible();
 }
 
@@ -40,7 +44,7 @@ test('a signed-in admin switches to English: it persists and emails follow', asy
   await signIn(page, email);
   await expect(page.getByRole('heading', { name: UK_APP_TITLE, level: 1 })).toBeVisible();
 
-  await openSettings(page, email);
+  await openSettings(page);
   await choose(page, 'English');
   await expect(page.getByRole('heading', { name: EN.settings, level: 1 })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
@@ -90,7 +94,7 @@ test('/login and /app fit a 360px screen in both languages', async ({ page, cont
   const email = newEmail();
   await signIn(page, email);
   expect(await overflow()).toBeLessThanOrEqual(0);
-  await openSettings(page, email);
+  await openSettings(page);
   expect(await overflow()).toBeLessThanOrEqual(0);
   await choose(page, 'English');
   await expect(page.getByRole('heading', { name: EN.settings, level: 1 })).toBeVisible();
@@ -106,7 +110,7 @@ test('a failed profile save shows a toast and still switches the page', async ({
   await page.route('**/api/v1/me', (route) =>
     route.request().method() === 'PATCH' ? route.abort() : route.continue(),
   );
-  await openSettings(page, email);
+  await openSettings(page);
   await choose(page, 'English');
   await expect(page.getByRole('heading', { name: EN.settings, level: 1 })).toBeVisible();
   // The toast is worded in whichever language was loaded when the save failed.
@@ -118,7 +122,7 @@ test('a failed profile save shows a toast and still switches the page', async ({
 test('quick switches save in order, so the profile ends on the last choice', async ({ page }) => {
   const email = newEmail();
   await signIn(page, email);
-  await openSettings(page, email);
+  await openSettings(page);
   // Sent in parallel, a later choice could reach the server first and an earlier one would win.
   // Holds the first save and records when each save is sent and settles.
   const events: string[] = [];

@@ -1,4 +1,4 @@
-// Identity (spec §7.1), collections and audit (§7.2, §7.4). Constraints the schema cannot express (citext extension, CHECKs,
+// Identity (spec §7.1), collections, guest links and audit (§7.2, §7.4). Constraints the schema cannot express (citext extension, CHECKs,
 // partial indexes) live as named raw SQL in the migrations (ADR 0005, spike S6).
 
 generator client {
@@ -26,6 +26,14 @@ enum CollectionStatus {
   ARCHIVED
   /// Deletion requested: gone for everyone; the purge job removes the rows (D2).
   DELETING
+}
+
+enum GuestLinkStatus {
+  ACTIVE
+  /// Paused by the admin; can be resumed.
+  INACTIVE
+  /// Terminal: revoked, or rotated out (a default link). The token ciphertext is wiped.
+  REVOKED
 }
 
 enum AuditActorType {
@@ -113,8 +121,48 @@ model Collection {
   createdAt           DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime         @updatedAt @db.Timestamptz(3)
   owner               User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  guestLinks          GuestLink[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+/// A public entry point to a collection (ADR 0007, spec §7.2). Rules live as named CHECKs:
+/// "GuestLink_has_capability", "GuestLink_delete_own_needs_contribution",
+/// "GuestLink_revoked_consistent", "GuestLink_ciphertext_while_live",
+/// "GuestLink_replaced_only_revoked", "GuestLink_label_rules",
+/// "GuestLink_hidden_only_revoked_additional"; at most one non-revoked default
+/// link per collection (partial unique index "GuestLink_one_live_default").
+model GuestLink {
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId    String          @db.Uuid
+  isDefault       Boolean
+  /// Additional links only, 1 to 60 characters; the default link has none.
+  label           String?
+  status          GuestLinkStatus @default(ACTIVE)
+  revokedAt       DateTime?       @db.Timestamptz(3)
+  /// Set when the owner deletes an additional link: revoked and no longer listed. The row stays,
+  /// so audit events and (later) guest content keep pointing at it.
+  hiddenAt        DateTime?       @db.Timestamptz(3)
+  /// Set on a rotated-out default link: the link that replaced it.
+  replacedById    String?         @unique @db.Uuid
+  /// SHA-256 of the token, for lookup. The raw token is never stored in clear.
+  tokenHash       String          @unique
+  /// AES-256-GCM of the token so the owner can see the link again; NULL once revoked.
+  tokenCiphertext String?
+  tokenKeyId      String?
+  canUploadPhotos    Boolean
+  canUploadVideos    Boolean
+  canUploadDocuments Boolean
+  canSubmitText   Boolean
+  canViewGallery  Boolean
+  canDeleteOwn    Boolean
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  replacedBy      GuestLink?      @relation("LinkRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces        GuestLink?      @relation("LinkRotation")
+
+  @@index([collectionId, isDefault, status, createdAt])
 }
 
 /// Append-only. Plain ids without foreign keys, so events outlive what they describe (spec §7.4).

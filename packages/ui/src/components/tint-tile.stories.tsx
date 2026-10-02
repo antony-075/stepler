@@ -43,6 +43,9 @@ export const AllTints: Story = {
           <TintTile tint={tint} size="lg">
             <ImagePlus aria-hidden="true" />
           </TintTile>
+          <TintTile tint={tint} size="cover">
+            {['В', 'ЮБ', 'Х', 'ДН'][index]}
+          </TintTile>
         </div>
       ))}
     </>
@@ -52,6 +55,23 @@ export const AllTints: Story = {
       tile.getAttribute('data-tint'),
     );
     await expect(new Set(tints)).toEqual(new Set(FRAME_TINTS));
+  },
+};
+
+/** The settings summary card: the tile fills its column. */
+export const Fill: Story = {
+  render: () => (
+    <div className="w-60">
+      <TintTile tint="sand" size="fill">
+        ДН
+      </TintTile>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const tile = canvasElement.querySelector<HTMLElement>('[data-slot="tint-tile"]')!;
+    const box = tile.getBoundingClientRect();
+    await expect(Math.round(box.width)).toBe(240);
+    await expect(Math.round(box.height)).toBe(240);
   },
 };
 

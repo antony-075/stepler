@@ -19,7 +19,13 @@
               "UPSTREAM_UNAVAILABLE",
               "DEPENDENCY_UNAVAILABLE",
               "INTERNAL",
-              "COLLECTION_LIMIT_REACHED"
+              "COLLECTION_LIMIT_REACHED",
+              "GUEST_LINK_LIMIT_REACHED",
+              "LINK_REVOKED",
+              "LINK_INACTIVE",
+              "DEFAULT_LINK_NOT_REVOCABLE",
+              "COLLECTION_ARCHIVED",
+              "COLLECTION_UNAVAILABLE"
             ],
             "type": "string"
           },
@@ -481,6 +487,47 @@
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
+                          "defaultLinkPermissions": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "canDeleteOwn": {
+                                "type": "boolean"
+                              },
+                              "canSubmitText": {
+                                "type": "boolean"
+                              },
+                              "canUploadDocuments": {
+                                "type": "boolean"
+                              },
+                              "canUploadPhotos": {
+                                "type": "boolean"
+                              },
+                              "canUploadVideos": {
+                                "type": "boolean"
+                              },
+                              "canViewGallery": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "canUploadPhotos",
+                              "canUploadVideos",
+                              "canUploadDocuments",
+                              "canSubmitText",
+                              "canViewGallery",
+                              "canDeleteOwn"
+                            ],
+                            "type": "object"
+                          },
+                          "defaultLinkStatus": {
+                            "enum": [
+                              "ACTIVE",
+                              "INACTIVE"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "description": {
                             "nullable": true,
                             "type": "string"
@@ -513,7 +560,9 @@
                           "status",
                           "createdAt",
                           "updatedAt",
-                          "archivedAt"
+                          "archivedAt",
+                          "defaultLinkStatus",
+                          "defaultLinkPermissions"
                         ],
                         "type": "object"
                       },
@@ -604,6 +653,47 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
                       "type": "string"
@@ -636,7 +726,9 @@
                     "status",
                     "createdAt",
                     "updatedAt",
-                    "archivedAt"
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -742,6 +834,47 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
                       "type": "string"
@@ -774,7 +907,9 @@
                     "status",
                     "createdAt",
                     "updatedAt",
-                    "archivedAt"
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -860,6 +995,47 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
                       "type": "string"
@@ -892,7 +1068,9 @@
                     "status",
                     "createdAt",
                     "updatedAt",
-                    "archivedAt"
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -954,6 +1132,47 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
                       "type": "string"
@@ -986,7 +1205,9 @@
                     "status",
                     "createdAt",
                     "updatedAt",
-                    "archivedAt"
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -1012,6 +1233,506 @@
         ],
         "tags": [
           "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/guest-links": {
+      "get": {
+        "operationId": "GuestLinksController_list_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "isDefault": {
+                            "type": "boolean"
+                          },
+                          "label": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "permissions": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "canDeleteOwn": {
+                                "type": "boolean"
+                              },
+                              "canSubmitText": {
+                                "type": "boolean"
+                              },
+                              "canUploadDocuments": {
+                                "type": "boolean"
+                              },
+                              "canUploadPhotos": {
+                                "type": "boolean"
+                              },
+                              "canUploadVideos": {
+                                "type": "boolean"
+                              },
+                              "canViewGallery": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "canUploadPhotos",
+                              "canUploadVideos",
+                              "canUploadDocuments",
+                              "canSubmitText",
+                              "canViewGallery",
+                              "canDeleteOwn"
+                            ],
+                            "type": "object"
+                          },
+                          "revokedAt": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "status": {
+                            "enum": [
+                              "ACTIVE",
+                              "INACTIVE",
+                              "REVOKED"
+                            ],
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "url": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "isDefault",
+                          "label",
+                          "status",
+                          "permissions",
+                          "url",
+                          "createdAt",
+                          "updatedAt",
+                          "revokedAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not one of your collections"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      },
+      "post": {
+        "operationId": "GuestLinksController_create_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "maxLength": 60,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "type": "string"
+                  },
+                  "permissions": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "canDeleteOwn": {
+                        "type": "boolean"
+                      },
+                      "canSubmitText": {
+                        "type": "boolean"
+                      },
+                      "canUploadDocuments": {
+                        "type": "boolean"
+                      },
+                      "canUploadPhotos": {
+                        "type": "boolean"
+                      },
+                      "canUploadVideos": {
+                        "type": "boolean"
+                      },
+                      "canViewGallery": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "canUploadPhotos",
+                      "canUploadVideos",
+                      "canUploadDocuments",
+                      "canSubmitText",
+                      "canViewGallery",
+                      "canDeleteOwn"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "required": [
+                  "label",
+                  "permissions"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not one of your collections"
+          },
+          "409": {
+            "description": "GUEST_LINK_LIMIT_REACHED: the collection has its maximum of additional links"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/guest-links/default/rotate": {
+      "post": {
+        "operationId": "GuestLinksController_rotateDefault_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "expectedLinkId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "expectedLinkId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The new default link, or the current one if it is no longer expectedLinkId"
+          },
+          "404": {
+            "description": "NOT_FOUND: not one of your collections"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
         ]
       }
     },
@@ -1048,6 +1769,47 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
                       "type": "string"
@@ -1080,7 +1842,9 @@
                     "status",
                     "createdAt",
                     "updatedAt",
-                    "archivedAt"
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions"
                   ],
                   "type": "object"
                 }
@@ -1109,6 +1873,784 @@
         ],
         "tags": [
           "Collections"
+        ]
+      }
+    },
+    "/api/v1/guest-links/{id}": {
+      "delete": {
+        "operationId": "GuestLinksController_remove_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted: revoked if it was live, and no longer listed. The record stays for the audit trail. Deleting again is a no-op."
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      },
+      "patch": {
+        "operationId": "GuestLinksController_update_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "label": {
+                    "maxLength": 60,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "type": "string"
+                  },
+                  "permissions": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "canDeleteOwn": {
+                        "type": "boolean"
+                      },
+                      "canSubmitText": {
+                        "type": "boolean"
+                      },
+                      "canUploadDocuments": {
+                        "type": "boolean"
+                      },
+                      "canUploadPhotos": {
+                        "type": "boolean"
+                      },
+                      "canUploadVideos": {
+                        "type": "boolean"
+                      },
+                      "canViewGallery": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "canUploadPhotos",
+                      "canUploadVideos",
+                      "canUploadDocuments",
+                      "canSubmitText",
+                      "canViewGallery",
+                      "canDeleteOwn"
+                    ],
+                    "type": "object"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: invalid permissions, or a label on the default link"
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "LINK_REVOKED: the link is revoked"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      }
+    },
+    "/api/v1/guest-links/{id}/activate": {
+      "post": {
+        "operationId": "GuestLinksController_activate_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Resumed"
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "LINK_REVOKED: the link is revoked"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      }
+    },
+    "/api/v1/guest-links/{id}/deactivate": {
+      "post": {
+        "operationId": "GuestLinksController_deactivate_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Paused"
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "LINK_REVOKED: the link is revoked"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      }
+    },
+    "/api/v1/guest-links/{id}/revoke": {
+      "post": {
+        "operationId": "GuestLinksController_revoke_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "label": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "revokedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE",
+                        "REVOKED"
+                      ],
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "url": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "isDefault",
+                    "label",
+                    "status",
+                    "permissions",
+                    "url",
+                    "createdAt",
+                    "updatedAt",
+                    "revokedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Revoked; url is null"
+          },
+          "404": {
+            "description": "NOT_FOUND: not a link of one of your collections"
+          },
+          "409": {
+            "description": "DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not revoked"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest links"
+        ]
+      }
+    },
+    "/api/v1/guest/links/resolve": {
+      "post": {
+        "operationId": "GuestController_resolve_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "linkToken": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "linkToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "collection": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "description": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "description"
+                      ],
+                      "type": "object"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "collection",
+                    "permissions"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "COLLECTION_ARCHIVED, or LINK_INACTIVE (paused)"
+          },
+          "404": {
+            "description": "NOT_FOUND: unknown or malformed token"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Guest"
         ]
       }
     },
@@ -1354,6 +2896,7 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "nullable": true,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
                     "type": "string"
                   },
                   "locale": {

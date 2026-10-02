@@ -13,9 +13,10 @@ import {
 type DemoProps = {
   onConfirm: () => Promise<void>;
   destructive?: boolean;
+  confirmPhrase?: string;
 };
 
-function Demo({ onConfirm, destructive }: DemoProps) {
+function Demo({ onConfirm, destructive, confirmPhrase }: DemoProps) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -33,6 +34,8 @@ function Demo({ onConfirm, destructive }: DemoProps) {
         destructive={destructive}
         onConfirm={onConfirm}
         errorMessage="Could not delete the photo. Try again."
+        confirmPhrase={confirmPhrase}
+        confirmPhraseLabel={`To confirm, type “${confirmPhrase ?? ''}”`}
       />
     </>
   );
@@ -302,4 +305,32 @@ export const FromMenuDeferred: Story = {
 export const FromMenuDeferredReducedMotion: Story = {
   ...FromMenuDeferred,
   tags: ['!dev', '!autodocs', 'reduced-motion'],
+};
+
+/**
+ * Typed confirmation for the most dangerous actions: focus starts in the field, and the action
+ * does nothing (aria-disabled) until the exact phrase is typed; spaces around it are ignored.
+ */
+export const TypedConfirmation: Story = {
+  args: { confirmPhrase: 'Main link' },
+  play: async ({ args, canvas }) => {
+    const { dialog } = await openDialog(canvas);
+    const field = screen.getByRole('textbox', { name: 'To confirm, type “Main link”' });
+    await waitFor(() => expect(field).toHaveFocus());
+    const confirm = screen.getByRole('button', { name: 'Delete' });
+    await expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.type(field, 'Main lin{Enter}');
+    await expect(args.onConfirm).not.toHaveBeenCalled();
+    await expect(dialog).toBeVisible();
+    await userEvent.type(field, 'k ');
+    await expect(confirm).not.toHaveAttribute('aria-disabled');
+    await userEvent.click(confirm);
+    await waitFor(() => expect(args.onConfirm).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    // Reopened, it starts empty again.
+    await userEvent.click(canvas.getByRole('button', { name: 'Delete photo' }));
+    await expect(
+      await screen.findByRole('textbox', { name: 'To confirm, type “Main link”' }),
+    ).toHaveValue('');
+  },
 };

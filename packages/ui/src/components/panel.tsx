@@ -5,11 +5,12 @@ import { cn } from '../lib/utils';
 
 // The sheet of direction C (DESIGN-SYSTEM.md §5.3), replacing shadcn's Card: `--card`, a 4px
 // radius, a 1px `--border` edge in both themes (the sheet-to-page contrast alone is 1.07 in
-// light), no shadow. `panel` (default) is for settings and lists: padding lives on each section
+// light) and `--shadow-card`, a soft lift in light and none in dark (owner 2026-10-02). Inside
+// another card or a dialog use a plain bordered box instead: no stacked shadows. `panel` (default) is for settings and lists: padding lives on each section
 // and rows inside are split with `divide-y`. `sheet` has no padding of its own: a contact grid
 // or a list of rows fills it edge to edge.
 const panelVariants = cva(
-  'flex min-w-0 flex-col rounded-sheet border bg-card text-card-foreground',
+  'flex min-w-0 flex-col rounded-sheet border bg-card text-card-foreground shadow-card',
   {
     variants: {
       variant: {

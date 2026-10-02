@@ -17,6 +17,8 @@ export interface UserLimits {
 
 export interface CollectionLimits {
   storageBytes: bigint;
+  /** Non-revoked additional guest links; the default link does not count [G8]. */
+  guestLinks: number;
 }
 
 /**
@@ -35,8 +37,16 @@ export class LimitsService {
     };
   }
 
+  /** Public guest link resolution per client IP per minute [G10]. */
+  guestLinkResolvePerIpPerMinute(): number {
+    return this.env.LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE;
+  }
+
   forCollection(_collection: { id: string }): CollectionLimits {
-    return { storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION };
+    return {
+      storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION,
+      guestLinks: this.env.LIMIT_GUEST_LINKS_PER_COLLECTION,
+    };
   }
 
   forUser(_user: { id: string }): UserLimits {

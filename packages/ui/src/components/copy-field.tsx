@@ -1,14 +1,12 @@
 'use client';
 
 import { Check, Copy } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useId, useRef } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+import { useClipboardCopy } from './copy-button';
 import { Input } from './input';
 import { Label } from './label';
-
-/** How long the button says `copiedLabel` after a successful copy. */
-const COPIED_FEEDBACK_MS = 2000;
 
 type CopyFieldProps = {
   label: string;
@@ -17,14 +15,12 @@ type CopyFieldProps = {
   copiedLabel: string;
   /** Shown and announced when the clipboard is unavailable or refuses; the value is then selected. */
   failedLabel: string;
+  /** Keeps the label for screen readers only, where the context already says what the value is. */
+  hideLabel?: boolean;
+  /** More actions after Copy, in the same row (e.g. «Відкрити» the link in a new tab). */
+  children?: ReactNode;
   className?: string;
 };
-
-type CopyStatus = 'idle' | 'copied' | 'failed';
-
-function nextFrame() {
-  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-}
 
 /**
  * A read-only value (e.g. a guest link) with a copy button. Success is announced through a
@@ -37,60 +33,36 @@ function CopyField({
   copyLabel,
   copiedLabel,
   failedLabel,
+  hideLabel = false,
+  children,
   className,
 }: CopyFieldProps) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  // Identifies the latest click; a stale clipboard result or one after unmount is ignored.
-  const attempt = useRef(0);
-  const [status, setStatus] = useState<CopyStatus>('idle');
-
-  useEffect(
-    () => () => {
-      attempt.current += 1;
-      clearTimeout(resetTimer.current);
-    },
-    [],
-  );
-
-  function selectValue() {
+  const selectValue = useCallback(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
-  }
-
-  async function copy() {
-    const current = ++attempt.current;
-    clearTimeout(resetTimer.current);
-    // Empty the live region first so a repeated outcome (a second failure) is announced again.
-    setStatus('idle');
-    // Typed as optional: the API is missing on insecure origins and in some embedded browsers.
-    const clipboard: Clipboard | undefined = navigator.clipboard;
-    let copiedOk = true;
-    try {
-      if (!clipboard) throw new Error('Clipboard API unavailable');
-      await clipboard.writeText(value);
-    } catch {
-      copiedOk = false;
-    }
-    // Let the cleared region render before the new message goes in.
-    await nextFrame();
-    if (current !== attempt.current) return;
-    if (!copiedOk) {
-      selectValue();
-      setStatus('failed');
-      return;
-    }
-    setStatus('copied');
-    resetTimer.current = setTimeout(() => setStatus('idle'), COPIED_FEEDBACK_MS);
-  }
+  }, []);
+  const { status, copy } = useClipboardCopy(selectValue);
 
   const copied = status === 'copied';
 
   return (
-    <div data-slot="copy-field" className={cn('grid min-w-0 gap-2', className)}>
-      <Label htmlFor={id}>{label}</Label>
-      <div className="flex min-w-0 gap-2">
+    <div
+      data-slot="copy-field"
+      className={cn('@container/copy-field grid min-w-0 gap-2', className)}
+    >
+      <Label htmlFor={id} className={cn({ 'sr-only': hideLabel })}>
+        {label}
+      </Label>
+      {/* Below 22rem (a phone-width panel; 34rem with more actions) the buttons go under the
+          field at full width, so the field keeps enough of the value to recognise it. */}
+      <div
+        className={cn(
+          'flex min-w-0 flex-col gap-2',
+          children ? '@[34rem]/copy-field:flex-row' : '@[22rem]/copy-field:flex-row',
+        )}
+      >
         <Input
           ref={inputRef}
           id={id}
@@ -105,21 +77,24 @@ function CopyField({
           }}
           className="flex-1"
         />
-        {/* \`lg\` matches the input's 48px height. */}
-        <Button type="button" variant="outline" size="lg" onClick={() => void copy()}>
-          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-          {/* Both labels share one grid cell, so the button is as wide as the longer one and
+        <div className="flex gap-2 *:flex-1">
+          {/* \`lg\` matches the input's 48px height. */}
+          <Button type="button" variant="outline" size="lg" onClick={() => void copy(value)}>
+            {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+            {/* Both labels share one grid cell, so the button is as wide as the longer one and
               the input does not shift when the label changes. `invisible` also removes the
               inactive label from the accessible name. */}
-          <span className="grid">
-            <span className={cn('col-start-1 row-start-1', { invisible: copied })}>
-              {copyLabel}
+            <span className="grid">
+              <span className={cn('col-start-1 row-start-1', { invisible: copied })}>
+                {copyLabel}
+              </span>
+              <span className={cn('col-start-1 row-start-1', { invisible: !copied })}>
+                {copiedLabel}
+              </span>
             </span>
-            <span className={cn('col-start-1 row-start-1', { invisible: !copied })}>
-              {copiedLabel}
-            </span>
-          </span>
-        </Button>
+          </Button>
+          {children}
+        </div>
       </div>
       <p
         data-slot="copy-field-status"
