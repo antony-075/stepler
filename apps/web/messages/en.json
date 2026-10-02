@@ -13,7 +13,13 @@
     "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
     "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
     "INTERNAL": "Something went wrong. Try again.",
-    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room."
+    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room.",
+    "GUEST_LINK_LIMIT_REACHED": "This collection has reached its link limit. Revoke one you no longer need.",
+    "LINK_REVOKED": "This link has been revoked.",
+    "LINK_INACTIVE": "This link is paused.",
+    "DEFAULT_LINK_NOT_REVOCABLE": "The main link can't be revoked. Replace it instead.",
+    "COLLECTION_ARCHIVED": "This collection is closed.",
+    "COLLECTION_UNAVAILABLE": "This collection is unavailable."
   },
   "login": {
     "pageTitle": "Sign in",

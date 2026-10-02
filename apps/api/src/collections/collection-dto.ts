@@ -14,5 +14,7 @@ export function toCollectionDto(row: CollectionRow): Collection {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     archivedAt: row.archivedAt?.toISOString() ?? null,
+    // Filled from the live default guest link once guest links exist (slice 2, Task 4).
+    defaultLinkStatus: null,
   };
 }

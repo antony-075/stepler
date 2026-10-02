@@ -42,6 +42,28 @@ export {
   type ProblemDetails,
 } from './errors.js';
 export {
+  createGuestLinkRequestSchema,
+  guestLinkIdParamsSchema,
+  guestLinkLabelSchema,
+  guestLinkListResponseSchema,
+  guestLinkPermissionsSchema,
+  guestLinkSchema,
+  guestLinkStatusSchema,
+  resolveGuestLinkRequestSchema,
+  resolveGuestLinkResponseSchema,
+  rotateDefaultLinkRequestSchema,
+  updateGuestLinkRequestSchema,
+  type CreateGuestLinkRequest,
+  type GuestLink,
+  type GuestLinkListResponse,
+  type GuestLinkPermissions,
+  type GuestLinkStatus,
+  type ResolveGuestLinkRequest,
+  type ResolveGuestLinkResponse,
+  type RotateDefaultLinkRequest,
+  type UpdateGuestLinkRequest,
+} from './guest-links.js';
+export {
   healthLiveResponseSchema,
   healthReadyResponseSchema,
   type HealthLiveResponse,
