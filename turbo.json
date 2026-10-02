@@ -9,6 +9,10 @@
       "dependsOn": ["^build", "db:generate"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
+    "build:e2e": {
+      "dependsOn": ["^build", "db:generate"],
+      "outputs": ["dist-e2e/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build", "db:generate"]
     },
@@ -28,7 +32,7 @@
       "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/docker/**"]
     },
     "e2e": {
-      "dependsOn": ["^build", "db:generate"],
+      "dependsOn": ["@stepler/api#build:e2e", "@stepler/web#build", "db:generate"],
       "cache": false,
       "passThroughEnv": [
         "NODE_ENV",
