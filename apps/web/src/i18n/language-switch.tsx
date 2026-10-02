@@ -15,13 +15,13 @@ import { useRouter } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useOptimistic, useRef, useTransition } from 'react';
 import { apiRequest } from '@/api/client';
-import { SETTING_SELECT } from '@/components/setting-control';
 import { ME_QUERY_KEY } from '@/api/me';
+import { LanguageFlag } from './language-flag';
 import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
 import { setLocaleCookie } from './set-locale';
 
 /**
- * The current locale and a change handler for the language control on /app/settings.
+ * The current locale and a change handler for the language control on /app/account.
  * `changeLocale` takes the raw `onValueChange` string and ignores unknown values.
  *
  * On change it writes `st_locale`, saves the choice to the profile when an admin is signed in
@@ -77,7 +77,7 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
   return { locale, changeLocale };
 }
 
-/** Українська / English as a select, each name in its own language (`lang`). */
+/** Українська / English as a select, each with its flag and its name in its own language (`lang`). */
 export function LanguageSwitch({
   labelledBy,
   describedBy,
@@ -92,7 +92,7 @@ export function LanguageSwitch({
       <SelectTrigger
         aria-labelledby={labelledBy}
         aria-describedby={describedBy}
-        className={SETTING_SELECT}
+        className="w-full sm:max-w-80"
       >
         <SelectValue />
       </SelectTrigger>
@@ -100,9 +100,11 @@ export function LanguageSwitch({
         <SelectGroup>
           {/* `lang` on the text too: the trigger shows a copy of it, outside the option. */}
           <SelectItem value="uk" lang="uk">
+            <LanguageFlag locale="uk" />
             <span lang="uk">{t('uk')}</span>
           </SelectItem>
           <SelectItem value="en" lang="en">
+            <LanguageFlag locale="en" />
             <span lang="en">{t('en')}</span>
           </SelectItem>
         </SelectGroup>

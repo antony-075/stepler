@@ -59,7 +59,21 @@
     "loading": "Loading…",
     "signedInAs": "Signed in as",
     "logout": "Sign out",
-    "logoutFailed": "Couldn't sign out. Try again."
+    "logoutFailed": "Couldn't sign out. Try again.",
+    "skipToContent": "Skip to content",
+    "nav": {
+      "label": "Sections",
+      "open": "Open menu",
+      "close": "Close menu",
+      "collections": "Collections",
+      "section": {
+        "settings": "Options"
+      },
+      "account": "Account",
+      "collapse": "Collapse the sidebar",
+      "expand": "Expand the sidebar"
+    },
+    "breadcrumbs": "Breadcrumb"
   },
   "brand": {
     "name": "Stepler",
@@ -143,7 +157,10 @@
     "label": "Theme",
     "system": "System",
     "light": "Light",
-    "dark": "Dark"
+    "dark": "Dark",
+    "lightHint": "Light and clean.",
+    "darkHint": "Easy on the eyes after dark.",
+    "systemHint": "Follows your device."
   },
   "language": {
     "label": "Language",
@@ -152,29 +169,16 @@
     "saveFailed": "Couldn't save the language to your profile",
     "saveFailedHint": "Emails will keep the previous language, and the app will open in it next time. Try again."
   },
-  "settings": {
-    "pageTitle": "Settings",
-    "back": "Collections",
-    "appearance": "Appearance",
-    "description": "How your workspace looks and which language it uses.",
-    "appearanceHint": "Changes apply right away, no reload needed.",
-    "themeHint": "System follows your device setting. The choice applies to this browser.",
-    "languageHint": "The language of the interface and of the emails Stepler sends you."
-  },
   "collections": {
     "pageTitle": "Collections",
     "usage": "{used} of {limit} active collections",
     "new": "New collection",
-    "active": "Active",
-    "archive": "Archive",
-    "archiveHint": "Guests can't open these collections. You still see everything in them.",
     "status": {
       "ACTIVE": "Active",
       "ARCHIVED": "Archived"
     },
     "createdOn": "Created {date}",
     "archivedOn": "Archived {date}",
-    "cardSettings": "Settings for “{title}”",
     "noActive": "No active collections. Create one or bring one back from the archive.",
     "showMore": "Show more",
     "loading": "Loading collections",
@@ -209,18 +213,47 @@
       "share": "Share the link or QR code",
       "collect": "Guests add photos, videos and messages"
     },
-    "noContentYet": "Nothing added yet",
     "linkActive": "Link active",
     "linkPaused": "Link paused",
     "statusChip": {
       "ACTIVE": "Collection active",
       "ARCHIVED": "Archived"
+    },
+    "subtitle": "Create a collection for each event and gather photos, videos, documents and wishes from guests.",
+    "search": "Search collections",
+    "searchPlaceholder": "Search by title",
+    "filterLabel": "Show",
+    "filter": {
+      "all": "All",
+      "active": "Active",
+      "archived": "Archive"
+    },
+    "sortLabel": "Sort:",
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "title": "By title"
+    },
+    "nothingFound": "No collections with “{query}” in the title.",
+    "noArchived": "The archive is empty.",
+    "showAll": "Show all",
+    "showMoreArchived": "Show more from the archive",
+    "card": {
+      "share": "Share"
+    },
+    "actions": {
+      "unarchiveConfirmTitle": "Unarchive “{title}”?",
+      "unarchiveConfirmText": "Guests can open the collection through its links again.",
+      "unarchivePending": "Unarchiving",
+      "deletePhrase": "To confirm, type “{title}”",
+      "menu": "Actions for “{title}”",
+      "menuShort": "Actions"
     }
   },
   "collection": {
     "pageTitle": "Collection",
     "back": "Collections",
-    "settings": "Settings",
+    "settings": "Edit collection",
     "archivedTitle": "Collection archived",
     "archivedText": "Guests can't open it. Everything in it is kept.",
     "unarchive": "Unarchive",
@@ -233,11 +266,9 @@
     "loading": "Loading the collection",
     "retry": "Try again",
     "settingsPage": {
-      "pageTitle": "Collection settings",
-      "details": "Details",
-      "detailsHint": "Guests see the title and description.",
-      "titleHint": "Up to 100 characters.",
-      "descriptionHint": "Optional. Line breaks are kept.",
+      "pageTitle": "Collection options",
+      "details": "Basic information",
+      "detailsHint": "The title and description tell guests where they are.",
       "cancel": "Cancel",
       "save": "Save",
       "saving": "Saving…",
@@ -251,7 +282,6 @@
       "archivePending": "Archiving",
       "archived": "Collection archived",
       "danger": "Danger zone",
-      "delete": "Delete collection",
       "deleteHint": "The collection and everything in it will be deleted for good.",
       "deleteButton": "Delete collection",
       "deleteConfirmTitle": "Delete “{title}”?",
@@ -259,16 +289,35 @@
       "deleteConfirm": "Delete for good",
       "deletePending": "Deleting",
       "deleted": "Collection deleted",
-      "leave": "The collection details aren’t saved. Leave the page without saving?"
+      "leave": "The collection details aren’t saved. Leave the page without saving?",
+      "subtitle": "Title and description, guest access, archive and deletion.",
+      "accessHint": "What the main link allows. Each link has its own permissions.",
+      "accessNoLink": "The main link appears once you open Links.",
+      "accessChange": "Change",
+      "accessChangeName": "Change guest access",
+      "archiving": "Archiving",
+      "archiveTitle": "Archive the collection"
     },
     "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
-    "nav": {
+    "share": "Share",
+    "tabs": {
       "label": "Collection sections",
       "content": "Content",
-      "links": "Links"
+      "links": "Links",
+      "settings": "Options"
     },
-    "share": "Share",
-    "shareLink": "Share the link"
+    "inline": {
+      "editTitle": "Edit title",
+      "editDescription": "Edit description",
+      "addDescription": "Add a description",
+      "titleField": "Collection title",
+      "descriptionField": "Collection description",
+      "descriptionHint": "Ctrl+Enter or ⌘+Enter saves, Esc cancels.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Saved",
+      "failed": "Couldn’t save"
+    }
   },
   "guestLinks": {
     "permissions": {
@@ -289,29 +338,32 @@
     "title": "Share with guests",
     "description": "Guests open the link or scan the QR code, no sign-up needed.",
     "pausedNotice": "The link is paused: guests can’t open it.",
-    "manage": "All links",
     "close": "Close",
     "loading": "Loading the link",
     "loadFailed": "Couldn’t load the link.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "qrTitle": "Show the QR code",
+    "downloadPng": "Download for print (PNG)",
+    "downloadSvg": "SVG",
+    "linkTitle": "Send the link",
+    "copyLink": "Copy link",
+    "openAsGuest": "Open as a guest",
+    "resume": "Turn on",
+    "gone": "This link is gone. All of the collection’s links are under Manage links.",
+    "picker": "Link",
+    "pausedMarker": "paused"
   },
   "links": {
-    "pageTitle": "Links",
     "loading": "Loading links",
     "loadFailed": "Couldn’t load the links.",
     "retry": "Try again",
     "defaultTitle": "Main link",
-    "defaultMeta": "Every guest gets this one: on invitations, on the tables, in messages.",
-    "createdOn": "Created {date}",
     "status": {
       "ACTIVE": "Active",
       "INACTIVE": "Paused"
     },
     "archivedNotice": "The collection is archived: links don’t work until you unarchive it.",
     "share": {
-      "title": "Share",
-      "description": "Show the QR code at the entrance or on the tables, or send the link.",
-      "link": "Link",
       "copy": "Copy",
       "copied": "Copied",
       "copyFailed": "Couldn’t copy. The link is selected: copy it with your keyboard.",
@@ -320,18 +372,18 @@
       "png": "PNG for print",
       "svg": "SVG",
       "downloadFailed": "Couldn’t create the QR file. Try again.",
-      "hidden": "The link can’t be shown. Replace it (Manage → Replace link) to get a new one.",
-      "hiddenExtra": "The link can’t be shown. Delete it under Manage and create a new one.",
-      "resume": "Resume"
+      "hidden": "The link can’t be shown. Replace it below, under Danger zone, to get a new one.",
+      "hiddenExtra": "The link can’t be shown. Delete it below and create a new one.",
+      "resume": "Resume",
+      "guestLink": "Guest link",
+      "open": "Open",
+      "newTab": " (in a new tab)",
+      "link": "Link"
     },
     "permissions": {
-      "title": "What guests can do",
+      "title": "Link permissions",
       "description": "Changes apply once you save, for everyone who opens this link.",
       "addLegend": "Can add",
-      "addPhotos": "Photos",
-      "addVideos": "Videos",
-      "addDocuments": "Documents",
-      "addTexts": "Wishes",
       "seeLegend": "What they see",
       "seeOwn": "Only their own",
       "seeOwnHint": "Each guest sees only what they added.",
@@ -344,22 +396,48 @@
       "saving": "Saving…",
       "saved": "Permissions saved",
       "cancel": "Cancel",
-      "leave": "The link’s permissions aren’t saved. Leave the page without saving?"
+      "leave": "The link’s permissions aren’t saved. Leave the page without saving?",
+      "chipsLabel": "Guests can add",
+      "viewOnlyChip": "View only",
+      "type": {
+        "photos": {
+          "title": "Photos",
+          "hint": "Pictures"
+        },
+        "videos": {
+          "title": "Videos",
+          "hint": "Video files"
+        },
+        "documents": {
+          "title": "Documents",
+          "hint": "PDFs, files"
+        },
+        "texts": {
+          "title": "Wishes",
+          "hint": "Text messages"
+        }
+      },
+      "addTitle": "What guests can add",
+      "addDescription": "Choose what guests can add through this link.",
+      "seeTitle": "What guests see",
+      "seeDescription": "Whose content guests see when they open the link."
     },
     "state": {
-      "title": "Status",
-      "description": "Pause the link to stop guests opening it for a while.",
+      "title": "Link status",
+      "description": "Pause the link for a while so guests can’t open it. Turn it back on at any time.",
       "switch": "The link works",
       "activeHint": "Guests open the link and use it.",
       "pausedHint": "Guests who open the link see “This link is paused”. Nothing is deleted: turn it back on when you’re ready.",
       "paused": "Link paused",
-      "resumed": "Link resumed"
+      "resumed": "Link resumed",
+      "on": "Link active",
+      "off": "Link paused"
     },
     "danger": {
       "title": "Danger zone",
       "cancel": "Cancel",
       "description": "These can’t be undone.",
-      "mainOnly": "The main link can’t be deleted, only replaced. If you don’t need it for a while, pause it above under Status."
+      "mainOnly": "The main link can’t be deleted, only replaced. If you don’t need it for a while, pause it above under Link status."
     },
     "rotate": {
       "description": "Creates a new link and a new QR code. The old link and any printed QR code stop working at once.",
@@ -416,9 +494,6 @@
       "cancel": "Cancel",
       "limitTitle": "No more links can be created"
     },
-    "manage": "Manage",
-    "manageName": "Manage “{name}”",
-    "unsavedTag": "Not saved",
     "delete": {
       "description": "Stops working for good and disappears from the list.",
       "button": "Delete link",
@@ -428,12 +503,31 @@
       "confirm": "Delete",
       "pending": "Deleting",
       "done": "Link deleted"
-    }
+    },
+    "notFoundTitle": "Link not found",
+    "notFoundText": "It may have been deleted or revoked. All of the collection’s links are in the list.",
+    "mainDescription": "Share this link or QR code with guests: on invitations, on the tables, in messages. Below: what guests can add and see.",
+    "extraDescription": "A separate link with its own permissions. Created {date}.",
+    "row": {
+      "hidden": "The link can’t be shown: open its page.",
+      "copyFailed": "Couldn’t copy. Open the link and copy the address.",
+      "settings": "Manage",
+      "settingsName": "Manage “{name}”",
+      "showQr": "Show the QR code and share “{name}”",
+      "pause": "Pause",
+      "resume": "Turn on",
+      "menu": "Actions for “{name}”",
+      "copyLink": "Copy link"
+    },
+    "sheet": {
+      "close": "Close"
+    },
+    "mainHint": "Every guest gets this one: on invitations, on the tables, in messages."
   },
   "guestLink": {
     "loading": "Opening the collection",
     "retry": "Try again",
-    "soonAdd": "Soon you’ll be able to add photos here.",
+    "soonAdd": "You’ll be able to add them here soon.",
     "soonView": "Soon you’ll be able to see what guests added here.",
     "paused": {
       "title": "This link is paused",
@@ -459,5 +553,28 @@
       "title": "Too many tries: try again in a minute"
     },
     "failed": "Couldn’t open the collection. Check your connection and try again."
+  },
+  "account": {
+    "pageTitle": "Account",
+    "description": "How Stepler looks and which language it speaks.",
+    "appearance": "Appearance",
+    "appearanceHint": "Choose how Stepler looks in this browser. Applies right away.",
+    "languageHint": "The language of the interface and of the emails Stepler sends you.",
+    "profile": {
+      "title": "Profile",
+      "hint": "Your name shows at the top of the page instead of your email.",
+      "formLabel": "Profile",
+      "name": "Name",
+      "nameHint": "You can leave it empty: then we show your email.",
+      "placeholder": "Olia Koval",
+      "counter": "{count, number} / {max, number}",
+      "tooLong": "The name can be at most {max} characters",
+      "invalid": "The name must be one line, without control characters",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Name saved",
+      "cancel": "Cancel",
+      "leave": "Your name isn’t saved. Leave the page without saving?"
+    }
   }
 }

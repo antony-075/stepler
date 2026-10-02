@@ -66,6 +66,7 @@ export const Success: Story = {
     const [toast] = toasts();
     await expect(toast).toBeVisible();
     await expect(toast).toHaveTextContent('Guests can open it now.');
+    await expect(toast).toHaveClass('bg-success-soft');
     await expect(screen.getByRole('region', { name: /Notifications/ })).toBeInTheDocument();
   },
 };
@@ -81,6 +82,7 @@ export const Error: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     await expect(await screen.findByRole('status')).toHaveAttribute('aria-live', 'assertive');
     await expect(toasts()[0]).toHaveAttribute('data-variant', 'error');
+    await expect(toasts()[0]).toHaveClass('bg-destructive-soft');
   },
 };
 
@@ -98,6 +100,8 @@ export const Warning: Story = {
     const [toast] = toasts();
     await expect(toast).toHaveAttribute('data-variant', 'warning');
     await expect(toast?.querySelector('svg')).toHaveClass('text-warning');
+    // Tinted in the variant's soft fill (owner review 2026-10-02), not the white popover.
+    await expect(toast).toHaveClass('bg-warning-soft');
   },
 };
 
@@ -112,7 +116,13 @@ export const Info: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     await waitFor(() => expect(toasts()).toHaveLength(1));
     await expect(toasts()[0]).toHaveAttribute('data-variant', 'info');
+    await expect(toasts()[0]).toHaveClass('bg-info-soft');
   },
+};
+
+export const InfoDark: Story = {
+  ...Info,
+  globals: { theme: 'dark' },
 };
 
 export const Dismiss: Story = {

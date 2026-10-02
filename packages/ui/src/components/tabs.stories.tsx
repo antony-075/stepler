@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
+import { Images, Link2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from './tabs';
 
 const meta = {
   title: 'Components/Tabs',
@@ -160,5 +161,77 @@ export const WithCountsPhone: Story = {
     const list = canvas.getByRole('tablist');
     await expect(list.scrollWidth).toBeGreaterThan(list.clientWidth);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};
+
+/** The segmented variant: equal segments on a phone, an icon, a label and a count. */
+export const Segmented: Story = {
+  render: (args) => (
+    <Tabs {...args} className="w-md max-w-full">
+      <TabsList variant="segmented" aria-label="Collection">
+        <TabsTrigger value="photos">
+          <Images aria-hidden="true" />
+          Content
+        </TabsTrigger>
+        <TabsTrigger value="links">
+          <Link2 aria-hidden="true" />
+          Links
+          <TabsCount>3</TabsCount>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="photos">The gallery.</TabsContent>
+      <TabsContent value="links">The guest links.</TabsContent>
+    </Tabs>
+  ),
+  play: async ({ canvas }) => {
+    const [content, links] = canvas.getAllByRole('tab');
+    await expect(content).toHaveAttribute('aria-selected', 'true');
+    await expectTriggersAreTouchTargets(canvas.getAllByRole('tab'));
+    content!.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(links).toHaveFocus());
+    await expect(links).toHaveAttribute('aria-selected', 'true');
+    await expect(canvas.getByRole('tabpanel')).toHaveTextContent('The guest links.');
+  },
+};
+
+export const SegmentedDark: Story = {
+  ...Segmented,
+  globals: { theme: 'dark' },
+};
+
+/** Four segments on a 390px phone (the planned «Вигляд» tab): labels shorten, nothing scrolls. */
+export const SegmentedFourOnPhone: Story = {
+  render: (args) => (
+    <Tabs {...args} className="w-[358px]">
+      <TabsList variant="segmented" aria-label="Collection">
+        <TabsTrigger value="photos">
+          <Images aria-hidden="true" />
+          <span className="min-w-0 truncate">Content</span>
+        </TabsTrigger>
+        <TabsTrigger value="links">
+          <Link2 aria-hidden="true" />
+          <span className="min-w-0 truncate">Links</span>
+          <TabsCount>3</TabsCount>
+        </TabsTrigger>
+        <TabsTrigger value="options">
+          <Link2 aria-hidden="true" />
+          <span className="min-w-0 truncate">Options</span>
+        </TabsTrigger>
+        <TabsTrigger value="look">
+          <Images aria-hidden="true" />
+          <span className="min-w-0 truncate">Appearance</span>
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="photos">The gallery.</TabsContent>
+      <TabsContent value="links">The links.</TabsContent>
+      <TabsContent value="options">Options.</TabsContent>
+      <TabsContent value="look">Appearance.</TabsContent>
+    </Tabs>
+  ),
+  play: async ({ canvasElement }) => {
+    const list = canvasElement.querySelector<HTMLElement>('[data-slot="tabs-list"]')!;
+    await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth + 1);
+    await expect(list.getBoundingClientRect().width).toBeLessThanOrEqual(358);
   },
 };

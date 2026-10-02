@@ -63,8 +63,8 @@ type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {
 };
 
 // Based on shadcn/ui (new-york). Deviations: full width minus the 16px gutters on phones and
-// 480px from `sm`, scrolls inside when taller than the screen, a 44px close button whose label is
-// a prop, direction C surface and motion (above), and no motion under reduced motion.
+// 480px from `sm`, its body scrolls inside when taller than the screen (the box and the close
+// button do not; overscroll does not reach the page), a 44px close button whose label is a prop, direction C surface and motion (above), and no motion under reduced motion.
 function DialogContent({
   className,
   children,
@@ -77,15 +77,26 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
-        className={cn(dialogContentClassName, { 'pr-14': showCloseButton }, className)}
+        // The box itself does not scroll: its body does (below), so the close button stays in
+        // the corner, level with the title, however long the content (owner review 2026-10-02).
+        className={cn(dialogContentClassName, 'overflow-hidden p-0 sm:p-0', className)}
         {...props}
       >
-        {children}
+        <div
+          data-slot="dialog-body"
+          className={cn(
+            'grid max-h-[calc(100dvh-2rem)] min-w-0 gap-5 overflow-y-auto overscroll-contain p-5 sm:p-6',
+            // Only the header makes room for the close button, so the body stays symmetric.
+            { '[&>[data-slot=dialog-header]]:pr-10': showCloseButton },
+          )}
+        >
+          {children}
+        </div>
         {showCloseButton ? (
           <DialogPrimitive.Close
             data-slot="dialog-close"
             aria-label={closeLabel}
-            className={cn(closeButtonClassName, 'absolute top-2 right-2')}
+            className={cn(closeButtonClassName, 'absolute top-2 right-2 sm:top-3 sm:right-3')}
           >
             <X aria-hidden="true" className="size-4" />
           </DialogPrimitive.Close>

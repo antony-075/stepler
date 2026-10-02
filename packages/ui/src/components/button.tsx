@@ -8,8 +8,9 @@ import { cn } from '../lib/utils';
 // - variants: `default` (ink, the admin primary), `pencil` (only the guest's main action),
 //   `outline`, `ghost`, `destructive` (inside ConfirmDialog); no `secondary` (use `outline`) and
 //   no `link` (text links are links);
-// - sizes: default 44px, `guest` 56px (the guest's main action), `lg` 48px, `icon` 44×44, `sm`
-//   36px for dense pointer-first rows only, never the primary action on touch; no xs sizes;
+// - sizes: default 44px, `guest` 56px (the guest's main action), `lg` 48px, `icon` 44×44,
+//   `adaptive` (icon on phones, default from `sm`), `sm` 36px for dense pointer-first rows and
+//   quiet header controls, never the primary action on touch; no xs sizes;
 // - 8px radius, a 2px focus outline (lib/focus), pressed = scale 0.98 (no colour of its own);
 // - disabled is a solid muted fill with muted text, not half-transparent, so a label such as
 //   "Wait, checking…" stays readable; `aria-disabled` looks the same.
@@ -37,6 +38,9 @@ const buttonVariants = cva(
         lg: 'h-12 px-5 text-base has-[>svg]:px-4',
         guest: 'h-14 px-6 type-body-lg font-semibold',
         icon: 'size-11',
+        /** A square icon button on phones (44px, name it with `aria-label`), the default size with
+         *  its label from `sm` (hide the label below `sm` with `sr-only sm:not-sr-only`). */
+        adaptive: 'size-11 px-0 text-[0.9375rem] sm:h-11 sm:w-auto sm:px-4 sm:has-[>svg]:px-3.5',
       },
     },
     compoundVariants: [

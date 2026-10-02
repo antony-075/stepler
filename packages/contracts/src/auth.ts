@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { NO_CONTROL_CHARACTERS } from './text.js';
 
 export const localeSchema = z.enum(['uk', 'en']);
 export type Locale = z.infer<typeof localeSchema>;
@@ -13,10 +14,21 @@ export const meResponseSchema = z.object({
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
+/**
+ * A person's name as they want it shown (the header, later the guests' view): plain text on one
+ * line, 1–80 characters after trimming. Mirrored by `User_displayName_length` in the database.
+ */
+export const displayNameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(80)
+  .regex(NO_CONTROL_CHARACTERS, 'Must not contain control characters or line breaks');
+
 /** `PATCH /api/v1/me`. `displayName: null` clears it; omitted fields are unchanged. */
 export const updateMeRequestSchema = z
   .object({
-    displayName: z.string().trim().min(1).max(80).nullable().optional(),
+    displayName: displayNameSchema.nullable().optional(),
     locale: localeSchema.optional(),
   })
   .strict();

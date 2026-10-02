@@ -87,6 +87,11 @@
   --shadow-popover: 0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06);
   --shadow-dialog: 0 24px 48px -16px rgb(20 22 20 / 0.32);
   --shadow-print: 0 1px 1px rgb(20 22 20 / 0.1), 0 8px 18px -8px rgb(20 22 20 / 0.28);
+  /* Cards and panels lift off the table like paper (owner 2026-10-02): two soft layers; a little
+     more for an interactive card under the pointer. Nested cards (inside a card or a dialog)
+     carry none: never stacked shadows. */
+  --shadow-card: 0 1px 2px rgb(20 22 20 / 0.04), 0 2px 8px rgb(20 22 20 / 0.05);
+  --shadow-card-hover: 0 1px 2px rgb(20 22 20 / 0.06), 0 4px 14px rgb(20 22 20 / 0.08);
 
   /* Layers */
   --z-base: 0;
@@ -164,6 +169,9 @@
     --shadow-popover: none;
     --shadow-dialog: none;
     --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+    /* At night a shadow muddies the dark table: the 1px edge and the lighter sheet do the work. */
+    --shadow-card: none;
+    --shadow-card-hover: none;
   }
 }
 
@@ -221,6 +229,8 @@
   --shadow-popover: none;
   --shadow-dialog: none;
   --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+  --shadow-card: none;
+  --shadow-card-hover: none;
 }
 
 @theme {
@@ -295,6 +305,8 @@
   --shadow-popover: var(--shadow-popover);
   --shadow-dialog: var(--shadow-dialog);
   --shadow-print: var(--shadow-print);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
 }
 
 @layer base {

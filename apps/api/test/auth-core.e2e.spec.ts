@@ -134,6 +134,21 @@ describe('auth core', () => {
       expect(cleared.body).toMatchObject({ displayName: null, locale: 'en' });
     });
 
+    test('PATCH /me rejects an empty, too long or control-character display name', async () => {
+      const { cookie } = await signedIn();
+      for (const displayName of ['   ', 'x'.repeat(81), 'Anton\nK', 'A\u0000']) {
+        const res = await request(server())
+          .patch('/api/v1/me')
+          .set('Cookie', cookie)
+          .set('Origin', ORIGIN)
+          .send({ displayName })
+          .expect(400);
+        expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      }
+      const me = await request(server()).get('/api/v1/me').set('Cookie', cookie).expect(200);
+      expect(me.body).toMatchObject({ displayName: null });
+    });
+
     test('PATCH /me validates the body', async () => {
       const { cookie } = await signedIn();
       const res = await request(server())

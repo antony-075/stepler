@@ -1,7 +1,9 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { getSessionUser } from '@/api/server';
 import { AppShell } from './app-shell';
+import { isSidebarCollapsed, SIDEBAR_COOKIE } from './sidebar-state';
 
 /**
  * The admin area. A signed-out visitor is sent to /login on the server, before any of the shell
@@ -10,5 +12,6 @@ import { AppShell } from './app-shell';
  */
 export default async function AppLayout({ children }: { children: ReactNode }) {
   if ((await getSessionUser()) === null) redirect('/login');
-  return <AppShell>{children}</AppShell>;
+  const collapsed = isSidebarCollapsed((await cookies()).get(SIDEBAR_COOKIE)?.value);
+  return <AppShell initialCollapsed={collapsed}>{children}</AppShell>;
 }

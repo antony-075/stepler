@@ -9,6 +9,10 @@ const SIZES = {
   md: 'size-14 text-xl sm:size-16 sm:text-[1.375rem]',
   /** 72px: the mark of an empty state. */
   lg: 'size-18 text-2xl [&_svg]:size-8',
+  /** 80px on phones, 128px from `sm`: a collection's cover in a dashboard card. */
+  cover: 'size-20 text-2xl sm:size-32 sm:text-[2.25rem]',
+  /** The full width of its container, square: the collection's summary card in settings. */
+  fill: 'aspect-square w-full text-5xl',
 } as const;
 
 type TintTileProps = {
@@ -23,7 +27,8 @@ type TintTileProps = {
 /**
  * A calm square in one tint with a mark in its ink (DESIGN-SYSTEM.md §5.10, §5.16): a
  * collection's identity before it has content (its initials; the newest photo replaces the fill
- * in slice 7) and the mark of an empty state (an icon). Flat like a frame: 2px radius, a 1px
+ * in slice 7, an admin cover photo later: the tile is the slot either takes, at the same size)
+ * and the mark of an empty state (an icon). Flat like a frame: 2px radius, a 1px
  * tint edge, no shadow. Decorative, so hidden from assistive technology; the caller names the
  * collection or the state in words. The ink passes 4.5:1 on its fill in both themes.
  */

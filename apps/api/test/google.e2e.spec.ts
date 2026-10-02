@@ -142,6 +142,56 @@ describe('Google sign-in', () => {
     expect(account.userId).toBe(existing.id);
   });
 
+  test('the Google name fills an empty display name once and never overwrites one', async () => {
+    // A magic-link user without a name signs in with Google: the verified name is taken.
+    const plain = await prisma.user.create({
+      data: { email: 'olia@stepler.test', emailVerifiedAt: new Date() },
+    });
+    google.claims = {
+      sub: 'g-olia',
+      email: 'olia@stepler.test',
+      emailVerified: true,
+      name: '  Оля\u0007 Коваль  ',
+    };
+    await signIn();
+    // Trimmed, control characters dropped.
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: plain.id } })).displayName).toBe(
+      'Оля Коваль',
+    );
+
+    // A name the user set (or an earlier one) stays, on the linked path too.
+    await prisma.user.update({ where: { id: plain.id }, data: { displayName: 'Ольга' } });
+    google.claims = { ...google.claims, name: 'Olia K.' };
+    await signIn();
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: plain.id } })).displayName).toBe(
+      'Ольга',
+    );
+
+    // Cleared by the user, the next Google sign-in fills it again.
+    await prisma.user.update({ where: { id: plain.id }, data: { displayName: null } });
+    await signIn();
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: plain.id } })).displayName).toBe(
+      'Olia K.',
+    );
+  });
+
+  test('a new Google user gets the name, cut to 80 characters; a blank name leaves it empty', async () => {
+    google.claims = { ...google.claims, name: 'Я'.repeat(90) };
+    await signIn();
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: google.claims.email } });
+    expect(user.displayName).toBe('Я'.repeat(80));
+
+    google.claims = {
+      sub: `g-${randomUUID()}`,
+      email: `g-${randomUUID()}@stepler.test`,
+      emailVerified: true,
+      name: '   ',
+    };
+    await signIn();
+    const blank = await prisma.user.findUniqueOrThrow({ where: { email: google.claims.email } });
+    expect(blank.displayName).toBeNull();
+  });
+
   test('Review Focus 5: an unverified Google email never links or creates an account', async () => {
     await prisma.user.create({ data: { email: 'victim@stepler.test' } });
     google.claims = { sub: 'g-attacker', email: 'victim@stepler.test', emailVerified: false };

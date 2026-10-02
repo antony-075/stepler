@@ -9,98 +9,159 @@ import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 import { addsNothing, isValidForm, type PermissionForm } from './link-permissions';
+import { ADD_TYPES } from './permission-types';
 
-const ADD_OPTIONS = [
-  { name: 'photos', label: 'addPhotos' },
-  { name: 'videos', label: 'addVideos' },
-  { name: 'documents', label: 'addDocuments' },
-  { name: 'texts', label: 'addTexts' },
-] as const;
-
-/**
- * What guests may do, as two plain questions: what they can add (photos, videos, documents and
- * wishes, each its own box) and what they see (only their own, or what every guest added; each
- * option says what it means). A link where guests can add nothing gets a warning that it is
- * view-only; one that allows nothing at all an inline error (it cannot be saved).
- */
-export function PermissionFields({
-  value,
-  onChange,
-  layout = 'stacked',
-}: {
+type FieldsProps = {
   value: PermissionForm;
   onChange: (next: PermissionForm) => void;
-  /**
-   * `wide`: inside a link card part, the two questions side by side once the part is 40rem
-   * wide (owner review 2026-10-02: one narrow column left the card half empty at 1440px).
-   */
-  layout?: 'stacked' | 'wide';
+};
+
+// A tile and a radio card share one look (owner reference 2026-10-02): a sheet-coloured box
+// with a 1px edge that turns `--foreground` when chosen (as a selected filter chip), so the
+// choice reads from the edge and the control, never from colour alone. The whole box is the
+// label, so it is the touch target.
+const BOX =
+  'rounded-sheet border bg-card transition-[border-color] duration-(--duration-fast) hover:border-input has-[[data-state=checked]]:border-foreground motion-reduce:transition-none';
+
+/**
+ * What guests may add (owner 2026-10-02: photos, videos, documents and wishes, each on its
+ * own): four tiles, 2×2 from `sm` (one column on phones), each an icon, the type, a muted line
+ * on what it means and a checkbox on the right. The checkbox is named by the type and described
+ * by the line.
+ */
+export function AddPermissionTiles({
+  value,
+  onChange,
+  legend,
+  legendClassName,
+}: FieldsProps & { legend: string; legendClassName?: string }) {
+  const t = useTranslations('links.permissions');
+  const id = useId();
+  const invalid = !isValidForm(value);
+  return (
+    <fieldset className="grid min-w-0 gap-3">
+      <legend className={cn('mb-3 text-sm font-semibold', legendClassName)}>{legend}</legend>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {ADD_TYPES.map(({ name, icon: Icon }) => (
+          <Label
+            key={name}
+            className={cn(
+              BOX,
+              'min-h-16 cursor-pointer gap-3 px-3.5 py-3 text-base leading-normal font-normal',
+            )}
+          >
+            <Icon aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+            <span className="grid min-w-0 flex-1 gap-0.5">
+              <span id={`${id}-${name}`} className="font-semibold">
+                {t(`type.${name}.title`)}
+              </span>
+              <span
+                id={`${id}-${name}-hint`}
+                className="text-sm leading-[1.4] text-muted-foreground"
+              >
+                {t(`type.${name}.hint`)}
+              </span>
+            </span>
+            <Checkbox
+              checked={value[name]}
+              onCheckedChange={(checked) => onChange({ ...value, [name]: checked === true })}
+              aria-labelledby={`${id}-${name}`}
+              aria-describedby={`${id}-${name}-hint`}
+              aria-invalid={invalid || undefined}
+            />
+          </Label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+const SEE_OPTIONS = [
+  { value: 'own', title: 'seeOwn', hint: 'seeOwnHint' },
+  { value: 'all', title: 'seeAll', hint: 'seeAllHint' },
+] as const;
+
+/** Whose content guests see: two radio cards, each saying what it means. */
+export function SeePermissionCards({
+  value,
+  onChange,
+  legend,
+  legendClassName,
+}: FieldsProps & { legend: string; legendClassName?: string }) {
+  const t = useTranslations('links.permissions');
+  const legendId = useId();
+  return (
+    <fieldset className="grid min-w-0 gap-3">
+      <legend id={legendId} className={cn('mb-3 text-sm font-semibold', legendClassName)}>
+        {legend}
+      </legend>
+      <RadioGroup
+        aria-labelledby={legendId}
+        value={value.seeAll ? 'all' : 'own'}
+        onValueChange={(next) => onChange({ ...value, seeAll: next === 'all' })}
+        className="gap-3"
+      >
+        {SEE_OPTIONS.map(({ value: option, title, hint }) => (
+          <RadioGroupItem
+            key={option}
+            value={option}
+            className={cn(BOX, 'items-start px-3.5 py-3 [&>button]:mt-0.5')}
+          >
+            <span className="grid gap-0.5">
+              <span className="font-semibold">{t(title)}</span>
+              <span className="text-sm leading-[1.4] text-muted-foreground">{t(hint)}</span>
+            </span>
+          </RadioGroupItem>
+        ))}
+      </RadioGroup>
+    </fieldset>
+  );
+}
+
+/**
+ * What the current answers mean as a whole: an inline error when guests would have nothing to
+ * do (it cannot be saved), a warning when the link is view-only, otherwise nothing.
+ */
+export function PermissionNotice({
+  value,
+  className,
+}: {
+  value: PermissionForm;
+  className?: string;
 }) {
   const t = useTranslations('links.permissions');
-  const seeId = useId();
-  const valid = isValidForm(value);
+  if (!isValidForm(value)) {
+    return (
+      <p
+        role="alert"
+        className={cn(
+          'flex items-start gap-1.5 text-sm leading-[1.45] text-destructive',
+          className,
+        )}
+      >
+        <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        <span className="min-w-0">{t('invalid')}</span>
+      </p>
+    );
+  }
+  if (addsNothing(value)) {
+    return (
+      <Alert variant="warning" className={className}>
+        {t('viewOnly')}
+      </Alert>
+    );
+  }
+  return null;
+}
 
-  const wide = layout === 'wide';
+/** Both questions stacked, for the «Нове посилання» dialog. */
+export function PermissionFields({ value, onChange }: FieldsProps) {
+  const t = useTranslations('links.permissions');
   return (
-    <div
-      className={cn('grid gap-5', {
-        '@[40rem]/link-card-part:grid-cols-2 @[40rem]/link-card-part:gap-x-10': wide,
-      })}
-    >
-      <fieldset className="grid gap-1">
-        <legend className="mb-1 text-sm font-semibold">{t('addLegend')}</legend>
-        <div className="grid max-w-md sm:grid-cols-2 sm:gap-x-6">
-          {ADD_OPTIONS.map(({ name, label }) => (
-            <Label key={name} className="min-h-11 gap-3 text-base font-normal">
-              <Checkbox
-                checked={value[name]}
-                onCheckedChange={(checked) => onChange({ ...value, [name]: checked === true })}
-                aria-invalid={!valid || undefined}
-              />
-              {t(label)}
-            </Label>
-          ))}
-        </div>
-      </fieldset>
-      <fieldset className="grid gap-1">
-        <legend id={seeId} className="mb-1 text-sm font-semibold">
-          {t('seeLegend')}
-        </legend>
-        <RadioGroup
-          aria-labelledby={seeId}
-          value={value.seeAll ? 'all' : 'own'}
-          onValueChange={(next) => onChange({ ...value, seeAll: next === 'all' })}
-          className="gap-0"
-        >
-          <RadioGroupItem value="own" className="items-start [&>button]:mt-0.5">
-            <span className="grid gap-0.5">
-              <span>{t('seeOwn')}</span>
-              <span className="text-sm text-muted-foreground">{t('seeOwnHint')}</span>
-            </span>
-          </RadioGroupItem>
-          <RadioGroupItem value="all" className="items-start [&>button]:mt-0.5">
-            <span className="grid gap-0.5">
-              <span>{t('seeAll')}</span>
-              <span className="text-sm text-muted-foreground">{t('seeAllHint')}</span>
-            </span>
-          </RadioGroupItem>
-        </RadioGroup>
-      </fieldset>
-      {!valid ? (
-        <p
-          role="alert"
-          className={cn('flex items-start gap-1.5 text-sm leading-[1.45] text-destructive', {
-            '@[40rem]/link-card-part:col-span-2': wide,
-          })}
-        >
-          <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <span className="min-w-0">{t('invalid')}</span>
-        </p>
-      ) : addsNothing(value) ? (
-        <Alert variant="warning" className={cn({ '@[40rem]/link-card-part:col-span-2': wide })}>
-          {t('viewOnly')}
-        </Alert>
-      ) : null}
+    <div className="grid gap-5">
+      <AddPermissionTiles value={value} onChange={onChange} legend={t('addLegend')} />
+      <SeePermissionCards value={value} onChange={onChange} legend={t('seeLegend')} />
+      <PermissionNotice value={value} />
     </div>
   );
 }

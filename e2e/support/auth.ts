@@ -31,6 +31,6 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto(link);
   await page.getByRole('button', { name: SIGN_IN_UK.signIn }).click();
   await expect(page).toHaveURL(/\/app$/);
-  // The account menu is named by the address (on phones it shows only the avatar initial).
-  await expect(page.getByRole('button', { name: email })).toBeVisible();
+  // The top bar says who is signed in (on phones the address is for screen readers only).
+  await expect(page.locator('[data-slot="account-block"]')).toContainText(email);
 }

@@ -1,117 +1,99 @@
 'use client';
 
-// Design (DESIGN-SYSTEM.md §6.0, §6.7; owner reviews 2026-10-02: "a very sensitive section",
-// make it clear; then: cards as an accordion, a way to delete a link):
-// - The tab answers one question per link: how do guests get in, and what may they do. Every
-//   live link is one accordion card (GuestLinkCard): the header shares it (QR, link, Copy,
-//   Download QR) and says what guests can do; «Керувати» opens the controls and the danger zone.
-// - Order follows importance: the main link (the one on invitations and tables), then
-//   «Додаткові посилання» (title with the count, one sentence on why you would want one and
-//   «Нове посилання» level with the title; a dashed empty card that asks when there are none),
-//   then revoked links as a short struck-through record, each removable from the list.
-// - Plain language everywhere: each part says what it does in one sentence; the state switch
-//   says what a guest will see; the danger zone says what stops working, and its actions ask
-//   for the link's name to be typed.
-// - States: skeleton while loading, an Alert with Retry on failure, the shared «not found» for a
-//   missing or foreign collection, an info Alert for an archived collection (controls stay),
-//   inline Alerts for failed actions, toasts only to confirm (in the colour of the new state).
+// Design (DESIGN-SYSTEM.md §6.7; owner reviews 2026-10-02): the collection page's «Посилання»
+// tab. Order follows importance: the main link (the one on
+// invitations and tables), then additional links, then the revoked record. Each live link is a
+// `LinkListRow`: its QR (opens the QR to download), name and status, what guests can do, the
+// link, «Копіювати» and «Керувати» (its settings, in the same sheet).
 
-import type { GuestLink } from '@stepler/contracts';
+import type { Collection, GuestLink } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { LinkRow } from '@stepler/ui/components/link-row';
-import { PageHeader } from '@stepler/ui/components/page-header';
-import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Link2, Plus, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { isApiError } from '@/api/client';
-import { isCollectionNotFound, useInvalidateCollections } from '@/api/collections';
-import { deleteGuestLink, guestLinksKey, listGuestLinks } from '@/api/guest-links';
-import { BackLink } from '@/components/back-link';
+import { useInvalidateCollections } from '@/api/collections';
+import { deleteGuestLink } from '@/api/guest-links';
 import { errorMessageKey } from '@/errors/error-message';
 import { permissionWords } from '@/guest-links/link-permissions';
-import { CollectionNotFound } from '../../collection-not-found';
-import { useCollection } from '../../use-collection';
-import { CollectionHeader } from '../collection-header';
 import { CreateLinkDialog } from './create-link-dialog';
-import { GuestLinkCard } from './guest-link-card';
+import { LinkListRow } from './link-list-row';
 
 const SHORT_DATE = { day: '2-digit', month: '2-digit', year: 'numeric' } as const;
 
-export function CollectionLinks({ id }: { id: string }) {
+/**
+ * Every link of a collection, on the «Посилання» tab: the main link, then «Додаткові
+ * посилання» (count, why you would want one, «Нове посилання»; a dashed empty card when there
+ * are none), then revoked links as a short struck-through record. `onSettings` opens a link's
+ * settings in a sheet.
+ */
+export function LinksList({
+  collection,
+  items,
+  onSettings,
+}: {
+  collection: Collection;
+  items: readonly GuestLink[];
+  onSettings: (key: string) => void;
+}) {
   const t = useTranslations('links');
-  const tCollection = useTranslations('collection');
-  const collection = useCollection(id);
-  const links = useQuery({ queryKey: guestLinksKey(id), queryFn: () => listGuestLinks(id) });
-
-  if (collection.isError || links.isError) {
-    const error = collection.error ?? links.error;
-    if (isCollectionNotFound(error)) return <CollectionNotFound />;
-    return (
-      <>
-        <PageHeader
-          size="compact"
-          back={<BackLink href="/app">{tCollection('back')}</BackLink>}
-          title={t('pageTitle')}
-        />
-        <Alert
-          variant="error"
-          action={
-            <Button
-              variant="outline"
-              onClick={() => {
-                void collection.refetch();
-                void links.refetch();
-              }}
-            >
-              {t('retry')}
-            </Button>
-          }
-        >
-          {collection.isError ? tCollection('loadFailed') : t('loadFailed')}
-        </Alert>
-      </>
-    );
-  }
-  if (collection.data === undefined || links.data === undefined) {
-    return <LinksSkeleton label={t('loading')} />;
-  }
-
-  const items = links.data.items;
   // A rotated-out default is never listed by the API; only the live one is.
   const main = items.find((link) => link.isDefault && link.status !== 'REVOKED');
   const extra = items.filter((link) => !link.isDefault && link.status !== 'REVOKED');
   const revoked = items.filter((link) => !link.isDefault && link.status === 'REVOKED');
-
   return (
-    <>
-      <CollectionHeader collection={collection.data} current="links" />
-      <div className="grid gap-12">
-        {collection.data.status === 'ARCHIVED' ? (
-          <Alert variant="info">{t('archivedNotice')}</Alert>
-        ) : null}
-        {main === undefined ? null : (
-          <GuestLinkCard collection={collection.data} link={main} level={2} />
-        )}
-        <ExtraLinks collectionId={id}>
+    <div className="grid gap-10">
+      {collection.status === 'ARCHIVED' ? (
+        <Alert variant="info">{t('archivedNotice')}</Alert>
+      ) : null}
+      {main === undefined ? null : (
+        <section aria-labelledby="main-link" className="grid gap-3">
+          <div className="grid gap-1">
+            <h2 id="main-link" className="type-h3">
+              {t('defaultTitle')}
+            </h2>
+            <p className="max-w-[64ch] text-sm text-pretty text-muted-foreground">
+              {t('mainHint')}
+            </p>
+          </div>
+          <ul className="rounded-sheet border bg-card shadow-card">
+            <LinkListRow collection={collection} link={main} onSettings={onSettings} />
+          </ul>
+        </section>
+      )}
+      <ExtraLinks collectionId={collection.id} count={extra.length}>
+        <ul className="divide-y rounded-sheet border bg-card shadow-card">
           {extra.map((link) => (
-            <GuestLinkCard key={link.id} collection={collection.data} link={link} level={3} />
+            <LinkListRow
+              key={link.id}
+              collection={collection}
+              link={link}
+              onSettings={onSettings}
+            />
           ))}
-        </ExtraLinks>
-        {revoked.length === 0 ? null : <RevokedLinks links={revoked} />}
-      </div>
-    </>
+        </ul>
+      </ExtraLinks>
+      {revoked.length === 0 ? null : <RevokedLinks links={revoked} />}
+    </div>
   );
 }
 
-function ExtraLinks({ collectionId, children }: { collectionId: string; children: ReactNode[] }) {
+function ExtraLinks({
+  collectionId,
+  count,
+  children,
+}: {
+  collectionId: string;
+  count: number;
+  children: ReactNode;
+}) {
   const t = useTranslations('links.extra');
   const [creating, setCreating] = useState(false);
-  const count = children.length;
   const create = (
     <Button variant="outline" className="w-full sm:w-auto" onClick={() => setCreating(true)}>
       <Plus aria-hidden="true" />
@@ -123,7 +105,7 @@ function ExtraLinks({ collectionId, children }: { collectionId: string; children
       {/* Title and count on one line with the action level with it (from `sm`); the sentence
           under them says why you would want one. With no links the empty card asks instead. */}
       <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        <h2 id="extra-links" className="type-h2 flex min-w-0 items-center gap-3">
+        <h2 id="extra-links" className="type-h3 flex min-w-0 items-center gap-3">
           {t('title')}
           {count === 0 ? null : (
             <span
@@ -187,7 +169,7 @@ function RevokedLinks({ links }: { links: GuestLink[] }) {
         </h2>
         <p className="text-sm text-muted-foreground">{t('revoked.description')}</p>
       </div>
-      <ul className="divide-y rounded-sheet border bg-card px-4 sm:px-5">
+      <ul className="divide-y rounded-sheet border bg-card px-4 shadow-card sm:px-5">
         {links.map((link) => (
           <li key={link.id}>
             <LinkRow
@@ -254,18 +236,5 @@ function RemoveFromHistory({ link }: { link: GuestLink }) {
         errorMessage={tRoot(errorMessageKey(failure ?? 'INTERNAL'))}
       />
     </>
-  );
-}
-
-function LinksSkeleton({ label }: { label: string }) {
-  return (
-    <div role="status" aria-busy="true" aria-label={label} className="grid gap-8">
-      <div className="grid gap-3">
-        <Skeleton className="h-11 w-28" />
-        <Skeleton className="h-9 w-2/3 max-w-md" />
-        <Skeleton className="h-12 w-72 max-w-full" />
-      </div>
-      <Skeleton className="h-[36rem] w-full rounded-sheet" />
-    </div>
   );
 }

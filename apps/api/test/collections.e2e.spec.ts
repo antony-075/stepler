@@ -71,6 +71,15 @@ describe('collections API', () => {
         status: 'ACTIVE',
         archivedAt: null,
         defaultLinkStatus: 'ACTIVE',
+        // [G3] the default link's permissions, so the dashboard can say what guests may add.
+        defaultLinkPermissions: {
+          canUploadPhotos: true,
+          canUploadVideos: true,
+          canUploadDocuments: true,
+          canSubmitText: true,
+          canViewGallery: false,
+          canDeleteOwn: true,
+        },
       });
       const events = await prisma.auditEvent.findMany({ where: { action: 'collection.create' } });
       expect(events).toHaveLength(1);
@@ -122,14 +131,14 @@ describe('collections API', () => {
       expect(linkEvent?.requestId).toBe(collectionEvent?.requestId);
     });
 
-    test('lists and reads show the default link status; legacy rows show null', async () => {
+    test('lists and reads show the default link status and permissions; legacy rows show null', async () => {
       const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
       const created = collectionSchema.parse(
         (await create(cookie, { title: 'New' }).expect(201)).body,
       );
       await prisma.guestLink.updateMany({
         where: { collectionId: created.id },
-        data: { status: 'INACTIVE' },
+        data: { status: 'INACTIVE', canUploadDocuments: false, canViewGallery: true },
       });
       const legacy = await seed(userId, 'ACTIVE', 'Legacy');
       const list = collectionListResponseSchema.parse(
@@ -139,11 +148,22 @@ describe('collections API', () => {
         ['Legacy', null],
         ['New', 'INACTIVE'],
       ]);
+      expect(list.items.map((c) => c.defaultLinkPermissions)).toEqual([
+        null,
+        {
+          canUploadPhotos: true,
+          canUploadVideos: true,
+          canUploadDocuments: false,
+          canSubmitText: true,
+          canViewGallery: true,
+          canDeleteOwn: true,
+        },
+      ]);
       const one = await request(server())
         .get(`/api/v1/collections/${legacy.id}`)
         .set('Cookie', cookie)
         .expect(200);
-      expect(one.body).toMatchObject({ defaultLinkStatus: null });
+      expect(one.body).toMatchObject({ defaultLinkStatus: null, defaultLinkPermissions: null });
     });
 
     test('requires a session and a same-origin request', async () => {

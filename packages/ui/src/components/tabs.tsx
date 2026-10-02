@@ -1,5 +1,5 @@
 import { Tabs as TabsPrimitive } from 'radix-ui';
-import type { ComponentProps } from 'react';
+import { type ComponentProps, createContext, useContext } from 'react';
 import { focusRingInset } from '../lib/focus';
 import { cn } from '../lib/utils';
 
@@ -14,21 +14,49 @@ function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>
   );
 }
 
-// Deviation from shadcn: no grey track. The list is a row of text tabs on a 1px `--border` base
-// line; it never widens the page: it is capped at its container and scrolls horizontally inside
-// itself when the triggers do not fit (phones, long labels).
-function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
+type TabsVariant = 'line' | 'segmented';
+
+const VariantContext = createContext<TabsVariant>('line');
+
+// `line` (default; deviation from shadcn: no grey track): a row of text tabs on a 1px `--border`
+// base line; it never widens the page: it is capped at its container and scrolls horizontally
+// inside itself when the triggers do not fit (phones, long labels).
+// `segmented` (owner review 2026-10-02: tabs that obviously click): a track on the page colour
+// with a 1px edge, a 10px radius and 4px padding; full width with equal segments on phones,
+// its own width from `sm`.
+function TabsList({
+  className,
+  variant = 'line',
+  ...props
+}: ComponentProps<typeof TabsPrimitive.List> & { variant?: TabsVariant }) {
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      className={cn(
-        'flex w-full max-w-full items-stretch gap-1 overflow-x-auto border-b text-muted-foreground [scrollbar-width:thin]',
-        className,
-      )}
-      {...props}
-    />
+    <VariantContext value={variant}>
+      <TabsPrimitive.List
+        data-slot="tabs-list"
+        data-variant={variant}
+        className={cn(
+          variant === 'line'
+            ? 'flex w-full max-w-full items-stretch gap-1 overflow-x-auto border-b text-muted-foreground [scrollbar-width:thin]'
+            : 'grid w-full auto-cols-[minmax(0,1fr)] grid-flow-col gap-1 rounded-[10px] border bg-background p-1 text-muted-foreground sm:inline-grid sm:w-auto sm:auto-cols-auto sm:self-start',
+          className,
+        )}
+        {...props}
+      />
+    </VariantContext>
   );
 }
+
+// A segment: 44px, icon and label (and a count as data), muted until active; hover takes the
+// page's hover fill; active is a raised sheet (`--card`, a 1px edge, a soft shadow in light)
+// with foreground text. The violet ring is drawn inside.
+const SEGMENT = cn(
+  'inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-2 text-[0.9375rem] sm:gap-2 sm:px-4 font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
+  focusRingInset,
+  'hover:bg-hover hover:text-foreground',
+  'data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgb(20_22_20/0.08)] data-[state=active]:hover:bg-card',
+  'disabled:pointer-events-none disabled:text-muted-foreground',
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+);
 
 // Direction C (DESIGN-SYSTEM.md §5.6): 48px tabs, 15px/600 text, muted until active; the active
 // tab is foreground with a hand-drawn pencil underline that draws itself in 180ms (pathLength 1,
@@ -41,6 +69,14 @@ function TabsTrigger({
   children,
   ...props
 }: ComponentProps<typeof TabsPrimitive.Trigger>) {
+  const variant = useContext(VariantContext);
+  if (variant === 'segmented') {
+    return (
+      <TabsPrimitive.Trigger data-slot="tabs-trigger" className={cn(SEGMENT, className)} {...props}>
+        {children}
+      </TabsPrimitive.Trigger>
+    );
+  }
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
@@ -90,4 +126,18 @@ function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitiv
   );
 }
 
-export { Tabs, TabsContent, TabsList, TabsTrigger };
+/** A count inside a segment, as data (Geist Mono) on a quiet fill. */
+function TabsCount({ className, ...props }: ComponentProps<'span'>) {
+  return (
+    <span
+      data-slot="tabs-count"
+      className={cn(
+        'type-data inline-grid h-5 min-w-5 place-items-center rounded-sheet bg-muted px-1.5 text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger, type TabsVariant };

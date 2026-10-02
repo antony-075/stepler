@@ -110,6 +110,17 @@ const ICONS: Record<ToastVariant, { icon: LucideIcon; className: string }> = {
   error: { icon: CircleAlert, className: 'text-destructive' },
 };
 
+// The soft fill of the variant with an edge of the same colour (owner review 2026-10-02: a white
+// toast did not say at a glance how it went). Title and description stay foreground / muted
+// text, which pass 4.5:1 on every soft fill in both themes (Foundations/Contrast); the icon and
+// the word still carry the meaning, never the colour alone.
+const SURFACES: Record<ToastVariant, string> = {
+  info: 'border-link/40 bg-info-soft',
+  success: 'border-success/40 bg-success-soft',
+  warning: 'border-warning/50 bg-warning-soft',
+  error: 'border-destructive/40 bg-destructive-soft',
+};
+
 // Radix `foreground` toasts are announced assertively; only errors interrupt.
 const ANNOUNCE_TYPE: Record<ToastVariant, 'foreground' | 'background'> = {
   info: 'background',
@@ -175,7 +186,7 @@ type ToasterProps = {
 
 // Based on shadcn/ui (new-york) toast. Deviations: rendered from context by one `Toaster`,
 // bottom-centre on phones (full width minus the 16px gutter, above the safe area) and
-// bottom-right from `sm`, the popover surface (8px radius, `--shadow-popover`), a built-in icon
+// bottom-right from `sm`, the variant's soft fill and edge (8px radius, `--shadow-popover`), a built-in icon
 // per variant, a 44px close button, `error` toasts use Radix's `foreground` type (announced
 // assertively), and motion is off under reduced motion: enter = fade + 8px rise (180ms), exit =
 // fade (120ms).
@@ -203,7 +214,8 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
               if (!next) dismiss(id);
             }}
             className={cn(
-              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-control border bg-popover p-4 pr-2 text-sm text-popover-foreground shadow-popover [overflow-wrap:anywhere]',
+              'pointer-events-auto grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-control border p-4 pr-2 text-sm text-foreground shadow-popover [overflow-wrap:anywhere]',
+              SURFACES[variant],
               focusRing,
               'ease-out animation-duration-[var(--duration-base)] data-[state=closed]:animation-duration-[var(--duration-fast)]',
               'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
@@ -228,7 +240,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
             </div>
             <ToastPrimitive.Close
               aria-label={closeLabel}
-              className={cn(closeButtonClassName, '-my-3')}
+              className={cn(closeButtonClassName, '-my-3 hover:bg-foreground/5')}
             >
               <X aria-hidden="true" className="size-4" />
             </ToastPrimitive.Close>
