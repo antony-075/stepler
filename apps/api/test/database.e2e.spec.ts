@@ -163,3 +163,129 @@ describe('collection schema', () => {
     expect(await prisma.auditEvent.count({ where: { targetId: collection.id } })).toBe(1);
   });
 });
+
+describe('guest link schema', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  let sequence = 0;
+  async function collection(): Promise<string> {
+    const ownerId = (await prisma.user.create({ data: { email: `o${sequence++}@x.io` } })).id;
+    return (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
+  }
+
+  /** A valid live default link; tests override one field to break one rule. */
+  function link(collectionId: string, overrides: Record<string, unknown> = {}) {
+    return prisma.guestLink.create({
+      data: {
+        collectionId,
+        isDefault: true,
+        tokenHash: `hash-${sequence++}`,
+        tokenCiphertext: 'ct',
+        tokenKeyId: 'app-secret-v1',
+        canUploadFiles: true,
+        canSubmitText: true,
+        canViewGallery: false,
+        canDeleteOwn: true,
+        ...overrides,
+      },
+    });
+  }
+
+  const revoked = {
+    status: 'REVOKED',
+    revokedAt: new Date(),
+    tokenCiphertext: null,
+    tokenKeyId: null,
+  };
+  const check = (constraint: string) => ({ kind: 'check', constraint });
+
+  test('a link allows at least one of upload, text or gallery', async () => {
+    const id = await collection();
+    expect(
+      await violation(
+        link(id, { canUploadFiles: false, canSubmitText: false, canDeleteOwn: false }),
+      ),
+    ).toEqual(check('GuestLink_has_capability'));
+    await link(id, {
+      canUploadFiles: false,
+      canSubmitText: false,
+      canViewGallery: true,
+      canDeleteOwn: false,
+    });
+  });
+
+  test('delete-own needs a contribution permission', async () => {
+    const id = await collection();
+    expect(
+      await violation(
+        link(id, { canUploadFiles: false, canSubmitText: false, canViewGallery: true }),
+      ),
+    ).toEqual(check('GuestLink_delete_own_needs_contribution'));
+  });
+
+  test('REVOKED if and only if revokedAt is set', async () => {
+    const id = await collection();
+    expect(await violation(link(id, { ...revoked, revokedAt: null }))).toEqual(
+      check('GuestLink_revoked_consistent'),
+    );
+    expect(await violation(link(id, { revokedAt: new Date() }))).toEqual(
+      check('GuestLink_revoked_consistent'),
+    );
+  });
+
+  test('a live link keeps its ciphertext and key id; a revoked one keeps neither', async () => {
+    const id = await collection();
+    const rule = check('GuestLink_ciphertext_while_live');
+    expect(await violation(link(id, { tokenCiphertext: null, tokenKeyId: null }))).toEqual(rule);
+    expect(await violation(link(id, { tokenKeyId: null }))).toEqual(rule);
+    expect(
+      await violation(link(id, { ...revoked, tokenCiphertext: 'ct', tokenKeyId: 'k' })),
+    ).toEqual(rule);
+    await link(id, revoked);
+  });
+
+  test('only a revoked link can point at its replacement', async () => {
+    const id = await collection();
+    const old = await link(id, revoked);
+    const live = await link(id);
+    expect(
+      await violation(link(id, { isDefault: false, label: 'B', replacedById: old.id })),
+    ).toEqual(check('GuestLink_replaced_only_revoked'));
+    await prisma.guestLink.update({ where: { id: old.id }, data: { replacedById: live.id } });
+  });
+
+  test('labels: none on the default link, 1 to 60 characters on additional links', async () => {
+    const id = await collection();
+    const rule = check('GuestLink_label_rules');
+    expect(await violation(link(id, { label: 'A' }))).toEqual(rule);
+    expect(await violation(link(id, { isDefault: false }))).toEqual(rule);
+    expect(await violation(link(id, { isDefault: false, label: '' }))).toEqual(rule);
+    expect(await violation(link(id, { isDefault: false, label: 'x'.repeat(61) }))).toEqual(rule);
+    await link(id, { isDefault: false, label: 'x'.repeat(60) });
+  });
+
+  test('one live default link per collection; revoked defaults do not count', async () => {
+    const id = await collection();
+    await link(id, revoked);
+    await link(id);
+    expect(await violation(link(id))).toEqual({
+      kind: 'unique',
+      constraint: 'GuestLink_one_live_default',
+    });
+    expect(await violation(link(id, { status: 'INACTIVE' }))).toEqual({
+      kind: 'unique',
+      constraint: 'GuestLink_one_live_default',
+    });
+    await link(await collection());
+  });
+
+  test('deleting a collection deletes its links', async () => {
+    const id = await collection();
+    await link(id);
+    await link(id, { isDefault: false, label: 'B' });
+    await prisma.collection.delete({ where: { id } });
+    expect(await prisma.guestLink.count()).toBe(0);
+  });
+});
