@@ -56,6 +56,8 @@ export const Copy: Story = {
     await expect(input).toHaveValue(LINK);
     const status = canvasElement.querySelector('[aria-live="polite"]');
     await expect(status).toBeEmptyDOMElement();
+    // Measure only with the real fonts loaded; a late font swap would change the width.
+    await document.fonts.ready;
     const button = canvas.getByRole('button', { name: 'Copy' });
     // The button lines up with the input, and its width does not change with the label.
     await expect(button.getBoundingClientRect().height).toBe(input.getBoundingClientRect().height);
