@@ -1,6 +1,5 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import './stapled-stack.css';
 
 /* Scan ui sources wherever this stylesheet is imported (e.g. apps/web). */
 @source '../';
@@ -9,9 +8,9 @@
  * Design tokens, direction C «Контактний аркуш» (owner decision 2026-10-02; specification in
  * docs/design/DESIGN-SYSTEM.md §2, implemented state and contrast in docs/ux/design-system.md).
  * A light table with white sheets, ink for admin actions, a rare red-orange wax pencil for
- * selection, "new", focus and the guest's main action, violet for links. Dark is "the light
- * table at night": greenish black, sheets half a tone lighter, popovers lighter still instead of
- * a shadow. Every text pair passes 4.5:1 and every control edge 3:1 (Foundations/Contrast).
+ * selection, "new", the active tab and the guest's main action, dusty violet for links,
+ * information and focus (never the pencil). Dark is "the light table at night": greenish
+ * black, sheets half a tone lighter, popovers lighter still instead of a shadow. Every text pair passes 4.5:1 and every control edge 3:1 (Foundations/Contrast).
  * shadcn names are kept, so `bg-card`, `text-muted-foreground` and friends keep working.
  */
 :root {
@@ -91,17 +90,6 @@
   --duration-slow: 240ms;
   --duration-develop: 300ms;
   --duration-stack: 400ms;
-
-  /* Legacy v4 tokens, still read by components restyled in later steps of the migration
-     (DESIGN-SYSTEM.md §10.4). Removed with them; do not use in new code. */
-  --accent-warm: #f0a04b;
-  --accent-warm-foreground: #2a1605;
-  --staple: #a3a7b6;
-  --staple-shine: #ecedf2;
-  --dot: #d6d8e0;
-  --glow-warm: rgb(255 186 120 / 0.42);
-  --glow-cool: rgb(150 162 255 / 0.16);
-  --shadow-tile: 0 1px 2px rgb(22 24 42 / 0.08), 0 12px 26px -12px rgb(22 24 42 / 0.3);
 }
 
 /* Dark is written twice: for the system setting (unless the page chose light) and for an
@@ -148,13 +136,6 @@
     --shadow-popover: none;
     --shadow-dialog: none;
     --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
-    --accent-warm: #f4b26a;
-    --staple: #7e8296;
-    --staple-shine: #c9cbd6;
-    --dot: #262834;
-    --glow-warm: rgb(255 168 96 / 0.15);
-    --glow-cool: rgb(120 132 255 / 0.07);
-    --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
   }
 }
 
@@ -200,13 +181,6 @@
   --shadow-popover: none;
   --shadow-dialog: none;
   --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
-  --accent-warm: #f4b26a;
-  --staple: #7e8296;
-  --staple-shine: #c9cbd6;
-  --dot: #262834;
-  --glow-warm: rgb(255 168 96 / 0.15);
-  --glow-cool: rgb(120 132 255 / 0.07);
-  --shadow-tile: inset 0 1px 0 rgb(255 255 255 / 0.05), 0 14px 30px -12px rgb(0 0 0 / 0.8);
 }
 
 @theme {
@@ -269,11 +243,6 @@
   --shadow-popover: var(--shadow-popover);
   --shadow-dialog: var(--shadow-dialog);
   --shadow-print: var(--shadow-print);
-  /* Legacy (see :root). */
-  --color-accent-warm: var(--accent-warm);
-  --color-accent-warm-foreground: var(--accent-warm-foreground);
-  --color-staple: var(--staple);
-  --shadow-tile: var(--shadow-tile);
 }
 
 @layer base {
@@ -437,33 +406,14 @@
   }
 }
 
-/* Page atmosphere (v4, legacy): removed with the sign-in landing redesign. */
-@utility stepler-atmosphere {
-  position: relative;
-  isolation: isolate;
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
-    background-size: 22px 22px;
-    background-position: 11px 11px;
-    mask-image: radial-gradient(ellipse 70% 55% at 30% 30%, #000 20%, transparent 80%);
+/* The wax-pencil stroke drawing itself (DESIGN-SYSTEM.md §8). For an SVG path with
+   `pathLength="1"` and `stroke-dasharray: 1`; without the animation (reduced motion) the stroke
+   is simply there. Duration, easing and delay belong to the caller. */
+@keyframes pencil-draw {
+  from {
+    stroke-dashoffset: 1;
   }
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    pointer-events: none;
-    background:
-      radial-gradient(
-        min(900px, 120vw) min(640px, 90vw) at 92% -4%,
-        var(--glow-warm),
-        transparent 70%
-      ),
-      radial-gradient(min(700px, 100vw) 520px at -6% 104%, var(--glow-cool), transparent 70%);
+  to {
+    stroke-dashoffset: 0;
   }
 }
