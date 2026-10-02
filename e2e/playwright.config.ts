@@ -47,6 +47,7 @@ export default defineConfig({
         // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
         LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
         LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
+        LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
       },
       reuseExistingServer: false,
     },

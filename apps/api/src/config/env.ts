@@ -82,6 +82,7 @@ const apiEnvSchema = z
     LIMIT_STORAGE_BYTES_PER_ACCOUNT: byteCount(20n * GIB),
     LIMIT_STORAGE_BYTES_PER_COLLECTION: byteCount(10n * GIB),
     LIMIT_GUEST_LINKS_PER_COLLECTION: positiveInt(10),
+    LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(120),
   })
   .superRefine((env, ctx) => {
     if ((env.GOOGLE_CLIENT_ID === undefined) !== (env.GOOGLE_CLIENT_SECRET === undefined)) {

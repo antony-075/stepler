@@ -19,6 +19,7 @@ describe('LimitsService', () => {
       storageBytes: 10n * 1024n ** 3n,
       guestLinks: 10,
     });
+    expect(limits.guestLinkResolvePerIpPerMinute()).toBe(120);
   });
 
   test('applies env overrides', () => {
@@ -29,8 +30,10 @@ describe('LimitsService', () => {
         LIMIT_STORAGE_BYTES_PER_ACCOUNT: '1000',
         LIMIT_COLLECTION_CREATIONS_PER_DAY: '4',
         LIMIT_GUEST_LINKS_PER_COLLECTION: '2',
+        LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '30',
       }),
     );
+    expect(limits.guestLinkResolvePerIpPerMinute()).toBe(30);
     expect(limits.forCollection({ id: 'c1' }).guestLinks).toBe(2);
     expect(limits.magicLink().perEmailPerHour).toBe(2);
     expect(limits.forUser({ id: 'u1' })).toEqual({

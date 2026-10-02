@@ -121,7 +121,7 @@ The spec, the ADRs and the discovery answers do not settle these, or they confli
      - the sidebar plus search header from the D-dashboard artboard (which the owner likes) is worth it once the admin has more than one global destination, or search has something to search: proposed for slice 7 (content management). Revisit then.
    - Alternative: build the sidebar shell now. More layout work, and no second global destination to put in it yet.
 10. **[G10] Rate limit on the public resolve endpoint.**
-    - **Recommended: 30 per minute per IP** (spec §13.1's value for guest session creation, which this endpoint stands in for), from `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE`.
+    - **Recommended: 30 per minute per IP** (spec §13.1's value for guest session creation, which this endpoint stands in for), from `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE`. **Approved: 120 per minute per IP** (the default in `env.ts`), still configurable.
     - **Risk to note:** guests on one venue Wi-Fi (NAT) or one mobile carrier (CGNAT) share an IP. 150 people scanning in the same minute would hit 30. The page shows «Забагато спроб — спробуйте за хвилину» with Retry.
     - Brute force is not the concern: a 256-bit token cannot be guessed, so the limit only bounds load. Raising it (for example to 120 per minute) is a config change, not a code change. Owner: keep 30, or raise it now?
 
@@ -469,7 +469,7 @@ Revoke the old link before inserting the new one, so the partial unique index ne
 - Create: `apps/api/src/guest-access/guest-link-resolver.ts`, `apps/api/src/guest-access/guest.controller.ts`
 - Modify:
   - `apps/api/src/auth/rate-limit.ts`: add `RateLimitName` `'guest-link-resolve'` and let `named()` take a `ttl`, so this limit uses a 60s window;
-  - `apps/api/src/limits/limits.service.ts` (`guestLinkResolvePerIpPerMinute`), `env.ts` (`LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(30)` [G10]), `.env.example`, `turbo.json`, `e2e/playwright.config.ts` (`'10000'`, like the magic-link limits), `apps/api/openapi.json`
+  - `apps/api/src/limits/limits.service.ts` (`guestLinkResolvePerIpPerMinute`), `env.ts` (`LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(120)` [G10], raised from 30 by the owner), `.env.example`, `turbo.json`, `e2e/playwright.config.ts` (`'10000'`, like the magic-link limits), `apps/api/openapi.json`
 - Create: `apps/api/test/guest-link-resolve.e2e.spec.ts`
 
 **Interfaces — produces:**

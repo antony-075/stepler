@@ -2214,6 +2214,118 @@
         ]
       }
     },
+    "/api/v1/guest/links/resolve": {
+      "post": {
+        "operationId": "GuestController_resolve_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "linkToken": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "linkToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "collection": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "description": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "description"
+                      ],
+                      "type": "object"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadFiles": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadFiles",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "collection",
+                    "permissions"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "COLLECTION_ARCHIVED, or LINK_INACTIVE (paused)"
+          },
+          "404": {
+            "description": "NOT_FOUND: unknown or malformed token"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Guest"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live_v1",
