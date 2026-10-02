@@ -158,14 +158,8 @@ export class GuestLinksService {
         after,
         'guest_link.update',
         {
-          fromCanUploadFiles: from.canUploadFiles,
-          fromCanSubmitText: from.canSubmitText,
-          fromCanViewGallery: from.canViewGallery,
-          fromCanDeleteOwn: from.canDeleteOwn,
-          toCanUploadFiles: to.canUploadFiles,
-          toCanSubmitText: to.canSubmitText,
-          toCanViewGallery: to.canViewGallery,
-          toCanDeleteOwn: to.canDeleteOwn,
+          ...permissionChange('from', from),
+          ...permissionChange('to', to),
           labelChanged: before.label !== after.label,
         },
         requestId,
@@ -387,4 +381,14 @@ export class GuestLinksService {
       ...(requestId === undefined ? {} : { requestId }),
     });
   }
+}
+
+/** `{ fromCanUploadPhotos: true, … }`: the permission booleans for the audit metadata. */
+function permissionChange(prefix: 'from' | 'to', p: GuestLinkPermissions): Record<string, boolean> {
+  return Object.fromEntries(
+    Object.entries(p).map(([key, value]) => [
+      `${prefix}${key[0]!.toUpperCase()}${key.slice(1)}`,
+      value,
+    ]),
+  );
 }

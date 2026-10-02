@@ -5,24 +5,38 @@ import { NO_CONTROL_CHARACTERS } from './collections.js';
 export const guestLinkStatusSchema = z.enum(['ACTIVE', 'INACTIVE', 'REVOKED']);
 export type GuestLinkStatus = z.infer<typeof guestLinkStatusSchema>;
 
+type ContributionFlags = {
+  canUploadPhotos: boolean;
+  canUploadVideos: boolean;
+  canUploadDocuments: boolean;
+  canSubmitText: boolean;
+};
+
+/** Guests can add something: a photo, a video, a document or a wish. */
+export const canContribute = (p: ContributionFlags): boolean =>
+  p.canUploadPhotos || p.canUploadVideos || p.canUploadDocuments || p.canSubmitText;
+
 /**
- * What a link lets guests do. Mirrored by `GuestLink_has_capability` and
- * `GuestLink_delete_own_needs_contribution` in the database. The refinement messages are codes the
- * web app translates.
+ * What a link lets guests do. Photos, videos and documents are separate permissions (owner,
+ * 2026-10-02): a photographer's link may take photos and videos but not documents. Mirrored by
+ * `GuestLink_has_capability` and `GuestLink_delete_own_needs_contribution` in the database. The
+ * refinement messages are codes the web app translates.
  */
 export const guestLinkPermissionsSchema = z
   .object({
-    canUploadFiles: z.boolean(),
+    canUploadPhotos: z.boolean(),
+    canUploadVideos: z.boolean(),
+    canUploadDocuments: z.boolean(),
     canSubmitText: z.boolean(),
     canViewGallery: z.boolean(),
     canDeleteOwn: z.boolean(),
   })
   .strict()
-  .refine((p) => p.canUploadFiles || p.canSubmitText || p.canViewGallery, {
+  .refine((p) => canContribute(p) || p.canViewGallery, {
     message: 'NO_CAPABILITY',
     path: [],
   })
-  .refine((p) => !p.canDeleteOwn || p.canUploadFiles || p.canSubmitText, {
+  .refine((p) => !p.canDeleteOwn || canContribute(p), {
     message: 'DELETE_OWN_REQUIRES_CONTRIBUTION',
     path: [],
   });

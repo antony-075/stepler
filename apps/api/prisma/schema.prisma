@@ -146,7 +146,9 @@ model GuestLink {
   /// AES-256-GCM of the token so the owner can see the link again; NULL once revoked.
   tokenCiphertext String?
   tokenKeyId      String?
-  canUploadFiles  Boolean
+  canUploadPhotos    Boolean
+  canUploadVideos    Boolean
+  canUploadDocuments Boolean
   canSubmitText   Boolean
   canViewGallery  Boolean
   canDeleteOwn    Boolean

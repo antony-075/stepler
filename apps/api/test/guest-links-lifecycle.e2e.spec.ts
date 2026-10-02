@@ -14,12 +14,20 @@ const OPERATOR = 'op@stepler.test';
 const prisma = createTestPrisma();
 
 const UPLOAD_ONLY = {
-  canUploadFiles: true,
+  canUploadPhotos: true,
+  canUploadVideos: true,
+  canUploadDocuments: true,
   canSubmitText: false,
   canViewGallery: false,
   canDeleteOwn: false,
 };
-const VIEW_ONLY = { ...UPLOAD_ONLY, canUploadFiles: false, canViewGallery: true };
+const VIEW_ONLY = {
+  ...UPLOAD_ONLY,
+  canUploadPhotos: false,
+  canUploadVideos: false,
+  canUploadDocuments: false,
+  canViewGallery: true,
+};
 
 /** Every token issued during this file, so Review Focus 3 can look for any of them. */
 const issuedTokens = new Set<string>();
@@ -124,7 +132,15 @@ describe('guest link management', () => {
       const { cookie, collectionId } = await ownerWithCollection();
       for (const body of [
         { permissions: UPLOAD_ONLY },
-        { label: 'A', permissions: { ...UPLOAD_ONLY, canUploadFiles: false } },
+        {
+          label: 'A',
+          permissions: {
+            ...UPLOAD_ONLY,
+            canUploadPhotos: false,
+            canUploadVideos: false,
+            canUploadDocuments: false,
+          },
+        },
         { label: 'x'.repeat(61), permissions: UPLOAD_ONLY },
         { label: 'A', permissions: UPLOAD_ONLY, isDefault: true },
       ]) {
@@ -161,7 +177,12 @@ describe('guest link management', () => {
     test('permissions: invalid → 400, view-only → 200; audited as booleans only', async () => {
       const { cookie, collectionId } = await ownerWithCollection();
       const link = parseLink((await createLink(cookie, collectionId, 'Секрет').expect(201)).body);
-      const none = { ...UPLOAD_ONLY, canUploadFiles: false };
+      const none = {
+        ...UPLOAD_ONLY,
+        canUploadPhotos: false,
+        canUploadVideos: false,
+        canUploadDocuments: false,
+      };
       const invalid = await patch(cookie, link.id, { permissions: none }).expect(400);
       expect(invalid.body).toMatchObject({ code: 'VALIDATION_FAILED' });
       await patch(cookie, link.id, {}).expect(400);
@@ -175,11 +196,15 @@ describe('guest link management', () => {
         where: { action: 'guest_link.update', targetId: link.id },
       });
       expect(event.metadata).toEqual({
-        fromCanUploadFiles: true,
+        fromCanUploadPhotos: true,
+        fromCanUploadVideos: true,
+        fromCanUploadDocuments: true,
         fromCanSubmitText: false,
         fromCanViewGallery: false,
         fromCanDeleteOwn: false,
-        toCanUploadFiles: false,
+        toCanUploadPhotos: false,
+        toCanUploadVideos: false,
+        toCanUploadDocuments: false,
         toCanSubmitText: false,
         toCanViewGallery: true,
         toCanDeleteOwn: false,

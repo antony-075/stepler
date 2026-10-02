@@ -184,7 +184,9 @@ describe('guest link schema', () => {
         tokenHash: `hash-${sequence++}`,
         tokenCiphertext: 'ct',
         tokenKeyId: 'app-secret-v1',
-        canUploadFiles: true,
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
         canSubmitText: true,
         canViewGallery: false,
         canDeleteOwn: true,
@@ -205,11 +207,19 @@ describe('guest link schema', () => {
     const id = await collection();
     expect(
       await violation(
-        link(id, { canUploadFiles: false, canSubmitText: false, canDeleteOwn: false }),
+        link(id, {
+          canUploadPhotos: false,
+          canUploadVideos: false,
+          canUploadDocuments: false,
+          canSubmitText: false,
+          canDeleteOwn: false,
+        }),
       ),
     ).toEqual(check('GuestLink_has_capability'));
     await link(id, {
-      canUploadFiles: false,
+      canUploadPhotos: false,
+      canUploadVideos: false,
+      canUploadDocuments: false,
       canSubmitText: false,
       canViewGallery: true,
       canDeleteOwn: false,
@@ -220,9 +230,32 @@ describe('guest link schema', () => {
     const id = await collection();
     expect(
       await violation(
-        link(id, { canUploadFiles: false, canSubmitText: false, canViewGallery: true }),
+        link(id, {
+          canUploadPhotos: false,
+          canUploadVideos: false,
+          canUploadDocuments: false,
+          canSubmitText: false,
+          canViewGallery: true,
+        }),
       ),
     ).toEqual(check('GuestLink_delete_own_needs_contribution'));
+  });
+
+  test('any one upload type is a contribution, also for delete-own', async () => {
+    const id = await collection();
+    for (const only of ['canUploadPhotos', 'canUploadVideos', 'canUploadDocuments'] as const) {
+      await link(id, {
+        isDefault: false,
+        label: only,
+        canUploadPhotos: false,
+        canUploadVideos: false,
+        canUploadDocuments: false,
+        canSubmitText: false,
+        canViewGallery: false,
+        canDeleteOwn: true,
+        [only]: true,
+      });
+    }
   });
 
   test('REVOKED if and only if revokedAt is set', async () => {

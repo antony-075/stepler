@@ -67,7 +67,9 @@ async function seed(
       tokenHash: issued.tokenHash,
       tokenCiphertext: revoked ? null : issued.tokenCiphertext,
       tokenKeyId: revoked ? null : issued.tokenKeyId,
-      canUploadFiles: true,
+      canUploadPhotos: true,
+      canUploadVideos: true,
+      canUploadDocuments: true,
       canSubmitText: true,
       canViewGallery: false,
       canDeleteOwn: true,
@@ -149,7 +151,9 @@ describe('guest link resolution', () => {
     expect(resolveGuestLinkResponseSchema.parse(res.body)).toEqual({
       collection: { title: 'Весілля', description: 'Опис' },
       permissions: {
-        canUploadFiles: true,
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
         canSubmitText: true,
         canViewGallery: false,
         canDeleteOwn: true,
@@ -223,7 +227,9 @@ describe('guest link resolution', () => {
       .set('Origin', ORIGIN)
       .send({
         permissions: {
-          canUploadFiles: true,
+          canUploadPhotos: true,
+          canUploadVideos: true,
+          canUploadDocuments: false,
           canSubmitText: true,
           canViewGallery: true,
           canDeleteOwn: true,
@@ -232,6 +238,12 @@ describe('guest link resolution', () => {
       .expect(200);
     const after = resolveGuestLinkResponseSchema.parse((await resolve(token).expect(200)).body);
     expect(after.permissions.canViewGallery).toBe(true);
+    // Upload types are separate: documents off, photos and videos on.
+    expect(after.permissions).toMatchObject({
+      canUploadPhotos: true,
+      canUploadVideos: true,
+      canUploadDocuments: false,
+    });
   });
 
   test('public, but the CSRF origin check applies', async () => {

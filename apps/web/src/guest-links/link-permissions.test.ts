@@ -2,6 +2,7 @@ import { guestLinkPermissionsSchema } from '@stepler/contracts';
 import { describe, expect, it } from 'vitest';
 import uk from '../../messages/uk.json';
 import {
+  addsNothing,
   allowedWords,
   fromPermissions,
   isValidForm,
@@ -12,32 +13,46 @@ import {
 } from './link-permissions';
 
 const words = uk.guestLinks.permissions;
-const t = (key: PermissionWordKey, values?: { list: string }) =>
-  words[key].replace('{list}', values?.list ?? '');
+const t = (key: PermissionWordKey, values: Record<string, string> = {}) =>
+  Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, value),
+    words[key],
+  );
+const list = (items: string[]) => new Intl.ListFormat('uk', { type: 'conjunction' }).format(items);
 
-const VALID_FORMS: PermissionForm[] = [
-  { uploads: true, texts: true, seeAll: true },
-  { uploads: true, texts: true, seeAll: false },
-  { uploads: true, texts: false, seeAll: true },
-  { uploads: true, texts: false, seeAll: false },
-  { uploads: false, texts: true, seeAll: true },
-  { uploads: false, texts: true, seeAll: false },
-  { uploads: false, texts: false, seeAll: true },
-];
+const FLAGS = ['photos', 'videos', 'documents', 'texts', 'seeAll'] as const;
+/** Every combination of the five answers (32 forms). */
+const ALL_FORMS: PermissionForm[] = Array.from({ length: 2 ** FLAGS.length }, (_, bits) =>
+  Object.fromEntries(FLAGS.map((flag, i) => [flag, (bits & (1 << i)) !== 0])),
+) as PermissionForm[];
+const VALID_FORMS = ALL_FORMS.filter(isValidForm);
+
+const form = (on: Partial<PermissionForm>): PermissionForm => ({
+  photos: false,
+  videos: false,
+  documents: false,
+  texts: false,
+  seeAll: false,
+  ...on,
+});
 
 describe('toPermissions', () => {
   it('makes a view-only link without delete-own', () => {
-    expect(toPermissions({ uploads: false, texts: false, seeAll: true })).toEqual({
-      canUploadFiles: false,
+    expect(toPermissions(form({ seeAll: true }))).toEqual({
+      canUploadPhotos: false,
+      canUploadVideos: false,
+      canUploadDocuments: false,
       canSubmitText: false,
       canViewGallery: true,
       canDeleteOwn: false,
     });
   });
 
-  it('lets contributors delete their own content (G3)', () => {
-    expect(toPermissions({ uploads: true, texts: false, seeAll: false })).toEqual({
-      canUploadFiles: true,
+  it('keeps upload types separate and lets contributors delete their own content (G3)', () => {
+    expect(toPermissions(form({ videos: true }))).toEqual({
+      canUploadPhotos: false,
+      canUploadVideos: true,
+      canUploadDocuments: false,
       canSubmitText: false,
       canViewGallery: false,
       canDeleteOwn: true,
@@ -45,42 +60,52 @@ describe('toPermissions', () => {
   });
 
   it('produces permissions the contract accepts, and round-trips, for every valid form', () => {
-    for (const form of VALID_FORMS) {
-      const permissions = toPermissions(form);
+    expect(VALID_FORMS).toHaveLength(31);
+    for (const valid of VALID_FORMS) {
+      const permissions = toPermissions(valid);
       expect(guestLinkPermissionsSchema.safeParse(permissions).success).toBe(true);
-      expect(fromPermissions(permissions)).toEqual(form);
+      expect(fromPermissions(permissions)).toEqual(valid);
     }
   });
 });
 
-describe('isValidForm', () => {
-  it('rejects a link that allows nothing', () => {
-    expect(isValidForm({ uploads: false, texts: false, seeAll: false })).toBe(false);
-    for (const form of VALID_FORMS) expect(isValidForm(form)).toBe(true);
+describe('isValidForm and addsNothing', () => {
+  it('rejects only the link that allows nothing at all', () => {
+    expect(ALL_FORMS.filter((f) => !isValidForm(f))).toEqual([form({})]);
+  });
+
+  it('flags a link where guests can add nothing', () => {
+    expect(addsNothing(form({ seeAll: true }))).toBe(true);
+    expect(addsNothing(form({ documents: true }))).toBe(false);
   });
 });
 
 describe('permissionWords', () => {
   it('says «Лише перегляд» for a view-only link', () => {
-    expect(permissionWords(toPermissions({ uploads: false, texts: false, seeAll: true }), t)).toBe(
-      'Лише перегляд',
-    );
+    expect(permissionWords(toPermissions(form({ seeAll: true })), t, list)).toBe('Лише перегляд');
   });
 
-  it('lists what guests can do', () => {
-    expect(permissionWords(toPermissions({ uploads: true, texts: true, seeAll: false }), t)).toBe(
-      'Гості можуть: додавати фото й відео, писати побажання, бачити лише свої кадри',
+  it('lists what guests can do, upload types by name', () => {
+    expect(
+      permissionWords(
+        toPermissions(form({ photos: true, videos: true, documents: true, texts: true })),
+        t,
+        list,
+      ),
+    ).toBe('Гості можуть додавати фото, відео, документи і побажання та бачити лише своє');
+    expect(permissionWords(toPermissions(form({ photos: true, seeAll: true })), t, list)).toBe(
+      'Гості можуть додавати фото та бачити вміст усіх гостей',
     );
   });
 });
 
 describe('allowedWords', () => {
   it('names only what the organiser allowed', () => {
-    expect(allowedWords(toPermissions({ uploads: true, texts: true, seeAll: false }), t)).toBe(
-      'Організатор дозволив: додавати фото й відео, писати побажання',
-    );
-    expect(allowedWords(toPermissions({ uploads: false, texts: false, seeAll: true }), t)).toBe(
-      'Організатор дозволив: бачити кадри всіх гостей',
+    expect(
+      allowedWords(toPermissions(form({ photos: true, videos: true, texts: true })), t, list),
+    ).toBe('Організатор дозволив додавати фото, відео і побажання');
+    expect(allowedWords(toPermissions(form({ seeAll: true })), t, list)).toBe(
+      'Організатор дозволив бачити вміст усіх гостей',
     );
   });
 });

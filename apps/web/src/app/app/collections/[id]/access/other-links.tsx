@@ -182,7 +182,9 @@ function OtherLinkRow({
     <LinkRow
       label={label}
       permissionsSummary={
-        url === null && !revoked ? t('hiddenRowNotice') : permissionWords(link.permissions, tWords)
+        url === null && !revoked
+          ? t('hiddenRowNotice')
+          : permissionWords(link.permissions, tWords, (items) => format.list(items))
       }
       status={revoked ? 'revoked' : paused ? 'paused' : 'active'}
       statusLabel={

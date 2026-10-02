@@ -3,9 +3,14 @@ import type { GuestLink, GuestLinkPermissions } from '@stepler/contracts';
 import type { GuestLink as GuestLinkRow } from '../generated/prisma/client.js';
 import type { GuestLinkTokens } from './guest-link-tokens.js';
 
-/** [G3] Contribution-only: guests do not see each other's content until the admin opts in. */
+/**
+ * [G3] Contribution-only: guests add photos, videos, documents and wishes but do not see each
+ * other's content until the admin opts in.
+ */
 export const DEFAULT_LINK_PERMISSIONS: GuestLinkPermissions = {
-  canUploadFiles: true,
+  canUploadPhotos: true,
+  canUploadVideos: true,
+  canUploadDocuments: true,
   canSubmitText: true,
   canViewGallery: false,
   canDeleteOwn: true,
@@ -13,7 +18,9 @@ export const DEFAULT_LINK_PERMISSIONS: GuestLinkPermissions = {
 
 export function permissionsOf(row: GuestLinkRow): GuestLinkPermissions {
   return {
-    canUploadFiles: row.canUploadFiles,
+    canUploadPhotos: row.canUploadPhotos,
+    canUploadVideos: row.canUploadVideos,
+    canUploadDocuments: row.canUploadDocuments,
     canSubmitText: row.canSubmitText,
     canViewGallery: row.canViewGallery,
     canDeleteOwn: row.canDeleteOwn,

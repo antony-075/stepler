@@ -9,7 +9,7 @@ import { LinkPanel, RotatingQr } from '@stepler/ui/components/link-panel';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation } from '@tanstack/react-query';
 import { Pause, Play, RefreshCw, SlidersHorizontal } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { isApiError } from '@/api/client';
 import { useInvalidateCollections } from '@/api/collections';
@@ -31,6 +31,7 @@ import { LinkDialog } from './link-dialog';
 export function DefaultLink({ collection, link }: { collection: Collection; link: GuestLink }) {
   const t = useTranslations('access');
   const tWords = useTranslations('guestLinks.permissions');
+  const format = useFormatter();
   const tRoot = useTranslations();
   const { toast } = useToast();
   const invalidate = useInvalidateCollections();
@@ -84,7 +85,9 @@ export function DefaultLink({ collection, link }: { collection: Collection; link
             />
           )
         }
-        permissionsSummary={permissionWords(link.permissions, tWords)}
+        permissionsSummary={permissionWords(link.permissions, tWords, (items) =>
+          format.list(items),
+        )}
         notice={
           toggleFailure !== null ? (
             <Alert variant="error">{tRoot(errorMessageKey(toggleFailure))}</Alert>

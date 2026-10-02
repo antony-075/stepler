@@ -266,13 +266,17 @@
   },
   "guestLinks": {
     "permissions": {
-      "uploads": "add photos and videos",
-      "texts": "write wishes",
-      "seeAll": "see every guest’s frames",
-      "ownOnly": "see only their own frames",
+      "photos": "photos",
+      "videos": "videos",
+      "documents": "documents",
+      "texts": "wishes",
+      "add": "add {items}",
+      "seeAll": "see what every guest added",
+      "ownOnly": "see only their own",
+      "both": "{add}, and {see}",
       "viewOnly": "View only",
-      "guestsCan": "Guests can: {list}",
-      "allowed": "The organiser allows you to: {list}"
+      "guestsCan": "Guests can {what}",
+      "allowed": "The organiser allows you to {what}"
     }
   },
   "access": {
@@ -326,12 +330,14 @@
     "revokedOn": "Revoked {date}",
     "permissions": {
       "addLegend": "What guests can add",
-      "addFiles": "Photos, videos and documents",
+      "addPhotos": "Photos",
+      "addVideos": "Videos",
+      "addDocuments": "Documents",
       "addTexts": "Wishes",
       "seeLegend": "What guests see",
-      "seeAll": "Every guest’s frames",
+      "seeAll": "What every guest added",
       "seeOwn": "Only their own",
-      "invalid": "That leaves guests nothing to do. Let them add something or see every guest’s frames."
+      "invalid": "That leaves guests nothing to do. Let them add something or see what every guest added."
     },
     "dialog": {
       "createTitle": "New link",

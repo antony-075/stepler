@@ -42,6 +42,7 @@ export {
   type ProblemDetails,
 } from './errors.js';
 export {
+  canContribute,
   createGuestLinkRequestSchema,
   guestLinkIdParamsSchema,
   guestLinkLabelSchema,

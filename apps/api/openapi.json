@@ -1118,7 +1118,13 @@
                               "canSubmitText": {
                                 "type": "boolean"
                               },
-                              "canUploadFiles": {
+                              "canUploadDocuments": {
+                                "type": "boolean"
+                              },
+                              "canUploadPhotos": {
+                                "type": "boolean"
+                              },
+                              "canUploadVideos": {
                                 "type": "boolean"
                               },
                               "canViewGallery": {
@@ -1126,7 +1132,9 @@
                               }
                             },
                             "required": [
-                              "canUploadFiles",
+                              "canUploadPhotos",
+                              "canUploadVideos",
+                              "canUploadDocuments",
                               "canSubmitText",
                               "canViewGallery",
                               "canDeleteOwn"
@@ -1241,7 +1249,13 @@
                       "canSubmitText": {
                         "type": "boolean"
                       },
-                      "canUploadFiles": {
+                      "canUploadDocuments": {
+                        "type": "boolean"
+                      },
+                      "canUploadPhotos": {
+                        "type": "boolean"
+                      },
+                      "canUploadVideos": {
                         "type": "boolean"
                       },
                       "canViewGallery": {
@@ -1249,7 +1263,9 @@
                       }
                     },
                     "required": [
-                      "canUploadFiles",
+                      "canUploadPhotos",
+                      "canUploadVideos",
+                      "canUploadDocuments",
                       "canSubmitText",
                       "canViewGallery",
                       "canDeleteOwn"
@@ -1300,7 +1316,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -1308,7 +1330,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -1453,7 +1477,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -1461,7 +1491,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -1676,7 +1708,13 @@
                       "canSubmitText": {
                         "type": "boolean"
                       },
-                      "canUploadFiles": {
+                      "canUploadDocuments": {
+                        "type": "boolean"
+                      },
+                      "canUploadPhotos": {
+                        "type": "boolean"
+                      },
+                      "canUploadVideos": {
                         "type": "boolean"
                       },
                       "canViewGallery": {
@@ -1684,7 +1722,9 @@
                       }
                     },
                     "required": [
-                      "canUploadFiles",
+                      "canUploadPhotos",
+                      "canUploadVideos",
+                      "canUploadDocuments",
                       "canSubmitText",
                       "canViewGallery",
                       "canDeleteOwn"
@@ -1731,7 +1771,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -1739,7 +1785,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -1866,7 +1914,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -1874,7 +1928,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -1998,7 +2054,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -2006,7 +2068,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -2130,7 +2194,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -2138,7 +2208,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"
@@ -2272,7 +2344,13 @@
                         "canSubmitText": {
                           "type": "boolean"
                         },
-                        "canUploadFiles": {
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
                           "type": "boolean"
                         },
                         "canViewGallery": {
@@ -2280,7 +2358,9 @@
                         }
                       },
                       "required": [
-                        "canUploadFiles",
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
                         "canSubmitText",
                         "canViewGallery",
                         "canDeleteOwn"

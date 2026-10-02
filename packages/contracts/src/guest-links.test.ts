@@ -12,7 +12,9 @@ import {
 } from './index.js';
 
 const none = {
-  canUploadFiles: false,
+  canUploadPhotos: false,
+  canUploadVideos: false,
+  canUploadDocuments: false,
   canSubmitText: false,
   canViewGallery: false,
   canDeleteOwn: false,
@@ -45,10 +47,28 @@ describe('guestLinkPermissionsSchema', () => {
     expect(result.error?.issues[0]?.path).toEqual([]);
   });
 
+  test('each upload type alone is a contribution (photos, videos and documents are separate)', () => {
+    for (const only of ['canUploadPhotos', 'canUploadVideos', 'canUploadDocuments'] as const) {
+      const permissions = { ...none, [only]: true, canDeleteOwn: true };
+      expect(guestLinkPermissionsSchema.parse(permissions)).toEqual(permissions);
+    }
+  });
+
+  test('rejects the old single upload flag', () => {
+    expect(guestLinkPermissionsSchema.safeParse({ ...none, canUploadFiles: true }).success).toBe(
+      false,
+    );
+  });
+
   test('rejects extra keys', () => {
     expect(
-      guestLinkPermissionsSchema.safeParse({ ...none, canUploadFiles: true, isAdmin: true })
-        .success,
+      guestLinkPermissionsSchema.safeParse({
+        ...none,
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
+        isAdmin: true,
+      }).success,
     ).toBe(false);
   });
 });
@@ -70,7 +90,15 @@ describe('guestLinkLabelSchema', () => {
 
 describe('request schemas', () => {
   test('create needs a label and valid permissions', () => {
-    const body = { label: 'Фотограф', permissions: { ...none, canUploadFiles: true } };
+    const body = {
+      label: 'Фотограф',
+      permissions: {
+        ...none,
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
+      },
+    };
     expect(createGuestLinkRequestSchema.parse(body)).toEqual(body);
     expect(createGuestLinkRequestSchema.safeParse({ permissions: body.permissions }).success).toBe(
       false,
@@ -113,7 +141,9 @@ describe('guestLinkSchema', () => {
     label: null,
     status: 'ACTIVE',
     permissions: {
-      canUploadFiles: true,
+      canUploadPhotos: true,
+      canUploadVideos: true,
+      canUploadDocuments: true,
       canSubmitText: true,
       canViewGallery: false,
       canDeleteOwn: true,

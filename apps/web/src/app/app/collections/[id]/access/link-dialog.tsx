@@ -43,7 +43,9 @@ type LinkDialogMode = { kind: 'create'; collectionId: string } | { kind: 'edit';
 type LinkFormValues = PermissionForm & { label: string };
 
 const ADD_OPTIONS = [
-  { name: 'uploads', label: 'addFiles' },
+  { name: 'photos', label: 'addPhotos' },
+  { name: 'videos', label: 'addVideos' },
+  { name: 'documents', label: 'addDocuments' },
   { name: 'texts', label: 'addTexts' },
 ] as const;
 
@@ -52,7 +54,9 @@ const formSchema = (withLabel: boolean) =>
   z
     .object({
       label: withLabel ? guestLinkLabelSchema : z.string(),
-      uploads: z.boolean(),
+      photos: z.boolean(),
+      videos: z.boolean(),
+      documents: z.boolean(),
       texts: z.boolean(),
       seeAll: z.boolean(),
     })
@@ -108,7 +112,7 @@ function LinkForm({
     defaultValues: {
       label: existing?.label ?? '',
       ...(existing === null
-        ? { uploads: true, texts: true, seeAll: false }
+        ? { photos: true, videos: true, documents: true, texts: true, seeAll: false }
         : fromPermissions(existing.permissions)),
     },
   });
@@ -136,11 +140,12 @@ function LinkForm({
   const failure = isApiError(save.error) && !limitHit ? save.error.code : null;
   const labelError = form.formState.errors.label;
   // Live after the first submit, so the message goes as soon as the choice is fixed.
-  const [uploads, texts, seeAll] = useWatch({
+  const [photos, videos, documents, texts, seeAll] = useWatch({
     control: form.control,
-    name: ['uploads', 'texts', 'seeAll'],
+    name: ['photos', 'videos', 'documents', 'texts', 'seeAll'],
   });
-  const invalid = form.formState.isSubmitted && !isValidForm({ uploads, texts, seeAll });
+  const invalid =
+    form.formState.isSubmitted && !isValidForm({ photos, videos, documents, texts, seeAll });
 
   if (limitHit) {
     return (
