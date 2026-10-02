@@ -11,6 +11,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   // packages/ui ships TypeScript sources.
   transpilePackages: ['@stepler/ui'],
+  // The landing's photos (static imports): AVIF first, WebP as the fallback.
+  images: { formats: ['image/avif', 'image/webp'] },
   headers() {
     return Promise.resolve([
       {

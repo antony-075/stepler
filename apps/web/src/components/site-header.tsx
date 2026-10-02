@@ -14,6 +14,8 @@ type SiteHeaderProps = {
   brandHref?: string;
   /** After the wordmark (the account menu). */
   children?: ReactNode;
+  /** The page column; the landing passes its wider `landing-container`. */
+  container?: string;
 };
 
 /**
@@ -21,12 +23,17 @@ type SiteHeaderProps = {
  * DESIGN-SYSTEM.md §5.18) plus an optional slot on the right; public pages show the wordmark
  * only. Synchronous so both server pages and the client app shell can render it.
  */
-export function SiteHeader({ variant = 'public', brandHref = '/', children }: SiteHeaderProps) {
+export function SiteHeader({
+  variant = 'public',
+  brandHref = '/',
+  children,
+  container = 'stepler-container',
+}: SiteHeaderProps) {
   const t = useTranslations('brand');
   const app = variant === 'app';
   return (
     <header className={app ? 'border-b border-border bg-background' : undefined}>
-      <div className="stepler-container flex h-14 items-center justify-between gap-3">
+      <div className={cn(container, 'flex h-14 items-center justify-between gap-3')}>
         <Link
           href={brandHref}
           translate="no"

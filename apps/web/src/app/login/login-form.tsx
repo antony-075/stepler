@@ -7,7 +7,7 @@ import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
 import { useMutation } from '@tanstack/react-query';
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, MailCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -15,6 +15,7 @@ import type { z } from 'zod';
 import { apiRequest, isApiError } from '@/api/client';
 import { errorMessageKey } from '@/errors/error-message';
 import { isLocale } from '@/i18n/locales';
+import { GoogleMark } from './google-mark';
 import { Turnstile, type TurnstileHandle } from './turnstile';
 
 const emailFormSchema = magicLinkRequestSchema.pick({ email: true });
@@ -62,12 +63,19 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   if (sentTo !== null) {
     return (
       <div role="status" className="grid gap-3">
-        <h2 className="type-h2">{t('login.sentTitle')}</h2>
+        <h2 className="flex items-center gap-2.5 type-h2">
+          <MailCheck
+            aria-hidden="true"
+            className="size-6 shrink-0 text-success"
+            strokeWidth={1.75}
+          />
+          {t('login.sentTitle')}
+        </h2>
         <p className="text-muted-foreground">{t('login.sentText', { email: sentTo })}</p>
         <p className="text-muted-foreground">{t('login.sentHint')}</p>
         <Button
           variant="ghost"
-          className="justify-self-start"
+          className="-ml-3 justify-self-start text-link underline underline-offset-4"
           onClick={() => {
             setSentTo(null);
             request.reset();
@@ -84,17 +92,14 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   const shownError = requestError ?? (request.isIdle ? initialError : null);
 
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-1">
-        <h2 className="type-h2">{t('login.title')}</h2>
-        <p className="text-muted-foreground">{t('login.hint')}</p>
-      </div>
+    <div className="grid gap-4">
+      <h2 className="type-h2">{t('login.title')}</h2>
 
       {shownError !== null && <Alert variant="error">{t(errorMessageKey(shownError))}</Alert>}
 
       <form
         noValidate
-        className="grid gap-4"
+        className="grid gap-3"
         onSubmit={(event) => void form.handleSubmit(({ email }) => request.mutate(email))(event)}
       >
         <div className="grid gap-2">
@@ -173,10 +178,14 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
           <Button asChild variant="outline" size="lg" className={WRAPPING_BUTTON}>
             {/* A full navigation to an API route (not a page): it redirects to Google and back. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- API route, not a page */}
-            <a href="/api/v1/auth/google/start">{t('login.google')}</a>
+            <a href="/api/v1/auth/google/start">
+              <GoogleMark className="size-[18px]" />
+              {t('login.google')}
+            </a>
           </Button>
         </>
       )}
+      <p className="type-small text-muted-foreground">{t('login.hint')}</p>
     </div>
   );
 }
