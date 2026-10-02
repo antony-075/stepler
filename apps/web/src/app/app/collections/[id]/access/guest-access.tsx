@@ -3,7 +3,7 @@
 // Design (DESIGN-SYSTEM.md §6.7, §7.1; artboard C-gallery access aside; plan Task 9):
 // - Hierarchy follows the admin's job before an event: hand guests the link. The default link
 //   is first and largest (LinkPanel: QR, link, what guests can do, actions); additional links
-//   are a quiet list under «Інші посилання»; the page column stops at 960px.
+//   are a quiet list under «Інші посилання»; cards use the full page column (§6.0).
 // - Permissions read as a sentence («Гості можуть: додавати фото й відео, …» / «Лише перегляд»),
 //   never as four flags; they are edited through two plain questions in a dialog.
 // - Consequences are spelled out where they happen: replacing the link says the old one and the
@@ -78,7 +78,7 @@ export function GuestAccess({ id }: { id: string }) {
   return (
     <>
       <CollectionHeader collection={collection.data} current="access" />
-      <div className="grid max-w-[960px] gap-10">
+      <div className="grid gap-10">
         {collection.data.status === 'ARCHIVED' ? (
           <Alert variant="info">{t('archivedNotice')}</Alert>
         ) : null}
@@ -93,7 +93,7 @@ export function GuestAccess({ id }: { id: string }) {
 
 function AccessSkeleton({ label }: { label: string }) {
   return (
-    <div role="status" aria-busy="true" aria-label={label} className="grid max-w-[960px] gap-8">
+    <div role="status" aria-busy="true" aria-label={label} className="grid gap-8">
       <div className="grid gap-3">
         <Skeleton className="h-11 w-28" />
         <Skeleton className="h-9 w-2/3 max-w-md" />

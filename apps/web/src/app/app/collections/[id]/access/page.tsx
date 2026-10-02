@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { AdminPage } from '@/components/admin-page';
 import { GuestAccess } from './guest-access';
 
 // A generic title: the collection is fetched in the browser, not on the server.
@@ -15,8 +16,8 @@ export default async function CollectionAccessPage({
 }) {
   const { id } = await params;
   return (
-    <main className="stepler-container grid gap-8 pt-5 pb-16 lg:pt-8 lg:pb-20">
+    <AdminPage>
       <GuestAccess id={id} />
-    </main>
+    </AdminPage>
   );
 }

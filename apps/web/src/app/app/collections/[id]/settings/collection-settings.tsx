@@ -1,8 +1,10 @@
 'use client';
 
 // Design (direction C settings pattern, DESIGN-SYSTEM.md §6.8; the same column as /app/settings):
-// - One centred 640px column, back link to the collection (its title, cut to one line), a
-//   compact header and three sections in order of how often they are used: Details, Guest
+// - The shared admin page frame (DESIGN-SYSTEM.md §6.0): the header block at the same place as
+//   on the collection's other pages, then the sections in a 640px form column on the same left
+//   edge (not centred). Back link to the collection (its title, cut to one line), a compact
+//   header and three sections in order of how often they are used: Details, Guest
 //   access, Danger zone.
 // - Details uses `wide` rows: the label and hint on the left, the field taking the rest of the
 //   row from 600px; stacked on phones. Save and Cancel sit in the panel's own footer, so they
@@ -42,6 +44,7 @@ import {
   updateCollection,
   useInvalidateCollections,
 } from '@/api/collections';
+import { AdminFormColumn } from '@/components/admin-page';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
 import {
@@ -75,7 +78,6 @@ export function CollectionSettings({ id }: { id: string }) {
         />
         <Alert
           variant="error"
-          className="mt-8"
           action={
             <Button variant="outline" onClick={() => void query.refetch()}>
               {t('retry')}
@@ -100,21 +102,25 @@ function Settings({ collection, onDeleted }: { collection: Collection; onDeleted
   const t = useTranslations('collection');
   return (
     <>
-      <PageHeader
-        size="compact"
-        back={
-          <BackLink href={`/app/collections/${collection.id}`} title={collection.title}>
-            {collection.title}
-          </BackLink>
-        }
-        title={t('settingsPage.pageTitle')}
-      />
-      <CollectionNav id={collection.id} current="settings" className="mt-4" />
-      <div className="mt-8 grid gap-8">
+      {/* The same header block as the collection's other pages (CollectionHeader): back link,
+          h1 and nav at the same place, so switching pages does not move them (§6.0). */}
+      <div className="grid gap-4">
+        <PageHeader
+          size="compact"
+          back={
+            <BackLink href={`/app/collections/${collection.id}`} title={collection.title}>
+              {collection.title}
+            </BackLink>
+          }
+          title={t('settingsPage.pageTitle')}
+        />
+        <CollectionNav id={collection.id} current="settings" />
+      </div>
+      <AdminFormColumn>
         <DetailsSection collection={collection} />
         <AccessSection collection={collection} />
         <DangerSection collection={collection} onDeleted={onDeleted} />
-      </div>
+      </AdminFormColumn>
     </>
   );
 }
