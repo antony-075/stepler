@@ -180,7 +180,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'relative flex min-h-11 w-full cursor-default items-center gap-2 rounded-sheet py-2 pr-9 pl-3 text-base outline-none select-none [overflow-wrap:anywhere] focus:bg-hover-popover [[data-input=keyboard]_&]:focus-visible:outline-2 [[data-input=keyboard]_&]:focus-visible:outline-solid [[data-input=keyboard]_&]:focus-visible:-outline-offset-2 [[data-input=keyboard]_&]:focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:text-muted-foreground',
+        'relative flex min-h-11 w-full items-center gap-2 rounded-sheet py-2 pr-9 pl-3 text-base outline-none select-none [overflow-wrap:anywhere] focus:bg-hover-popover [[data-input=keyboard]_&]:focus-visible:outline-2 [[data-input=keyboard]_&]:focus-visible:outline-solid [[data-input=keyboard]_&]:focus-visible:-outline-offset-2 [[data-input=keyboard]_&]:focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:text-muted-foreground',
         'data-[state=checked]:font-semibold',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className,

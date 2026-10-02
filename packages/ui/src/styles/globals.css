@@ -260,6 +260,42 @@
   p {
     text-wrap: pretty;
   }
+  /* Tailwind 4 leaves buttons on the default arrow; anything that acts on click shows the hand,
+     and a control that can't be used says so. Utilities still override this per component. */
+  :where(
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    a[href],
+    label[for],
+    summary,
+    select:not(:disabled),
+    [role='menuitem'],
+    [role='menuitemradio'],
+    [role='menuitemcheckbox'],
+    [role='option'],
+    [role='tab'],
+    [role='radio'],
+    [role='switch'],
+    [role='checkbox']
+  ) {
+    cursor: pointer;
+  }
+  :where(
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled]:is(
+      [role='menuitem'],
+      [role='menuitemradio'],
+      [role='menuitemcheckbox'],
+      [role='option'],
+      [role='tab'],
+      [role='radio'],
+      [role='switch'],
+      [role='checkbox']
+    )
+  ) {
+    cursor: not-allowed;
+  }
 }
 
 /*
