@@ -397,5 +397,35 @@
       "cancel": "Cancel",
       "limitTitle": "No more links can be created"
     }
+  },
+  "guestLink": {
+    "loading": "Opening the collection",
+    "retry": "Try again",
+    "soonAdd": "Soon you’ll be able to add photos here.",
+    "soonView": "Soon you’ll be able to see what guests added here.",
+    "paused": {
+      "title": "This link is paused",
+      "text": "The organiser has paused adding for now."
+    },
+    "revoked": {
+      "title": "This link no longer works",
+      "text": "Ask the organiser for a new one."
+    },
+    "archived": {
+      "title": "This collection is closed",
+      "text": "The organiser no longer takes photos and videos."
+    },
+    "unavailable": {
+      "title": "This collection is unavailable",
+      "text": "Contact the organiser."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "text": "Check the link: it may have a typo."
+    },
+    "rateLimited": {
+      "title": "Too many tries: try again in a minute"
+    },
+    "failed": "Couldn’t open the collection. Check your connection and try again."
   }
 }
