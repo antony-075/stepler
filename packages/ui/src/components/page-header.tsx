@@ -35,9 +35,11 @@ function PageHeader({
       data-slot="page-header"
       className={cn('grid gap-4 sm:flex sm:items-end sm:justify-between sm:gap-6', className)}
     >
-      <div className="grid min-w-0 gap-2">
+      {/* `minmax(0,1fr)` and the back slot's `max-w-full`: a long back link (a collection title)
+          can truncate instead of widening the page. */}
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-2">
         {back ? (
-          <div data-slot="page-header-back" className="justify-self-start">
+          <div data-slot="page-header-back" className="max-w-full justify-self-start">
             {back}
           </div>
         ) : null}
