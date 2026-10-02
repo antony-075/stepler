@@ -231,10 +231,11 @@
 }
 
 @theme inline {
-  /* next/font sets --font-manrope / --font-unbounded in apps/web; Storybook uses the fallbacks. */
-  --font-sans: var(--font-manrope, 'Manrope'), system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display:
-    var(--font-unbounded, 'Unbounded'), var(--font-manrope, 'Manrope'), system-ui, sans-serif;
+  /* next/font/local sets --font-geologica / --font-geist-mono in apps/web; Storybook declares the
+     same files under these family names (src/fonts/fonts.css). */
+  --font-sans: var(--font-geologica, 'Geologica'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    var(--font-geist-mono, 'Geist Mono'), ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -301,6 +302,134 @@
   }
   body {
     @apply bg-background font-sans text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+}
+
+/*
+ * Type scale (DESIGN-SYSTEM.md §3.2): Geologica for all text, the SHRP axis (sharp terminals)
+ * only at 19px and above, Geist Mono only for data (frame numbers, times, sizes, counters).
+ * Sizes step up at md (768px) and xl (1280px). Each `type-*` utility sets size, line height and,
+ * for headings, weight and sharpness, so a heading is one class.
+ */
+@utility font-wordmark {
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 100;
+  letter-spacing: -0.01em;
+}
+
+/* Sharp terminals for display text without a size (e.g. a heading sized by its context). */
+@utility font-display {
+  font-variation-settings: 'SHRP' 80;
+}
+
+/* h1 of guest pages and the sign-in landing: 28 (under 360px) / 32 / 44 / 64px. */
+@utility type-display {
+  font-size: 2rem;
+  line-height: 1.12;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 80;
+  text-wrap: balance;
+  @media (width < 360px) {
+    font-size: 1.75rem;
+  }
+  @variant md {
+    font-size: 2.75rem;
+    letter-spacing: -0.01em;
+  }
+  @variant xl {
+    font-size: 4rem;
+  }
+}
+
+/* h1 of admin pages: 28 / 32 / 44px. */
+@utility type-h1 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 80;
+  text-wrap: balance;
+  @variant md {
+    font-size: 2rem;
+  }
+  @variant xl {
+    font-size: 2.75rem;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Section headings: 19 / 24px. */
+@utility type-h2 {
+  font-size: 1.1875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  font-variation-settings: 'SHRP' 60;
+  text-wrap: balance;
+  @variant md {
+    font-size: 1.5rem;
+  }
+}
+
+/* Panel headings: 16 / 17px; too small for SHRP. */
+@utility type-h3 {
+  font-size: 1rem;
+  line-height: 1.3;
+  font-weight: 600;
+  text-wrap: balance;
+  @variant md {
+    font-size: 1.0625rem;
+  }
+}
+
+/* Guest texts and the guest's main button: 17px. */
+@utility type-body-lg {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+/* Admin body: 16 / 15px. Fields stay 16px everywhere (no iOS zoom). */
+@utility type-body {
+  font-size: 1rem;
+  line-height: 1.5;
+  @variant md {
+    font-size: 0.9375rem;
+  }
+}
+
+@utility type-small {
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+/* Captions under a frame, the terms line: the smallest size for words. */
+@utility type-caption {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+/* Data in Geist Mono: frame number, time, duration, size. 12px only for digits. */
+@utility type-data {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A range or count as the heading's data, e.g. "#087–#116": 16 / 20px. */
+@utility type-data-lg {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  @variant md {
+    font-size: 1.25rem;
   }
 }
 

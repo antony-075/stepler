@@ -173,11 +173,36 @@ Pencil and destructive are 1.33 / 1.14 apart in luminance: they are never told a
 | `--duration-instant` … `--duration-stack` | 0 / 120 fast / 180 base / 240 slow / 300 develop / 400 stack ms | `duration-(--duration-fast)` |
 | `--ease-out` / `--ease-in` / `--ease-in-out` | `cubic-bezier(0.2, 0.7, 0.3, 1)` / `(0.4, 0, 1, 1)` / `(0.4, 0, 0.2, 1)` | replace Tailwind's defaults (`ease-out` …) |
 | `--breakpoint-3xl` | 120rem (1920px) | adds `3xl:` |
+| `--font-sans` | Geologica (`--font-geologica` from `next/font/local` in apps/web, the `Geologica` family from `src/fonts/fonts.css` in Storybook), system fallbacks | all text |
+| `--font-mono` | Geist Mono (`--font-geist-mono` / `Geist Mono`), then `ui-monospace` | data only, through `type-data` / `type-data-lg` or `font-mono` |
 | `--stepler-gutter` / `--stepler-content` | 16 / 24 / 32 / 40px (base / `sm` / `lg` / `2xl`); 1240px (1320px from 1600px) | set by `stepler-container` |
 
 `color-scheme` is `light` / `dark` with the theme, so native scrollbars and form parts follow it.
 
-**Legacy v4 tokens** still defined for components that later steps of the migration restyle (DESIGN-SYSTEM.md §10.4), and removed with them: `--radius` (12px, `rounded-lg` …), `--secondary*` and `--accent` / `--accent-foreground` (now aliases of `--muted` / `--foreground`), `--accent-warm*`, `--staple*`, `--dot`, `--glow-*`, `--shadow-card` (now `--shadow-popover`), `--shadow-tile`, `--control-track`, `--control-thumb`, `--shadow-thumb`, the `stepler-atmosphere` utility and the fonts Manrope (`--font-sans`) and Unbounded (`--font-display`). Do not use them in new code.
+### Type
+
+The files are committed in `packages/ui/src/fonts/` with their OFL licences (ADR 0015): `geologica-wght-shrp.woff2` (Geologica, `wght` 100–900 and `SHRP` 0–100; `CRSV` and `slnt` dropped; 40.8 KB) and `geist-mono-wght.woff2` (Geist Mono, `wght` 100–900; 29.2 KB), each latin + cyrillic in one file (Ukrainian і ї є ґ, ’, «», № included; no `latin-ext` / `cyrillic-ext`). apps/web loads them with `next/font/local` (`apps/web/src/app/fonts.ts`; Geologica is preloaded, Geist Mono is not), Storybook with `@font-face` (`packages/ui/src/fonts/fonts.css`, imported by `.storybook/preview.tsx`). Nothing fetches fonts over the network. The rebuild recipe (fontTools instancer + `pyftsubset`) is in ADR 0015.
+
+| Utility | base / md (768) / xl (1280) | Line height | Weight · SHRP | Use |
+| --- | --- | --- | --- | --- |
+| `type-display` | 32 (28 under 360px) / 44 / 64px, −0.01em from 44 | 1.12 | 600 · 80 | h1 of guest pages and the sign-in landing |
+| `type-h1` | 28 / 32 / 44px, −0.01em at 44 | 1.15 | 600 · 80 | h1 of admin pages |
+| `type-h2` | 19 / 24 / 24px | 1.2 | 600 · 60 | sections, dialog titles |
+| `type-h3` | 16 / 17 / 17px | 1.3 | 600 · 0 | panel headings |
+| `type-body-lg` | 17px | 1.5 | — | guest texts, guest main button |
+| `type-body` | 16 / 15 / 15px | 1.5 | — | admin body; fields stay 16px |
+| `type-small` | 14px | 1.45 | — | hints, meta, `sm` buttons |
+| `type-caption` | 13px | 1.4 | — | captions under a frame, terms line |
+| `type-data` | Geist Mono 12px, `tabular-nums` | 1.35 | — | frame number, time, duration, size |
+| `type-data-lg` | Geist Mono 16 / 20px | 1.2 | — | a range such as `#087–#116` |
+| `font-wordmark` | — | — | 600 · 100, −0.01em | the text wordmark «stepler» |
+| `font-display` | — | — | SHRP 80 | sharp terminals on a heading sized elsewhere |
+
+h1–h3 get `text-wrap: balance`, paragraphs `text-wrap: pretty` (base layer). SHRP is only used at 19px and above (sharp terminals turn to noise on small text), so `type-h3` has none although the spec's role table lists SHRP 60 for h3; whether SHRP holds up on low-density Android screens is not verified. Words are never smaller than 13px; 12px is for mono digits only. `Foundations/Type` shows the scale, the SHRP steps and a Ukrainian sample, and checks that both files load and cover it.
+
+Ukrainian copy: the apostrophe is always ’ (U+2019) and the ellipsis one character (…); `apps/web/src/i18n/ukrainian-copy.test.ts` fails on `'`, `ʼ` or `...` in `messages/uk.json`.
+
+**Legacy v4 tokens** still defined for components that later steps of the migration restyle (DESIGN-SYSTEM.md §10.4), and removed with them: `--radius` (12px, `rounded-lg` …), `--secondary*` and `--accent` / `--accent-foreground` (now aliases of `--muted` / `--foreground`), `--accent-warm*`, `--staple*`, `--dot`, `--glow-*`, `--shadow-card` (now `--shadow-popover`), `--shadow-tile`, `--control-track`, `--control-thumb`, `--shadow-thumb`, and the `stepler-atmosphere` utility. Do not use them in new code.
 
 ## How to add a component
 

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next';
-import { Manrope, Unbounded } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { cookies } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
@@ -7,20 +6,8 @@ import type { ReactNode } from 'react';
 import { QueryProvider } from '@/api/query-provider';
 import { THEME_COOKIE, parseTheme, themeAttribute } from '@/theme/theme';
 import { ThemeProvider } from '@/theme/theme-provider';
+import { geistMono, geologica } from './fonts';
 import './globals.css';
-
-// Self-hosted by Next.js at build time: the browser never contacts Google Fonts.
-const manrope = Manrope({
-  subsets: ['latin', 'cyrillic', 'cyrillic-ext'],
-  variable: '--font-manrope',
-  display: 'swap',
-});
-const unbounded = Unbounded({
-  subsets: ['latin', 'cyrillic', 'cyrillic-ext'],
-  weight: ['500', '600'],
-  variable: '--font-unbounded',
-  display: 'swap',
-});
 
 // Browser chrome in the page colour (--background, light and dark). It follows the system
 // setting; an explicit theme choice in the cookie is not reflected here.
@@ -47,7 +34,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html
       lang={locale}
       data-theme={themeAttribute(theme)}
-      className={`${manrope.variable} ${unbounded.variable}`}
+      className={`${geologica.variable} ${geistMono.variable}`}
     >
       <body>
         <NextIntlClientProvider>

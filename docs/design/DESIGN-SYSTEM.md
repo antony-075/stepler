@@ -309,6 +309,8 @@ Fluid только у display; остальное фиксировано. `text-
 
 ### 3.5 Подключение
 
+**Реализовано иначе, чем в наброске ниже** (решение 12.18, [ADR 0015](../architecture/decisions/0015-visual-direction-c-fonts-frame-numbers.md)): woff2 лежат в `packages/ui/src/fonts/` с OFL, apps/web подключает их через `next/font/local`, Storybook — через `@font-face`; один файл на семейство (latin + cyrillic), Geologica 40.8 KB, Geist Mono 29.2 KB. Набросок с `next/font/google` оставлен как история решения.
+
 ```ts
 // apps/web/src/app/layout.tsx (заменяет Manrope и Unbounded)
 import { Geologica, Geist_Mono } from 'next/font/google';
