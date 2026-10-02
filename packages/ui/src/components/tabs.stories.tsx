@@ -111,3 +111,54 @@ export const Phone: Story = {
     await expectTriggersAreTouchTargets(canvas.getAllByRole('tab'));
   },
 };
+
+/** The admin collection tabs: counts as mono data, the active tab underlined in pencil. */
+export const WithCounts: Story = {
+  args: { defaultValue: 'frames' },
+  render: (args) => (
+    <Tabs {...args} className="w-full max-w-2xl">
+      <TabsList aria-label="Collection">
+        <TabsTrigger value="frames">
+          Кадри <span className="type-data">126</span>
+        </TabsTrigger>
+        <TabsTrigger value="texts">
+          Тексти <span className="type-data">14</span>
+        </TabsTrigger>
+        <TabsTrigger value="access">Доступ</TabsTrigger>
+        <TabsTrigger value="settings">Налаштування</TabsTrigger>
+      </TabsList>
+      <TabsContent value="frames">126 frames.</TabsContent>
+      <TabsContent value="texts">14 texts.</TabsContent>
+      <TabsContent value="access">Guest links.</TabsContent>
+      <TabsContent value="settings">Collection settings.</TabsContent>
+    </Tabs>
+  ),
+  play: async ({ canvas }) => {
+    const underline = (name: string | RegExp) =>
+      canvas.getByRole('tab', { name }).querySelector('[data-slot="tabs-underline"] path')!;
+    // The underline is decorative and drawn only under the active tab (it draws in 180ms).
+    await expect(
+      canvas.getByRole('tab', { name: /Кадри/ }).querySelector('[data-slot="tabs-underline"]'),
+    ).toHaveAttribute('aria-hidden', 'true');
+    await waitFor(() => expect(getComputedStyle(underline(/Кадри/)).strokeDashoffset).toBe('0px'));
+    await expect(getComputedStyle(underline('Доступ')).strokeDashoffset).toBe('1px');
+    await userEvent.click(canvas.getByRole('tab', { name: 'Доступ' }));
+    await waitFor(() => expect(getComputedStyle(underline('Доступ')).strokeDashoffset).toBe('0px'));
+  },
+};
+
+export const WithCountsDark: Story = {
+  ...WithCounts,
+  globals: { theme: 'dark' },
+};
+
+/** At 360px the list scrolls inside itself instead of widening the page. */
+export const WithCountsPhone: Story = {
+  ...WithCounts,
+  globals: { viewport: { value: 'phone' } },
+  play: async ({ canvas }) => {
+    const list = canvas.getByRole('tablist');
+    await expect(list.scrollWidth).toBeGreaterThan(list.clientWidth);
+    await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};

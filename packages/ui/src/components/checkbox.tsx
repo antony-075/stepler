@@ -1,20 +1,23 @@
 import { Check } from 'lucide-react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
+import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
 
-// Based on shadcn/ui (new-york). The box is 20px; wrap it in a `Label` row of min-h-11 so the
-// whole row is the 44px touch target (see the story).
+// Based on shadcn/ui (new-york). The box is 20px with a 2px radius; checked is an ink fill with a
+// white check (not the pencil: the pencil marks frames, a checkbox is a setting). Wrap it in a
+// `Label` row of min-h-11 so the whole row is the 44px touch target (see the story).
 function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        'peer size-5 shrink-0 rounded-[6px] border border-input bg-card shadow-xs transition-[color,background-color,border-color,box-shadow] outline-none motion-reduce:transition-none',
-        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/70',
+        'peer size-5 shrink-0 rounded-frame border border-input bg-card transition-[background-color,border-color] duration-(--duration-fast) motion-reduce:transition-none',
+        focusRing,
+        'hover:border-foreground',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        'aria-invalid:border-destructive aria-invalid:ring-destructive/70',
+        'disabled:cursor-not-allowed disabled:bg-muted data-[state=checked]:disabled:border-muted-foreground data-[state=checked]:disabled:bg-muted-foreground',
+        'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
         className,
       )}
       {...props}

@@ -5,8 +5,8 @@ import { newEmail, signIn } from '../support/auth.js';
 // /app/settings; public pages have none, so anonymous tests set the `st_theme` cookie directly.
 test.use({ locale: 'de-DE', viewport: { width: 1024, height: 768 } });
 
-const DARK_BACKGROUND = 'rgb(19, 20, 27)';
-const LIGHT_BACKGROUND = 'rgb(244, 244, 247)';
+const DARK_BACKGROUND = 'rgb(20, 22, 21)';
+const LIGHT_BACKGROUND = 'rgb(240, 241, 238)';
 const T = { group: 'Тема', light: 'Світла', dark: 'Темна', system: 'Системна' };
 
 async function setThemeCookie(context: BrowserContext, baseURL: string, value: string) {
@@ -205,7 +205,7 @@ test.describe('sign-in card at 360px', () => {
     // The widget is in once the always-pass test key has produced a token.
     await expect(submit).toBeEnabled({ timeout: 20_000 });
     const { contentRight, buttonRight } = await submit.evaluate((button) => {
-      const content = button.closest<HTMLElement>('[data-slot="card-content"]')!;
+      const content = button.closest<HTMLElement>('[data-slot="panel-content"]')!;
       const style = getComputedStyle(content);
       return {
         contentRight: content.getBoundingClientRect().right - parseFloat(style.paddingRight),

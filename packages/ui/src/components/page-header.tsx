@@ -10,16 +10,16 @@ type PageHeaderProps = {
   /** An optional link above the title (e.g. back to the list). */
   back?: ReactNode;
   /**
-   * `default`: the large fluid title of public pages. `compact`: a fixed 24px title for the
-   * admin area, where the page is a tool and the header should not outweigh its content.
+   * `default`: the display title of public and guest pages (32 / 44 / 64px). `compact`: the admin
+   * h1 (28 / 32 / 44px).
    */
   size?: 'default' | 'compact';
   className?: string;
 };
 
 const TITLE_SIZE = {
-  default: 'text-[clamp(1.5rem,1.1rem+1.6vw,2.25rem)]',
-  compact: 'text-2xl',
+  default: 'type-display',
+  compact: 'type-h1',
 } as const;
 
 function PageHeader({
@@ -44,17 +44,14 @@ function PageHeader({
         <h1
           data-slot="page-header-title"
           data-size={size}
-          className={cn(
-            'font-display leading-tight font-medium tracking-tight text-balance [overflow-wrap:anywhere]',
-            TITLE_SIZE[size],
-          )}
+          className={cn('[overflow-wrap:anywhere]', TITLE_SIZE[size])}
         >
           {title}
         </h1>
         {description ? (
           <p
             data-slot="page-header-description"
-            className="max-w-prose text-muted-foreground [overflow-wrap:anywhere]"
+            className="max-w-[60ch] text-muted-foreground [overflow-wrap:anywhere]"
           >
             {description}
           </p>

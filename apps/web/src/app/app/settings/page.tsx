@@ -1,4 +1,7 @@
 import { PageHeader } from '@stepler/ui/components/page-header';
+import { Panel } from '@stepler/ui/components/panel';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { cn } from '@stepler/ui/lib/utils';
 import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
@@ -29,7 +32,7 @@ function SettingRow({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-3 px-5 py-[1.125rem] min-[600px]:grid-cols-[minmax(0,1fr)_auto] min-[600px]:items-center min-[600px]:gap-6 min-[600px]:px-6 min-[600px]:py-5">
+    <div className="grid gap-3 p-4 min-[600px]:grid-cols-[minmax(0,1fr)_auto] min-[600px]:items-center min-[600px]:gap-6 min-[600px]:px-6 min-[600px]:py-5">
       <div className="min-w-0">
         <div id={id} className="text-[0.9375rem] font-semibold">
           {label}
@@ -47,9 +50,10 @@ function SettingRow({
 }
 
 /**
- * Theme and language, in one centred column on wide screens. The theme lives in a cookie; the
- * language is saved to the profile too. Reached from the account menu; the back link above the
- * title returns to the collections.
+ * Theme and language, in one centred 640px column (DESIGN-SYSTEM.md §6.8): back link, h1, then
+ * sections of an h2 over a panel of rows. The theme lives in a cookie; the language is saved to
+ * the profile too. Reached from the account menu; the back link above the title returns to the
+ * collections.
  */
 export default async function SettingsPage() {
   const t = await getTranslations();
@@ -61,7 +65,10 @@ export default async function SettingsPage() {
           back={
             <Link
               href="/app"
-              className="-ml-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-lg px-1.5 text-sm font-semibold text-muted-foreground no-underline outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/70"
+              className={cn(
+                '-ml-1.5 inline-flex min-h-11 items-center gap-1.5 rounded-control px-1.5 text-sm font-semibold text-muted-foreground no-underline transition-colors duration-(--duration-fast) hover:text-foreground motion-reduce:transition-none',
+                focusRing,
+              )}
             >
               <ArrowLeft aria-hidden="true" className="size-4" />
               {t('settings.back')}
@@ -70,12 +77,12 @@ export default async function SettingsPage() {
           title={t('settings.pageTitle')}
           description={t('settings.description')}
         />
-        <section aria-labelledby="settings-appearance" className="mt-8">
-          <h2 id="settings-appearance" className="text-base leading-snug font-semibold">
+        <section aria-labelledby="settings-appearance" className="mt-8 lg:mt-10">
+          <h2 id="settings-appearance" className="type-h2">
             {t('settings.appearance')}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{t('settings.appearanceHint')}</p>
-          <div className="mt-3 divide-y rounded-2xl border bg-card shadow-xs">
+          <Panel className="mt-4 divide-y">
             <SettingRow id="settings-theme" label={t('theme.label')} hint={t('settings.themeHint')}>
               <ThemeSwitch labelledBy="settings-theme" describedBy="settings-theme-hint" />
             </SettingRow>
@@ -86,7 +93,7 @@ export default async function SettingsPage() {
             >
               <LanguageSwitch labelledBy="settings-language" describedBy="settings-language-hint" />
             </SettingRow>
-          </div>
+          </Panel>
         </section>
       </div>
     </main>

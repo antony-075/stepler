@@ -59,8 +59,8 @@ export const WithActionsLaptop: Story = {
     await expect(actions.left).toBeGreaterThan(title.right);
     const container = canvasElement.querySelector('main');
     if (!container) throw new Error('container missing');
-    // Aligned with the container's content edge (the 40px desktop gutter).
-    await expect(Math.round(container.getBoundingClientRect().right - actions.right)).toBe(40);
+    // Aligned with the container's content edge (the 32px gutter from `lg`).
+    await expect(Math.round(container.getBoundingClientRect().right - actions.right)).toBe(32);
   },
 };
 
@@ -124,7 +124,7 @@ export const ContainerPhone: Story = {
   },
 };
 
-/** The admin area uses `compact`: a fixed 24px title at every width. */
+/** The admin area uses `compact`: the admin h1, 44px from 1280px (32px at 768, 28px on phones). */
 export const Compact: Story = {
   args: {
     size: 'compact',
@@ -135,7 +135,16 @@ export const Compact: Story = {
   globals: { viewport: { value: 'laptop' } },
   play: async ({ canvas }) => {
     const title = canvas.getByRole('heading', { level: 1, name: 'Settings' });
-    await expect(getComputedStyle(title).fontSize).toBe('24px');
+    await expect(getComputedStyle(title).fontSize).toBe('44px');
     await expect(title).toHaveAttribute('data-size', 'compact');
+  },
+};
+
+export const CompactPhone: Story = {
+  ...Compact,
+  globals: { viewport: { value: 'phone' } },
+  play: async ({ canvas }) => {
+    const title = canvas.getByRole('heading', { level: 1, name: 'Settings' });
+    await expect(getComputedStyle(title).fontSize).toBe('28px');
   },
 };

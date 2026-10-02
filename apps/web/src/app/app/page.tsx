@@ -1,22 +1,23 @@
 import { EmptyState } from '@stepler/ui/components/empty-state';
 import { PageHeader } from '@stepler/ui/components/page-header';
-import { FolderOpen } from 'lucide-react';
+import { Panel } from '@stepler/ui/components/panel';
 import { getTranslations } from 'next-intl/server';
 
-// Placeholder dashboard until collections arrive (Phase 4).
+// Placeholder dashboard until collections arrive (Phase 4): an empty sheet waiting for its first
+// frame, as an empty collection will look (DESIGN-SYSTEM.md §5.16).
 export default async function AppHomePage() {
   const t = await getTranslations('app');
   return (
-    <main className="stepler-container grid gap-8 pt-8 pb-16 lg:pt-10 lg:pb-20">
+    <main className="stepler-container grid gap-6 pt-8 pb-16 lg:gap-8 lg:pt-10 lg:pb-20">
       <PageHeader size="compact" title={t('placeholderTitle')} />
-      <div className="rounded-2xl border bg-card shadow-xs">
+      <Panel variant="sheet">
         <EmptyState
-          icon={<FolderOpen />}
+          frameNumber={1}
           title={t('emptyTitle')}
           description={t('emptyText')}
-          className="py-14"
+          className="py-12 sm:py-16"
         />
-      </div>
+      </Panel>
     </main>
   );
 }
