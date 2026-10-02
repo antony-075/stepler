@@ -144,6 +144,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
 | `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
+| `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |

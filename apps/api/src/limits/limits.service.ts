@@ -17,6 +17,8 @@ export interface UserLimits {
 
 export interface CollectionLimits {
   storageBytes: bigint;
+  /** Non-revoked additional guest links; the default link does not count [G8]. */
+  guestLinks: number;
 }
 
 /**
@@ -36,7 +38,10 @@ export class LimitsService {
   }
 
   forCollection(_collection: { id: string }): CollectionLimits {
-    return { storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION };
+    return {
+      storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION,
+      guestLinks: this.env.LIMIT_GUEST_LINKS_PER_COLLECTION,
+    };
   }
 
   forUser(_user: { id: string }): UserLimits {

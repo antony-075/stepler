@@ -15,7 +15,10 @@ describe('LimitsService', () => {
       collectionCreationsPerDay: 10,
       storageBytes: 20n * 1024n ** 3n,
     });
-    expect(limits.forCollection({ id: 'c1' })).toEqual({ storageBytes: 10n * 1024n ** 3n });
+    expect(limits.forCollection({ id: 'c1' })).toEqual({
+      storageBytes: 10n * 1024n ** 3n,
+      guestLinks: 10,
+    });
   });
 
   test('applies env overrides', () => {
@@ -25,8 +28,10 @@ describe('LimitsService', () => {
         LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '7',
         LIMIT_STORAGE_BYTES_PER_ACCOUNT: '1000',
         LIMIT_COLLECTION_CREATIONS_PER_DAY: '4',
+        LIMIT_GUEST_LINKS_PER_COLLECTION: '2',
       }),
     );
+    expect(limits.forCollection({ id: 'c1' }).guestLinks).toBe(2);
     expect(limits.magicLink().perEmailPerHour).toBe(2);
     expect(limits.forUser({ id: 'u1' })).toEqual({
       activeCollections: 7,

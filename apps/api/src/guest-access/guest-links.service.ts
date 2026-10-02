@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import type { GuestLinkListResponse, GuestLinkPermissions } from '@stepler/contracts';
-import { type AuditActor, AuditService } from '../audit/audit.service.js';
+import type {
+  CreateGuestLinkRequest,
+  GuestLink,
+  GuestLinkListResponse,
+  GuestLinkPermissions,
+  RotateDefaultLinkRequest,
+  UpdateGuestLinkRequest,
+} from '@stepler/contracts';
+import { type AuditAction, type AuditActor, AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -9,8 +16,19 @@ import type {
   GuestLink as GuestLinkRow,
   Prisma,
 } from '../generated/prisma/client.js';
-import { DEFAULT_LINK_PERMISSIONS, toGuestLinkDto } from './guest-link-dto.js';
+import { LimitsService } from '../limits/limits.service.js';
+import { DEFAULT_LINK_PERMISSIONS, permissionsOf, toGuestLinkDto } from './guest-link-dto.js';
 import { GuestLinkTokens } from './guest-link-tokens.js';
+
+/** Revoking ends a link for good and wipes its token ciphertext [G1]. */
+function revoked() {
+  return {
+    status: 'REVOKED',
+    revokedAt: new Date(),
+    tokenCiphertext: null,
+    tokenKeyId: null,
+  } as const;
+}
 
 /** How many revoked additional links the list keeps showing, most recent first [G8]. */
 const LISTED_REVOKED_LINKS = 10;
@@ -30,6 +48,7 @@ export class GuestLinksService {
     private readonly prisma: PrismaService,
     private readonly tokens: GuestLinkTokens,
     private readonly audit: AuditService,
+    private readonly limits: LimitsService,
   ) {}
 
   /** Inserts a collection's default link inside the caller's transaction, and audits it. */
@@ -44,15 +63,7 @@ export class GuestLinksService {
       label: null,
       permissions: DEFAULT_LINK_PERMISSIONS,
     });
-    await this.audit.record(tx, {
-      collectionId,
-      actor,
-      action: 'guest_link.create',
-      targetType: 'guest_link',
-      targetId: row.id,
-      metadata: { isDefault: true },
-      ...(requestId === undefined ? {} : { requestId }),
-    });
+    await this.record(tx, actor, row, 'guest_link.create', { isDefault: true }, requestId);
     return row;
   }
 
@@ -79,6 +90,171 @@ export class GuestLinksService {
       return [...live, ...revoked];
     });
     return { items: rows.map((row) => toGuestLinkDto(row, this.tokens)) };
+  }
+
+  /** An additional link, under the collection lock so concurrent creates respect the cap [G8]. */
+  async create(
+    principal: Principal,
+    collectionId: string,
+    body: CreateGuestLinkRequest,
+    requestId?: string,
+  ): Promise<GuestLink> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      await this.lockOwnedCollection(tx, principal, collectionId);
+      const live = await tx.guestLink.count({
+        where: { collectionId, isDefault: false, status: { not: 'REVOKED' } },
+      });
+      if (live >= this.limits.forCollection({ id: collectionId }).guestLinks) {
+        throw new AppError('GUEST_LINK_LIMIT_REACHED', 409);
+      }
+      const created = await this.insert(tx, collectionId, {
+        isDefault: false,
+        label: body.label,
+        permissions: body.permissions,
+      });
+      await this.record(
+        tx,
+        principal,
+        created,
+        'guest_link.create',
+        { isDefault: false },
+        requestId,
+      );
+      return created;
+    });
+    return toGuestLinkDto(row, this.tokens);
+  }
+
+  /** Label and permissions; last write wins. Guests see the change on their next request. */
+  async update(
+    principal: Principal,
+    linkId: string,
+    body: UpdateGuestLinkRequest,
+    requestId?: string,
+  ): Promise<GuestLink> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const before = await this.findOwnedLink(tx, principal, linkId);
+      if (before.status === 'REVOKED') throw new AppError('LINK_REVOKED', 409);
+      if (before.isDefault && body.label !== undefined) {
+        throw new AppError('VALIDATION_FAILED', 400, {
+          errors: [{ path: ['label'], message: 'The default link has no label' }],
+        });
+      }
+      const { count } = await tx.guestLink.updateMany({
+        where: { id: linkId, status: { not: 'REVOKED' } },
+        data: {
+          ...(body.label === undefined ? {} : { label: body.label }),
+          ...(body.permissions ?? {}),
+        },
+      });
+      // Revoked by a concurrent request after the read above.
+      if (count === 0) throw new AppError('LINK_REVOKED', 409);
+      const after = await tx.guestLink.findUniqueOrThrow({ where: { id: linkId } });
+      const from = permissionsOf(before);
+      const to = permissionsOf(after);
+      await this.record(
+        tx,
+        principal,
+        after,
+        'guest_link.update',
+        {
+          fromCanUploadFiles: from.canUploadFiles,
+          fromCanSubmitText: from.canSubmitText,
+          fromCanViewGallery: from.canViewGallery,
+          fromCanDeleteOwn: from.canDeleteOwn,
+          toCanUploadFiles: to.canUploadFiles,
+          toCanSubmitText: to.canSubmitText,
+          toCanViewGallery: to.canViewGallery,
+          toCanDeleteOwn: to.canDeleteOwn,
+          labelChanged: before.label !== after.label,
+        },
+        requestId,
+      );
+      return after;
+    });
+    return toGuestLinkDto(row, this.tokens);
+  }
+
+  /** Pause: `ACTIVE` → `INACTIVE`. Idempotent; a revoked link → 409. */
+  deactivate(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+    return this.transition(principal, linkId, 'ACTIVE', 'INACTIVE', requestId);
+  }
+
+  /** Resume: `INACTIVE` → `ACTIVE`. Idempotent; a revoked link → 409. */
+  activate(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+    return this.transition(principal, linkId, 'INACTIVE', 'ACTIVE', requestId);
+  }
+
+  /**
+   * Terminal, additional links only (the default is rotated instead). The token ciphertext is
+   * wiped, so a revoked token is not stored at all [G1]. Revoking again is a no-op.
+   */
+  async revoke(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const link = await this.findOwnedLink(tx, principal, linkId);
+      if (link.isDefault) throw new AppError('DEFAULT_LINK_NOT_REVOCABLE', 409);
+      const { count } = await tx.guestLink.updateMany({
+        where: { id: linkId, status: { not: 'REVOKED' } },
+        data: revoked(),
+      });
+      const after = await tx.guestLink.findUniqueOrThrow({ where: { id: linkId } });
+      if (count === 1) {
+        await this.record(
+          tx,
+          principal,
+          after,
+          'guest_link.revoke',
+          { fromStatus: link.status, toStatus: 'REVOKED' },
+          requestId,
+        );
+      }
+      return after;
+    });
+    return toGuestLinkDto(row, this.tokens);
+  }
+
+  /**
+   * Replaces the default link's token: the old link is revoked and a new one keeps its
+   * permissions and status [G7]. Only when the live default is still `expectedLinkId`, so a
+   * retried, doubled or stale request returns the current default without rotating twice.
+   */
+  async rotateDefault(
+    principal: Principal,
+    collectionId: string,
+    body: RotateDefaultLinkRequest,
+    requestId?: string,
+  ): Promise<GuestLink> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      await this.lockOwnedCollection(tx, principal, collectionId);
+      const current = await tx.guestLink.findFirst({
+        where: { collectionId, isDefault: true, status: { not: 'REVOKED' } },
+      });
+      if (current === null) return this.createDefault(tx, collectionId, 'system');
+      if (current.id !== body.expectedLinkId) return current;
+
+      // Revoke first, so the partial unique index never sees two live defaults.
+      await tx.guestLink.update({ where: { id: current.id }, data: revoked() });
+      const replacement = await this.insert(tx, collectionId, {
+        isDefault: true,
+        label: null,
+        permissions: permissionsOf(current),
+        status: current.status,
+      });
+      await tx.guestLink.update({
+        where: { id: current.id },
+        data: { replacedById: replacement.id },
+      });
+      await this.record(
+        tx,
+        principal,
+        replacement,
+        'guest_link.rotate',
+        { replacedLinkId: current.id },
+        requestId,
+      );
+      return replacement;
+    });
+    return toGuestLinkDto(row, this.tokens);
   }
 
   /** A link of one of the principal's collections that is not `DELETING`; otherwise 404. */
@@ -139,6 +315,57 @@ export class GuestLinksService {
         tokenKeyId,
         ...link.permissions,
       },
+    });
+  }
+
+  /** A conditional status change, audited only when it changed something. */
+  private async transition(
+    principal: Principal,
+    linkId: string,
+    from: 'ACTIVE' | 'INACTIVE',
+    to: 'ACTIVE' | 'INACTIVE',
+    requestId: string | undefined,
+  ): Promise<GuestLink> {
+    const row = await this.prisma.$transaction(async (tx) => {
+      const link = await this.findOwnedLink(tx, principal, linkId);
+      if (link.status === 'REVOKED') throw new AppError('LINK_REVOKED', 409);
+      const { count } = await tx.guestLink.updateMany({
+        where: { id: linkId, status: from },
+        data: { status: to },
+      });
+      const after = await tx.guestLink.findUniqueOrThrow({ where: { id: linkId } });
+      if (after.status === 'REVOKED') throw new AppError('LINK_REVOKED', 409);
+      if (count === 1) {
+        await this.record(
+          tx,
+          principal,
+          after,
+          to === 'INACTIVE' ? 'guest_link.deactivate' : 'guest_link.activate',
+          { fromStatus: from, toStatus: to },
+          requestId,
+        );
+      }
+      return after;
+    });
+    return toGuestLinkDto(row, this.tokens);
+  }
+
+  private record(
+    tx: Prisma.TransactionClient,
+    actor: AuditActor,
+    link: GuestLinkRow,
+    action: AuditAction,
+    metadata: Record<string, string | boolean>,
+    requestId: string | undefined,
+  ): Promise<void> {
+    return this.audit.record(tx, {
+      collectionId: link.collectionId,
+      actor,
+      action,
+      targetType: 'guest_link',
+      targetId: link.id,
+      metadata,
+      ...(requestId === undefined ? {} : { requestId }),
     });
   }
 }
