@@ -2,17 +2,32 @@ import { Injectable } from '@nestjs/common';
 import type { Principal } from '../auth/principal.js';
 import type { AuditActorType, Prisma } from '../generated/prisma/client.js';
 
-/** Extended by later slices (guest links, content, operator actions). */
+/** Extended by later slices (content, operator actions). */
 export type AuditAction =
-  'collection.create' | 'collection.archive' | 'collection.unarchive' | 'collection.delete';
+  | 'collection.create'
+  | 'collection.archive'
+  | 'collection.unarchive'
+  | 'collection.delete'
+  | 'guest_link.create'
+  | 'guest_link.update'
+  | 'guest_link.deactivate'
+  | 'guest_link.activate'
+  | 'guest_link.revoke'
+  | 'guest_link.rotate';
+
+/** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
+export type AuditActor = Principal | 'system';
 
 export interface AuditEventInput {
   collectionId?: string;
-  actor: Principal;
+  actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection';
+  targetType: 'collection' | 'guest_link';
   targetId: string;
-  /** Ids and states only: never titles, descriptions or other user content (spec §7.4). */
+  /**
+   * Ids and states only: never titles, descriptions, labels or other user content, and never
+   * tokens or URLs (spec §7.4).
+   */
   metadata?: Record<string, string | number | boolean | null>;
   requestId?: string;
 }
@@ -32,8 +47,8 @@ export class AuditService {
     await tx.auditEvent.create({
       data: {
         collectionId: event.collectionId ?? null,
-        actorType: ACTOR_TYPES[event.actor.kind],
-        actorId: event.actor.userId,
+        actorType: event.actor === 'system' ? 'SYSTEM' : ACTOR_TYPES[event.actor.kind],
+        actorId: event.actor === 'system' ? null : event.actor.userId,
         action: event.action,
         targetType: event.targetType,
         targetId: event.targetId,

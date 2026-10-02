@@ -9,7 +9,7 @@ Guests have no accounts. Links are revocable capabilities. Guests may delete the
 
 ## Decision
 
-- `GuestLink` has four permissions: `canUploadFiles`, `canSubmitText`, `canViewGallery`, `canDeleteOwn`. At least one of the first three; `canDeleteOwn` requires a contribution permission. View-only links are allowed.
+- `GuestLink` has six permissions: `canUploadPhotos`, `canUploadVideos`, `canUploadDocuments`, `canSubmitText`, `canViewGallery`, `canDeleteOwn`. At least one of the first five; `canDeleteOwn` requires a contribution permission (an upload type or text). View-only links are allowed. (Amended 2026-10-02 by the owner: the single `canUploadFiles` became three upload types, so a link can take photos and videos but not documents; existing links kept their value in all three.)
 - States: `ACTIVE`, `INACTIVE` (reversible pause), `REVOKED` (terminal). The default link can be deactivated or rotated (old → REVOKED, new → ACTIVE), never revoked without replacement. Exactly one non-revoked default link per collection (partial unique index).
 - Token: 32 random bytes, base64url. Stored as SHA-256 hash (lookup) and AES-256-GCM ciphertext (re-display to owner) with a key ID for rotation.
 - `GuestSession` belongs to the collection; `currentLinkId` records the capability in use. Opening another valid link of the same collection with a valid session cookie re-binds the session; permissions always come from the current link.

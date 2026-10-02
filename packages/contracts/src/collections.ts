@@ -3,7 +3,7 @@ import { z } from 'zod';
 // PostgreSQL text cannot store NUL, and other C0 control characters have no place in plain text.
 // Matching control characters is the point of these patterns, hence the lint exceptions.
 // eslint-disable-next-line no-control-regex
-const NO_CONTROL_CHARACTERS = /^[^\u0000-\u001f]*$/;
+export const NO_CONTROL_CHARACTERS = /^[^\u0000-\u001f]*$/;
 const NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS =
   // eslint-disable-next-line no-control-regex
   /^[^\u0000-\u0008\u000b\u000c\u000e-\u001f]*$/;
@@ -38,6 +38,8 @@ export const collectionSchema = z
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
     archivedAt: z.iso.datetime().nullable(),
+    /** The live default guest link's status; `null` until a pre-slice-2 collection gets one. */
+    defaultLinkStatus: z.enum(['ACTIVE', 'INACTIVE']).nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

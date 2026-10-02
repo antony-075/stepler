@@ -2,10 +2,12 @@
 
 import { Trash2 } from 'lucide-react';
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
-import { type MouseEvent, useEffect, useRef, useState } from 'react';
+import { type MouseEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
 import { Alert } from './alert';
 import { Button } from './button';
+import { Input } from './input';
+import { Label } from './label';
 import {
   DialogFooter,
   DialogHeader,
@@ -31,6 +33,15 @@ type ConfirmDialogProps = {
   onConfirm: () => Promise<void>;
   /** Shown in an error Alert when `onConfirm` rejects; required so a failure always has feedback. */
   errorMessage: string;
+  /**
+   * For the most dangerous actions: the confirm button stays `aria-disabled` until this exact
+   * text (e.g. the link's name) is typed. Focus starts in the field instead of on Cancel.
+   */
+  confirmPhrase?: string;
+  /** The field's label, translated, e.g. «Щоб підтвердити, введіть «Основне посилання»». */
+  confirmPhraseLabel?: string;
+  /** Replaces the destructive bin icon when the action is not a deletion (e.g. replacing a link). */
+  confirmIcon?: ReactNode;
   className?: string;
 };
 
@@ -66,7 +77,8 @@ function focusReturnTarget(
  * focus to the trigger. Initial focus goes to Cancel, never to the action. While `onConfirm` is
  * pending, both buttons are `aria-disabled` (still focusable, so focus never falls out of the
  * dialog) and inert, and Escape is ignored; a rejection keeps the dialog open with the error and
- * focus on the confirm button.
+ * focus on the confirm button. With `confirmPhrase`, focus starts in a field and the action stays
+ * `aria-disabled` until the phrase is typed exactly.
  */
 function ConfirmDialog({
   open,
@@ -79,9 +91,15 @@ function ConfirmDialog({
   destructive = false,
   onConfirm,
   errorMessage,
+  confirmPhrase,
+  confirmPhraseLabel,
+  confirmIcon,
   className,
 }: ConfirmDialogProps) {
   const [status, setStatus] = useState<Status>('idle');
+  const [typed, setTyped] = useState('');
+  const phraseId = useId();
+  const phraseRef = useRef<HTMLInputElement>(null);
   const [wasOpen, setWasOpen] = useState(open);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -94,6 +112,8 @@ function ConfirmDialog({
   // Ignores a settle that arrives after the dialog was closed or reopened.
   const attempt = useRef(0);
   const pending = status === 'pending';
+  // Typed confirmation: the action is unavailable until the phrase matches (spaces around ignored).
+  const locked = confirmPhrase !== undefined && typed.trim() !== confirmPhrase;
 
   useEffect(() => {
     const onFocusOut = (event: FocusEvent) => {
@@ -120,13 +140,16 @@ function ConfirmDialog({
   // Every opening starts clean (no stale error or spinner from the last time).
   if (open !== wasOpen) {
     setWasOpen(open);
-    if (open) setStatus('idle');
+    if (open) {
+      setStatus('idle');
+      setTyped('');
+    }
   }
 
   const handleConfirm = async (event: MouseEvent<HTMLButtonElement>) => {
     // AlertDialog.Action closes on click; the dialog closes only after `onConfirm` resolves.
     event.preventDefault();
-    if (pending) return;
+    if (pending || locked) return;
     const current = ++attempt.current;
     setStatus('pending');
     try {
@@ -163,7 +186,7 @@ function ConfirmDialog({
               document.activeElement,
               menuLeftFocusRef.current,
             );
-            cancelRef.current?.focus();
+            (confirmPhrase === undefined ? cancelRef : phraseRef).current?.focus();
           }}
           onCloseAutoFocus={(event) => {
             attempt.current += 1;
@@ -192,6 +215,23 @@ function ConfirmDialog({
               {description}
             </AlertDialogPrimitive.Description>
           </DialogHeader>
+          {confirmPhrase === undefined ? null : (
+            <div className="grid gap-2">
+              <Label htmlFor={phraseId}>{confirmPhraseLabel}</Label>
+              <Input
+                ref={phraseRef}
+                id={phraseId}
+                value={typed}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(event) => setTyped(event.target.value)}
+                onKeyDown={(event) => {
+                  // Enter confirms only once the phrase matches, like the button.
+                  if (event.key === 'Enter' && !locked) confirmRef.current?.click();
+                }}
+              />
+            </div>
+          )}
           {status === 'error' ? <Alert variant="error">{errorMessage}</Alert> : null}
           <DialogFooter>
             <AlertDialogPrimitive.Cancel asChild>
@@ -209,11 +249,13 @@ function ConfirmDialog({
                 ref={confirmRef}
                 data-slot="confirm-dialog-action"
                 variant={destructive ? 'destructive' : 'default'}
-                aria-disabled={pending || undefined}
+                aria-disabled={pending || locked || undefined}
                 onClick={(event) => void handleConfirm(event)}
               >
                 {pending ? (
                   <Spinner label={pendingLabel} className="size-4" />
+                ) : confirmIcon !== undefined ? (
+                  confirmIcon
                 ) : destructive ? (
                   // Destructive and the pencil look alike in luminance: the icon says "delete".
                   <Trash2 aria-hidden="true" />

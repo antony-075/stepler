@@ -5,6 +5,7 @@ docs/
 skills-lock.json
 pnpm-lock.yaml
 dist/
+dist-e2e/
 .next/
 coverage/
 storybook-static/

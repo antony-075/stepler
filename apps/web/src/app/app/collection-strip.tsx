@@ -26,7 +26,8 @@ const ROW = cn(
  * cover, then title, status, date and description, and the settings button on the right. Before
  * content exists (slice 7) the cover is an identity tile: the collection's initials in its own
  * tint (chosen from its id, the same on its page); once it has content the newest photo
- * replaces the tile. No counts, QR or link actions yet: guest links arrive in slice 2 (plan D6).
+ * replaces the tile. Under the meta, the default guest link's state (slice 2); sharing itself
+ * lives on the collection page, so a row stays one link plus settings.
  *
  * Cover left, settings right at every width (cover 56px on phones, 64px from `sm`). On phones
  * the meta and description run under the settings button too, so the date is not squeezed
@@ -112,6 +113,9 @@ function CollectionSummary({
             <span className="text-sm text-muted-foreground">{t('noContentYet')}</span>
           )}
         </p>
+        {archived || collection.defaultLinkStatus === null ? null : (
+          <LinkStatus status={collection.defaultLinkStatus} />
+        )}
         {collection.description !== null && !archived ? (
           <p className="line-clamp-2 text-sm leading-[1.45] whitespace-pre-line text-muted-foreground [overflow-wrap:anywhere]">
             {collection.description}
@@ -119,6 +123,31 @@ function CollectionSummary({
         ) : null}
       </div>
     </>
+  );
+}
+
+/**
+ * The default guest link's state (§6.5): «● Посилання активне» / «◌ Посилання призупинене».
+ * The dot (filled success, hollow warning) is decoration; the words carry the state. Absent for
+ * archived rows and for collections whose default link was never ensured (pre-slice-2, G4).
+ */
+function LinkStatus({ status }: { status: 'ACTIVE' | 'INACTIVE' }) {
+  const t = useTranslations('collections');
+  const active = status === 'ACTIVE';
+  return (
+    <p
+      data-slot="collection-link-status"
+      className="flex items-center gap-2 text-sm text-muted-foreground"
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          'size-2 shrink-0 rounded-full',
+          active ? 'bg-success' : 'border-[1.5px] border-warning',
+        )}
+      />
+      {active ? t('linkActive') : t('linkPaused')}
+    </p>
   );
 }
 

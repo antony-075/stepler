@@ -6,7 +6,7 @@
 //   limit is a sentence, not a KPI.
 // - Active collections are rows of one white sheet (`CollectionStrip`), each row one link: the
 //   collection's cover (its initials in its own tint until it has content), title, status and
-//   date; no counts, no QR or link buttons that do not work yet (plan D6, slice 2).
+//   date and the default link's state; no counts yet. Sharing (QR, copy) is on the collection page.
 // - The archive follows as its own titled list of compact rows without strips, on the page
 //   itself behind a dashed edge: set apart by shape, not by a second colour.
 // - Empty is an invitation, centred: a tinted tile with an icon (the same mark as an empty

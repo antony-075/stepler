@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { AdminPage } from '@/components/admin-page';
 import { CollectionSettings } from './collection-settings';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,10 +15,8 @@ export default async function CollectionSettingsPage({
 }) {
   const { id } = await params;
   return (
-    <main className="stepler-container pt-5 pb-16 lg:pt-8 lg:pb-20">
-      <div className="mx-auto max-w-[640px]">
-        <CollectionSettings id={id} />
-      </div>
-    </main>
+    <AdminPage>
+      <CollectionSettings id={id} />
+    </AdminPage>
   );
 }

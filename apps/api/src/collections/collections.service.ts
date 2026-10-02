@@ -12,9 +12,14 @@ import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { Prisma, type Collection as CollectionRow } from '../generated/prisma/client.js';
+import { GuestLinksService } from '../guest-access/guest-links.service.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
-import { toCollectionDto } from './collection-dto.js';
+import {
+  type CollectionWithDefaultLink,
+  toCollectionDto,
+  WITH_DEFAULT_LINK_STATUS,
+} from './collection-dto.js';
 
 const DAY_MS = 24 * 3600_000;
 
@@ -26,6 +31,7 @@ export class CollectionsService {
     private readonly limits: LimitsService,
     private readonly usage: UsageService,
     private readonly audit: AuditService,
+    private readonly guestLinks: GuestLinksService,
   ) {}
 
   /** Daily cap first, then the active limit, both under the owner's row lock (spec §10.3). */
@@ -68,7 +74,9 @@ export class CollectionsService {
         metadata: { toStatus: 'ACTIVE' },
         ...(requestId === undefined ? {} : { requestId }),
       });
-      return toCollectionDto(row);
+      // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
+      const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
+      return toCollectionDto({ ...row, guestLinks: [{ status: link.status }] });
     });
   }
 
@@ -95,6 +103,7 @@ export class CollectionsService {
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: query.limit + 1,
+      include: WITH_DEFAULT_LINK_STATUS,
     });
     const items = rows.slice(0, query.limit);
     const last = items.at(-1);
@@ -121,6 +130,7 @@ export class CollectionsService {
           ...(body.title === undefined ? {} : { title: body.title }),
           ...(body.description === undefined ? {} : { description: body.description }),
         },
+        include: WITH_DEFAULT_LINK_STATUS,
       });
       return toCollectionDto(row);
     } catch (error) {
@@ -235,9 +245,10 @@ export class CollectionsService {
     id: string,
     userId: string,
     tx: Prisma.TransactionClient = this.prisma,
-  ): Promise<CollectionRow> {
+  ): Promise<CollectionWithDefaultLink> {
     const row = await tx.collection.findFirst({
       where: { id, ownerId: userId, status: { not: 'DELETING' } },
+      include: WITH_DEFAULT_LINK_STATUS,
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
     return row;

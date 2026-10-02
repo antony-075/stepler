@@ -1,5 +1,8 @@
-/** Query keys whose values are credentials: magic-link/OAuth tokens and S3 signatures. */
-const SECRET_QUERY_KEY = /^(token|code|state|x-amz-.*)$/i;
+/** Query keys whose values are credentials: magic-link/OAuth/guest-link tokens, S3 signatures. */
+const SECRET_QUERY_KEY = /^(token|code|state|linkToken|x-amz-.*)$/i;
+
+/** A guest link page path, `/g/<token>` (optionally under a locale prefix), e.g. in a Referer. */
+const GUEST_LINK_PATH = /\/g\/[^/?#]+/g;
 
 export const REDACTED = '[REDACTED]';
 
@@ -7,7 +10,8 @@ export const REDACTED = '[REDACTED]';
  * Replaces secret query values in a request URL for logging. Works on the raw string so the
  * rest of the URL is logged exactly as received.
  */
-export function redactUrl(url: string): string {
+export function redactUrl(raw: string): string {
+  const url = raw.replace(GUEST_LINK_PATH, `/g/${REDACTED}`);
   const queryStart = url.indexOf('?');
   if (queryStart === -1) return url;
   const query = url

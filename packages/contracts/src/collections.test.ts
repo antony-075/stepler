@@ -95,10 +95,23 @@ describe('collectionSchema', () => {
     createdAt: '2026-10-01T10:00:00.000Z',
     updatedAt: '2026-10-01T10:00:00.000Z',
     archivedAt: null,
+    defaultLinkStatus: 'ACTIVE',
   };
 
   test('accepts a collection', () => {
     expect(collectionSchema.parse(collection)).toEqual(collection);
+  });
+
+  test('defaultLinkStatus is ACTIVE, INACTIVE or null (no live default yet)', () => {
+    expect(collectionSchema.safeParse({ ...collection, defaultLinkStatus: null }).success).toBe(
+      true,
+    );
+    expect(
+      collectionSchema.safeParse({ ...collection, defaultLinkStatus: 'INACTIVE' }).success,
+    ).toBe(true);
+    expect(
+      collectionSchema.safeParse({ ...collection, defaultLinkStatus: 'REVOKED' }).success,
+    ).toBe(false);
   });
 
   test('rejects DELETING and internal fields', () => {

@@ -13,7 +13,13 @@
     "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
     "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
     "INTERNAL": "Something went wrong. Try again.",
-    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room."
+    "COLLECTION_LIMIT_REACHED": "You've reached the limit of active collections. Archive one to make room.",
+    "GUEST_LINK_LIMIT_REACHED": "This collection has reached its link limit. Revoke one you no longer need.",
+    "LINK_REVOKED": "This link has been revoked.",
+    "LINK_INACTIVE": "This link is paused.",
+    "DEFAULT_LINK_NOT_REVOCABLE": "The main link can't be revoked. Replace it instead.",
+    "COLLECTION_ARCHIVED": "This collection is closed.",
+    "COLLECTION_UNAVAILABLE": "This collection is unavailable."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -201,7 +207,9 @@
       "share": "Share the link or QR code",
       "collect": "Guests add photos, videos and messages"
     },
-    "noContentYet": "Nothing added yet"
+    "noContentYet": "Nothing added yet",
+    "linkActive": "Link active",
+    "linkPaused": "Link paused"
   },
   "collection": {
     "pageTitle": "Collection",
@@ -246,6 +254,178 @@
       "deletePending": "Deleting",
       "deleted": "Collection deleted"
     },
-    "contentEmptyText": "Once you share the link, guests can add their photos and videos."
+    "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
+    "nav": {
+      "label": "Collection sections",
+      "content": "Content",
+      "links": "Links"
+    },
+    "share": "Share",
+    "shareLink": "Share the link"
+  },
+  "guestLinks": {
+    "permissions": {
+      "photos": "photos",
+      "videos": "videos",
+      "documents": "documents",
+      "texts": "wishes",
+      "add": "add {items}",
+      "seeAll": "see what every guest added",
+      "ownOnly": "see only their own",
+      "both": "{add}, and {see}",
+      "viewOnly": "View only",
+      "guestsCan": "Guests can {what}",
+      "allowed": "The organiser allows you to {what}"
+    }
+  },
+  "share": {
+    "title": "Share with guests",
+    "description": "Guests open the link or scan the QR code, no sign-up needed.",
+    "pausedNotice": "The link is paused: guests can’t open it.",
+    "manage": "All links",
+    "close": "Close",
+    "loading": "Loading the link",
+    "loadFailed": "Couldn’t load the link.",
+    "retry": "Try again"
+  },
+  "links": {
+    "pageTitle": "Links",
+    "loading": "Loading links",
+    "loadFailed": "Couldn’t load the links.",
+    "retry": "Try again",
+    "defaultTitle": "Main link",
+    "defaultMeta": "Every guest gets this one: on invitations, on the tables, in messages.",
+    "createdOn": "Created {date}",
+    "status": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Paused"
+    },
+    "archivedNotice": "The collection is archived: links don’t work until you unarchive it.",
+    "share": {
+      "title": "Share",
+      "description": "Show the QR code at the entrance or on the tables, or send the link.",
+      "link": "Link",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Couldn’t copy. The link is selected: copy it with your keyboard.",
+      "qrLabel": "QR code for “{name}”",
+      "download": "Download QR",
+      "png": "PNG for print",
+      "svg": "SVG",
+      "downloadFailed": "Couldn’t create the QR file. Try again.",
+      "hidden": "The link can’t be shown. Replace it in the danger zone below to get a new one.",
+      "hiddenExtra": "The link can’t be shown. Revoke it in the danger zone below and create a new one.",
+      "resume": "Resume"
+    },
+    "permissions": {
+      "title": "What guests can do",
+      "description": "Changes apply once you save, for everyone who opens this link.",
+      "addLegend": "Can add",
+      "addPhotos": "Photos",
+      "addVideos": "Videos",
+      "addDocuments": "Documents",
+      "addTexts": "Wishes",
+      "seeLegend": "What they see",
+      "seeOwn": "Only their own",
+      "seeOwnHint": "Each guest sees only what they added.",
+      "seeAll": "What every guest added",
+      "seeAllHint": "Guests see everything the others added.",
+      "viewOnly": "Guests can’t add anything, only look.",
+      "invalid": "That leaves guests nothing to do: let them add something or see what every guest added.",
+      "unsaved": "You have unsaved changes.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Permissions saved",
+      "cancel": "Cancel"
+    },
+    "state": {
+      "title": "Status",
+      "description": "Pause the link to stop guests opening it for a while.",
+      "switch": "The link works",
+      "activeHint": "Guests open the link and use it.",
+      "pausedHint": "Guests who open the link see “This link is paused”. Nothing is deleted: turn it back on when you’re ready.",
+      "paused": "Link paused",
+      "resumed": "Link resumed"
+    },
+    "danger": {
+      "title": "Danger zone",
+      "cancel": "Cancel"
+    },
+    "rotate": {
+      "description": "Creates a new link and a new QR code. The old link and any printed QR code stop working at once.",
+      "button": "Replace link",
+      "confirmTitle": "Replace “{name}”?",
+      "confirmText": "The old link and any printed QR code stop working at once. Guests who have the old one will need the new one. This can’t be undone.",
+      "confirmPaused": "The new link will be paused too.",
+      "phrase": "To confirm, type “{name}”",
+      "confirm": "Replace",
+      "pending": "Replacing",
+      "done": "Link replaced"
+    },
+    "revoke": {
+      "description": "The link stops working for good. It can’t be brought back; you can only create a new one.",
+      "button": "Revoke link",
+      "confirmTitle": "Revoke “{name}”?",
+      "confirmText": "The link and its QR code stop working for good. They can’t be brought back; you can only create a new link.",
+      "phrase": "To confirm, type “{name}”",
+      "confirm": "Revoke",
+      "pending": "Revoking",
+      "done": "Link revoked"
+    },
+    "extra": {
+      "title": "Additional links",
+      "description": "Separate links with their own permissions, for example for a photographer or for viewing only after the event.",
+      "new": "New link"
+    },
+    "revoked": {
+      "title": "Revoked",
+      "description": "These links no longer work. They stay here as a record.",
+      "on": "Revoked {date}"
+    },
+    "create": {
+      "title": "New link",
+      "description": "Name the link and choose what guests can do. Only you see the name.",
+      "label": "Name",
+      "labelHint": "Up to {max} characters.",
+      "labelPlaceholder": "Photographer",
+      "labelRequired": "Enter a name",
+      "labelTooLong": "The name must be at most {max} characters",
+      "submit": "Create",
+      "pending": "Creating…",
+      "done": "Link created",
+      "close": "Close",
+      "cancel": "Cancel",
+      "limitTitle": "No more links can be created"
+    }
+  },
+  "guestLink": {
+    "loading": "Opening the collection",
+    "retry": "Try again",
+    "soonAdd": "Soon you’ll be able to add photos here.",
+    "soonView": "Soon you’ll be able to see what guests added here.",
+    "paused": {
+      "title": "This link is paused",
+      "text": "The organiser has paused adding for now."
+    },
+    "revoked": {
+      "title": "This link no longer works",
+      "text": "Ask the organiser for a new one."
+    },
+    "archived": {
+      "title": "This collection is closed",
+      "text": "The organiser no longer takes photos and videos."
+    },
+    "unavailable": {
+      "title": "This collection is unavailable",
+      "text": "Contact the organiser."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "text": "Check the link: it may have a typo."
+    },
+    "rateLimited": {
+      "title": "Too many tries: try again in a minute"
+    },
+    "failed": "Couldn’t open the collection. Check your connection and try again."
   }
 }

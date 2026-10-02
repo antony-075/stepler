@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
 import { Button } from './button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from './dialog';
@@ -9,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 import { Input } from './input';
+import { RotatingQr } from './qr-frame';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Toaster, ToastProvider, useToast } from './toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
@@ -196,5 +198,36 @@ export const Tabs_: Story = {
     await expect(getComputedStyle(path).transitionDuration).toBe('0s');
     await expect(getComputedStyle(path).strokeDashoffset).toBe('0px');
     await expectStill(canvas.getByRole('tablist'));
+  },
+};
+
+function RotatingQrDemo() {
+  const [key, setKey] = useState('a');
+  return (
+    <div className="grid justify-items-start gap-4">
+      <div className="size-[200px] rounded-frame border bg-[#FFFFFF] p-2">
+        <RotatingQr rotationKey={key}>
+          <span role="img" aria-label={`QR ${key}`} className="block bg-foreground" />
+        </RotatingQr>
+      </div>
+      <Button variant="outline" onClick={() => setKey('b')}>
+        Replace link
+      </Button>
+    </div>
+  );
+}
+
+/** RotatingQr: the new code is there at once, with no cross-out stroke or crossfade. */
+export const RotatingQr_: Story = {
+  name: 'RotatingQr',
+  render: () => <RotatingQrDemo />,
+  play: async ({ canvas, canvasElement }) => {
+    await expectReducedMotion();
+    await userEvent.click(canvas.getByRole('button', { name: 'Replace link' }));
+    await expect(canvas.getByRole('img', { name: 'QR b' })).toBeVisible();
+    await expect(canvas.queryByRole('img', { name: 'QR a' })).toBeNull();
+    const leaving = canvasElement.querySelector('[data-slot=rotating-qr-leaving]');
+    if (leaving !== null) await expect(getComputedStyle(leaving).display).toBe('none');
+    await expectStill(canvasElement.querySelector('[data-slot=rotating-qr]')!);
   },
 };

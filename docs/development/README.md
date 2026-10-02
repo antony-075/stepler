@@ -73,7 +73,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
-| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script) |
+| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
@@ -144,6 +144,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
 | `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
+| `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
+| `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |

@@ -22,4 +22,15 @@ describe('redactUrl', () => {
   test('redacts repeated keys and encoded values', () => {
     expect(redactUrl('/p?token=a%20b&token=c')).toBe('/p?token=[REDACTED]&token=[REDACTED]');
   });
+
+  test('redacts a guest link token', () => {
+    expect(redactUrl('/x?linkToken=abc&page=2')).toBe('/x?linkToken=[REDACTED]&page=2');
+  });
+
+  test('redacts the token in a guest link path (a Referer from /g/<token>)', () => {
+    expect(redactUrl('http://localhost:3000/g/abcDEF_-123?x=1')).toBe(
+      'http://localhost:3000/g/[REDACTED]?x=1',
+    );
+    expect(redactUrl('/en/g/abc')).toBe('/en/g/[REDACTED]');
+  });
 });

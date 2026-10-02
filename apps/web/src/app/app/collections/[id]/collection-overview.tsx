@@ -2,7 +2,6 @@
 
 import type { Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
-import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
@@ -10,9 +9,8 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Settings } from 'lucide-react';
-import Link from 'next/link';
-import { useFormatter, useTranslations } from 'next-intl';
+import { ImagePlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { isApiError } from '@/api/client';
 import {
   collectionKey,
@@ -24,6 +22,8 @@ import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
 import { collectionTint } from '../../collection-tint';
 import { CollectionNotFound } from '../collection-not-found';
+import { CollectionHeader } from './collection-header';
+import { ShareButton } from './share-dialog';
 import { useCollection } from '../use-collection';
 
 /**
@@ -32,8 +32,9 @@ import { useCollection } from '../use-collection';
  * collection name at 44px would push the sheet off the first screen), status and date, the
  * description, the archive state with its one action, and the empty sheet: centred and quiet, a
  * tile in the collection's tint (the same as its cover on the dashboard) with an icon, what will
- * appear there and, unless archived, how. No Share or QR button yet: they would not work.
- * Settings are one outline button away in the header.
+ * appear there and, unless archived, how, with «Поділитися посиланням» (outline: the same Share dialog
+ * as the header's ink «Поділитися», §6.6). The section nav under the header leads to the links
+ * (G9); settings are a header button.
  */
 export function CollectionOverview({ id }: { id: string }) {
   const t = useTranslations('collection');
@@ -66,51 +67,31 @@ export function CollectionOverview({ id }: { id: string }) {
   return <Overview collection={query.data} />;
 }
 
-// The collection's name is the page's h1 at the admin scale, but capped at 32px from `xl`
-// (DESIGN-SYSTEM.md §3.2: "название в коллекции 32").
-const COLLECTION_TITLE = 'xl:[&_[data-slot=page-header-title]]:text-[2rem]';
-
 function Overview({ collection }: { collection: Collection }) {
   const t = useTranslations('collection');
-  const tList = useTranslations('collections');
-  const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
-  const status = tList(`status.${collection.status}`);
-  const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
-  const dated = archived ? tList('archivedOn', { date }) : tList('createdOn', { date });
 
   return (
     <>
-      <div className="grid gap-4">
-        <PageHeader
-          size="compact"
-          className={COLLECTION_TITLE}
-          back={<BackLink href="/app">{t('back')}</BackLink>}
-          title={collection.title}
-          description={
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-                {status}
-              </Badge>
-              <span className="text-sm tabular-nums">{dated}</span>
-            </span>
-          }
-          actions={
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/app/collections/${collection.id}/settings`} className="no-underline">
-                <Settings aria-hidden="true" />
-                {t('settings')}
-              </Link>
-            </Button>
-          }
-        />
+      <CollectionHeader
+        collection={collection}
+        current="content"
+        actions={
+          // Archived, guests can't open it: the notice below says so, so there is nothing to share.
+          archived ? undefined : (
+            <ShareButton collection={collection} className="w-full sm:w-auto">
+              {t('share')}
+            </ShareButton>
+          )
+        }
+      >
         {/* Below the header, not inside it: the actions stay level with the title. */}
         {collection.description !== null ? (
           <p className="max-w-[60ch] whitespace-pre-line [overflow-wrap:anywhere]">
             {collection.description}
           </p>
         ) : null}
-      </div>
+      </CollectionHeader>
       {archived ? <ArchivedNotice id={collection.id} /> : null}
       <section aria-labelledby="collection-content" className="grid gap-3">
         <h2 id="collection-content" className="type-h3">
@@ -130,6 +111,11 @@ function Overview({ collection }: { collection: Collection }) {
               <p className="text-pretty text-muted-foreground">{t('contentEmptyText')}</p>
             )}
           </div>
+          {archived ? null : (
+            <ShareButton collection={collection} variant="outline" className="w-full sm:w-auto">
+              {t('shareLink')}
+            </ShareButton>
+          )}
         </Panel>
       </section>
     </>

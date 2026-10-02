@@ -20,6 +20,14 @@ const config: NextConfig = {
         source: '/auth/verify',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
+      {
+        // A guest link's token is in the URL (spec §4): no Referer, and never indexed.
+        source: '/g/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+        ],
+      },
     ]);
   },
 };
