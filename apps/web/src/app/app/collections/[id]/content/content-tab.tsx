@@ -3,8 +3,11 @@
 // The collection's «Вміст» tab (DESIGN-SYSTEM.md §6.6; [C5], [C6], [O3]).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - A tool, not a showcase: one toolbar row (type chips with counts, the order select), then the
-//   contact sheet. Frames fill the column (3 columns at 320px up to 12 on wide screens); the
-//   admin sees every number and the contributor's name.
+//   contact sheet straight on the page (no white panel around it). Frames are large enough to
+//   read (3 columns on a phone, about 170px on a desktop; 1–3 frames larger still); the admin
+//   sees every number and the contributor's name.
+// - A type no live link lets guests add, with nothing of it, is a locked chip with the reason
+//   (owner review 2026-10-03); a type with frames always stays open.
 // - Newest first by default (during an event the admin wants what just arrived); «За номером
 //   кадру» for the archive view. Both, and the type, live in the URL (`?kind=text&sort=frame`),
 //   and so does the open frame (`?frame=86`, Back closes the viewer).
@@ -33,7 +36,12 @@ import {
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
-import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { ImagePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -46,6 +54,7 @@ import {
   listContent,
 } from '@/api/content';
 import { collectionsListKey } from '@/api/collections';
+import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { collectionTint } from '../../../collection-tint';
 import {
   filterOf,
@@ -53,6 +62,7 @@ import {
   KIND_FILTERS,
   type KindFilter,
   kindFromParam,
+  lockedFilters,
   sortFromParam,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
@@ -85,6 +95,12 @@ export function ContentTab({ collection }: { collection: Collection }) {
     getNextPageParam: (last: AdminContentPage) => last.nextCursor,
   });
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  // The same query as the «Посилання» tab: what live links let guests add locks empty chips.
+  const links = useQuery({
+    queryKey: guestLinksKey(collection.id),
+    queryFn: () => listGuestLinks(collection.id),
+  });
+  const locked = lockedFilters(links.data?.items, counts.data);
 
   /** Updates the URL; `null` removes a parameter. */
   function navigate(changes: Record<string, string | null>, mode: 'push' | 'replace') {
@@ -147,6 +163,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
+      {/* One toolbar row from md: chips left, the order right, both 36px (44px on touch) on one
+          centre line. */}
       <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
           <ToggleGroup
@@ -157,7 +175,16 @@ export function ContentTab({ collection }: { collection: Collection }) {
             }
           >
             {KIND_FILTERS.map((value) => (
-              <ToggleGroupItem key={value} value={value} count={countOf(value)}>
+              <ToggleGroupItem
+                key={value}
+                value={value}
+                count={countOf(value)}
+                disabledReason={
+                  value !== 'all' && locked.has(value) && filter !== value
+                    ? t(`filterLocked.${value}`)
+                    : undefined
+                }
+              >
                 {t(`filter.${value}`)}
               </ToggleGroupItem>
             ))}
@@ -173,7 +200,10 @@ export function ContentTab({ collection }: { collection: Collection }) {
               navigate({ sort: value === 'frame' ? 'frame' : null, frame: null }, 'replace')
             }
           >
-            <SelectTrigger aria-labelledby={sortId} className="h-11 w-full min-w-44 md:w-52">
+            <SelectTrigger
+              aria-labelledby={sortId}
+              className="h-11 w-full min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent align="end">
@@ -208,8 +238,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
       {list.isPending ? (
         <div role="status" aria-busy="true">
           <span className="sr-only">{t('loading')}</span>
-          <div className="grid grid-cols-3 gap-px sm:grid-cols-5 lg:grid-cols-7">
-            {Array.from({ length: 14 }, (_, i) => (
+          <div className="grid grid-cols-3 gap-px sm:grid-cols-4 lg:grid-cols-6">
+            {Array.from({ length: 12 }, (_, i) => (
               <Skeleton key={i} className="aspect-square" />
             ))}
           </div>

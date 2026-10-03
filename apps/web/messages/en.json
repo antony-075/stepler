@@ -335,6 +335,12 @@
       "document": "Documents",
       "text": "Texts"
     },
+    "filterLocked": {
+      "photo": "No link lets guests add photos",
+      "video": "No link lets guests add videos",
+      "document": "No link lets guests add documents",
+      "text": "No link lets guests write wishes"
+    },
     "sortLabel": "Order",
     "sort": {
       "newest": "Newest first",

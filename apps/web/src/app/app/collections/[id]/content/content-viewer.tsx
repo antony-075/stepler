@@ -7,14 +7,16 @@ import { useToast } from '@stepler/ui/components/toast';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { cn } from '@stepler/ui/lib/utils';
-import { ImageIcon, Trash2 } from 'lucide-react';
+import { ImageIcon, Quote, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 
 /**
- * One frame full screen for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): the number,
- * time and contributor's name on top, «Видалити» beside «Закрити», ←/→ across the frames already
- * loaded in the grid. A wish is shown whole at 20px (it scrolls in its own focusable box); files
+ * One frame for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): full screen on phones and
+ * tablets, a large centred dialog from `lg`. The number, date and contributor's name on top,
+ * «Видалити» beside «Закрити», ←/→ across the frames already loaded in the grid. A wish is a
+ * centred card in large type (20–24px, at most 60 characters a line; a long one scrolls in its
+ * own focusable box); files
  * show the preview placeholder until uploads and processing exist. Deleting asks first, in plain
  * words: guests stop seeing it and its number is never reused.
  */
@@ -43,7 +45,12 @@ export function ContentViewer({
 
   if (item === undefined) return null;
   const created = new Date(item.createdAt);
-  const time = format.dateTime(created, { hour: '2-digit', minute: '2-digit' });
+  const when = format.dateTime(created, {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   const name = item.contributorName ?? t('noName');
   const number = formatFrameNumber(item.frameNo);
 
@@ -59,7 +66,7 @@ export function ContentViewer({
             <span translate="no" className="font-medium">
               {number}
             </span>
-            <span className="text-muted-foreground">{time}</span>
+            <span className="shrink-0 text-muted-foreground">{when}</span>
             <span className="truncate font-sans [overflow-wrap:anywhere]">{name}</span>
           </span>
         }
@@ -98,16 +105,22 @@ export function ContentViewer({
         }
       >
         {item.kind === 'TEXT' ? (
-          <div
-            // A long wish scrolls in its own box; keyboard users scroll it too.
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-            tabIndex={0}
-            className={cn(
-              'max-h-full w-full max-w-[60ch] overflow-y-auto rounded-control px-2 text-xl leading-normal whitespace-pre-line [overflow-wrap:anywhere]',
-              focusRing,
-            )}
-          >
-            {item.text}
+          // On phones the card keeps clear of the previous/next buttons at the stage's edges.
+          <div className="flex size-full min-h-0 min-w-0 items-center justify-center max-sm:px-12">
+            <div
+              // A long wish scrolls in its own box; keyboard users scroll it too.
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+              tabIndex={0}
+              className={cn(
+                'max-h-full w-fit min-w-[min(100%,20rem)] max-w-[min(100%,60ch)] overflow-y-auto rounded-dialog border border-[rgb(255_255_255/0.1)] bg-[rgb(255_255_255/0.05)] px-6 py-7 sm:px-10 sm:py-9',
+                focusRing,
+              )}
+            >
+              <Quote aria-hidden="true" className="mb-4 size-6 text-muted-foreground" />
+              <p className="text-xl leading-[1.55] text-pretty whitespace-pre-line [overflow-wrap:anywhere] sm:text-2xl sm:leading-[1.5]">
+                {item.text}
+              </p>
+            </div>
           </div>
         ) : (
           <div className="grid justify-items-center gap-2 text-muted-foreground">
