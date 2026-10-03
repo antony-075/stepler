@@ -4,13 +4,11 @@ import type { Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
-import { Panel } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
-import { TintTile } from '@stepler/ui/components/tint-tile';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, Images, Link2, SlidersHorizontal } from 'lucide-react';
+import { Images, Link2, SlidersHorizontal } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -21,12 +19,13 @@ import {
   unarchiveCollection,
   useInvalidateCollections,
 } from '@/api/collections';
+import { contentCounts, contentCountsKey } from '@/api/content';
 import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
-import { collectionTint } from '../../collection-tint';
 import { CollectionNotFound } from '../collection-not-found';
 import { CollectionHeader } from './collection-header';
+import { ContentTab } from './content/content-tab';
 import { CollectionSettingsPanel } from './settings/collection-settings';
 import { LinksList } from './links/links-list';
 import { LinksSheet, useLinksSheet } from './links/links-sheet';
@@ -35,9 +34,8 @@ import { useCollection } from '../use-collection';
 /**
  * The collection's page (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02). The header (title,
  * status, date, «Дії»), the description, the archive state with its one action, then a
- * segmented control between «Вміст» and «Посилання» (`?tab=links` in the URL). Until content
- * exists (slice 7) «Вміст» is one quiet centred panel: a tile in the collection's tint, what will
- * appear there and, unless archived, how (no button: sharing is per link, on the other tab).
+ * segmented control between «Вміст» (the frames, `ContentTab`, with their count) and «Посилання»
+ * (`?tab=links` in the URL).
  * A link's settings open in a sheet (`?link=`).
  */
 export function CollectionOverview({ id }: { id: string }) {
@@ -96,6 +94,12 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
   });
   const sheet = useLinksSheet(collection.id);
   const live = links.data?.items.filter((link) => link.status !== 'REVOKED').length;
+  // Shared with the «Вміст» tab, which polls it while shown [C6].
+  const counts = useQuery({
+    queryKey: contentCountsKey(collection.id),
+    queryFn: () => contentCounts(collection.id),
+  });
+  const contentTotal = counts.data?.total;
 
   // The tab lives in the URL (a history entry each), so refresh, Back and links keep it; an open
   // link sheet's `?link=` stays as it is.
@@ -117,16 +121,17 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
         <TabsList variant="segmented" aria-label={t('tabs.label')}>
           <TabsTrigger value="content">
-            <Images aria-hidden="true" />
+            <Images aria-hidden="true" className="max-sm:hidden" />
             <span className="min-w-0 truncate">{t('tabs.content')}</span>
+            {contentTotal === undefined ? null : <TabsCount>{contentTotal}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="links">
-            <Link2 aria-hidden="true" />
+            <Link2 aria-hidden="true" className="max-sm:hidden" />
             <span className="min-w-0 truncate">{t('tabs.links')}</span>
             {live === undefined ? null : <TabsCount>{live}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="settings">
-            <SlidersHorizontal aria-hidden="true" />
+            <SlidersHorizontal aria-hidden="true" className="max-sm:hidden" />
             <span className="min-w-0 truncate">{t('tabs.settings')}</span>
           </TabsTrigger>
         </TabsList>
@@ -135,22 +140,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
             <h2 id="collection-content" className="sr-only">
               {t('content')}
             </h2>
-            <Panel
-              data-slot="collection-empty"
-              // A flex column centred on its cross axis: centred in the card at every width.
-              className="items-center justify-center gap-5 px-5 py-14 text-center sm:px-8 sm:py-20 lg:py-24"
-            >
-              <TintTile tint={collectionTint(collection.id)} size="lg">
-                <ImagePlus aria-hidden="true" />
-              </TintTile>
-              <div className="grid max-w-[44ch] gap-2">
-                <h3 className="type-h3 [overflow-wrap:anywhere]">{t('contentEmpty')}</h3>
-                {/* Archived, guests can't add anything: the notice above says so. */}
-                {archived ? null : (
-                  <p className="text-pretty text-muted-foreground">{t('contentEmptyText')}</p>
-                )}
-              </div>
-            </Panel>
+            <ContentTab collection={collection} />
           </section>
         </TabsContent>
         <TabsContent value="links">

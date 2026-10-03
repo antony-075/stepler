@@ -248,7 +248,9 @@
     "showAll": "Show all",
     "showMoreArchived": "Show more from the archive",
     "card": {
-      "share": "Share"
+      "share": "Share",
+      "frames": "{count, plural, one {# frame} other {# frames}}",
+      "lastAt": "latest at {time}"
     },
     "actions": {
       "unarchiveConfirmTitle": "Unarchive “{title}”?",
@@ -326,6 +328,69 @@
       "cancel": "Cancel",
       "saved": "Saved",
       "failed": "Couldn’t save"
+    }
+  },
+  "content": {
+    "filterLabel": "Content type",
+    "filter": {
+      "all": "All",
+      "photo": "Photos",
+      "video": "Videos",
+      "document": "Documents",
+      "text": "Texts"
+    },
+    "sortLabel": "Order",
+    "sort": {
+      "newest": "Newest first",
+      "frame": "By frame number"
+    },
+    "newFrames": "{count, plural, one {# new frame} other {# new frames}}",
+    "showNew": "Show",
+    "listLabel": "Frames of the collection",
+    "loading": "Loading frames…",
+    "loadMore": "Show more",
+    "loadFailed": "Couldn’t load the frames.",
+    "retry": "Try again",
+    "emptyFilter": {
+      "photo": "No photos yet",
+      "video": "No videos yet",
+      "document": "No documents yet",
+      "text": "No texts yet"
+    },
+    "emptyFilterText": "They’ll appear here as soon as guests add them.",
+    "showAll": "Show all",
+    "kind": {
+      "PHOTO": "photo",
+      "VIDEO": "video",
+      "DOCUMENT": "document",
+      "TEXT": "wish"
+    },
+    "kindTitle": {
+      "PHOTO": "Photo",
+      "VIDEO": "Video",
+      "DOCUMENT": "Document",
+      "TEXT": "Wish"
+    },
+    "frameName": "Frame {number}, {kind}, {time}, {name}",
+    "noName": "No name",
+    "pendingPreview": "Preview on its way",
+    "viewer": {
+      "close": "Close",
+      "prev": "Previous frame",
+      "next": "Next frame",
+      "delete": "Delete",
+      "added": "Added",
+      "type": "Type",
+      "from": "From"
+    },
+    "delete": {
+      "title": "Delete frame {frame}?",
+      "text": "Guests won’t see it any more. Its number won’t be used again.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "pending": "Deleting",
+      "failed": "Couldn’t delete the frame. Try again.",
+      "done": "Frame deleted"
     }
   },
   "guestLinks": {
