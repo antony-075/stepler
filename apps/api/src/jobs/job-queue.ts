@@ -16,6 +16,11 @@ export interface EnqueueOptions {
  * same singleton key that is already queued, retrying or running makes this a no-op.
  */
 export interface JobQueue {
+  /**
+   * Resolves once the queue can send. Call it before opening the transaction that enqueues, so a
+   * first start (or a restart after the database was down) never runs inside that transaction.
+   */
+  ready(): Promise<void>;
   enqueue<N extends JobName>(
     tx: Prisma.TransactionClient,
     name: N,

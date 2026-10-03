@@ -114,6 +114,10 @@ export class PgBossClient implements OnApplicationBootstrap, OnApplicationShutdo
 export class PgBossQueue implements JobQueue {
   constructor(private readonly client: PgBossClient) {}
 
+  async ready(): Promise<void> {
+    await this.client.start();
+  }
+
   async enqueue<N extends JobName>(
     tx: Prisma.TransactionClient,
     name: N,

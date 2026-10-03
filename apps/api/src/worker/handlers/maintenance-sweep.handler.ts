@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
+import type { JobData } from '../../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../../jobs/job-queue.js';
 import { type JobHandler, WORKER_ENV } from '../job-handler.js';
 import type { WorkerEnv } from '../worker-env.js';
@@ -7,6 +8,8 @@ import type { WorkerEnv } from '../worker-env.js';
 /** Purge jobs normally run within seconds; older leftovers are lost or failed jobs. */
 const STALE_AFTER_MS = 3600_000;
 const DAY_MS = 24 * 3600_000;
+/** Sends per transaction when re-enqueueing purges. */
+const ENQUEUE_CHUNK = 50;
 
 /**
  * Hourly safety net (ADR 0009):
@@ -46,13 +49,18 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
         take,
       }),
     ]);
-    await this.prisma.$transaction(async (tx) => {
-      for (const { id } of items)
-        await this.jobs.enqueue(tx, 'content.purge', { contentItemId: id });
-      for (const { id } of collections) {
-        await this.jobs.enqueue(tx, 'collection.purge', { collectionId: id });
-      }
-    });
+    // Short transactions of a few sends each: one big one could hit the interactive-transaction
+    // timeout on a backlog. The session cleanup runs even if enqueueing fails.
+    let enqueueError: Error | undefined;
+    try {
+      await this.enqueueInChunks(items, (id) => ['content.purge', { contentItemId: id }] as const);
+      await this.enqueueInChunks(
+        collections,
+        (id) => ['collection.purge', { collectionId: id }] as const,
+      );
+    } catch (error) {
+      enqueueError = error instanceof Error ? error : new Error('enqueue failed');
+    }
     const idleSessions = await this.deleteIdleGuestSessions();
     this.logger.log({
       msg: 'maintenance.sweep done',
@@ -60,6 +68,22 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       collectionPurges: collections.length,
       idleSessionsDeleted: idleSessions,
     });
+    if (enqueueError !== undefined) throw enqueueError;
+  }
+
+  private async enqueueInChunks<N extends 'content.purge' | 'collection.purge'>(
+    rows: readonly { id: string }[],
+    job: (id: string) => readonly [N, JobData[N]],
+  ): Promise<void> {
+    for (let start = 0; start < rows.length; start += ENQUEUE_CHUNK) {
+      const chunk = rows.slice(start, start + ENQUEUE_CHUNK);
+      await this.prisma.$transaction(async (tx) => {
+        for (const { id } of chunk) {
+          const [name, data] = job(id);
+          await this.jobs.enqueue(tx, name, data);
+        }
+      });
+    }
   }
 
   /** In batches, so no statement holds many row locks for long. */

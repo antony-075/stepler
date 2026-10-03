@@ -25,6 +25,17 @@ describe('PgBossQueue (transactional enqueue, spike S7)', () => {
     await resetDatabase(prisma);
   });
 
+  test('ready starts the queue outside any transaction', async () => {
+    const freshClient = new PgBossClient(senderBossOptions(TEST_DATABASE_URL));
+    const fresh = new PgBossQueue(freshClient);
+    try {
+      await fresh.ready();
+      await fresh.ready();
+    } finally {
+      await freshClient.stop();
+    }
+  });
+
   test('a job enqueued in a transaction that rolls back does not exist', async () => {
     const contentItemId = randomUUID();
     await expect(

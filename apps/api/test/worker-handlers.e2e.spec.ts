@@ -250,6 +250,40 @@ describe('worker handlers', () => {
       expect(contentJobs.map((job) => job.data)).toEqual([{ contentItemId: oldItem.id }]);
     });
 
+    test('enqueues a backlog in short transactions', async () => {
+      const { collectionId } = await seed();
+      const deletedAt = new Date(Date.now() - 2 * HOUR_MS);
+      await prisma.contentItem.createMany({
+        data: Array.from({ length: 120 }, (_, i) => ({
+          collectionId,
+          frameNo: i + 1,
+          kind: 'TEXT' as const,
+          textBody: `#${i + 1}`,
+          processingStatus: 'NOT_REQUIRED' as const,
+          deletedAt,
+        })),
+      });
+      await sweep({ WORKER_PURGE_BATCH_SIZE: '1000' }).handle();
+      expect(await queuedJobs(prisma, 'content.purge')).toHaveLength(120);
+    });
+
+    test('still cleans up idle sessions when enqueueing fails, then reports the failure', async () => {
+      const { collectionId, linkId } = await seed();
+      await addItem(collectionId, 1, new Date(Date.now() - 2 * HOUR_MS));
+      await addSession(collectionId, linkId, new Date(Date.now() - 31 * DAY_MS));
+      const broken = {
+        ready: () => Promise.resolve(),
+        enqueue: () => Promise.reject(new Error('queue down')),
+      };
+      const handler = new MaintenanceSweepHandler(
+        prisma,
+        broken,
+        workerEnv({ GUEST_SESSION_IDLE_DAYS: '30' }),
+      );
+      await expect(handler.handle()).rejects.toThrow('queue down');
+      expect(await prisma.guestSession.count()).toBe(0);
+    });
+
     test('deletes long-idle guest sessions that contributed nothing', async () => {
       const { collectionId, linkId } = await seed();
       const longAgo = new Date(Date.now() - 31 * DAY_MS);

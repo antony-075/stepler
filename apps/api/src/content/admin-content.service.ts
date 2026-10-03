@@ -63,6 +63,8 @@ export class AdminContentService {
    * update changes the row once).
    */
   async delete(a: AccountPrincipal, id: string, requestId?: string): Promise<void> {
+    // Started outside the transaction, so a first start never runs while it holds a connection.
+    await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
       // The canonical id comes from the row: the route accepts a UUID in any case.
       const row = await tx.contentItem.findFirst({

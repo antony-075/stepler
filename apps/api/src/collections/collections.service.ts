@@ -209,6 +209,8 @@ export class CollectionsService {
    * Repeating it for an owned collection is a no-op.
    */
   async delete(principal: AccountPrincipal, id: string, requestId?: string): Promise<void> {
+    // Started outside the transaction, so a first start never runs while it holds a connection.
+    await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
       // Includes DELETING (for the no-op) and locks the row, so `fromStatus` is accurate. The id
       // is read back: PostgreSQL matches a UUID in any case, storage keys are case-sensitive.
