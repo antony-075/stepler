@@ -477,6 +477,24 @@ describe('guest session and content schema', () => {
     expect(row.contributorGuestSessionId).toBeNull();
   });
 
+  test("a session's link and an item's session belong to the row's own collection", async () => {
+    const x = await setup();
+    const y = await setup();
+    await expect(
+      prisma.guestSession.create({
+        data: { collectionId: x.collectionId, currentLinkId: y.linkId, tokenHash: 'cross' },
+      }),
+    ).rejects.toThrow();
+    await expect(item({ collectionId: x.collectionId, sessionId: y.sessionId })).rejects.toThrow();
+    await expect(
+      prisma.guestSession.update({
+        where: { id: x.sessionId },
+        data: { currentLinkId: y.linkId },
+      }),
+    ).rejects.toThrow();
+    expect(await prisma.contentItem.count()).toBe(0);
+  });
+
   test('a link a session points at cannot be deleted', async () => {
     const ids = await setup();
     await expect(prisma.guestLink.delete({ where: { id: ids.linkId } })).rejects.toThrow();

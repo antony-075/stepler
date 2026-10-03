@@ -34,6 +34,7 @@ export const ERROR_CODES = [
   'UPLOAD_EXPIRED',
   'UPLOAD_CLOSED',
   'IDEMPOTENCY_CONFLICT',
+  'CONTENT_NOT_FOUND',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

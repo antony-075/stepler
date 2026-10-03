@@ -118,6 +118,22 @@ describe('guestContentItemSchema', () => {
     expect(guestContentItemSchema.safeParse({ ...own, frameNo: null }).success).toBe(false);
   });
 
+  test("other guests' file names stay private (spec §8)", () => {
+    const file = { ...own, kind: 'DOCUMENT', text: null, originalFilename: 'Program.pdf' };
+    expect(guestContentItemSchema.safeParse(file).success).toBe(true);
+    expect(guestContentItemSchema.safeParse({ ...file, isOwn: false, frameNo: null }).success).toBe(
+      false,
+    );
+    expect(
+      guestContentItemSchema.safeParse({
+        ...file,
+        isOwn: false,
+        frameNo: null,
+        originalFilename: null,
+      }).success,
+    ).toBe(true);
+  });
+
   test('never carries admin fields [C16]', () => {
     for (const extra of [
       { contributorName: 'Ірина' },
@@ -184,6 +200,7 @@ test('ERROR_CODES contains the guest content and upload codes', () => {
     'UPLOAD_EXPIRED',
     'UPLOAD_CLOSED',
     'IDEMPOTENCY_CONFLICT',
+    'CONTENT_NOT_FOUND',
   ]) {
     expect(ERROR_CODES).toContain(code);
   }

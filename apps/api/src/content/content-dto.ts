@@ -62,7 +62,8 @@ export function toGuestContentItem(
     isOwn,
     frameNo: isOwn ? row.frameNo : null,
     canDelete: canDeleteItem(p, row),
-    originalFilename: row.originalFilename,
+    // Other guests' metadata stays private (spec §8): a file name can carry a name or a place.
+    originalFilename: isOwn ? row.originalFilename : null,
     ...NO_FILE,
     processingStatus: row.processingStatus,
     text: row.textBody,

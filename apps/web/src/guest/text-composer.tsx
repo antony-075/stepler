@@ -16,6 +16,7 @@ import { Textarea } from '@stepler/ui/components/textarea';
 import { useTranslations } from 'next-intl';
 import { useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { isApiError } from '@/api/client';
 import { z } from 'zod';
 
 /** The counter appears near the limit, not from the first letter. */
@@ -77,7 +78,9 @@ export function TextComposer({
       key.current = null;
       form.reset({ body: '' });
       onOpenChange(false);
-    } catch {
+    } catch (error) {
+      // Stored, then deleted by the organiser before the answer arrived: a new send is a new wish.
+      if (isApiError(error, 'CONTENT_NOT_FOUND')) key.current = null;
       setFailed(true);
     } finally {
       setSending(false);

@@ -15,6 +15,10 @@ export class UsageService {
   /**
    * Serializes limit checks per account: concurrent transactions that change the account's
    * usage wait here until the first commits, so a check-then-insert cannot overshoot (§10.3).
+   *
+   * Lock order [C9]: a transaction that locks both takes the owner's `User` row here first, then
+   * the `Collection` row (`FrameNumbers.next`), never the other way round, so two such
+   * transactions cannot deadlock.
    */
   async lockOwner(tx: Prisma.TransactionClient, userId: string): Promise<void> {
     await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;

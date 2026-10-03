@@ -120,6 +120,20 @@ describe('guest names and texts', () => {
     expect((next.body as { frameNo: number }).frameNo).toBe(2);
   });
 
+  test('a retry of a text the admin deleted meanwhile → 404 CONTENT_NOT_FOUND, never the item', async () => {
+    const { collectionId, cookie } = await guest();
+    const key = randomUUID();
+    const first = await postText(collectionId, cookie, { body: 'Вітаємо!' }, key).expect(201);
+    await prisma.contentItem.update({
+      where: { id: (first.body as { id: string }).id },
+      data: { deletedAt: new Date() },
+    });
+    const retry = await postText(collectionId, cookie, { body: 'Вітаємо!' }, key).expect(404);
+    expect(retry.body).toMatchObject({ code: 'CONTENT_NOT_FOUND' });
+    expect(JSON.stringify(retry.body)).not.toContain('Вітаємо');
+    expect(await prisma.contentItem.count()).toBe(1);
+  });
+
   test('20 concurrent texts from two guests → frame numbers exactly 1…20', async () => {
     const { collectionId, link, cookie } = await guest();
     const other = await joinAsGuest(server(), collectionId, link.token);

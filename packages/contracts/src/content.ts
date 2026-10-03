@@ -90,6 +90,7 @@ const guestContentItemShape = z.object({
   /** Only on the guest's own frames (ADR 0015): other guests' numbers stay private. */
   frameNo: z.number().int().min(1).nullable(),
   canDelete: z.boolean(),
+  /** Only on the guest's own files: other guests' metadata stays private (spec §8). */
   originalFilename: z.string().nullable(),
   sizeBytes: nullableInt,
   width: nullableInt,
@@ -103,20 +104,28 @@ const guestContentItemShape = z.object({
 const frameNoOnlyWhenOwn = (item: { isOwn: boolean; frameNo: number | null }) =>
   (item.frameNo !== null) === item.isOwn;
 const frameNoRule = { message: 'frameNo is set exactly on own items', path: ['frameNo'] };
+const filenameOnlyWhenOwn = (item: { isOwn: boolean; originalFilename: string | null }) =>
+  item.isOwn || item.originalFilename === null;
+const filenameRule = {
+  message: 'originalFilename is only on own items',
+  path: ['originalFilename'],
+};
 
 /**
  * A frame as a guest sees it [C16]: never the contributor's name, session or anything the admin
- * alone sees.
+ * alone sees; numbers and file names only on the guest's own frames.
  */
 export const guestContentItemSchema = guestContentItemShape
   .strict()
-  .refine(frameNoOnlyWhenOwn, frameNoRule);
+  .refine(frameNoOnlyWhenOwn, frameNoRule)
+  .refine(filenameOnlyWhenOwn, filenameRule);
 export type GuestContentItem = z.infer<typeof guestContentItemSchema>;
 
 export const guestContentDetailSchema = guestContentItemShape
   .extend({ originalUrl: z.url().nullable(), downloadUrl: z.url().nullable() })
   .strict()
-  .refine(frameNoOnlyWhenOwn, frameNoRule);
+  .refine(frameNoOnlyWhenOwn, frameNoRule)
+  .refine(filenameOnlyWhenOwn, filenameRule);
 export type GuestContentDetail = z.infer<typeof guestContentDetailSchema>;
 
 /** A cursor page of frames. */

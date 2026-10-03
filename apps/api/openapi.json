@@ -34,7 +34,8 @@
               "UPLOAD_INCOMPLETE",
               "UPLOAD_EXPIRED",
               "UPLOAD_CLOSED",
-              "IDEMPOTENCY_CONFLICT"
+              "IDEMPOTENCY_CONFLICT",
+              "CONTENT_NOT_FOUND"
             ],
             "type": "string"
           },
@@ -4348,6 +4349,9 @@
           },
           "403": {
             "description": "FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE"
+          },
+          "404": {
+            "description": "CONTENT_NOT_FOUND: a retry of a text the admin has deleted since"
           },
           "409": {
             "description": "IDEMPOTENCY_CONFLICT: the key was used for another text"

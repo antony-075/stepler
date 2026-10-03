@@ -184,6 +184,7 @@ model GuestLink {
   replaces        GuestLink?      @relation("LinkRotation")
   guestSessions   GuestSession[]
 
+  @@unique([id, collectionId])
   @@index([collectionId, isDefault, status, createdAt])
 }
 
@@ -194,8 +195,9 @@ model GuestLink {
 model GuestSession {
   id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
   collectionId    String        @db.Uuid
-  /// A link with sessions is never deleted (links are revoked and hidden instead). NO ACTION, not
-  /// RESTRICT, so deleting the collection still cascades to both in one statement.
+  /// A link of the same collection (composite key with "collectionId"). A link with sessions is
+  /// never deleted (links are revoked and hidden instead). NO ACTION, not RESTRICT, so deleting
+  /// the collection still cascades to both in one statement.
   currentLinkId   String        @db.Uuid
   /// SHA-256 of the cookie token; the raw token is never stored.
   tokenHash       String        @unique
@@ -205,9 +207,10 @@ model GuestSession {
   createdAt       DateTime      @default(now()) @db.Timestamptz(3)
   lastSeenAt      DateTime      @default(now()) @db.Timestamptz(3)
   collection      Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  currentLink     GuestLink     @relation(fields: [currentLinkId], references: [id], onDelete: NoAction)
+  currentLink     GuestLink     @relation(fields: [currentLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "GuestSession_link_same_collection_fkey")
   contentItems    ContentItem[]
 
+  @@unique([id, collectionId])
   @@index([collectionId])
   @@index([currentLinkId])
 }
@@ -223,7 +226,9 @@ model ContentItem {
   /// Per-collection number shown as #086 (ADR 0015); never reused.
   frameNo                   Int
   kind                      ContentKind
-  /// NULL once the session row is gone; the item stays.
+  /// A session of the same collection (composite key with "collectionId"); only this column is
+  /// nulled once the session row is gone (`SET NULL ("contributorGuestSessionId")` in the
+  /// migration; Prisma warns about SetNull on a key with a required field). The item stays.
   contributorGuestSessionId String?          @db.Uuid
   /// Snapshot of the session's name when the item was created; renaming updates live items [C4].
   contributorName           String?
@@ -237,7 +242,7 @@ model ContentItem {
   deletedAt                 DateTime?        @db.Timestamptz(3)
   createdAt                 DateTime         @default(now()) @db.Timestamptz(3)
   collection                Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  contributorGuestSession   GuestSession?    @relation(fields: [contributorGuestSessionId], references: [id], onDelete: SetNull)
+  contributorGuestSession   GuestSession?    @relation(fields: [contributorGuestSessionId, collectionId], references: [id, collectionId], onDelete: SetNull, onUpdate: NoAction, map: "ContentItem_session_same_collection_fkey")
 
   @@unique([collectionId, frameNo])
   @@unique([contributorGuestSessionId, idempotencyKey])

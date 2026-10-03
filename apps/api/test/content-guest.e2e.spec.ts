@@ -122,6 +122,40 @@ describe('guest content API [C16]', () => {
     expect(rest.nextCursor).toBeNull();
   });
 
+  test("other guests' file names stay private; the guest's own keep theirs (spec §8)", async () => {
+    const { collectionId, a, b } = await twoGuests(SHARED_GALLERY);
+    const sessionOf = async (cookie: string) =>
+      (
+        await prisma.guestSession.findFirstOrThrow({
+          where: { contentItems: { some: { textBody: cookie === a ? 'A1' : 'B1' } } },
+        })
+      ).id;
+    for (const [cookie, frameNo, name] of [
+      [a, 5, 'Ірина-програма.pdf'],
+      [b, 6, 'Богдан-фото.pdf'],
+    ] as const) {
+      await prisma.contentItem.create({
+        data: {
+          collectionId,
+          frameNo,
+          kind: 'DOCUMENT',
+          processingStatus: 'NOT_REQUIRED',
+          originalFilename: name,
+          contributorGuestSessionId: await sessionOf(cookie),
+        },
+      });
+    }
+    const res = await list(collectionId, a, 'scope=all').expect(200);
+    const items = guestContentPageSchema.parse(res.body).items;
+    expect(items.find((i) => i.frameNo === 5)).toMatchObject({
+      isOwn: true,
+      originalFilename: 'Ірина-програма.pdf',
+    });
+    const foreign = items.find((i) => i.kind === 'DOCUMENT' && !i.isOwn);
+    expect(foreign).toMatchObject({ originalFilename: null });
+    expect(JSON.stringify(res.body)).not.toContain('Богдан-фото');
+  });
+
   test('deleted items are not listed or readable', async () => {
     const { collectionId, a, aIds } = await twoGuests(SHARED_GALLERY);
     await prisma.contentItem.update({ where: { id: aIds[1] }, data: { deletedAt: new Date() } });

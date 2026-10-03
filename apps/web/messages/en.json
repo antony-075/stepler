@@ -28,7 +28,8 @@
     "UPLOAD_INCOMPLETE": "The upload didn’t finish. Try again.",
     "UPLOAD_EXPIRED": "The upload took too long. Add the file again.",
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
-    "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one."
+    "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
+    "CONTENT_NOT_FOUND": "This frame was deleted."
   },
   "login": {
     "pageTitle": "Sign in",

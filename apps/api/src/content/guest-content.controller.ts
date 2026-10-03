@@ -117,6 +117,10 @@ export class GuestContentController {
     description: 'FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE',
   })
   @ApiResponse({
+    status: 404,
+    description: 'CONTENT_NOT_FOUND: a retry of a text the admin has deleted since',
+  })
+  @ApiResponse({
     status: 409,
     description: 'IDEMPOTENCY_CONFLICT: the key was used for another text',
   })
