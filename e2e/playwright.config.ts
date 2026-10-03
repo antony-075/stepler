@@ -50,6 +50,7 @@ export default defineConfig({
         LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
         LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
+        LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '10000',
       },
       reuseExistingServer: false,
     },

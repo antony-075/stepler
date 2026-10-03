@@ -20,6 +20,11 @@ describe('LimitsService', () => {
       guestLinks: 10,
     });
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(120);
+    expect(limits.guestSessionCreatePerIpPerMinute()).toBe(120);
+    expect(limits.fileRules()).toEqual({
+      fileBytes: { PHOTO: 50_000_000n, VIDEO: 2_000_000_000n, DOCUMENT: 50_000_000n },
+      filesPerBatch: 100,
+    });
   });
 
   test('applies env overrides', () => {
@@ -31,8 +36,12 @@ describe('LimitsService', () => {
         LIMIT_COLLECTION_CREATIONS_PER_DAY: '4',
         LIMIT_GUEST_LINKS_PER_COLLECTION: '2',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '30',
+        LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '40',
+        LIMIT_FILE_BYTES_VIDEO: '3000000000',
       }),
     );
+    expect(limits.guestSessionCreatePerIpPerMinute()).toBe(40);
+    expect(limits.fileRules().fileBytes.VIDEO).toBe(3_000_000_000n);
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(30);
     expect(limits.forCollection({ id: 'c1' }).guestLinks).toBe(2);
     expect(limits.magicLink().perEmailPerHour).toBe(2);

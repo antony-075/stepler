@@ -8,7 +8,7 @@ import type {
   UpdateGuestLinkRequest,
 } from '@stepler/contracts';
 import { type AuditAction, type AuditActor, AuditService } from '../audit/audit.service.js';
-import type { Principal } from '../auth/principal.js';
+import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type {
@@ -72,7 +72,7 @@ export class GuestLinksService {
    * additional links that were not deleted. A collection from before guest links gets its default here [G4], under the
    * collection lock so concurrent first reads create one.
    */
-  async list(principal: Principal, collectionId: string): Promise<GuestLinkListResponse> {
+  async list(principal: AccountPrincipal, collectionId: string): Promise<GuestLinkListResponse> {
     const rows = await this.prisma.$transaction(async (tx) => {
       await this.lockOwnedCollection(tx, principal, collectionId);
       const live = await tx.guestLink.findMany({
@@ -94,7 +94,7 @@ export class GuestLinksService {
 
   /** An additional link, under the collection lock so concurrent creates respect the cap [G8]. */
   async create(
-    principal: Principal,
+    principal: AccountPrincipal,
     collectionId: string,
     body: CreateGuestLinkRequest,
     requestId?: string,
@@ -127,7 +127,7 @@ export class GuestLinksService {
 
   /** Label and permissions; last write wins. Guests see the change on their next request. */
   async update(
-    principal: Principal,
+    principal: AccountPrincipal,
     linkId: string,
     body: UpdateGuestLinkRequest,
     requestId?: string,
@@ -170,12 +170,12 @@ export class GuestLinksService {
   }
 
   /** Pause: `ACTIVE` → `INACTIVE`. Idempotent; a revoked link → 409. */
-  deactivate(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+  deactivate(principal: AccountPrincipal, linkId: string, requestId?: string): Promise<GuestLink> {
     return this.transition(principal, linkId, 'ACTIVE', 'INACTIVE', requestId);
   }
 
   /** Resume: `INACTIVE` → `ACTIVE`. Idempotent; a revoked link → 409. */
-  activate(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+  activate(principal: AccountPrincipal, linkId: string, requestId?: string): Promise<GuestLink> {
     return this.transition(principal, linkId, 'INACTIVE', 'ACTIVE', requestId);
   }
 
@@ -183,7 +183,11 @@ export class GuestLinksService {
    * Terminal, additional links only (the default is rotated instead). The token ciphertext is
    * wiped, so a revoked token is not stored at all [G1]. Revoking again is a no-op.
    */
-  async revoke(principal: Principal, linkId: string, requestId?: string): Promise<GuestLink> {
+  async revoke(
+    principal: AccountPrincipal,
+    linkId: string,
+    requestId?: string,
+  ): Promise<GuestLink> {
     const row = await this.prisma.$transaction(async (tx) => {
       const link = await this.findOwnedLink(tx, principal, linkId);
       if (link.isDefault) throw new AppError('DEFAULT_LINK_NOT_REVOCABLE', 409);
@@ -213,7 +217,7 @@ export class GuestLinksService {
    * content that will reference it. The default link is replaced, never deleted. Deleting again
    * is a no-op.
    */
-  async remove(principal: Principal, linkId: string, requestId?: string): Promise<void> {
+  async remove(principal: AccountPrincipal, linkId: string, requestId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       const owned = await this.findOwnedLink(tx, principal, linkId);
       if (owned.isDefault) throw new AppError('DEFAULT_LINK_NOT_REVOCABLE', 409);
@@ -244,7 +248,7 @@ export class GuestLinksService {
    * retried, doubled or stale request returns the current default without rotating twice.
    */
   async rotateDefault(
-    principal: Principal,
+    principal: AccountPrincipal,
     collectionId: string,
     body: RotateDefaultLinkRequest,
     requestId?: string,
@@ -283,7 +287,7 @@ export class GuestLinksService {
   /** A link of one of the principal's collections that is not `DELETING`; otherwise 404. */
   async findOwnedLink(
     tx: Prisma.TransactionClient,
-    principal: Principal,
+    principal: AccountPrincipal,
     linkId: string,
   ): Promise<OwnedGuestLink> {
     const row = await tx.guestLink.findFirst({
@@ -324,7 +328,7 @@ export class GuestLinksService {
    */
   private async lockOwnedCollection(
     tx: Prisma.TransactionClient,
-    principal: Principal,
+    principal: AccountPrincipal,
     collectionId: string,
   ): Promise<{ id: string; status: CollectionStatus }> {
     const [row] = await tx.$queryRaw<{ id: string; status: CollectionStatus }[]>`
@@ -364,7 +368,7 @@ export class GuestLinksService {
 
   /** A conditional status change, audited only when it changed something. */
   private async transition(
-    principal: Principal,
+    principal: AccountPrincipal,
     linkId: string,
     from: 'ACTIVE' | 'INACTIVE',
     to: 'ACTIVE' | 'INACTIVE',

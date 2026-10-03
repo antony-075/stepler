@@ -12,8 +12,9 @@ import { permissionsOf } from './guest-link-dto.js';
 import { GuestLinkResolver } from './guest-link-resolver.js';
 
 /**
- * Public guest endpoints. No session; the CSRF origin check still applies. Until guest sessions
- * exist (slice 3), the guest page only resolves its link to show the right state [G6].
+ * Public guest endpoints. No session; the CSRF origin check still applies. The guest page
+ * resolves its link first (the right state [G6], and the collection id), then exchanges the
+ * token for a session under the collection's path (`GuestSessionsController`) [C3].
  */
 @ApiTags('Guest')
 @Public()
@@ -36,6 +37,7 @@ export class GuestController {
   ): Promise<ResolveGuestLinkResponse> {
     const { link, collection } = await this.resolver.resolveActive(body.linkToken);
     return {
+      collectionId: collection.id,
       collection: { title: collection.title, description: collection.description },
       permissions: permissionsOf(link),
     };

@@ -36,7 +36,14 @@ export interface AuditEventInput {
 const ACTOR_TYPES: Record<Principal['kind'], AuditActorType> = {
   admin: 'ADMIN',
   operator: 'OPERATOR',
+  guest: 'GUEST',
 };
+
+/** An account acts as its user; a guest as its guest session (no personal data). */
+function actorId(actor: AuditActor): string | null {
+  if (actor === 'system') return null;
+  return actor.kind === 'guest' ? actor.guestSessionId : actor.userId;
+}
 
 /**
  * Appends audit events. It takes the caller's transaction, so an event exists if and only if
@@ -49,7 +56,7 @@ export class AuditService {
       data: {
         collectionId: event.collectionId ?? null,
         actorType: event.actor === 'system' ? 'SYSTEM' : ACTOR_TYPES[event.actor.kind],
-        actorId: event.actor === 'system' ? null : event.actor.userId,
+        actorId: actorId(event.actor),
         action: event.action,
         targetType: event.targetType,
         targetId: event.targetId,

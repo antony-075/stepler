@@ -147,6 +147,11 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
 | `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
 | `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |
+| `LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE` | api | no | Guest session exchanges (opening a guest link) per client IP per minute; default `120` (venue NAT, as above) |
+| `LIMIT_FILE_BYTES_PHOTO` | api | no | Largest photo in bytes (decimal); default `50000000` (50 MB) |
+| `LIMIT_FILE_BYTES_VIDEO` | api | no | Largest video in bytes; default `2000000000` (2 GB) |
+| `LIMIT_FILE_BYTES_DOCUMENT` | api | no | Largest document in bytes; default `50000000` (50 MB) |
+| `LIMIT_FILES_PER_BATCH` | api | no | Files a guest may pick at once (enforced by the guest page); default `100` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |

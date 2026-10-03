@@ -13,7 +13,7 @@ import type { LimitsService } from '../limits/limits.service.js';
  * The magic-link request limit is not here: it is counted only after Turnstile passes
  * (`MagicLinkService`), so junk requests cannot use it up for everyone behind one IP.
  */
-export type RateLimitName = 'magic-link-preview' | 'guest-link-resolve';
+export type RateLimitName = 'magic-link-preview' | 'guest-link-resolve' | 'guest-session-create';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const MINUTE_MS = 60_000;
@@ -43,6 +43,7 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       // Bounds load, not guessing (a token has 256 bits). Guests behind one venue NAT share an IP,
       // hence the generous default [G10].
       named('guest-link-resolve', limits.guestLinkResolvePerIpPerMinute(), MINUTE_MS),
+      named('guest-session-create', limits.guestSessionCreatePerIpPerMinute(), MINUTE_MS),
     ],
     setHeaders: false,
   };

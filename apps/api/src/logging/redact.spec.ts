@@ -33,4 +33,9 @@ describe('redactUrl', () => {
     );
     expect(redactUrl('/en/g/abc')).toBe('/en/g/[REDACTED]');
   });
+
+  test('keeps guest collection paths: a collection id is not a secret (the session is a cookie)', () => {
+    const path = '/api/v1/guest/collections/01a0ee76-0574-7fe5-a38b-53b07a9b40f9/session';
+    expect(redactUrl(path)).toBe(path);
+  });
 });

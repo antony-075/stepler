@@ -83,6 +83,12 @@ const apiEnvSchema = z
     LIMIT_STORAGE_BYTES_PER_COLLECTION: byteCount(10n * GIB),
     LIMIT_GUEST_LINKS_PER_COLLECTION: positiveInt(10),
     LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(120),
+    LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: positiveInt(120),
+    // Per-file maxima by kind (D2, decimal units) and the files a guest may pick at once.
+    LIMIT_FILE_BYTES_PHOTO: byteCount(50_000_000n),
+    LIMIT_FILE_BYTES_VIDEO: byteCount(2_000_000_000n),
+    LIMIT_FILE_BYTES_DOCUMENT: byteCount(50_000_000n),
+    LIMIT_FILES_PER_BATCH: positiveInt(100),
   })
   .superRefine((env, ctx) => {
     if ((env.GOOGLE_CLIENT_ID === undefined) !== (env.GOOGLE_CLIENT_SECRET === undefined)) {

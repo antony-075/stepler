@@ -1,12 +1,17 @@
 import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
 import { AppError } from '../errors/app-error.js';
-import type { Principal, RequestWithPrincipal } from './principal.js';
+import type { AccountPrincipal, RequestWithPrincipal } from './principal.js';
 
-/** The authenticated principal set by `AuthGuard`; only valid on non-public routes. */
+/**
+ * The signed-in account set by `AuthGuard`; only valid on non-public routes. A guest principal
+ * never passes for an account.
+ */
 export const CurrentPrincipal = createParamDecorator(
-  (_data: unknown, context: ExecutionContext): Principal => {
+  (_data: unknown, context: ExecutionContext): AccountPrincipal => {
     const principal = context.switchToHttp().getRequest<RequestWithPrincipal>().principal;
-    if (principal === undefined) throw new AppError('UNAUTHENTICATED', 401);
+    if (principal === undefined || principal.kind === 'guest') {
+      throw new AppError('UNAUTHENTICATED', 401);
+    }
     return principal;
   },
 );
