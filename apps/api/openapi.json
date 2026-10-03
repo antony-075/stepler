@@ -1315,6 +1315,322 @@
         ]
       }
     },
+    "/api/v1/collections/{id}/content": {
+      "get": {
+        "operationId": "AdminContentController_list_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "enum": [
+                "PHOTO",
+                "VIDEO",
+                "DOCUMENT",
+                "TEXT"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "newest",
+              "enum": [
+                "newest",
+                "frame"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "contributorName": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "durationMs": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "frameNo": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "height": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": [
+                              "PHOTO",
+                              "VIDEO",
+                              "DOCUMENT",
+                              "TEXT"
+                            ],
+                            "type": "string"
+                          },
+                          "mimeType": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "originalFilename": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "posterUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "previewUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "processingStatus": {
+                            "enum": [
+                              "NOT_REQUIRED",
+                              "PENDING",
+                              "READY",
+                              "FAILED"
+                            ],
+                            "type": "string"
+                          },
+                          "sizeBytes": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "text": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "thumbnailUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "width": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "frameNo",
+                          "kind",
+                          "createdAt",
+                          "contributorName",
+                          "originalFilename",
+                          "mimeType",
+                          "sizeBytes",
+                          "width",
+                          "height",
+                          "durationMs",
+                          "processingStatus",
+                          "text",
+                          "thumbnailUrl",
+                          "previewUrl",
+                          "posterUrl"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/content/counts": {
+      "get": {
+        "operationId": "AdminContentController_counts_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "document": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "lastAddedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "photo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "total": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "video": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "total",
+                    "photo",
+                    "video",
+                    "document",
+                    "text",
+                    "lastAddedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content"
+        ]
+      }
+    },
     "/api/v1/collections/{id}/guest-links": {
       "get": {
         "operationId": "GuestLinksController_list_v1",
@@ -1965,6 +2281,218 @@
         ],
         "tags": [
           "Collections"
+        ]
+      }
+    },
+    "/api/v1/content/{id}": {
+      "delete": {
+        "operationId": "AdminContentController_delete_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted, or already deleted (idempotent); gone for everyone at once"
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content"
+        ]
+      },
+      "get": {
+        "operationId": "AdminContentController_get_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contributorName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "downloadUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "durationMs": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "frameNo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PHOTO",
+                        "VIDEO",
+                        "DOCUMENT",
+                        "TEXT"
+                      ],
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "originalFilename": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "originalUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "posterUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "previewUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "processingStatus": {
+                      "enum": [
+                        "NOT_REQUIRED",
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "width": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frameNo",
+                    "kind",
+                    "createdAt",
+                    "contributorName",
+                    "originalFilename",
+                    "mimeType",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "durationMs",
+                    "processingStatus",
+                    "text",
+                    "thumbnailUrl",
+                    "previewUrl",
+                    "posterUrl",
+                    "originalUrl",
+                    "downloadUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content"
         ]
       }
     },
@@ -2623,6 +3151,393 @@
         ],
         "tags": [
           "Guest links"
+        ]
+      }
+    },
+    "/api/v1/guest/collections/{collectionId}/content": {
+      "get": {
+        "operationId": "GuestContentController_list_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": true,
+            "schema": {
+              "enum": [
+                "own",
+                "all"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "canDelete": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "durationMs": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "frameNo": {
+                            "maximum": 9007199254740991,
+                            "minimum": 1,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "height": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "isOwn": {
+                            "type": "boolean"
+                          },
+                          "kind": {
+                            "enum": [
+                              "PHOTO",
+                              "VIDEO",
+                              "DOCUMENT",
+                              "TEXT"
+                            ],
+                            "type": "string"
+                          },
+                          "originalFilename": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "posterUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "previewUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "processingStatus": {
+                            "enum": [
+                              "NOT_REQUIRED",
+                              "PENDING",
+                              "READY",
+                              "FAILED"
+                            ],
+                            "type": "string"
+                          },
+                          "sizeBytes": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "text": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "thumbnailUrl": {
+                            "format": "uri",
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "width": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "createdAt",
+                          "isOwn",
+                          "frameNo",
+                          "canDelete",
+                          "originalFilename",
+                          "sizeBytes",
+                          "width",
+                          "height",
+                          "durationMs",
+                          "processingStatus",
+                          "text",
+                          "thumbnailUrl",
+                          "previewUrl",
+                          "posterUrl"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "GUEST_SESSION_REQUIRED"
+          },
+          "403": {
+            "description": "FORBIDDEN (scope=all without the shared gallery), COLLECTION_ARCHIVED or LINK_INACTIVE"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_gs": []
+          }
+        ],
+        "tags": [
+          "Guest"
+        ]
+      }
+    },
+    "/api/v1/guest/collections/{collectionId}/content/{id}": {
+      "get": {
+        "operationId": "GuestContentController_get_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collectionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "canDelete": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "downloadUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "durationMs": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "frameNo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isOwn": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PHOTO",
+                        "VIDEO",
+                        "DOCUMENT",
+                        "TEXT"
+                      ],
+                      "type": "string"
+                    },
+                    "originalFilename": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "originalUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "posterUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "previewUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "processingStatus": {
+                      "enum": [
+                        "NOT_REQUIRED",
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "width": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "createdAt",
+                    "isOwn",
+                    "frameNo",
+                    "canDelete",
+                    "originalFilename",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "durationMs",
+                    "processingStatus",
+                    "text",
+                    "thumbnailUrl",
+                    "previewUrl",
+                    "posterUrl",
+                    "originalUrl",
+                    "downloadUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "GUEST_SESSION_REQUIRED"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such item in this collection, or one the guest may not see"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_gs": []
+          }
+        ],
+        "tags": [
+          "Guest"
         ]
       }
     },

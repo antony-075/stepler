@@ -17,6 +17,7 @@ import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import {
   type CollectionWithDefaultLink,
+  type ContentStats,
   toCollectionDto,
   WITH_DEFAULT_LINK,
 } from './collection-dto.js';
@@ -110,14 +111,15 @@ export class CollectionsService {
     });
     const items = rows.slice(0, query.limit);
     const last = items.at(-1);
+    const content = await this.contentStats(items.map((row) => row.id));
     return {
-      items: items.map(toCollectionDto),
+      items: items.map((row) => toCollectionDto(row, content.get(row.id))),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
     };
   }
 
   async get(principal: AccountPrincipal, id: string): Promise<Collection> {
-    return toCollectionDto(await this.findOwned(id, principal.userId));
+    return this.toDto(await this.findOwned(id, principal.userId));
   }
 
   /** Last write wins. Archived collections stay editable (D9). */
@@ -135,7 +137,7 @@ export class CollectionsService {
         },
         include: WITH_DEFAULT_LINK,
       });
-      return toCollectionDto(row);
+      return await this.toDto(row);
     } catch (error) {
       if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
       throw error;
@@ -161,7 +163,7 @@ export class CollectionsService {
           requestId,
         );
       }
-      return toCollectionDto(await this.findOwned(id, principal.userId, tx));
+      return this.toDto(await this.findOwned(id, principal.userId, tx), tx);
     });
   }
 
@@ -176,7 +178,7 @@ export class CollectionsService {
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
       const row = await this.findOwned(id, userId, tx);
-      if (row.status !== 'ARCHIVED') return toCollectionDto(row);
+      if (row.status !== 'ARCHIVED') return this.toDto(row, tx);
       if ((await this.usage.activeCollections(userId, tx)) >= limits.activeCollections) {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
@@ -195,7 +197,7 @@ export class CollectionsService {
           requestId,
         );
       }
-      return toCollectionDto(await this.findOwned(id, userId, tx));
+      return this.toDto(await this.findOwned(id, userId, tx), tx);
     });
   }
 
@@ -226,6 +228,34 @@ export class CollectionsService {
         requestId,
       );
     });
+  }
+
+  private async toDto(
+    row: CollectionWithDefaultLink,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Collection> {
+    const content = await this.contentStats([row.id], tx);
+    return toCollectionDto(row, content.get(row.id));
+  }
+
+  /** One grouped query for a whole page, never one per collection (no N+1). */
+  private async contentStats(
+    collectionIds: string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, ContentStats>> {
+    if (collectionIds.length === 0) return new Map();
+    const groups = await tx.contentItem.groupBy({
+      by: ['collectionId'],
+      where: { collectionId: { in: collectionIds }, deletedAt: null },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+    return new Map(
+      groups.map((group) => [
+        group.collectionId,
+        { count: group._count._all, lastAt: group._max.createdAt },
+      ]),
+    );
   }
 
   private recordTransition(

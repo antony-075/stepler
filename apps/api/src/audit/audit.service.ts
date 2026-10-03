@@ -14,7 +14,8 @@ export type AuditAction =
   | 'guest_link.activate'
   | 'guest_link.revoke'
   | 'guest_link.delete'
-  | 'guest_link.rotate';
+  | 'guest_link.rotate'
+  | 'content.delete';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -23,11 +24,11 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link';
+  targetType: 'collection' | 'guest_link' | 'content';
   targetId: string;
   /**
-   * Ids and states only: never titles, descriptions, labels or other user content, and never
-   * tokens or URLs (spec §7.4).
+   * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other
+   * user content, and never tokens or URLs (spec §7.4).
    */
   metadata?: Record<string, string | number | boolean | null>;
   requestId?: string;

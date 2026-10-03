@@ -2,20 +2,30 @@ import type { ServerResponse } from 'node:http';
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
+  Query,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiCookieAuth, ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   createTextRequestSchema,
+  guestContentDetailSchema,
   guestContentItemSchema,
+  guestContentListQuerySchema,
+  guestContentPageSchema,
+  guestContentParamsSchema,
   idempotencyKeyHeaderSchema,
   type CreateTextRequest,
+  type GuestContentDetail,
   type GuestContentItem,
+  type GuestContentListQuery,
+  type GuestContentPage,
 } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
@@ -23,7 +33,13 @@ import { AppError } from '../errors/app-error.js';
 import { CurrentGuest } from '../guest-access/current-guest.decorator.js';
 import { GuestSessionGuard } from '../guest-access/guest-session.guard.js';
 import { GUEST_SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
+import { GuestContentService } from './guest-content.service.js';
 import { TextsService } from './texts.service.js';
+
+interface GuestContentParams {
+  collectionId: string;
+  id: string;
+}
 
 /** The `Idempotency-Key` header: required, one UUID per draft. */
 function parseIdempotencyKey(value: string | undefined): string {
@@ -44,7 +60,41 @@ function parseIdempotencyKey(value: string | undefined): string {
 @UseGuards(GuestSessionGuard)
 @Controller({ path: 'guest/collections/:collectionId', version: '1' })
 export class GuestContentController {
-  constructor(private readonly texts: TextsService) {}
+  constructor(
+    private readonly texts: TextsService,
+    private readonly content: GuestContentService,
+  ) {}
+
+  /** `own`: this browser's items; `all`: everyone's, only with the shared gallery [C16]. */
+  @Get('content')
+  @ApiResponse({ status: 200, standardSchema: guestContentPageSchema })
+  @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'FORBIDDEN (scope=all without the shared gallery), COLLECTION_ARCHIVED or LINK_INACTIVE',
+  })
+  @ApiResponse({ status: 410, description: 'COLLECTION_UNAVAILABLE, or LINK_REVOKED' })
+  list(
+    @CurrentGuest() guest: GuestPrincipal,
+    @Query({ schema: guestContentListQuerySchema }) query: GuestContentListQuery,
+  ): Promise<GuestContentPage> {
+    return this.content.list(guest, query);
+  }
+
+  @Get('content/:id')
+  @ApiResponse({ status: 200, standardSchema: guestContentDetailSchema })
+  @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
+  @ApiResponse({
+    status: 404,
+    description: 'NOT_FOUND: no such item in this collection, or one the guest may not see',
+  })
+  get(
+    @CurrentGuest() guest: GuestPrincipal,
+    @Param({ schema: guestContentParamsSchema }) params: GuestContentParams,
+  ): Promise<GuestContentDetail> {
+    return this.content.get(guest, params.id);
+  }
 
   @Post('texts')
   @HttpCode(HttpStatus.CREATED)

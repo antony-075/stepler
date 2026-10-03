@@ -1,4 +1,9 @@
-import type { AdminContentItem, GuestContentItem } from '@stepler/contracts';
+import type {
+  AdminContentDetail,
+  AdminContentItem,
+  GuestContentDetail,
+  GuestContentItem,
+} from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import type { ContentItem as ContentItemRow } from '../generated/prisma/client.js';
 import { canDeleteItem, isOwnItem } from '../guest-access/guest-policy.js';
@@ -63,4 +68,29 @@ export function toGuestContentItem(
     text: row.textBody,
     ...urls,
   };
+}
+
+/** Links to the original file (view and download); `null` for texts and until uploads exist. */
+export interface OriginalUrls {
+  originalUrl: string | null;
+  downloadUrl: string | null;
+}
+
+const NO_ORIGINAL: OriginalUrls = { originalUrl: null, downloadUrl: null };
+
+export function toAdminContentDetail(
+  row: ContentItemRow,
+  urls: ContentMediaUrls = NO_MEDIA,
+  original: OriginalUrls = NO_ORIGINAL,
+): AdminContentDetail {
+  return { ...toAdminContentItem(row, urls), ...original };
+}
+
+export function toGuestContentDetail(
+  row: ContentItemRow,
+  p: GuestPrincipal,
+  urls: ContentMediaUrls = NO_MEDIA,
+  original: OriginalUrls = NO_ORIGINAL,
+): GuestContentDetail {
+  return { ...toGuestContentItem(row, p, urls), ...original };
 }
