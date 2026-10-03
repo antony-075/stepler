@@ -119,20 +119,21 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       {/* On «Параметри» the archiving card says the same with its own button: never two. */}
       {archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null}
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
+        {/* Phones show icon + count only (owner 2026-10-03); the label stays as the accessible name. */}
         <TabsList variant="segmented" aria-label={t('tabs.label')}>
           <TabsTrigger value="content">
-            <Images aria-hidden="true" className="max-sm:hidden" />
-            <span className="min-w-0 truncate">{t('tabs.content')}</span>
+            <Images aria-hidden="true" className="max-sm:size-5" />
+            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.content')}</span>
             {contentTotal === undefined ? null : <TabsCount>{contentTotal}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="links">
-            <Link2 aria-hidden="true" className="max-sm:hidden" />
-            <span className="min-w-0 truncate">{t('tabs.links')}</span>
+            <Link2 aria-hidden="true" className="max-sm:size-5" />
+            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.links')}</span>
             {live === undefined ? null : <TabsCount>{live}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="settings">
-            <SlidersHorizontal aria-hidden="true" className="max-sm:hidden" />
-            <span className="min-w-0 truncate">{t('tabs.settings')}</span>
+            <SlidersHorizontal aria-hidden="true" className="max-sm:size-5" />
+            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.settings')}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="content">
