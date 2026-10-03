@@ -19,7 +19,16 @@
     "LINK_INACTIVE": "This link is paused.",
     "DEFAULT_LINK_NOT_REVOCABLE": "The main link can’t be revoked or deleted. Replace it instead.",
     "COLLECTION_ARCHIVED": "This collection is closed.",
-    "COLLECTION_UNAVAILABLE": "This collection is unavailable."
+    "COLLECTION_UNAVAILABLE": "This collection is unavailable.",
+    "GUEST_SESSION_REQUIRED": "Your guest session was lost. Open the link again.",
+    "QUOTA_EXCEEDED": "This collection is full — new frames can’t be added.",
+    "FILE_TYPE_NOT_ALLOWED": "This file type isn’t supported.",
+    "FILE_TOO_LARGE": "This file is too large.",
+    "UPLOAD_SIZE_MISMATCH": "The file didn’t upload completely.",
+    "UPLOAD_INCOMPLETE": "The upload didn’t finish. Try again.",
+    "UPLOAD_EXPIRED": "The upload took too long. Add the file again.",
+    "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
+    "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one."
   },
   "login": {
     "pageTitle": "Sign in",

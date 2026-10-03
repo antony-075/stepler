@@ -19,7 +19,16 @@
     "LINK_INACTIVE": "Посилання призупинене.",
     "DEFAULT_LINK_NOT_REVOCABLE": "Основне посилання не можна відкликати чи видалити — лише оновити.",
     "COLLECTION_ARCHIVED": "Колекцію закрито.",
-    "COLLECTION_UNAVAILABLE": "Колекція недоступна."
+    "COLLECTION_UNAVAILABLE": "Колекція недоступна.",
+    "GUEST_SESSION_REQUIRED": "Сесію гостя втрачено. Відкрийте посилання ще раз.",
+    "QUOTA_EXCEEDED": "Колекція заповнена — нові кадри не додаються.",
+    "FILE_TYPE_NOT_ALLOWED": "Такий тип файлу не підтримується.",
+    "FILE_TOO_LARGE": "Файл завеликий.",
+    "UPLOAD_SIZE_MISMATCH": "Файл завантажився не повністю.",
+    "UPLOAD_INCOMPLETE": "Завантаження не завершилося. Спробуйте ще раз.",
+    "UPLOAD_EXPIRED": "Час на завантаження минув. Додайте файл ще раз.",
+    "UPLOAD_CLOSED": "Це завантаження вже завершене або скасоване.",
+    "IDEMPOTENCY_CONFLICT": "Повторний запит не збігається з першим."
   },
   "login": {
     "pageTitle": "Вхід",

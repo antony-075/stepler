@@ -14,6 +14,8 @@ const collection = (title: string, createdAt: string, archived = false): Collect
   archivedAt: archived ? createdAt : null,
   defaultLinkStatus: archived ? null : 'ACTIVE',
   defaultLinkPermissions: null,
+  contentCount: 0,
+  lastContentAt: null,
 });
 
 function hash(text: string): number {

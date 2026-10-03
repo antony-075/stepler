@@ -173,14 +173,24 @@ describe('guestLinkSchema', () => {
 });
 
 describe('resolveGuestLinkResponseSchema', () => {
-  test('carries only the public fields', () => {
-    const body = {
-      collection: { title: 'Wedding', description: null },
-      permissions: { ...none, canViewGallery: true },
-    };
+  const collectionId = '01a0ee76-0574-7fe5-a38b-53b07a9b40f9';
+  const body = {
+    collectionId,
+    collection: { title: 'Wedding', description: null },
+    permissions: { ...none, canViewGallery: true },
+  };
+
+  test('carries the collection id for the session exchange [C3] and the public fields', () => {
     expect(resolveGuestLinkResponseSchema.parse(body)).toEqual(body);
-    const collectionId = '01a0ee76-0574-7fe5-a38b-53b07a9b40f9';
-    expect(resolveGuestLinkResponseSchema.safeParse({ ...body, collectionId }).success).toBe(false);
+    const withoutId: Partial<typeof body> = { ...body };
+    delete withoutId.collectionId;
+    expect(resolveGuestLinkResponseSchema.safeParse(withoutId).success).toBe(false);
+  });
+
+  test('nothing else: no link or owner ids', () => {
+    for (const extra of [{ linkId: collectionId }, { ownerId: collectionId }]) {
+      expect(resolveGuestLinkResponseSchema.safeParse({ ...body, ...extra }).success).toBe(false);
+    }
     expect(
       resolveGuestLinkResponseSchema.safeParse({
         ...body,
