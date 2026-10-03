@@ -1,4 +1,4 @@
-import { type ErrorCode, problemDetailsSchema } from '@stepler/contracts';
+import { type ErrorCode, type ProblemDetails, problemDetailsSchema } from '@stepler/contracts';
 import type { ZodType } from 'zod';
 
 /** A failed API call, reduced to the stable error code the UI translates. */
@@ -7,6 +7,8 @@ export class ApiError extends Error {
     readonly code: ErrorCode,
     readonly status: number,
     readonly requestId?: string,
+    /** The whole problem body, for extension members such as `missingPartNumbers`. */
+    readonly problem?: ProblemDetails,
   ) {
     super(code);
     this.name = 'ApiError';
@@ -37,7 +39,9 @@ export async function apiRequest<T = undefined>(path: string, init: ApiRequestIn
       credentials: 'same-origin',
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
-  } catch {
+  } catch (error) {
+    // A cancelled call stays a cancellation, not a network failure to retry.
+    if (rest.signal?.aborted) throw error;
     throw new ApiError('UPSTREAM_UNAVAILABLE', 0);
   }
 
@@ -51,7 +55,7 @@ export async function apiRequest<T = undefined>(path: string, init: ApiRequestIn
 async function toApiError(res: Response): Promise<ApiError> {
   const problem = problemDetailsSchema.safeParse(await res.json().catch(() => undefined));
   return problem.success
-    ? new ApiError(problem.data.code, res.status, problem.data.requestId)
+    ? new ApiError(problem.data.code, res.status, problem.data.requestId, problem.data)
     : new ApiError('UPSTREAM_UNAVAILABLE', res.status);
 }
 

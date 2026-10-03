@@ -1,4 +1,5 @@
 import {
+  type CreateUploadRequest,
   type GuestContentItem,
   type GuestContentListQuery,
   type GuestContentPage,
@@ -8,6 +9,10 @@ import {
   guestContextSchema,
   type ResolveGuestLinkResponse,
   resolveGuestLinkResponseSchema,
+  type UploadPartsResponse,
+  uploadPartsResponseSchema,
+  type UploadSessionResponse,
+  uploadSessionResponseSchema,
 } from '@stepler/contracts';
 import { apiRequest } from '@/api/client';
 
@@ -66,4 +71,68 @@ export const listGuestContent = (
   return apiRequest(`${base(collectionId)}/content?${params.toString()}`, {
     schema: guestContentPageSchema,
   });
+};
+
+// Direct uploads (spec §10, ADR 0008). The API only authorizes and verifies; bytes go from the
+// browser straight to storage with the presigned URLs these calls return. `signal` cancels the
+// call itself (a cancelled file stops at once).
+
+/** Starts (or, for the same `clientUploadId`, resumes) an upload session. */
+export const initiateUpload = (
+  collectionId: string,
+  body: CreateUploadRequest,
+  signal?: AbortSignal,
+): Promise<UploadSessionResponse> =>
+  apiRequest(`${base(collectionId)}/uploads`, {
+    method: 'POST',
+    body,
+    schema: uploadSessionResponseSchema,
+    signal,
+  });
+
+/** Presigned URLs for some parts of a multipart upload (each signs its exact length). */
+export const presignParts = (
+  collectionId: string,
+  uploadId: string,
+  partNumbers: number[],
+  signal?: AbortSignal,
+): Promise<UploadPartsResponse> =>
+  apiRequest(`${base(collectionId)}/uploads/${encodeURIComponent(uploadId)}/parts`, {
+    method: 'POST',
+    body: { partNumbers },
+    schema: uploadPartsResponseSchema,
+    signal,
+  });
+
+/** The server checks the stored object and records the frame; a repeat returns the same one. */
+export const completeUpload = (
+  collectionId: string,
+  uploadId: string,
+  signal?: AbortSignal,
+): Promise<GuestContentItem> =>
+  apiRequest(`${base(collectionId)}/uploads/${encodeURIComponent(uploadId)}/complete`, {
+    method: 'POST',
+    schema: guestContentItemSchema,
+    signal,
+  });
+
+/** Gives the upload up; the server discards whatever bytes arrived. Idempotent. */
+export const cancelUpload = (collectionId: string, uploadId: string): Promise<void> =>
+  apiRequest(`${base(collectionId)}/uploads/${encodeURIComponent(uploadId)}`, {
+    method: 'DELETE',
+  });
+
+/** The upload calls as one object, so the transport can be tested against a fake. */
+export interface GuestUploadApi {
+  initiateUpload: typeof initiateUpload;
+  presignParts: typeof presignParts;
+  completeUpload: typeof completeUpload;
+  cancelUpload: typeof cancelUpload;
+}
+
+export const guestUploadApi: GuestUploadApi = {
+  initiateUpload,
+  presignParts,
+  completeUpload,
+  cancelUpload,
 };
