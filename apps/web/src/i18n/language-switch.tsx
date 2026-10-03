@@ -21,7 +21,8 @@ import { DEFAULT_LOCALE, isLocale, type Locale } from './locales';
 import { setLocaleCookie } from './set-locale';
 
 /**
- * The current locale and a change handler for the language control on /app/account.
+ * The current locale and a change handler for the language select (/app/account and the public
+ * headers).
  * `changeLocale` takes the raw `onValueChange` string and ignores unknown values.
  *
  * On change it writes `st_locale`, saves the choice to the profile when an admin is signed in
@@ -77,26 +78,37 @@ export function useChangeLocale(): { locale: Locale; changeLocale: (value: strin
   return { locale, changeLocale };
 }
 
-/** Українська / English as a select, each with its flag and its name in its own language (`lang`). */
-export function LanguageSwitch({
-  labelledBy,
-  describedBy,
-}: {
-  labelledBy: string;
-  describedBy?: string;
-}) {
+type LanguageSwitchProps =
+  | {
+      /** The field on /app/account: labelled by its setting's heading, full width up to 320px. */
+      variant?: 'field';
+      labelledBy: string;
+      describedBy?: string;
+    }
+  | {
+      /** In a page header (guest page, landing): as wide as its value, named «Мова». */
+      variant: 'header';
+    };
+
+/**
+ * Українська / English as a select, each with its flag and its name in its own language (`lang`).
+ * The same control everywhere: a field on /app/account, a compact one in the public headers.
+ */
+export function LanguageSwitch(props: LanguageSwitchProps) {
   const t = useTranslations('language');
   const { locale, changeLocale } = useChangeLocale();
+  const header = props.variant === 'header';
   return (
     <Select value={locale} onValueChange={changeLocale}>
       <SelectTrigger
-        aria-labelledby={labelledBy}
-        aria-describedby={describedBy}
-        className="w-full sm:max-w-80"
+        {...(header
+          ? { 'aria-label': t('label') }
+          : { 'aria-labelledby': props.labelledBy, 'aria-describedby': props.describedBy })}
+        className={header ? 'h-10 w-auto px-3 pointer-coarse:h-11' : 'w-full sm:max-w-80'}
       >
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent align={header ? 'end' : undefined}>
         <SelectGroup>
           {/* `lang` on the text too: the trigger shows a copy of it, outside the option. */}
           <SelectItem value="uk" lang="uk">

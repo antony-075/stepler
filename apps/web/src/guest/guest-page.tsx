@@ -4,10 +4,12 @@
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - One question per screen: what is this (the collection's title, display size) and what do I
 //   do (one pencil action in the thumb zone). Everything else is quieter and lower.
-// - Phones (< 640): one column, the dock fixed at the bottom with the safe area; the content gets
-//   room below so nothing hides under it. 640–1023: the same column (max 560) with the dock sticky
-//   at its bottom. ≥ 1024: two columns, the title and actions sticky on the left (360/400px), the
-//   frames on the right; no dock.
+// - Layout per breakpoint (owner review 2026-10-03: "designed on tablets and monitors too"):
+//   phones (< 640): one column, the action in a dock fixed at the bottom with the safe area (the
+//   content gets room below it). 640–1023: one centred column of 720px; the action sits under
+//   the title, so no dock covers the frames on a tablet. ≥ 1024: two columns in the page container
+//   (1240px, 1320px from 1600): the collection's identity and the action on a sticky sheet on the
+//   left (380/420px), the frames on the right. Wider screens grow the margins, not the line length.
 // - The pencil is the guest's main action only. Until uploads exist it is «Написати побажання»,
 //   with a plain line that photos and videos come soon (no dead «Додати фото» button: rule 18);
 //   with uploads, «Додати фото» takes the pencil. A view-only link has no dock at all.
@@ -25,6 +27,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
 import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { LinkStatePage } from '@/app/g/[token]/link-state-page';
@@ -60,7 +63,7 @@ function GuestLoading() {
       role="status"
       aria-busy="true"
       aria-label={t('loading')}
-      className="mx-auto grid w-full max-w-[560px] gap-4 lg:max-w-none"
+      className="mx-auto grid w-full max-w-[720px] gap-4 lg:max-w-none"
     >
       <Skeleton className="h-10 w-4/5" />
       <Skeleton className="h-5 w-3/5" />
@@ -99,7 +102,7 @@ function GuestStatePage({ state, retry }: { state: GuestPageState; retry: () => 
         );
     }
   })();
-  return <div className="mx-auto w-full max-w-[560px]">{page}</div>;
+  return <div className="mx-auto w-full max-w-[720px]">{page}</div>;
 }
 
 type Pending = 'text' | null;
@@ -175,65 +178,72 @@ function GuestCollection({
     <>
       <div
         className={cn(
-          'mx-auto grid w-full max-w-[560px] gap-8 lg:max-w-none lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-12 xl:grid-cols-[400px_minmax(0,1fr)]',
+          'mx-auto grid w-full max-w-[720px] gap-8 sm:gap-10 lg:max-w-none lg:grid-cols-[380px_minmax(0,1fr)] lg:items-start lg:gap-12 xl:grid-cols-[420px_minmax(0,1fr)] xl:gap-16',
           // Room for the fixed dock on phones.
           contributes && 'max-sm:pb-32',
         )}
       >
-        <header className="grid content-start gap-3 lg:sticky lg:top-6 lg:self-start">
-          <h1 className="type-display text-balance [overflow-wrap:anywhere]">{collection.title}</h1>
+        {/* The collection's identity; from lg a sheet that stays in view beside the frames. */}
+        <header className="grid content-start gap-3 lg:sticky lg:top-6 lg:rounded-sheet lg:border lg:bg-card lg:p-8 xl:p-10">
+          {/* Display size until the sheet: there it fits the 300–340px column without breaking words. */}
+          <h1 className="type-display text-balance [overflow-wrap:anywhere] lg:text-[2.5rem] lg:leading-[1.1] xl:text-[2.75rem]">
+            {collection.title}
+          </h1>
           {collection.description === null ? null : (
-            <p className="whitespace-pre-line text-pretty [overflow-wrap:anywhere]">
+            <p className="max-w-[60ch] whitespace-pre-line text-pretty [overflow-wrap:anywhere]">
               {collection.description}
             </p>
           )}
           {counts === null ? null : (
-            <p className="flex flex-wrap gap-x-3 text-muted-foreground">
+            <p className="flex flex-wrap gap-x-3 type-data text-[0.875rem] text-muted-foreground">
               <span className="tabular-nums">{t('counts', { count: counts.total })}</span>
               {counts.lastAddedAt === null ? null : (
                 <span>{t('lastAt', { time: time(counts.lastAddedAt) })}</span>
               )}
             </p>
           )}
-          {actions === null ? null : <div className="mt-5 hidden lg:grid">{actions}</div>}
+          {actions === null ? null : (
+            <div className="mt-4 hidden sm:grid sm:max-w-sm lg:mt-6 lg:max-w-none lg:border-t lg:pt-6">
+              {actions}
+            </div>
+          )}
         </header>
 
-        <div className="grid min-w-0 content-start gap-10">
+        <div className="grid min-w-0 content-start gap-10 lg:gap-12">
           {contributes ? (
-            <section aria-labelledby="own-title" className="grid gap-3">
-              <h2 id="own-title" className="type-h2">
-                {t('ownTitle')}
-              </h2>
-              {permissions.canViewGallery ? null : (
-                <p className="text-muted-foreground">{t('onlyOrganizer')}</p>
-              )}
-              {guest.nameAnswered ? (
-                <p className="flex flex-wrap items-center gap-x-1 text-sm">
-                  <span className="[overflow-wrap:anywhere]">
-                    {guest.name === null ? t('noName') : t('you', { name: guest.name })}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-link underline underline-offset-4"
-                    onClick={() => setNamePrompt({ mode: 'edit', then: null })}
-                  >
-                    {guest.name === null ? t('setName') : t('changeName')}
-                  </Button>
-                </p>
-              ) : null}
+            <section aria-labelledby="own-title" className="grid gap-4">
+              <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                <div className="grid gap-1">
+                  <h2 id="own-title" className="type-h2">
+                    {t('ownTitle')}
+                  </h2>
+                  {permissions.canViewGallery ? null : (
+                    <p className="text-sm text-muted-foreground">{t('onlyOrganizer')}</p>
+                  )}
+                </div>
+                {guest.nameAnswered ? (
+                  <GuestNameLine
+                    name={guest.name}
+                    onChange={() => setNamePrompt({ mode: 'edit', then: null })}
+                  />
+                ) : null}
+              </div>
               <GuestFrames
                 collectionId={collectionId}
                 scope="own"
                 call={call}
                 label={t('listLabelOwn')}
-                empty={<p className="text-sm text-muted-foreground">{t('ownEmpty')}</p>}
+                empty={
+                  <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
+                    {t('ownEmpty')}
+                  </p>
+                }
               />
             </section>
           ) : null}
 
           {permissions.canViewGallery ? (
-            <section aria-labelledby="all-title" className="grid gap-3">
+            <section aria-labelledby="all-title" className="grid gap-4">
               <h2 id="all-title" className="type-h2">
                 {t('allTitle')}
               </h2>
@@ -259,7 +269,7 @@ function GuestCollection({
       {actions === null ? null : (
         <div
           data-toast-avoid
-          className="fixed inset-x-0 bottom-0 z-(--z-dock) border-t bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:sticky sm:mx-auto sm:mt-8 sm:max-w-[560px] sm:rounded-t-sheet sm:border-x lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-(--z-dock) border-t bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden"
         >
           {actions}
         </div>
@@ -280,7 +290,31 @@ function GuestCollection({
 }
 
 /**
- * The dock's content (and the left column's from 1024px). Until uploads exist (PR C) there is no
+ * Who the guest is to the organiser, as one quiet chip with «Змінити» beside it (a text button,
+ * 44px tall on touch), right of the section title when it fits.
+ */
+function GuestNameLine({ name, onChange }: { name: string | null; onChange: () => void }) {
+  const t = useTranslations('guest');
+  return (
+    <p className="flex min-w-0 items-center gap-1 text-sm">
+      <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full border bg-card py-1 pr-3 pl-2">
+        <UserRound aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        <span className="truncate">{name === null ? t('noName') : t('you', { name })}</span>
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="shrink-0 text-link underline-offset-4 hover:underline pointer-coarse:min-h-11"
+        onClick={onChange}
+      >
+        {name === null ? t('setName') : t('changeName')}
+      </Button>
+    </p>
+  );
+}
+
+/**
+ * The action's content: in the dock on phones, under the title from 640px. Until uploads exist (PR C) there is no
  * file button at all, not even a disabled one (a dead main action in the thumb zone, rule 18):
  * the wish is the pencil action, and a link that takes files says plainly that they come soon.
  */
@@ -302,7 +336,7 @@ function ContributeActions({
         </Button>
       ) : null}
       {primary === 'files' ? (
-        <p className="text-center text-sm text-muted-foreground lg:text-left">
+        <p className="text-center text-sm text-muted-foreground sm:text-left">
           {t('addFilesSoon')}
         </p>
       ) : null}
