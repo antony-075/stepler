@@ -41,7 +41,7 @@ const LIMIT_ERROR = 'Досягнуто ліміту активних колек
 
 const toast = (page: Page) => page.locator('[data-slot="toast-title"]');
 
-/** The collection page's «Параметри» tab (archive, delete, guest access). */
+/** The collection page's «Параметри» tab (archive, delete). */
 async function openOptions(page: Page, id: string): Promise<void> {
   await page.goto(`/app/collections/${id}?tab=settings`);
   await expect(page.getByRole('tab', { name: 'Параметри' })).toHaveAttribute(
@@ -565,24 +565,6 @@ test.describe('dashboard card and settings layout (owner review 2026-10-02)', ()
     const description = await strip.getByText('Неділя, 12:00').boundingBox();
     const metaBox = await meta.boundingBox();
     expect(description!.y + description!.height).toBeLessThanOrEqual(metaBox!.y);
-  });
-
-  test('«Параметри» sums up guest access and opens the main link to change it', async ({
-    page,
-  }) => {
-    await signIn(page, newEmail());
-    const { id } = await createCollectionViaApi(page, 'Ювілей');
-    // The old address lands on the tab.
-    await page.goto(`/app/collections/${id}/settings`);
-    await expect(page).toHaveURL(`/app/collections/${id}?tab=settings`);
-    const access = page.getByRole('region', { name: 'Доступ гостей' });
-    await expect(
-      access.getByRole('list', { name: 'Гості можуть додавати' }).getByRole('listitem'),
-    ).toHaveText(['Фото', 'Відео', 'Документи', 'Побажання']);
-    await expect(access.getByText('Лише своє')).toBeVisible();
-    await access.getByRole('link', { name: 'Змінити доступ гостей' }).click();
-    await expect(page).toHaveURL(`/app/collections/${id}?tab=links&link=main`);
-    await expect(page.getByRole('dialog', { name: 'Основне посилання' })).toBeVisible();
   });
 });
 

@@ -17,7 +17,7 @@ import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
-import { CopyField } from '@stepler/ui/components/copy-field';
+import { CopyButton } from '@stepler/ui/components/copy-button';
 import { Label } from '@stepler/ui/components/label';
 import { Panel } from '@stepler/ui/components/panel';
 import { QrFrame, RotatingQr } from '@stepler/ui/components/qr-frame';
@@ -35,7 +35,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Ban, ExternalLink, Info, RefreshCw, Trash2, TriangleAlert } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { isApiError } from '@/api/client';
 import { useInvalidateCollections } from '@/api/collections';
@@ -61,6 +61,7 @@ import {
   SeePermissionCards,
 } from '@/guest-links/permission-fields';
 import { findLink, LINK_PARAM, useLinkName } from '@/guest-links/link-pages';
+import { LinkUrlBlock } from '@/guest-links/link-url-block';
 import { QrDownloadMenu } from '@/guest-links/qr-download-menu';
 import { QrCode } from '@/qr/qr-code';
 import { qrFileName } from '@/qr/qr';
@@ -194,6 +195,7 @@ function LinkDetails({
   const format = useFormatter();
   const name = useLinkName()(link);
   const fileBase = qrFileName(link.isDefault ? collection.title : `${collection.title} ${name}`);
+  const urlId = useId();
 
   return (
     <div className="grid gap-6 p-4 pb-8 sm:p-6 sm:pb-10">
@@ -207,44 +209,58 @@ function LinkDetails({
       {collection.status === 'ARCHIVED' ? (
         <Alert variant="info">{t('archivedNotice')}</Alert>
       ) : null}
-      {/* The link and its QR side by side once the sheet is wide enough (from `sm`). */}
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_15rem] sm:items-start">
+      {/* The link and its QR side by side once the sheet is wide enough (from `sm`): two cards
+          of equal height (the row stretches them), each a column with its buttons pinned to the
+          bottom, so Copy and Open line up with «Завантажити QR» (as in the share dialog). */}
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_15rem]">
         <Panel data-slot="link-share" className="gap-3 p-4">
           {link.url === null ? (
             <Alert variant="info">
               {link.isDefault ? tShare('hidden') : tShare('hiddenExtra')}
             </Alert>
           ) : (
-            <CopyField
-              label={tShare('guestLink')}
-              value={link.url}
-              copyLabel={tShare('copy')}
-              copiedLabel={tShare('copied')}
-              failedLabel={tShare('copyFailed')}
-            >
-              <Button asChild size="lg">
-                <a
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="no-underline"
-                >
-                  <ExternalLink aria-hidden="true" />
-                  {tShare('open')}
-                  <span className="sr-only">{tShare('newTab')}</span>
-                </a>
-              </Button>
-            </CopyField>
+            <>
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
+                <label htmlFor={urlId} className="text-sm font-semibold">
+                  {tShare('guestLink')}
+                </label>
+                <LinkUrlBlock id={urlId} value={link.url} />
+              </div>
+              {/* Pinned to the bottom of the card, level with «Завантажити QR». */}
+              <div className="mt-auto grid gap-2 min-[400px]:grid-cols-2">
+                <CopyButton
+                  value={link.url}
+                  variant="outline"
+                  size="lg"
+                  copyLabel={tShare('copy')}
+                  copiedLabel={tShare('copied')}
+                  failedLabel={tShare('copyFailed')}
+                  className="w-full [&>button]:w-full"
+                />
+                <Button asChild size="lg">
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="no-underline"
+                  >
+                    <ExternalLink aria-hidden="true" />
+                    {tShare('open')}
+                    <span className="sr-only">{tShare('newTab')}</span>
+                  </a>
+                </Button>
+              </div>
+            </>
           )}
         </Panel>
         {link.url === null ? null : (
-          <Panel data-slot="link-qr" className="grid justify-items-center gap-3 p-4">
+          <Panel data-slot="link-qr" className="items-center gap-3 p-4">
             <QrFrame className="size-40">
               <RotatingQr rotationKey={link.id}>
                 <QrCode value={link.url} label={tShare('qrLabel', { name })} size={160} />
               </RotatingQr>
             </QrFrame>
-            <div className="grid w-full *:w-full">
+            <div className="mt-auto grid w-full *:w-full">
               <QrDownloadMenu url={link.url} fileBase={fileBase} />
             </div>
           </Panel>

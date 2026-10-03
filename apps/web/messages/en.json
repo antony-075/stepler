@@ -284,7 +284,6 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Saved",
-      "access": "Guest access",
       "archive": "Archive",
       "archiveHint": "Guests lose access, everything is kept. You can bring it back at any time.",
       "unarchiveHint": "Guests can open the collection again.",
@@ -302,10 +301,6 @@
       "deleted": "Collection deleted",
       "leave": "The collection details aren’t saved. Leave the page without saving?",
       "subtitle": "Title and description, guest access, archive and deletion.",
-      "accessHint": "What the main link allows. Each link has its own permissions.",
-      "accessNoLink": "The main link appears once you open Links.",
-      "accessChange": "Change",
-      "accessChangeName": "Change guest access",
       "archiving": "Archiving",
       "archiveTitle": "Archive the collection"
     },
@@ -394,18 +389,14 @@
     }
   },
   "guestLinks": {
-    "permissions": {
-      "photos": "photos",
-      "videos": "videos",
-      "documents": "documents",
-      "texts": "wishes",
-      "add": "add {items}",
-      "seeAll": "see what every guest added",
-      "ownOnly": "see only their own",
-      "both": "{add}, and {see}",
+    "summary": {
+      "photos": "Photos",
+      "videos": "Videos",
+      "documents": "Documents",
+      "texts": "Wishes",
       "viewOnly": "View only",
-      "guestsCan": "Guests can {what}",
-      "allowed": "The organiser allows you to {what}"
+      "seeOwn": "See only their own",
+      "seeAll": "See everything"
     }
   },
   "share": {
@@ -588,9 +579,6 @@
       "settings": "Manage",
       "settingsName": "Manage “{name}”",
       "showQr": "Show the QR code and share “{name}”",
-      "pause": "Pause",
-      "resume": "Turn on",
-      "menu": "Actions for “{name}”",
       "copyLink": "Copy link"
     },
     "sheet": {

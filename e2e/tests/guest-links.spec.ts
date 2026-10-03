@@ -57,10 +57,9 @@ const row = (scope: Page | Locator, name: string): Locator => {
 const sheetOf = (page: Page, name: string): Locator =>
   page.getByRole('dialog', { name, exact: true });
 
-/** Opens a link row's «⋯» and picks an item. */
-async function rowAct(rowLocator: Locator, name: string, item: string): Promise<void> {
-  await rowLocator.getByRole('button', { name: `Дії з посиланням «${name}»` }).click();
-  await rowLocator.page().getByRole('menuitem', { name: item }).click();
+/** Presses a link row's one button, «Керувати» (named after the link). */
+async function rowAct(rowLocator: Locator, name: string, item: 'Керувати'): Promise<void> {
+  await rowLocator.getByRole('button', { name: `${item} «${name}»`, exact: true }).click();
 }
 
 /** The «Посилання» tab's panel (the list of every link). */
@@ -86,7 +85,7 @@ test.describe('links tab', () => {
     const tabUrl = page.url();
     // Two segments, the active one in the URL; where we are: «Колекції › title».
     const tabs = page.getByRole('tablist', { name: 'Розділи колекції' });
-    await expect(tabs.getByRole('tab')).toHaveText(['Вміст', 'Посилання1', 'Параметри']);
+    await expect(tabs.getByRole('tab')).toHaveText(['Вміст0', 'Посилання1', 'Параметри']);
     await expect(tabs.getByRole('tab', { name: /^Посилання/ })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -103,17 +102,21 @@ test.describe('links tab', () => {
     await expect(main.getByText(T.active, { exact: true })).toBeVisible();
     await expect(main.getByRole('img', { name: `QR-код посилання “${T.main}”` })).toBeVisible();
     await expect(main.getByText(/\/g\/[A-Za-z0-9_-]{43}$/)).toBeVisible();
-    await expect(main.getByText(/^Гості можуть додавати фото, відео, документи/)).toBeVisible();
-    // The QR (the one way to share), the copy icon by the address and one «⋯».
+    // What guests may do, compact (owner 2026-10-03): the types, then whose content they see.
+    await expect(
+      main.getByText('Фото · Відео · Документи · Побажання · Бачать лише своє'),
+    ).toBeVisible();
+    // The QR (the one way to share), the copy icon by the address and one «Керувати»
+    // (owner 2026-10-03: pausing lives in the link's sheet).
     await expect(main.getByRole('button')).toHaveCount(3);
-    await main.getByRole('button', { name: `Дії з посиланням «${T.main}»` }).click();
-    await expect(page.getByRole('menuitem')).toHaveText(['Керувати', 'Призупинити']);
-    await page.keyboard.press('Escape');
+    await expect(main.locator('[data-slot="link-actions"]').getByRole('button')).toHaveText([
+      'Керувати',
+    ]);
     const copyBox = await main.getByRole('button', { name: 'Копіювати посилання' }).boundingBox();
     expect(copyBox!.height).toBeGreaterThanOrEqual(40);
     // The row itself is not a link: a click on its text stays put.
     await expect(main.getByRole('link')).toHaveCount(0);
-    await main.getByText(/^Гості можуть додавати/).click();
+    await main.getByText(/^Фото · Відео/).click();
     await expect(page).toHaveURL(tabUrl);
     const extra = panel.getByRole('region', { name: 'Додаткові посилання' });
     await expect(extra.getByText('Додаткових посилань ще немає')).toBeVisible();
@@ -406,24 +409,31 @@ test.describe('links tab', () => {
     await expect(page.getByRole('tab', { name: /^Посилання/ })).toHaveText('Посилання1');
   });
 
-  test('a row pauses and turns a link back on, and deletes an additional one, without opening it', async ({
+  test('a link is paused and resumed in its sheet, the row shows it; an additional one is deleted from its sheet', async ({
     page,
   }) => {
     await openLinks(page, 'Ювілей');
     const main = row(page.locator('main'), T.main);
-    await rowAct(main, T.main, 'Призупинити');
+    // Only «Керувати» on a row: no pause and no delete there.
+    await expect(main.getByRole('button', { name: /Призупинити|Відновити|Видалити/ })).toHaveCount(
+      0,
+    );
+    await rowAct(main, T.main, 'Керувати');
+    const sheet = sheetOf(page, T.main);
+    await sheet.getByRole('switch', { name: T.works }).click();
     await expect(
       page.locator('[data-slot="toast"][data-variant="warning"]', {
         hasText: 'Посилання призупинено',
       }),
     ).toBeVisible();
+    await expect(sheet.getByRole('switch', { name: T.works })).not.toBeChecked();
+    await sheet.getByRole('button', { name: 'Закрити', exact: true }).click();
     await expect(main.getByText(T.paused, { exact: true })).toBeVisible();
-    await rowAct(main, T.main, 'Увімкнути');
+    await rowAct(main, T.main, 'Керувати');
+    await sheet.getByRole('switch', { name: T.works }).click();
+    await expect(sheet.getByRole('switch', { name: T.works })).toBeChecked();
+    await sheet.getByRole('button', { name: 'Закрити', exact: true }).click();
     await expect(main.getByText(T.active, { exact: true })).toBeVisible();
-    // The main link is only replaced, inside «Керувати»: no delete on its row.
-    await main.getByRole('button', { name: `Дії з посиланням «${T.main}»` }).click();
-    await expect(page.getByRole('menuitem', { name: 'Видалити посилання' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
 
     // On a phone the pause/resume toasts sit over the create dialog's buttons.
     await closeToasts(page);
@@ -434,7 +444,8 @@ test.describe('links tab', () => {
     await create.getByRole('button', { name: 'Створити' }).click();
     await expect(row(all, 'Батьки')).toBeVisible();
     await closeToasts(page);
-    await rowAct(row(all, 'Батьки'), 'Батьки', 'Видалити посилання');
+    await rowAct(row(all, 'Батьки'), 'Батьки', 'Керувати');
+    await sheetOf(page, 'Батьки').getByRole('button', { name: 'Видалити посилання' }).click();
     const dialog = page.getByRole('alertdialog', { name: 'Видалити «Батьки»?' });
     await dialog.getByRole('textbox').fill('Батьки');
     await dialog.getByRole('button', { name: 'Видалити' }).click();
@@ -487,13 +498,11 @@ test.describe('sharing from the collection page', () => {
 
     // The Share dialog warns and resumes in place; the card is active again.
     await page.goto(`/app/collections/${collection.id}?tab=links`);
-    // A paused link is not offered for sharing in its menu; the dashboard's «Поділитися» still
-    // reaches the dialog, which warns and turns it on in place.
-    await row(page.locator('main'), T.main)
-      .getByRole('button', { name: `Дії з посиланням «${T.main}»` })
-      .click();
-    await expect(page.getByRole('menuitem', { name: 'Поділитися' })).toHaveCount(0);
-    await page.keyboard.press('Escape');
+    // A paused row says so; the dashboard's «Поділитися» still reaches the dialog, which warns
+    // and turns it on in place.
+    await expect(
+      row(page.locator('main'), T.main).getByText(T.paused, { exact: true }),
+    ).toBeVisible();
     await page.goto('/app');
     await card.getByRole('button', { name: 'Поділитися' }).click();
     await expect(
