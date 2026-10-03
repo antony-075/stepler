@@ -8,6 +8,8 @@
 //   sees every number and the contributor's name.
 // - A type no live link lets guests add, with nothing of it, is a locked chip with the reason
 //   (owner review 2026-10-03); a type with frames always stays open.
+// - «Оновити» beside the order (there is no push): counts, links and the list from its first
+//   page, in place; the icon spins meanwhile and «Оновлено» is announced when done.
 // - Newest first by default (during an event the admin wants what just arrived); «За номером
 //   кадру» for the archive view. Both, and the type, live in the URL (`?kind=text&sort=frame`),
 //   and so does the open frame (`?frame=86`, Back closes the viewer).
@@ -42,10 +44,11 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { ImagePlus } from 'lucide-react';
+import { ImagePlus, RefreshCw } from 'lucide-react';
+import { cn } from '@stepler/ui/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
   contentCountsKey,
   contentListKey,
@@ -79,7 +82,9 @@ export function ContentTab({ collection }: { collection: Collection }) {
   const kind = kindFromParam(params.get('kind'));
   const sort = sortFromParam(params.get('sort'));
   const frameNo = frameFromParam(params.get('frame'));
-  const { counts, newCount, showNew, rebase } = useNewContent(collection.id);
+  const { counts, newCount, showNew, rebase, refresh } = useNewContent(collection.id);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
 
@@ -113,6 +118,19 @@ export function ContentTab({ collection }: { collection: Collection }) {
     const href = `/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`;
     if (mode === 'push') router.push(href, { scroll: false });
     else router.replace(href, { scroll: false });
+  }
+
+  /** «Оновити»: no push yet, so the admin asks for what arrived (the 15 s line stays too). */
+  async function refreshAll() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshed(false);
+    try {
+      await Promise.all([refresh(), links.refetch()]);
+      setRefreshed(true);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function openFrame(n: number) {
@@ -216,8 +234,27 @@ export function ContentTab({ collection }: { collection: Collection }) {
               </SelectGroup>
             </SelectContent>
           </Select>
+          {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+          <Button
+            variant="outline"
+            aria-disabled={refreshing || undefined}
+            onClick={() => void refreshAll()}
+            className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
+          >
+            <RefreshCw
+              aria-hidden="true"
+              className={cn(
+                'size-4',
+                refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+              )}
+            />
+            <span className="max-sm:sr-only">{t('refresh')}</span>
+          </Button>
         </div>
       </div>
+      <p role="status" className="sr-only">
+        {refreshed ? t('refreshed') : null}
+      </p>
 
       <div aria-live="polite" className="empty:hidden">
         {newCount > 0 ? (

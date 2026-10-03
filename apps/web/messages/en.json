@@ -346,6 +346,8 @@
       "newest": "Newest first",
       "frame": "By frame number"
     },
+    "refresh": "Refresh",
+    "refreshed": "Updated",
     "newFrames": "{count, plural, one {# new frame} other {# new frames}}",
     "showNew": "Show",
     "listLabel": "Frames of the collection",
