@@ -7,30 +7,45 @@ import { MediaUrls, WITH_MEDIA } from '../content/media-urls.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma, UploadSession } from '../generated/prisma/client.js';
+import { permissionsOf } from '../guest-access/guest-link-dto.js';
+import { assertLinkUsable } from '../guest-access/guest-link-resolver.js';
 import { canUploadKind } from '../guest-access/guest-policy.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../storage/object-storage.js';
 import { detectFileType, matchesDeclared, verifiedMime } from './file-signature.js';
-import { partLength } from './upload-plan.js';
-import { findOwnUpload, viaStorage } from './uploads.service.js';
+import { partLength, staleClaimBefore } from './upload-plan.js';
+import {
+  findOwnUpload,
+  isBeingCompleted,
+  uploadInProgress,
+  viaStorage,
+} from './uploads.service.js';
 
 /** Bytes read to detect the type ([C17]). */
 const SIGNATURE_BYTES = 4096;
-/** The row lock is held across bounded storage calls [C18]. */
-const TRANSACTION_TIMEOUT_MS = 30_000;
 
-/** What the transaction decided; errors are thrown after it commits. */
+/** What storage showed about the upload: a file to record, or the reason it is refused. */
+type Verdict = { kind: 'file'; mime: string; size: number } | { kind: 'refuse'; error: AppError };
+
+/** What a short transaction decided; errors are thrown after it commits. */
 type Outcome =
   | { kind: 'item'; contentItemId: string }
-  | { kind: 'refused'; error: AppError; uploadSessionId: string; reason: string };
+  | { kind: 'claimed'; claimedAt: Date; row: UploadSession }
+  | { kind: 'refused'; error: AppError; reason: string };
 
 /**
- * Completes a direct upload (spec §10.4, [C18]). The upload row is locked for the whole check,
- * so a duplicate or concurrent completion waits and then gets the same item. The server alone
- * completes multipart uploads (`ListParts` + `CompleteMultipartUpload`, client ETags are never
- * used), then checks the stored size and the content signature. A refusal is recorded
- * (`REJECTED` or `EXPIRED`) and its bytes queued for discarding in the same transaction; the
- * error is thrown after the commit.
+ * Completes a direct upload (spec §10.4) in three steps, so no database connection waits on
+ * storage (review I2):
+ * 1. a short transaction claims the upload (`COMPLETING`, `claimedAt`) after the state and
+ *    permission checks; a concurrent completion then gets `409 UPLOAD_IN_PROGRESS` (retryable),
+ *    a finished one the same item;
+ * 2. outside any transaction, the server alone assembles the multipart upload (`ListParts` +
+ *    `CompleteMultipartUpload`; client ETags are never used), then checks the stored size and
+ *    the content signature; storage trouble or missing parts give the claim back;
+ * 3. a short transaction re-checks the claim, the link and the permission, then records the
+ *    frame (`COMPLETED`), or the refusal (`REJECTED`, bytes queued for discarding).
+ * A claim left by a crashed request is stale after `COMPLETION_CLAIM_TTL_SECONDS`: it can be
+ * claimed again, and the expiry job expires it past the session's TTL.
  */
 @Injectable()
 export class UploadCompletion {
@@ -53,20 +68,28 @@ export class UploadCompletion {
     uploadId: string,
     closed: AppError | null = null,
   ): Promise<GuestContentItem> {
-    // Started outside the transaction, so a first start never runs while it holds a connection.
+    // Started outside the transactions, so a first start never runs while one holds a connection.
     await this.jobs.ready();
-    const outcome = await this.prisma.$transaction((tx) => this.decide(tx, p, uploadId, closed), {
-      timeout: TRANSACTION_TIMEOUT_MS,
-      maxWait: 10_000,
-    });
-    if (outcome.kind === 'refused') {
-      this.logger.log({
-        msg: 'upload refused',
-        uploadSessionId: outcome.uploadSessionId,
-        reason: outcome.reason,
-      });
-      throw outcome.error;
+    const claim = await this.prisma.$transaction((tx) => this.claim(tx, p, uploadId, closed));
+    if (claim.kind !== 'claimed') return this.finish(p, claim);
+
+    let verdict: Verdict;
+    try {
+      verdict = await this.inspect(claim.row);
+    } catch (error) {
+      // Missing parts or storage trouble: give the claim back so the guest can retry at once.
+      await this.release(claim.row.id, claim.claimedAt);
+      throw error;
     }
+    const outcome = await this.prisma.$transaction((tx) =>
+      this.record(tx, claim.row.id, claim.claimedAt, verdict),
+    );
+    return this.finish(p, outcome);
+  }
+
+  private async finish(p: GuestPrincipal, outcome: Outcome): Promise<GuestContentItem> {
+    if (outcome.kind === 'refused') throw outcome.error;
+    if (outcome.kind === 'claimed') throw new Error('unreachable: an unfinished claim');
     const item = await this.prisma.contentItem.findUniqueOrThrow({
       where: { id: outcome.contentItemId },
       include: WITH_MEDIA,
@@ -74,16 +97,17 @@ export class UploadCompletion {
     return toGuestContentItem(item, p, await this.media.forItem(item));
   }
 
-  private async decide(
+  /** Step 1: state and permission checks under the row lock, then the claim. */
+  private async claim(
     tx: Prisma.TransactionClient,
     p: GuestPrincipal,
     uploadId: string,
     closed: AppError | null,
   ): Promise<Outcome> {
     // Scope first (another guest's upload is 404), then lock the row and read it again.
-    await findOwnUpload(tx, p, uploadId);
-    await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${uploadId}::uuid FOR UPDATE`;
-    const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: uploadId } });
+    const own = await findOwnUpload(tx, p, uploadId);
+    await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${own.id}::uuid FOR UPDATE`;
+    const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: own.id } });
 
     if (row.status === 'COMPLETED') {
       if (closed !== null) throw closed;
@@ -94,25 +118,42 @@ export class UploadCompletion {
       throw new AppError('UPLOAD_CLOSED', 409);
     }
     if (row.status === 'EXPIRED') throw new AppError('UPLOAD_EXPIRED', 410);
+    if (isBeingCompleted(row)) throw uploadInProgress();
     if (row.expiresAt <= new Date()) {
-      await tx.uploadSession.update({ where: { id: row.id }, data: { status: 'EXPIRED' } });
-      await this.jobs.enqueue(tx, 'storage.discard-upload', { uploadSessionId: row.id });
-      return refused(row, new AppError('UPLOAD_EXPIRED', 410), 'UPLOAD_EXPIRED');
+      return this.close(tx, row, 'EXPIRED', new AppError('UPLOAD_EXPIRED', 410));
     }
-
     // Re-authorized now (D8): a link paused, revoked or narrowed since initiation refuses.
-    if (closed !== null) return this.reject(tx, row, closed);
+    if (closed !== null) return this.close(tx, row, 'REJECTED', closed);
     if (row.kind === 'TEXT' || !canUploadKind(p, row.kind)) {
-      return this.reject(tx, row, new AppError('FORBIDDEN', 403));
+      return this.close(tx, row, 'REJECTED', new AppError('FORBIDDEN', 403));
     }
 
-    const incomplete = await this.completeMultipart(row);
-    if (incomplete !== null) throw incomplete;
+    const claimedAt = new Date();
+    const { count } = await tx.uploadSession.updateMany({
+      where: {
+        id: row.id,
+        OR: [
+          { status: 'INITIATED' },
+          { status: 'COMPLETING', claimedAt: { lt: staleClaimBefore(claimedAt) } },
+        ],
+      },
+      data: { status: 'COMPLETING', claimedAt },
+    });
+    if (count === 0) throw uploadInProgress();
+    return { kind: 'claimed', claimedAt, row };
+  }
 
+  /**
+   * Step 2, outside any transaction: assemble the parts, then check size and content. Missing
+   * or wrong parts are `409 UPLOAD_INCOMPLETE` with `missingPartNumbers` (the upload stays open).
+   */
+  private async inspect(row: UploadSession): Promise<Verdict> {
+    const missing = await this.assemble(row);
+    if (missing !== null) throw missing;
     const head = await viaStorage(() => this.storage.head(row.storageKey));
     if (head === null) throw new AppError('UPLOAD_INCOMPLETE', 409, { retryable: true });
     if (BigInt(head.size) !== row.declaredSizeBytes) {
-      return this.reject(tx, row, new AppError('UPLOAD_SIZE_MISMATCH', 422));
+      return { kind: 'refuse', error: new AppError('UPLOAD_SIZE_MISMATCH', 422) };
     }
     const bytes = await viaStorage(() =>
       this.storage.readRange(row.storageKey, 0, SIGNATURE_BYTES - 1),
@@ -120,11 +161,42 @@ export class UploadCompletion {
     const detected = detectFileType(bytes);
     const declared = fileTypeFor(row.originalFilename, row.declaredMime);
     if (detected === null || declared === null || !matchesDeclared(detected, declared)) {
-      return this.reject(tx, row, new AppError('FILE_TYPE_NOT_ALLOWED', 422));
+      return { kind: 'refuse', error: new AppError('FILE_TYPE_NOT_ALLOWED', 422) };
+    }
+    return { kind: 'file', mime: verifiedMime(detected, declared), size: head.size };
+  }
+
+  /**
+   * Step 3: if the claim still holds, re-check the link and the permission now, then record
+   * the frame or the refusal.
+   */
+  private async record(
+    tx: Prisma.TransactionClient,
+    uploadId: string,
+    claimedAt: Date,
+    verdict: Verdict,
+  ): Promise<Outcome> {
+    await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${uploadId}::uuid FOR UPDATE`;
+    const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: uploadId } });
+    // Another request took over a claim it thought stale, or the purge aborted the upload.
+    if (row.status !== 'COMPLETING' || row.claimedAt?.getTime() !== claimedAt.getTime()) {
+      if (row.status === 'COMPLETED') return this.completedItem(tx, row);
+      if (row.status === 'COMPLETING') throw uploadInProgress();
+      throw new AppError('UPLOAD_CLOSED', 409);
     }
 
-    // Takes the collection lock and re-checks it is ACTIVE.
-    const frameNo = await this.frames.next(tx, row.collectionId);
+    if (verdict.kind === 'refuse') return this.close(tx, row, 'REJECTED', verdict.error);
+    const refusal = await this.reauthorize(tx, row);
+    if (refusal !== null) return this.close(tx, row, 'REJECTED', refusal);
+
+    let frameNo: number;
+    try {
+      // Takes the collection lock and re-checks it is ACTIVE.
+      frameNo = await this.frames.next(tx, row.collectionId);
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      return this.close(tx, row, 'REJECTED', error);
+    }
     const session = await tx.guestSession.findUniqueOrThrow({
       where: { id: row.guestSessionId },
       select: { contributorName: true },
@@ -143,15 +215,20 @@ export class UploadCompletion {
           create: {
             role: 'ORIGINAL',
             storageKey: row.storageKey,
-            mimeType: verifiedMime(detected, declared),
-            sizeBytes: BigInt(head.size),
+            mimeType: verdict.mime,
+            sizeBytes: BigInt(verdict.size),
           },
         },
       },
     });
     await tx.uploadSession.update({
       where: { id: row.id },
-      data: { status: 'COMPLETED', completedAt: new Date(), contentItemId: item.id },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+        claimedAt: null,
+        contentItemId: item.id,
+      },
     });
     // Previews arrive with media processing (PR D); until then these jobs wait in the queue.
     if (kind === 'PHOTO') {
@@ -164,9 +241,48 @@ export class UploadCompletion {
       uploadSessionId: row.id,
       contentItemId: item.id,
       kind,
-      sizeBytes: head.size,
+      sizeBytes: verdict.size,
     });
     return { kind: 'item', contentItemId: item.id };
+  }
+
+  /**
+   * The guest session's link and collection as they are now, and the permission for this kind:
+   * they may have changed while storage was checked.
+   */
+  private async reauthorize(
+    tx: Prisma.TransactionClient,
+    row: UploadSession,
+  ): Promise<AppError | null> {
+    const session = await tx.guestSession.findUniqueOrThrow({
+      where: { id: row.guestSessionId },
+      include: {
+        currentLink: true,
+        collection: { select: { status: true, owner: { select: { status: true } } } },
+      },
+    });
+    try {
+      assertLinkUsable({ link: session.currentLink, collection: session.collection });
+    } catch (error) {
+      if (error instanceof AppError) return error;
+      throw error;
+    }
+    const permissions = permissionsOf(session.currentLink);
+    const allowed =
+      row.kind === 'PHOTO'
+        ? permissions.canUploadPhotos
+        : row.kind === 'VIDEO'
+          ? permissions.canUploadVideos
+          : row.kind === 'DOCUMENT' && permissions.canUploadDocuments;
+    return allowed ? null : new AppError('FORBIDDEN', 403);
+  }
+
+  /** Gives a claim back (the row stays open), unless something else changed it meanwhile. */
+  private async release(uploadId: string, claimedAt: Date): Promise<void> {
+    await this.prisma.uploadSession.updateMany({
+      where: { id: uploadId, status: 'COMPLETING', claimedAt },
+      data: { status: 'INITIATED', claimedAt: null },
+    });
   }
 
   /** A repeat of a completion that already happened: the same item, unless it is gone. */
@@ -182,10 +298,10 @@ export class UploadCompletion {
 
   /**
    * Assembles the multipart upload from the parts storage lists, after checking each has its
-   * exact length. Missing or wrong parts: `409 UPLOAD_INCOMPLETE` with `missingPartNumbers`, and
-   * the upload stays open. Already assembled (a completion that failed after this step): no-op.
+   * exact length; returns the error to throw when parts are missing. Already assembled (a
+   * completion that failed after this step): nothing to do.
    */
-  private async completeMultipart(row: UploadSession): Promise<AppError | null> {
+  private async assemble(row: UploadSession): Promise<AppError | null> {
     const { multipartUploadId, partSizeBytes, partCount } = row;
     const parts = await viaStorage(() => this.storage.listParts(row.storageKey, multipartUploadId));
     if (parts === null) return null;
@@ -216,23 +332,23 @@ export class UploadCompletion {
     return null;
   }
 
-  private async reject(
+  /** Records the refusal (`REJECTED` or `EXPIRED`) and queues the discard of its bytes. */
+  private async close(
     tx: Prisma.TransactionClient,
     row: UploadSession,
+    status: 'REJECTED' | 'EXPIRED',
     error: AppError,
   ): Promise<Outcome> {
     await tx.uploadSession.update({
       where: { id: row.id },
-      data: { status: 'REJECTED', rejectReason: error.code },
+      data: {
+        status,
+        claimedAt: null,
+        ...(status === 'REJECTED' ? { rejectReason: error.code } : {}),
+      },
     });
     await this.jobs.enqueue(tx, 'storage.discard-upload', { uploadSessionId: row.id });
-    return refused(row, error, error.code);
+    this.logger.log({ msg: 'upload refused', uploadSessionId: row.id, status, reason: error.code });
+    return { kind: 'refused', error, reason: error.code };
   }
 }
-
-const refused = (row: UploadSession, error: AppError, reason: string): Outcome => ({
-  kind: 'refused',
-  error,
-  uploadSessionId: row.id,
-  reason,
-});

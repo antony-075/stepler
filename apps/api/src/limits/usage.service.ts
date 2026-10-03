@@ -47,8 +47,8 @@ export class UsageService {
 
   /**
    * Bytes a collection holds (spec §13.2, ADR 0010): every stored file (originals and
-   * derivatives) of its non-deleted items, plus the declared size of its open (`INITIATED`)
-   * uploads, which reserve their space until they complete, fail or expire. A deleted item stops
+   * derivatives) of its non-deleted items, plus the declared size of its open (`INITIATED` or
+   * `COMPLETING`) uploads, which reserve their space until they complete, fail or expire. A deleted item stops
    * counting at once, before the worker purges its objects.
    */
   async collectionStorageBytes(
@@ -64,7 +64,8 @@ export class UsageService {
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(u."declaredSizeBytes") FROM "UploadSession" u
-          WHERE u."collectionId" = ${collectionId}::uuid AND u."status" = 'INITIATED'
+          WHERE u."collectionId" = ${collectionId}::uuid
+            AND u."status" IN ('INITIATED', 'COMPLETING')
         ), 0)::bigint AS "bytes"`;
     return row.bytes;
   }
@@ -84,7 +85,7 @@ export class UsageService {
           SELECT SUM(u."declaredSizeBytes") FROM "UploadSession" u
           JOIN "Collection" k ON k."id" = u."collectionId"
           WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
-            AND u."status" = 'INITIATED'
+            AND u."status" IN ('INITIATED', 'COMPLETING')
         ), 0)::bigint AS "bytes"`;
     return row.bytes;
   }

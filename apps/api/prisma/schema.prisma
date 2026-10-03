@@ -54,6 +54,9 @@ enum ProcessingStatus {
 
 enum UploadStatus {
   INITIATED
+  /// A completion claimed it (`claimedAt`) and is checking storage outside any transaction; a
+  /// claim older than a few minutes (a crashed completion) can be claimed again or expired.
+  COMPLETING
   COMPLETED
   /// Cancelled by the guest, or by the collection's purge.
   ABORTED
@@ -293,7 +296,7 @@ model MediaObject {
 
 /// One file on its way from a guest's browser to storage (spec §7.3, §10). Rules live as named
 /// CHECKs: "UploadSession_kind_is_file", "UploadSession_size_positive",
-/// "UploadSession_parts_positive", "UploadSession_completed_consistent",
+/// "UploadSession_parts_positive", "UploadSession_completed_consistent", "UploadSession_claim_consistent",
 /// "UploadSession_reject_reason"; open uploads per guest session use the partial index
 /// "UploadSession_active_idx". The guest session and link belong to the row's own collection
 /// (composite keys). `INITIATED` rows reserve `declaredSizeBytes` of quota (ADR 0010).
@@ -322,6 +325,8 @@ model UploadSession {
   rejectReason      String?
   expiresAt         DateTime     @db.Timestamptz(3)
   completedAt       DateTime?    @db.Timestamptz(3)
+  /// Set while COMPLETING (CHECK "UploadSession_claim_consistent").
+  claimedAt         DateTime?    @db.Timestamptz(3)
   /// The item it became; NULL once that item is purged.
   contentItemId     String?      @unique @db.Uuid
   createdAt         DateTime     @default(now()) @db.Timestamptz(3)

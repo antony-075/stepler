@@ -53,6 +53,8 @@ export default defineConfig({
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '10000',
         LIMIT_TEXTS_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_READS_PER_IP_PER_MINUTE: '10000',
+        LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE: '10000',
+        LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE: '10000',
       },
       reuseExistingServer: false,
     },

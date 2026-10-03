@@ -40,6 +40,8 @@ type StorageEnv = Pick<
   | 'S3_ACCESS_KEY_ID'
   | 'S3_SECRET_ACCESS_KEY'
   | 'S3_FORCE_PATH_STYLE'
+  | 'S3_REQUEST_TIMEOUT_MS'
+  | 'S3_COMPLETE_TIMEOUT_MS'
 >;
 
 /** Without this the SDK leaves Content-Type unsigned and any type can be uploaded (spike S4). */
@@ -50,20 +52,25 @@ const SIGNED_PUT_HEADERS = new Set(['content-type']);
 export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
   private readonly client: S3Client;
   private readonly bucket: string;
+  private readonly timeoutMs: number;
+  private readonly completeTimeoutMs: number;
 
   constructor(@Inject(API_ENV) env: StorageEnv) {
     this.bucket = env.S3_BUCKET;
+    this.timeoutMs = env.S3_REQUEST_TIMEOUT_MS;
+    this.completeTimeoutMs = env.S3_COMPLETE_TIMEOUT_MS;
     this.client = createS3Client({
       endpoint: env.S3_ENDPOINT,
       region: env.S3_REGION,
       accessKeyId: env.S3_ACCESS_KEY_ID,
       secretAccessKey: env.S3_SECRET_ACCESS_KEY,
       forcePathStyle: env.S3_FORCE_PATH_STYLE,
+      requestTimeoutMs: env.S3_COMPLETE_TIMEOUT_MS,
     });
   }
 
   async checkHealth(): Promise<void> {
-    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }), this.deadline());
   }
 
   presignPut(key: string, options: PresignPutOptions): Promise<string> {
@@ -96,7 +103,10 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
 
   async head(key: string): Promise<ObjectHead | null> {
     try {
-      const res = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      const res = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+        this.deadline(),
+      );
       return {
         size: res.ContentLength ?? 0,
         ...(res.ContentType === undefined ? {} : { contentType: res.ContentType }),
@@ -109,7 +119,10 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
 
   async delete(key: string): Promise<void> {
     // S3 DeleteObject succeeds for missing keys.
-    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    await this.client.send(
+      new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+      this.deadline(),
+    );
   }
 
   async listKeys(prefix: string, options: ListKeysOptions = {}): Promise<KeyPage> {
@@ -120,6 +133,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         ...(options.limit === undefined ? {} : { MaxKeys: options.limit }),
         ...(options.token === undefined ? {} : { ContinuationToken: options.token }),
       }),
+      this.deadline(),
     );
     const keys = (res.Contents ?? []).flatMap((object) =>
       object.Key === undefined ? [] : [object.Key],
@@ -139,6 +153,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         Bucket: this.bucket,
         Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
       }),
+      this.deadline(),
     );
     // Missing keys are not errors in S3; anything reported here is a real failure.
     const failed = res.Errors?.length ?? 0;
@@ -151,6 +166,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
     try {
       await this.client.send(
         new AbortMultipartUploadCommand({ Bucket: this.bucket, Key: key, UploadId: uploadId }),
+        this.deadline(),
       );
     } catch (error) {
       if (error instanceof NoSuchUpload) return;
@@ -161,6 +177,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
   async createMultipart(key: string, contentType: string): Promise<string> {
     const res = await this.client.send(
       new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+      this.deadline(),
     );
     if (res.UploadId === undefined) throw new Error('CreateMultipartUpload returned no UploadId');
     return res.UploadId;
@@ -210,7 +227,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
 
   private async sendListParts(command: ListPartsCommand) {
     try {
-      return await this.client.send(command);
+      return await this.client.send(command, this.deadline());
     } catch (error) {
       if (error instanceof NoSuchUpload) return null;
       throw error;
@@ -231,6 +248,8 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
           Parts: parts.map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })),
         },
       }),
+      // Assembling a 2 GB upload can take a while.
+      this.deadline(this.completeTimeoutMs),
     );
   }
 
@@ -241,6 +260,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         Key: key,
         Range: `bytes=${start}-${endInclusive}`,
       }),
+      this.deadline(),
     );
     if (res.Body === undefined) return new Uint8Array();
     return res.Body.transformToByteArray();
@@ -260,7 +280,16 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         ContentType: contentType,
         ...(contentLength === undefined ? {} : { ContentLength: contentLength }),
       }),
+      this.deadline(this.completeTimeoutMs),
     );
+  }
+
+  /**
+   * Every storage call has a deadline (review I2): a hung storage fails the request (the API
+   * answers 503, retryable) instead of holding it.
+   */
+  private deadline(timeoutMs: number = this.timeoutMs): { abortSignal: AbortSignal } {
+    return { abortSignal: AbortSignal.timeout(timeoutMs) };
   }
 
   onModuleDestroy(): void {

@@ -418,6 +418,8 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 
 ### 10.4 Complete — `POST .../uploads/{uid}/complete`
 
+As built (addendum 2026-10-03, ADR 0008): a short transaction **claims** the upload (`COMPLETING`), the storage checks below run outside any transaction with deadlines, and a second short transaction re-checks the claim, link, collection and permission before recording the frame or the refusal. A concurrent completion gets `409 UPLOAD_IN_PROGRESS` (retryable); a claim older than 5 minutes can be claimed again or expired. Upload routes are rate-limited per IP and per guest session.
+
 1. If already `COMPLETED` → return the existing content item (duplicate completion is safe).
 2. Re-check the guest context **now** (link active, the upload permission for the file's type, collection active). If not authorized → `REJECTED` and enqueue object deletion (D8: bytes may exist in storage; completion is refused; cleanup removes them).
 3. Multipart: the server calls `ListParts` and then `CompleteMultipartUpload` — client-supplied ETags are not trusted.

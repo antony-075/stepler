@@ -27,6 +27,7 @@
     "UPLOAD_SIZE_MISMATCH": "The file didn’t upload completely.",
     "UPLOAD_INCOMPLETE": "The upload didn’t finish. Try again.",
     "UPLOAD_EXPIRED": "The upload took too long. Add the file again.",
+    "UPLOAD_IN_PROGRESS": "This upload is being checked; try again in a moment.",
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
     "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
     "CONTENT_NOT_FOUND": "This frame was deleted."

@@ -157,6 +157,10 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR` | api | no | Upload starts one guest session may make per rolling hour; default `300` |
 | `LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION` | api | no | Uploads one guest session may have in progress at once; default `10` |
 | `UPLOAD_PART_SIZE_BYTES` | api | no | Part size of every upload (all uploads are multipart; a smaller file is one part), at least `5242880`; default `10485760` (10 MiB) |
+| `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` | api | no | Upload API calls (start, parts, complete, cancel) per client IP per minute, per route; default `600` (venue NAT) |
+| `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` | api | no | The same per guest session; default `240` |
+| `S3_REQUEST_TIMEOUT_MS` | api, worker | no | A storage call fails after this long (the API answers 503, retryable); default `15000` |
+| `S3_COMPLETE_TIMEOUT_MS` | api, worker | no | The same for assembling a multipart upload; default `60000` |
 | `UPLOAD_SESSION_TTL_HOURS` | api | no | An upload not completed within this many hours expires and its bytes are discarded; default `24` |
 | `UPLOAD_URL_TTL_SECONDS` | api, worker | no | Lifetime of presigned upload URLs; a deleted collection's purge waits this long plus an hour; default `900` |
 | `MEDIA_URL_WINDOW_SECONDS` | api | no | Media download URLs are signed per window of this length and stay valid for two; default `3600` |

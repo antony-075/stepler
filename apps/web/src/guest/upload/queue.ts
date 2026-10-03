@@ -102,6 +102,7 @@ const RETRYABLE = new Set<UploadErrorCode>([
   'DEPENDENCY_UNAVAILABLE',
   'RATE_LIMITED',
   'UPLOAD_INCOMPLETE',
+  'UPLOAD_IN_PROGRESS',
 ]);
 
 /**

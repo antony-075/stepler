@@ -70,13 +70,21 @@ export interface UploadTransport {
    * Throws `TransferError`, `ApiError` (from the API calls) or the abort reason.
    */
   upload(
-    item: { file: File; clientUploadId: string },
+    /**
+     * `uploadId`: the server's id from an earlier attempt with the same `clientUploadId`, so a
+     * retry after a lost answer can still collect the frame that attempt completed.
+     */
+    item: { file: File; clientUploadId: string; uploadId?: string },
     api: UploadApi,
     signal: AbortSignal,
     onProgress: (loaded: number) => void,
     events?: UploadEvents,
   ): Promise<GuestContentItem>;
 }
+
+/** A completion already checking storage takes seconds; wait this long between asks, 15 times. */
+const IN_PROGRESS_WAIT_MS = 2_000;
+const IN_PROGRESS_ROUNDS = 15;
 
 /** 1 + 2 + 4 + 8 + 16 = 31 s of backoff per PUT. */
 export const PART_RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000] as const;
@@ -192,6 +200,19 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
   return {
     async upload(item, api, signal, onProgress, events = {}) {
       const { file } = item;
+      /** Completes; while another completion of it is checking storage, waits and asks again. */
+      const completeWhenFree = async (uploadId: string): Promise<GuestContentItem> => {
+        for (let round = 0; ; round += 1) {
+          try {
+            return await api.complete(uploadId, signal);
+          } catch (error) {
+            if (!isApiError(error, 'UPLOAD_IN_PROGRESS') || round >= IN_PROGRESS_ROUNDS)
+              throw error;
+            await sleep(IN_PROGRESS_WAIT_MS, signal);
+          }
+        }
+      };
+
       const request: CreateUploadRequest = {
         clientUploadId: item.clientUploadId,
         filename: file.name,
@@ -200,7 +221,16 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
       };
       // Not aborted mid-call: an aborted initiation may still create the session, and only its
       // id lets us cancel it (and free its quota reservation) instead of waiting for expiry.
-      const session = await api.initiate(request);
+      let session: UploadSessionResponse;
+      try {
+        session = await api.initiate(request);
+      } catch (error) {
+        // The same file was completed by an attempt whose answer never arrived: fetch its frame.
+        if (isApiError(error, 'UPLOAD_CLOSED') && item.uploadId !== undefined) {
+          return completeWhenFree(item.uploadId);
+        }
+        throw error;
+      }
       events.onInitiated?.(session.uploadId);
 
       let reported = 0;
@@ -221,13 +251,13 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
         events.onTransferred?.();
 
         try {
-          return await api.complete(session.uploadId, signal);
+          return await completeWhenFree(session.uploadId);
         } catch (error) {
           // Once: storage lost some parts; send what the server lists, then complete again.
           const missing = missingParts(error);
           if (missing === null) throw error;
           await sendParts(session, missing);
-          return await api.complete(session.uploadId, signal);
+          return await completeWhenFree(session.uploadId);
         }
       } catch (error) {
         if (signal.aborted) {

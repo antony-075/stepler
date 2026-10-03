@@ -58,15 +58,18 @@ export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
   /** Open uploads become `ABORTED`; their multipart uploads are aborted in storage. */
   private async abortOpenUploads(collectionId: string): Promise<void> {
     const open = await this.prisma.uploadSession.findMany({
-      where: { collectionId, status: 'INITIATED' },
+      where: { collectionId, status: { in: ['INITIATED', 'COMPLETING'] } },
       select: { id: true, storageKey: true, multipartUploadId: true },
     });
     for (const upload of open) {
       await this.storage.abortMultipart(upload.storageKey, upload.multipartUploadId);
     }
     await this.prisma.uploadSession.updateMany({
-      where: { id: { in: open.map((upload) => upload.id) }, status: 'INITIATED' },
-      data: { status: 'ABORTED' },
+      where: {
+        id: { in: open.map((upload) => upload.id) },
+        status: { in: ['INITIATED', 'COMPLETING'] },
+      },
+      data: { status: 'ABORTED', claimedAt: null },
     });
   }
 }

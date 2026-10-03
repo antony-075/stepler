@@ -29,3 +29,15 @@ export function partLength(sizeBytes: bigint, partSize: bigint, partNumber: numb
 /** The original's key (spec §10.6): no user data, never renamed. */
 export const uploadKey = (collectionId: string, uploadSessionId: string): string =>
   `collections/${collectionId}/uploads/${uploadSessionId}/original`;
+
+/**
+ * A completion's claim on an upload (`COMPLETING`) lasts this long. Its storage calls are bounded
+ * by the S3 deadlines (15 s each, 60 s to assemble), so a claim older than this belongs to a
+ * crashed or killed request: another completion may claim it again, and the expiry job may
+ * expire it once the session's TTL has passed.
+ */
+export const COMPLETION_CLAIM_TTL_SECONDS = 300;
+
+/** A claim made before this moment is stale. */
+export const staleClaimBefore = (now = new Date()): Date =>
+  new Date(now.getTime() - COMPLETION_CLAIM_TTL_SECONDS * 1000);

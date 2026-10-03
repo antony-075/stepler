@@ -109,3 +109,19 @@ Signing `Content-Length` and `Content-Type` does not help: the attacker re-sends
 - The delayed collection purge (`UPLOAD_URL_TTL_SECONDS` + 1 h) stays, as a margin: S3 lets a part `PUT` that is already running finish after an abort.
 - The R2 lifecycle rule (abort incomplete multipart uploads after 2 days) now covers every upload a crashed API never recorded.
 - Derivative bytes (thumbnails, previews, posters, PR D) are not reserved at initiation; they count once stored. They are small next to originals; accepted.
+
+## Addendum (2026-10-03): completion claims the upload; storage calls have deadlines
+
+**Status:** accepted (review finding I2).
+
+**Context.** The first completion held the upload row lock, and with it a database connection, across `ListParts`, `CompleteMultipartUpload`, `HEAD` and the signature read. With no deadline on storage calls and no rate limit on the route, about 20 parallel completions could exhaust the API's 10-connection pool.
+
+**Decision.**
+- **Claim, then check, then record.** A short transaction checks state and permission and sets `COMPLETING` + `claimedAt`. The storage calls run outside any transaction. A second short transaction re-checks the claim, the link and collection state and the per-kind permission, then creates the frame (`COMPLETED`) or records the refusal (`REJECTED`, discard queued). A frame-number failure (collection archived or deleted meanwhile) is a refusal too.
+- **Concurrent completions.** A second completion during a claim gets `409 UPLOAD_IN_PROGRESS` (`retryable: true`, `Retry-After: 2`); the web transport waits and asks again. A finished one gets the same item.
+- **Crashed claims.** A claim older than `COMPLETION_CLAIM_TTL_SECONDS` (300 s, well above the storage deadlines) is stale: a later completion may claim it again, and the expiry job expires it once the session's TTL has passed. Missing parts or storage trouble give the claim back at once.
+- **Quota.** `COMPLETING` uploads keep their reservation and count as open.
+- **Storage deadlines** (`S3_REQUEST_TIMEOUT_MS`, default 15 s; `S3_COMPLETE_TIMEOUT_MS`, default 60 s for assembling a multipart upload and for server-side writes; connect timeout 3 s). A timeout is `503 DEPENDENCY_UNAVAILABLE`, retryable.
+- **Rate limits** on initiate, parts, complete and cancel, per route: `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` (600, generous for venue NAT) and `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` (240, keyed by a hash of the session cookie).
+
+**Consequences.** A new status (`COMPLETING`) and column (`claimedAt`, CHECK `UploadSession_claim_consistent`). Completion is no longer one atomic transaction: a crash between the steps leaves a stale claim, which the rules above recover.

@@ -62,6 +62,7 @@ describe('isRetryable', () => {
       'DEPENDENCY_UNAVAILABLE',
       'RATE_LIMITED',
       'UPLOAD_INCOMPLETE',
+      'UPLOAD_IN_PROGRESS',
     ] as const) {
       expect(isRetryable(code), code).toBe(true);
     }

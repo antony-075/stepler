@@ -90,6 +90,16 @@ export class LimitsService {
     return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
   }
 
+  /** Upload API calls per client IP per minute, per route (venue NAT shares an IP). */
+  uploadCallsPerIpPerMinute(): number {
+    return this.env.LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE;
+  }
+
+  /** Upload API calls per guest session per minute, per route. */
+  uploadCallsPerGuestSessionPerMinute(): number {
+    return this.env.LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {

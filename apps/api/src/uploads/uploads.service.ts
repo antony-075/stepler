@@ -15,7 +15,7 @@ import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../storage/object-storage.js';
-import { partLength, planUpload, uploadKey } from './upload-plan.js';
+import { partLength, planUpload, staleClaimBefore, uploadKey } from './upload-plan.js';
 
 const HOUR_MS = 3600_000;
 const IDEMPOTENCY_INDEX = 'UploadSession_guestSessionId_clientUploadId_key';
@@ -47,12 +47,24 @@ export async function findOwnUpload(
   return row;
 }
 
-/** An open upload, or the error for its state: closed `409`, expired `410`. */
+/** A completion is checking this upload now (its claim is not stale). */
+export const isBeingCompleted = (row: UploadSession, now = new Date()): boolean =>
+  row.status === 'COMPLETING' && row.claimedAt !== null && row.claimedAt > staleClaimBefore(now);
+
+export const uploadInProgress = (): AppError =>
+  new AppError('UPLOAD_IN_PROGRESS', 409, { retryable: true, retryAfterSeconds: 2 });
+
+/**
+ * An open upload, or the error for its state: being completed `409 UPLOAD_IN_PROGRESS`
+ * (retryable), closed `409`, expired `410`. A stale claim counts as open.
+ */
 export function assertOpen(row: UploadSession, now = new Date()): void {
-  if (row.status === 'EXPIRED' || (row.status === 'INITIATED' && row.expiresAt <= now)) {
+  const open = row.status === 'INITIATED' || row.status === 'COMPLETING';
+  if (row.status === 'EXPIRED' || (open && row.expiresAt <= now)) {
     throw new AppError('UPLOAD_EXPIRED', 410);
   }
-  if (row.status !== 'INITIATED') throw new AppError('UPLOAD_CLOSED', 409);
+  if (isBeingCompleted(row, now)) throw uploadInProgress();
+  if (!open) throw new AppError('UPLOAD_CLOSED', 409);
 }
 
 /**
@@ -202,6 +214,7 @@ export class UploadsService {
   /**
    * Gives an open upload up: `ABORTED`, its reservation freed at once, the bytes discarded by
    * the worker. Idempotent; works even when the link has closed since (it only frees things).
+   * While a completion is checking it: `409 UPLOAD_IN_PROGRESS`.
    */
   async cancel(p: GuestPrincipal, uploadId: string): Promise<void> {
     // Started outside the transaction, so a first start never runs while it holds a connection.
@@ -210,10 +223,17 @@ export class UploadsService {
       const row = await findOwnUpload(tx, p, uploadId);
       if (row.status === 'ABORTED') return;
       if (row.status === 'COMPLETED') throw new AppError('UPLOAD_CLOSED', 409);
-      if (row.status !== 'INITIATED') return; // REJECTED or EXPIRED: already being discarded
+      if (isBeingCompleted(row)) throw uploadInProgress();
+      if (row.status !== 'INITIATED' && row.status !== 'COMPLETING') return; // being discarded
       const { count } = await tx.uploadSession.updateMany({
-        where: { id: row.id, status: 'INITIATED' },
-        data: { status: 'ABORTED' },
+        where: {
+          id: row.id,
+          OR: [
+            { status: 'INITIATED' },
+            { status: 'COMPLETING', claimedAt: { lt: staleClaimBefore() } },
+          ],
+        },
+        data: { status: 'ABORTED', claimedAt: null },
       });
       if (count === 0) {
         // A completion took it meanwhile.
@@ -260,7 +280,7 @@ export class UploadsService {
       this.prisma.uploadSession.count({
         where: {
           guestSessionId: p.guestSessionId,
-          status: 'INITIATED',
+          status: { in: ['INITIATED', 'COMPLETING'] },
           expiresAt: { gt: new Date() },
         },
       }),

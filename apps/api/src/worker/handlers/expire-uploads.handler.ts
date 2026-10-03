@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import { JOB_QUEUE, type JobQueue } from '../../jobs/job-queue.js';
+import { staleClaimBefore } from '../../uploads/upload-plan.js';
 import type { JobHandler } from '../job-handler.js';
 
 /** Uploads closed per run; the next run (every 15 minutes) takes the rest. */
@@ -9,7 +10,8 @@ const MAX_PER_RUN = 200;
 const CHUNK = 50;
 
 /**
- * Closes uploads not completed within their TTL (spec §10.5): `EXPIRED`, which frees their
+ * Closes uploads not completed within their TTL (spec §10.5), and those a crashed completion left
+ * `COMPLETING` (a stale claim) past their TTL: `EXPIRED`, which frees their
  * quota reservation, and a discard job each, in short transactions of `CHUNK`. Rows a
  * completion holds are skipped (`SKIP LOCKED`) and seen again next run.
  */
@@ -31,14 +33,16 @@ export class ExpireUploadsHandler implements JobHandler<'uploads.expire'> {
         // Ids as stored, for the job payloads.
         const rows = await tx.$queryRaw<{ id: string }[]>`
           SELECT "id"::text AS "id" FROM "UploadSession"
-          WHERE "status" = 'INITIATED' AND "expiresAt" < now()
+          WHERE "expiresAt" < now()
+            AND ("status" = 'INITIATED'
+              OR ("status" = 'COMPLETING' AND "claimedAt" < ${staleClaimBefore()}))
           ORDER BY "expiresAt"
           LIMIT ${Math.min(CHUNK, MAX_PER_RUN - expired)}
           FOR UPDATE SKIP LOCKED`;
         if (rows.length === 0) return 0;
         await tx.uploadSession.updateMany({
-          where: { id: { in: rows.map((row) => row.id) }, status: 'INITIATED' },
-          data: { status: 'EXPIRED' },
+          where: { id: { in: rows.map((row) => row.id) } },
+          data: { status: 'EXPIRED', claimedAt: null },
         });
         for (const { id } of rows) {
           await this.jobs.enqueue(tx, 'storage.discard-upload', { uploadSessionId: id });

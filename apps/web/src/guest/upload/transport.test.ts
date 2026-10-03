@@ -241,6 +241,35 @@ describe('UploadTransport', () => {
     expect(t.api.complete).toHaveBeenCalledTimes(2);
   });
 
+  test('UPLOAD_IN_PROGRESS: waits for the other completion, then gets the frame', async () => {
+    const t = setup({ size: 10, session: single });
+    t.api.complete.mockRejectedValueOnce(new ApiError('UPLOAD_IN_PROGRESS', 409));
+    t.api.complete.mockRejectedValueOnce(new ApiError('UPLOAD_IN_PROGRESS', 409));
+    const done = await t.transport.upload(
+      t.item,
+      t.api,
+      new AbortController().signal,
+      t.onProgress,
+    );
+    expect(done).toBe(result);
+    expect(t.api.complete).toHaveBeenCalledTimes(3);
+    expect(t.sleeps).toEqual([2_000, 2_000]);
+  });
+
+  test('a retry whose earlier attempt completed collects that frame', async () => {
+    const t = setup({ size: 10, session: single });
+    t.api.initiate.mockRejectedValueOnce(new ApiError('UPLOAD_CLOSED', 409));
+    const done = await t.transport.upload(
+      { ...t.item, uploadId: UPLOAD_ID },
+      t.api,
+      new AbortController().signal,
+      t.onProgress,
+    );
+    expect(done).toBe(result);
+    expect(t.api.complete).toHaveBeenCalledExactlyOnceWith(UPLOAD_ID, expect.anything());
+    expect(FakeXhr.all).toHaveLength(0);
+  });
+
   test('a part that fails for good stops its siblings', async () => {
     const t = setup({
       size: 30,

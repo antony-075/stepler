@@ -25,6 +25,7 @@ import {
 import { z } from 'zod';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
+import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import type { AppError } from '../errors/app-error.js';
 import { CurrentGuest } from '../guest-access/current-guest.decorator.js';
 import {
@@ -49,7 +50,8 @@ const STATE_ERRORS =
 @ApiTags('Uploads')
 @ApiCookieAuth(GUEST_SESSION_COOKIE_SCHEME)
 @Public()
-@UseGuards(GuestSessionGuard)
+// The per-IP and per-session limits first, so a flood is refused before any session lookup.
+@UseGuards(RateLimitGuard, GuestSessionGuard)
 @Controller({ path: 'guest/collections/:collectionId/uploads', version: '1' })
 export class UploadsController {
   constructor(
@@ -58,6 +60,12 @@ export class UploadsController {
   ) {}
 
   @Post()
+  @RateLimit('guest-upload', 'guest-upload-session')
+  @ApiResponse({
+    status: 429,
+    description:
+      'RATE_LIMITED: calls per IP or per guest session (see Retry-After), uploads per hour or open at once',
+  })
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: 201, standardSchema: uploadSessionResponseSchema })
   @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
@@ -72,7 +80,6 @@ export class UploadsController {
   })
   @ApiResponse({ status: 410, description: 'UPLOAD_EXPIRED (a retry of an expired upload)' })
   @ApiResponse({ status: 422, description: 'FILE_TYPE_NOT_ALLOWED, FILE_TOO_LARGE' })
-  @ApiResponse({ status: 429, description: 'RATE_LIMITED: uploads per hour or open at once' })
   @ApiResponse({ status: 503, description: 'DEPENDENCY_UNAVAILABLE: storage; retryable' })
   initiate(
     @CurrentGuest() guest: GuestPrincipal,
@@ -82,6 +89,11 @@ export class UploadsController {
   }
 
   @Post(':uploadId/parts')
+  @RateLimit('guest-upload', 'guest-upload-session')
+  @ApiResponse({
+    status: 429,
+    description: 'RATE_LIMITED: calls per IP or per guest session; see Retry-After',
+  })
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: uploadPartsResponseSchema })
   @ApiResponse({
@@ -89,7 +101,7 @@ export class UploadsController {
     description: 'VALIDATION_FAILED: parts beyond partCount',
   })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: no such upload of this guest' })
-  @ApiResponse({ status: 409, description: 'UPLOAD_CLOSED' })
+  @ApiResponse({ status: 409, description: 'UPLOAD_CLOSED, UPLOAD_IN_PROGRESS (retryable)' })
   @ApiResponse({ status: 410, description: `UPLOAD_EXPIRED; ${STATE_ERRORS}` })
   parts(
     @CurrentGuest() guest: GuestPrincipal,
@@ -104,6 +116,11 @@ export class UploadsController {
    * has closed meanwhile, so the refusal is recorded and the bytes discarded.
    */
   @Post(':uploadId/complete')
+  @RateLimit('guest-upload', 'guest-upload-session')
+  @ApiResponse({
+    status: 429,
+    description: 'RATE_LIMITED: calls per IP or per guest session; see Retry-After',
+  })
   @HttpCode(HttpStatus.OK)
   @AllowClosedLink()
   @ApiResponse({ status: 200, standardSchema: guestContentItemSchema })
@@ -118,7 +135,7 @@ export class UploadsController {
   @ApiResponse({
     status: 409,
     description:
-      'UPLOAD_INCOMPLETE (with missingPartNumbers for multipart; retry after sending them), UPLOAD_CLOSED',
+      'UPLOAD_INCOMPLETE (with missingPartNumbers; retry after sending them), UPLOAD_IN_PROGRESS (another completion is checking it; retryable), UPLOAD_CLOSED',
   })
   @ApiResponse({ status: 410, description: `UPLOAD_EXPIRED; ${STATE_ERRORS}` })
   @ApiResponse({
@@ -136,11 +153,20 @@ export class UploadsController {
 
   /** Idempotent; allowed after the link closed (it only frees space). */
   @Delete(':uploadId')
+  @RateLimit('guest-upload', 'guest-upload-session')
+  @ApiResponse({
+    status: 429,
+    description: 'RATE_LIMITED: calls per IP or per guest session; see Retry-After',
+  })
   @HttpCode(HttpStatus.NO_CONTENT)
   @AllowClosedLink()
   @ApiResponse({ status: 204, description: 'Cancelled (or already cancelled)' })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: no such upload of this guest' })
-  @ApiResponse({ status: 409, description: 'UPLOAD_CLOSED: already completed' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'UPLOAD_CLOSED: already completed; UPLOAD_IN_PROGRESS: being completed (retryable)',
+  })
   cancel(
     @CurrentGuest() guest: GuestPrincipal,
     @Param({ schema: guestUploadParamsSchema }) params: UploadParams,

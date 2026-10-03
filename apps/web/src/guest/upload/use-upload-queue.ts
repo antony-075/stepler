@@ -83,7 +83,13 @@ export function useUploadQueue(
       let lastTick = 0;
       transport
         .upload(
-          { file: item.file, clientUploadId },
+          {
+            file: item.file,
+            clientUploadId,
+            ...(item.needsNewSession || item.uploadId === undefined
+              ? {}
+              : { uploadId: item.uploadId }),
+          },
           api,
           controller.signal,
           (loaded) => {

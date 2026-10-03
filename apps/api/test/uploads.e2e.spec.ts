@@ -221,13 +221,20 @@ describe('uploads API', () => {
 
     const urls = await partUrls(g.calls, first.uploadId, [1]);
     expect(await putTo(urls.get(1) ?? '', photo)).toBe(200);
-    const [a, b] = await Promise.all([
+    // Two at once: one records the frame; the other gets the same frame, or
+    // UPLOAD_IN_PROGRESS (retryable) while the first is still checking storage.
+    const results = await Promise.all([
       g.calls.complete(first.uploadId),
       g.calls.complete(first.uploadId),
     ]);
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
-    expect((a.body as { id: string }).id).toBe((b.body as { id: string }).id);
+    const ok = results.filter((r) => r.status === 200);
+    expect(ok.length).toBeGreaterThanOrEqual(1);
+    for (const r of results.filter((r) => r.status !== 200)) {
+      expect(r.status).toBe(409);
+      expect(r.body).toMatchObject({ code: 'UPLOAD_IN_PROGRESS', retryable: true });
+    }
+    const retried = await g.calls.complete(first.uploadId).expect(200);
+    expect((retried.body as { id: string }).id).toBe((ok[0]?.body as { id: string }).id);
     expect(await prisma.contentItem.count()).toBe(1);
     expect(
       (await prisma.collection.findUniqueOrThrow({ where: { id: g.collectionId } })).nextFrameNo,
