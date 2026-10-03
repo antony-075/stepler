@@ -10,11 +10,13 @@ import {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 import { Input } from './input';
+import { PrintStack } from './print-stack';
 import { RotatingQr } from './qr-frame';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 import { Toaster, ToastProvider, useToast } from './toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './tabs';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
+import { UploadFrame } from './upload-frame';
 
 /**
  * Regression tests: overlays and toasts do not animate under `prefers-reduced-motion: reduce`.
@@ -229,5 +231,80 @@ export const RotatingQr_: Story = {
     const leaving = canvasElement.querySelector('[data-slot=rotating-qr-leaving]');
     if (leaving !== null) await expect(getComputedStyle(leaving).display).toBe('none');
     await expectStill(canvasElement.querySelector('[data-slot=rotating-qr]')!);
+  },
+};
+
+const tile = (hue: number) => (
+  <span className="block size-full" style={{ background: `hsl(${hue} 35% 62%)` }} />
+);
+
+/** PrintStack: no entrance and no develop fade; the prints keep their rotation. */
+export const PrintStack_: Story = {
+  name: 'PrintStack',
+  render: () => (
+    <PrintStack
+      label="Ваші кадри: 3"
+      prints={[
+        { key: 'a', image: tile(30), frameNo: 1 },
+        { key: 'b', image: tile(150), frameNo: 2 },
+        { key: 'c', image: tile(210), frameNo: 3 },
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expectReducedMotion();
+    const stack = canvasElement.querySelector('[data-slot=print-stack]')!;
+    await expectStill(stack);
+    const rotations = [...stack.querySelectorAll('[data-slot=print]')].map(
+      (el) => getComputedStyle(el).rotate,
+    );
+    await expect(rotations).toEqual(['-1.5deg', '1.5deg', 'none']);
+  },
+};
+
+/** UploadFrame: the veil jumps to the new progress (data, not animation); «Додано» does not fade. */
+export const UploadFrame_: Story = {
+  name: 'UploadFrame',
+  render: () => (
+    <div className="grid w-36 gap-2">
+      <UploadFrame
+        state="uploading"
+        progress={40}
+        position={{ index: 1, total: 2 }}
+        accessibleName="Кадр 1 з 2, завантажується"
+        labels={{
+          queued: 'У черзі',
+          processing: 'Обробка…',
+          done: 'Додано',
+          failed: 'Не вдалося',
+          retry: 'Повторити',
+          cancel: 'Скасувати',
+          position: (index, total) => `${index} з ${total}`,
+          percent: (value) => `${value}%`,
+        }}
+      />
+      <UploadFrame
+        state="done"
+        frameNo={2}
+        position={{ index: 2, total: 2 }}
+        accessibleName="Кадр 2, додано"
+        labels={{
+          queued: 'У черзі',
+          processing: 'Обробка…',
+          done: 'Додано',
+          failed: 'Не вдалося',
+          retry: 'Повторити',
+          cancel: 'Скасувати',
+          position: (index, total) => `${index} з ${total}`,
+          percent: (value) => `${value}%`,
+        }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expectReducedMotion();
+    const veil = canvasElement.querySelector<HTMLElement>('[data-slot=upload-veil]')!;
+    await expect(getComputedStyle(veil).transitionProperty).toBe('none');
+    await expectStill(canvasElement);
   },
 };
