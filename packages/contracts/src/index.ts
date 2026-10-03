@@ -123,3 +123,19 @@ export {
   type HealthReadyResponse,
 } from './health.js';
 export { usageResponseSchema, type UsageResponse } from './usage.js';
+export {
+  createUploadRequestSchema,
+  extensionOf,
+  FILE_TYPES,
+  fileKindSchema,
+  fileTypeFor,
+  uploadPartsRequestSchema,
+  uploadPartsResponseSchema,
+  uploadSessionResponseSchema,
+  type CreateUploadRequest,
+  type FileKind,
+  type FileType,
+  type UploadPartsRequest,
+  type UploadPartsResponse,
+  type UploadSessionResponse,
+} from './uploads.js';
