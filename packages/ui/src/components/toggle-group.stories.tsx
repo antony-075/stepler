@@ -157,26 +157,30 @@ const onPanel: Story['render'] = (args) => (
         Show
       </span>
       <ToggleGroup {...args} aria-label={undefined} aria-labelledby="theme-label">
-        <ToggleGroupItem value="system">
-          All <span className="type-data">126</span>
+        <ToggleGroupItem value="system" count={126}>
+          All
         </ToggleGroupItem>
-        <ToggleGroupItem value="light">
-          Photos <span className="type-data">98</span>
+        <ToggleGroupItem value="light" count={98}>
+          Photos
         </ToggleGroupItem>
-        <ToggleGroupItem value="dark">
-          Videos <span className="type-data">21</span>
+        <ToggleGroupItem value="dark" count={21}>
+          Videos
         </ToggleGroupItem>
       </ToggleGroup>
     </PanelContent>
   </Panel>
 );
 
-/** Filter chips on a sheet, with counts as data. */
+/** Filter chips on a sheet, with counts as data (mono, read with the label). */
 export const OnPanel: Story = {
   render: onPanel,
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('radiogroup', { name: 'Show' })).toBeVisible();
+    const photos = canvas.getByRole('radio', { name: 'Photos 98' });
+    const count = photos.querySelector('[data-slot="toggle-group-item-count"]')!;
+    await expect(getComputedStyle(count).fontFamily).toMatch(/Geist Mono/);
     await waitFor(() => expectReadsOnPanel(canvasElement));
+    await expectItemsAreTouchTargets(canvas.getAllByRole('radio'));
   },
 };
 
