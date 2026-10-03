@@ -16,7 +16,8 @@ const ENQUEUE_CHUNK = 50;
  * - re-enqueues `content.purge` / `collection.purge` for items and collections deleted more than
  *   an hour ago (lost or failed jobs, and collections deleted before the worker existed); a job
  *   still queued or running for the same entity makes this a no-op (`exclusive` queues);
- * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing. Their
+ * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
+ *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
  *   behind), so nobody can come back to them.
  */
@@ -92,7 +93,8 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     const batch = this.env.WORKER_PURGE_BATCH_SIZE;
     let total = 0;
     for (;;) {
-      // Upload sessions also reference guest sessions once the upload slice lands; add them here.
+      // A session with any upload is kept too: deleting it would cascade to its upload rows,
+      // and an open or rejected upload's bytes could then never be discarded.
       const deleted = await this.prisma.$executeRaw`
         DELETE FROM "GuestSession" WHERE "id" IN (
           SELECT s."id" FROM "GuestSession" s
@@ -100,6 +102,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
             AND NOT EXISTS (
               SELECT 1 FROM "ContentItem" c WHERE c."contributorGuestSessionId" = s."id"
             )
+            AND NOT EXISTS (SELECT 1 FROM "UploadSession" u WHERE u."guestSessionId" = s."id")
           LIMIT ${batch}
         )`;
       total += deleted;

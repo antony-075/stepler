@@ -509,3 +509,181 @@ describe('guest session and content schema', () => {
     expect(await prisma.contentItem.count()).toBe(0);
   });
 });
+
+describe('upload session and media object schema', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  let sequence = 0;
+  const check = (constraint: string) => ({ kind: 'check', constraint });
+
+  async function setup() {
+    const ownerId = (await prisma.user.create({ data: { email: `u${sequence++}@x.io` } })).id;
+    const collectionId = (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
+    const link = await prisma.guestLink.create({
+      data: {
+        collectionId,
+        isDefault: true,
+        tokenHash: `ulink-${sequence++}`,
+        tokenCiphertext: 'ct',
+        tokenKeyId: 'app-secret-v1',
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
+        canSubmitText: true,
+        canViewGallery: false,
+        canDeleteOwn: true,
+      },
+    });
+    const session = await prisma.guestSession.create({
+      data: { collectionId, currentLinkId: link.id, tokenHash: `usession-${sequence++}` },
+    });
+    return { collectionId, linkId: link.id, sessionId: session.id };
+  }
+
+  /** A valid single-PUT upload; tests override fields to break one rule. */
+  function upload(
+    ids: { collectionId: string; linkId: string; sessionId: string },
+    overrides: Record<string, unknown> = {},
+  ) {
+    const n = sequence++;
+    return prisma.uploadSession.create({
+      data: {
+        collectionId: ids.collectionId,
+        guestSessionId: ids.sessionId,
+        guestLinkId: ids.linkId,
+        clientUploadId: `0199a000-0000-7000-8000-${String(n).padStart(12, '0')}`,
+        kind: 'PHOTO',
+        originalFilename: 'IMG_1.jpg',
+        declaredMime: 'image/jpeg',
+        declaredSizeBytes: 1000n,
+        storageKey: `collections/${ids.collectionId}/uploads/${n}/original`,
+        strategy: 'SINGLE',
+        expiresAt: new Date(Date.now() + 3600_000),
+        ...overrides,
+      },
+    });
+  }
+
+  test('only files are uploaded, with a positive size', async () => {
+    const ids = await setup();
+    expect(await violation(upload(ids, { kind: 'TEXT' }))).toEqual(
+      check('UploadSession_kind_is_file'),
+    );
+    expect(await violation(upload(ids, { declaredSizeBytes: 0n }))).toEqual(
+      check('UploadSession_size_positive'),
+    );
+  });
+
+  test('multipart has its upload id, part size and count; single PUT none of them', async () => {
+    const ids = await setup();
+    const rule = check('UploadSession_multipart_consistent');
+    expect(await violation(upload(ids, { strategy: 'MULTIPART' }))).toEqual(rule);
+    expect(
+      await violation(
+        upload(ids, { strategy: 'MULTIPART', multipartUploadId: 'mp', partCount: 2 }),
+      ),
+    ).toEqual(rule);
+    expect(await violation(upload(ids, { partSizeBytes: 10n }))).toEqual(rule);
+    await upload(ids, {
+      strategy: 'MULTIPART',
+      multipartUploadId: 'mp',
+      partSizeBytes: 10_485_760n,
+      partCount: 3,
+    });
+  });
+
+  test('COMPLETED iff completedAt; REJECTED iff a reason', async () => {
+    const ids = await setup();
+    expect(await violation(upload(ids, { status: 'COMPLETED' }))).toEqual(
+      check('UploadSession_completed_consistent'),
+    );
+    expect(await violation(upload(ids, { completedAt: new Date() }))).toEqual(
+      check('UploadSession_completed_consistent'),
+    );
+    expect(await violation(upload(ids, { status: 'REJECTED' }))).toEqual(
+      check('UploadSession_reject_reason'),
+    );
+    expect(await violation(upload(ids, { rejectReason: 'FILE_TYPE_NOT_ALLOWED' }))).toEqual(
+      check('UploadSession_reject_reason'),
+    );
+    await upload(ids, { status: 'REJECTED', rejectReason: 'FILE_TYPE_NOT_ALLOWED' });
+    await upload(ids, { status: 'COMPLETED', completedAt: new Date() });
+  });
+
+  test('clientUploadId is unique per guest session; storage keys are unique', async () => {
+    const ids = await setup();
+    const first = await upload(ids);
+    expect(await violation(upload(ids, { clientUploadId: first.clientUploadId }))).toEqual({
+      kind: 'unique',
+      constraint: 'UploadSession_guestSessionId_clientUploadId_key',
+    });
+    expect(await violation(upload(ids, { storageKey: first.storageKey }))).toEqual({
+      kind: 'unique',
+      constraint: 'UploadSession_storageKey_key',
+    });
+  });
+
+  test("the guest session and link belong to the upload's own collection", async () => {
+    const x = await setup();
+    const y = await setup();
+    await expect(upload({ ...x, sessionId: y.sessionId })).rejects.toThrow();
+    await expect(upload({ ...x, linkId: y.linkId })).rejects.toThrow();
+    expect(await prisma.uploadSession.count()).toBe(0);
+  });
+
+  test('media objects: one per role, positive size, gone with their item; uploads keep going', async () => {
+    const ids = await setup();
+    const item = await prisma.contentItem.create({
+      data: {
+        collectionId: ids.collectionId,
+        contributorGuestSessionId: ids.sessionId,
+        frameNo: 1,
+        kind: 'PHOTO',
+        processingStatus: 'PENDING',
+      },
+    });
+    const media = (role: 'ORIGINAL' | 'THUMBNAIL', sizeBytes: bigint, key = `k-${sequence++}`) =>
+      prisma.mediaObject.create({
+        data: { contentItemId: item.id, role, storageKey: key, mimeType: 'image/jpeg', sizeBytes },
+      });
+    expect(await violation(media('ORIGINAL', 0n))).toEqual(check('MediaObject_size_positive'));
+    await media('ORIGINAL', 1000n);
+    expect(await violation(media('ORIGINAL', 1000n))).toEqual({
+      kind: 'unique',
+      constraint: 'MediaObject_contentItemId_role_key',
+    });
+    const completed = await upload(ids, {
+      status: 'COMPLETED',
+      completedAt: new Date(),
+      contentItemId: item.id,
+    });
+    await prisma.contentItem.delete({ where: { id: item.id } });
+    expect(await prisma.mediaObject.count()).toBe(0);
+    const after = await prisma.uploadSession.findUniqueOrThrow({ where: { id: completed.id } });
+    expect(after.contentItemId).toBeNull();
+    expect(after.status).toBe('COMPLETED');
+  });
+
+  test('deleting a guest session or the collection deletes its uploads', async () => {
+    const ids = await setup();
+    await upload(ids);
+    await prisma.guestSession.delete({ where: { id: ids.sessionId } });
+    expect(await prisma.uploadSession.count()).toBe(0);
+    const other = await setup();
+    await upload(other);
+    await prisma.collection.delete({ where: { id: other.collectionId } });
+    expect(await prisma.uploadSession.count()).toBe(0);
+  });
+
+  test('a link with uploads cannot be deleted on its own', async () => {
+    const ids = await setup();
+    await upload(ids);
+    await prisma.guestSession.update({
+      where: { id: ids.sessionId },
+      data: { currentLinkId: ids.linkId },
+    });
+    await expect(prisma.guestLink.delete({ where: { id: ids.linkId } })).rejects.toThrow();
+  });
+});

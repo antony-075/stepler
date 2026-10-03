@@ -1,15 +1,20 @@
+import type { Readable } from 'node:stream';
 import {
   AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
+  ListPartsCommand,
   NoSuchUpload,
   NotFound,
   PutObjectCommand,
   type S3Client,
+  UploadPartCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
@@ -23,6 +28,7 @@ import {
   type ObjectStorage,
   type PresignGetOptions,
   type PresignPutOptions,
+  type StoredPart,
 } from './object-storage.js';
 import { createS3Client } from './s3-client.js';
 
@@ -82,7 +88,10 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         ? {}
         : { ResponseContentDisposition: options.contentDisposition }),
     });
-    return getSignedUrl(this.client, command, { expiresIn: options.expiresInSeconds });
+    return getSignedUrl(this.client, command, {
+      expiresIn: options.expiresInSeconds,
+      ...(options.signingDate === undefined ? {} : { signingDate: options.signingDate }),
+    });
   }
 
   async head(key: string): Promise<ObjectHead | null> {
@@ -147,6 +156,101 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
       if (error instanceof NoSuchUpload) return;
       throw error;
     }
+  }
+
+  async createMultipart(key: string, contentType: string): Promise<string> {
+    const res = await this.client.send(
+      new CreateMultipartUploadCommand({ Bucket: this.bucket, Key: key, ContentType: contentType }),
+    );
+    if (res.UploadId === undefined) throw new Error('CreateMultipartUpload returned no UploadId');
+    return res.UploadId;
+  }
+
+  presignPart(
+    key: string,
+    uploadId: string,
+    partNumber: number,
+    contentLength: number,
+    expiresInSeconds: number,
+  ): Promise<string> {
+    // ContentLength is signed: a part of another size is refused (and R2's equal-part rule
+    // holds, ADR 0008 S4).
+    const command = new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+      ContentLength: contentLength,
+    });
+    return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+  }
+
+  async listParts(key: string, uploadId: string): Promise<StoredPart[]> {
+    const parts: StoredPart[] = [];
+    let marker: string | undefined;
+    for (;;) {
+      const res = await this.client.send(
+        new ListPartsCommand({
+          Bucket: this.bucket,
+          Key: key,
+          UploadId: uploadId,
+          ...(marker === undefined ? {} : { PartNumberMarker: marker }),
+        }),
+      );
+      for (const part of res.Parts ?? []) {
+        if (part.PartNumber === undefined || part.ETag === undefined) continue;
+        parts.push({ partNumber: part.PartNumber, etag: part.ETag, size: part.Size ?? 0 });
+      }
+      if (res.IsTruncated !== true || res.NextPartNumberMarker === undefined) break;
+      marker = res.NextPartNumberMarker;
+    }
+    return parts.sort((a, b) => a.partNumber - b.partNumber);
+  }
+
+  async completeMultipart(
+    key: string,
+    uploadId: string,
+    parts: readonly Pick<StoredPart, 'partNumber' | 'etag'>[],
+  ): Promise<void> {
+    await this.client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucket,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts.map((part) => ({ PartNumber: part.partNumber, ETag: part.etag })),
+        },
+      }),
+    );
+  }
+
+  async readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array> {
+    const res = await this.client.send(
+      new GetObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Range: `bytes=${start}-${endInclusive}`,
+      }),
+    );
+    if (res.Body === undefined) return new Uint8Array();
+    return res.Body.transformToByteArray();
+  }
+
+  async putObject(
+    key: string,
+    body: Buffer | Readable,
+    contentType: string,
+    contentLength?: number,
+  ): Promise<void> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        ...(contentLength === undefined ? {} : { ContentLength: contentLength }),
+      }),
+    );
   }
 
   onModuleDestroy(): void {
