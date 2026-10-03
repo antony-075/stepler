@@ -89,6 +89,9 @@ const apiEnvSchema = z
     LIMIT_FILE_BYTES_VIDEO: byteCount(2_000_000_000n),
     LIMIT_FILE_BYTES_DOCUMENT: byteCount(50_000_000n),
     LIMIT_FILES_PER_BATCH: positiveInt(100),
+    LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR: positiveInt(60),
+    LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR: positiveInt(300),
+    LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION: positiveInt(10),
   })
   .superRefine((env, ctx) => {
     if ((env.GOOGLE_CLIENT_ID === undefined) !== (env.GOOGLE_CLIENT_SECRET === undefined)) {

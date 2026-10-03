@@ -2823,6 +2823,221 @@
       }
     },
     "/api/v1/guest/collections/{collectionId}/session": {
+      "patch": {
+        "operationId": "GuestSessionsController_updateName_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "nullable": true,
+                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "collection": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "description": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "title",
+                        "description"
+                      ],
+                      "type": "object"
+                    },
+                    "counts": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "lastAddedAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "total": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "lastAddedAt"
+                      ],
+                      "type": "object"
+                    },
+                    "guest": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "nameAnswered": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "nameAnswered"
+                      ],
+                      "type": "object"
+                    },
+                    "limits": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "filesPerBatch": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "maxFileBytes": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "document": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "photo": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "video": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "photo",
+                            "video",
+                            "document"
+                          ],
+                          "type": "object"
+                        },
+                        "textMaxChars": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "maxFileBytes",
+                        "filesPerBatch",
+                        "textMaxChars"
+                      ],
+                      "type": "object"
+                    },
+                    "permissions": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "collection",
+                    "permissions",
+                    "guest",
+                    "limits",
+                    "counts"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "GUEST_SESSION_REQUIRED: no session for this collection"
+          },
+          "403": {
+            "description": "FORBIDDEN (a view-only link), COLLECTION_ARCHIVED or LINK_INACTIVE"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_gs": []
+          }
+        ],
+        "tags": [
+          "Guest"
+        ]
+      },
       "post": {
         "operationId": "GuestSessionsController_exchange_v1",
         "parameters": [
@@ -3043,6 +3258,198 @@
             "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
           }
         },
+        "tags": [
+          "Guest"
+        ]
+      }
+    },
+    "/api/v1/guest/collections/{collectionId}/texts": {
+      "post": {
+        "operationId": "GuestContentController_createText_v1",
+        "parameters": [
+          {
+            "description": "A UUID per draft",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "body": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "body"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A retry with the same Idempotency-Key and body: the item created first"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "canDelete": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "durationMs": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "frameNo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isOwn": {
+                      "type": "boolean"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PHOTO",
+                        "VIDEO",
+                        "DOCUMENT",
+                        "TEXT"
+                      ],
+                      "type": "string"
+                    },
+                    "originalFilename": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "posterUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "previewUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "processingStatus": {
+                      "enum": [
+                        "NOT_REQUIRED",
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "width": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "createdAt",
+                    "isOwn",
+                    "frameNo",
+                    "canDelete",
+                    "originalFilename",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "durationMs",
+                    "processingStatus",
+                    "text",
+                    "thumbnailUrl",
+                    "previewUrl",
+                    "posterUrl"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "401": {
+            "description": "GUEST_SESSION_REQUIRED"
+          },
+          "403": {
+            "description": "FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE"
+          },
+          "409": {
+            "description": "IDEMPOTENCY_CONFLICT: the key was used for another text"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: texts per session per hour"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_gs": []
+          }
+        ],
         "tags": [
           "Guest"
         ]

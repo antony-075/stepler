@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Inject,
   Param,
+  Patch,
   Post,
   Req,
   Res,
@@ -17,8 +18,10 @@ import {
   guestCollectionParamsSchema,
   guestContextSchema,
   guestSessionRequestSchema,
+  updateGuestSessionRequestSchema,
   type GuestContext,
   type GuestSessionRequest,
+  type UpdateGuestSessionRequest,
 } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
@@ -86,6 +89,27 @@ export class GuestSessionsController {
     const token = newToken ?? cookieToken;
     if (token !== undefined) setGuestSessionCookie(res, token, params.collectionId, this.env);
     return context;
+  }
+
+  /** The guest's optional name [O4]; `null` skips or clears it. */
+  @Patch('session')
+  @UseGuards(GuestSessionGuard)
+  @ApiCookieAuth(GUEST_SESSION_COOKIE_SCHEME)
+  @ApiResponse({ status: 200, standardSchema: guestContextSchema })
+  @ApiResponse({
+    status: 401,
+    description: 'GUEST_SESSION_REQUIRED: no session for this collection',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'FORBIDDEN (a view-only link), COLLECTION_ARCHIVED or LINK_INACTIVE',
+  })
+  @ApiResponse(STATE_ERRORS[1])
+  updateName(
+    @CurrentGuest() guest: GuestPrincipal,
+    @Body({ schema: updateGuestSessionRequestSchema }) body: UpdateGuestSessionRequest,
+  ): Promise<GuestContext> {
+    return this.sessions.updateName(guest, body.name);
   }
 
   @Get('context')

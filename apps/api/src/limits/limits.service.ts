@@ -28,6 +28,13 @@ export interface FileRules {
   filesPerBatch: number;
 }
 
+/** Per guest session (spec §13.1, F1); a session is one browser in one collection. */
+export interface GuestSessionLimits {
+  textsPerHour: number;
+  uploadInitiationsPerHour: number;
+  concurrentUploads: number;
+}
+
 /**
  * Single source of limits. Values are config-backed today; plans and entitlements plug in
  * behind `forUser` later without changing callers (ADR 0010).
@@ -52,6 +59,14 @@ export class LimitsService {
   /** Guest session exchanges per client IP per minute; venue NAT shares an IP, as [G10]. */
   guestSessionCreatePerIpPerMinute(): number {
     return this.env.LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE;
+  }
+
+  forGuestSession(): GuestSessionLimits {
+    return {
+      textsPerHour: this.env.LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR,
+      uploadInitiationsPerHour: this.env.LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR,
+      concurrentUploads: this.env.LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION,
+    };
   }
 
   fileRules(): FileRules {

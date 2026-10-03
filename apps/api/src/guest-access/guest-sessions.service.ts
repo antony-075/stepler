@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
+import { canContribute, type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { generateToken, hashToken, TOKEN_PATTERN } from '../auth/tokens.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -95,6 +95,26 @@ export class GuestSessionsService {
       collectionId,
       link: { id: session.currentLink.id, permissions: permissionsOf(session.currentLink) },
     };
+  }
+
+  /**
+   * Saves (or, with `null`, skips or clears) the guest's name [O4]; either way the prompt is
+   * answered. [C4]: the name on this session's live items follows, in the same transaction, so
+   * the admin never sees two names for one guest after a typo fix.
+   */
+  async updateName(p: GuestPrincipal, name: string | null): Promise<GuestContext> {
+    if (!canContribute(p.link.permissions)) throw new AppError('FORBIDDEN', 403);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.guestSession.update({
+        where: { id: p.guestSessionId },
+        data: { contributorName: name, nameAnsweredAt: new Date() },
+      });
+      await tx.contentItem.updateMany({
+        where: { contributorGuestSessionId: p.guestSessionId, deletedAt: null },
+        data: { contributorName: name },
+      });
+    });
+    return this.context(p);
   }
 
   async context(p: GuestPrincipal): Promise<GuestContext> {

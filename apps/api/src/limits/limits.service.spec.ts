@@ -25,6 +25,11 @@ describe('LimitsService', () => {
       fileBytes: { PHOTO: 50_000_000n, VIDEO: 2_000_000_000n, DOCUMENT: 50_000_000n },
       filesPerBatch: 100,
     });
+    expect(limits.forGuestSession()).toEqual({
+      textsPerHour: 60,
+      uploadInitiationsPerHour: 300,
+      concurrentUploads: 10,
+    });
   });
 
   test('applies env overrides', () => {
