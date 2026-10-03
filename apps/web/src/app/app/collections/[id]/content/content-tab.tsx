@@ -181,75 +181,77 @@ export function ContentTab({ collection }: { collection: Collection }) {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      {/* One toolbar row from md: chips left, the order right, both 36px (44px on touch) on one
-          centre line. */}
-      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
-          <ToggleGroup
-            aria-label={t('filterLabel')}
-            value={filter}
-            onValueChange={(value) =>
-              navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
-            }
-          >
-            {KIND_FILTERS.map((value) => (
-              <ToggleGroupItem
-                key={value}
-                value={value}
-                count={countOf(value)}
-                disabledReason={
-                  value !== 'all' && locked.has(value) && filter !== value
-                    ? t(`filterLocked.${value}`)
-                    : undefined
-                }
-              >
-                {t(`filter.${value}`)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        <div className="flex min-w-0 items-center gap-3">
-          <span id={sortId} className="shrink-0 text-sm text-muted-foreground">
-            {t('sortLabel')}
-          </span>
-          <Select
-            value={sort}
-            onValueChange={(value) =>
-              navigate({ sort: value === 'frame' ? 'frame' : null, frame: null }, 'replace')
-            }
-          >
-            <SelectTrigger
-              aria-labelledby={sortId}
-              className="h-11 w-full min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+      {/* One toolbar row once it fits (an 832px column: not beside the sidebar at 1024): chips
+          left, the order and «Оновити» right, all 36px (44px on touch) on one centre line. */}
+      <div className="@container/toolbar min-w-0">
+        <div className="flex min-w-0 flex-col gap-3 @min-[52rem]/toolbar:flex-row @min-[52rem]/toolbar:items-center @min-[52rem]/toolbar:justify-between">
+          <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
+            <ToggleGroup
+              aria-label={t('filterLabel')}
+              value={filter}
+              onValueChange={(value) =>
+                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
+              }
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectGroup>
-                {SORTS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`sort.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
-          <Button
-            variant="outline"
-            aria-disabled={refreshing || undefined}
-            onClick={() => void refreshAll()}
-            className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={cn(
-                'size-4',
-                refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
-              )}
-            />
-            <span className="max-sm:sr-only">{t('refresh')}</span>
-          </Button>
+              {KIND_FILTERS.map((value) => (
+                <ToggleGroupItem
+                  key={value}
+                  value={value}
+                  count={countOf(value)}
+                  disabledReason={
+                    value !== 'all' && locked.has(value) && filter !== value
+                      ? t(`filterLocked.${value}`)
+                      : undefined
+                  }
+                >
+                  {t(`filter.${value}`)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <div className="flex min-w-0 items-center gap-3">
+            <span id={sortId} className="shrink-0 text-sm text-muted-foreground">
+              {t('sortLabel')}
+            </span>
+            <Select
+              value={sort}
+              onValueChange={(value) =>
+                navigate({ sort: value === 'frame' ? 'frame' : null, frame: null }, 'replace')
+              }
+            >
+              <SelectTrigger
+                aria-labelledby={sortId}
+                className="h-11 w-full min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectGroup>
+                  {SORTS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`sort.${value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+            <Button
+              variant="outline"
+              aria-disabled={refreshing || undefined}
+              onClick={() => void refreshAll()}
+              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(
+                  'size-4',
+                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+                )}
+              />
+              <span className="max-sm:sr-only">{t('refresh')}</span>
+            </Button>
+          </div>
         </div>
       </div>
       <p role="status" className="sr-only">
