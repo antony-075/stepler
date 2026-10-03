@@ -2,6 +2,8 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { EnvValidationError } from '../config/env.js';
+import { describeError } from '../jobs/pg-boss-queue.js';
+import { shutdownWorker } from './shutdown.js';
 import { WorkerModule } from './worker.module.js';
 import { loadWorkerEnv } from './worker-env.js';
 
@@ -20,6 +22,23 @@ try {
 const app = await NestFactory.createApplicationContext(WorkerModule.forRoot({ env }), {
   bufferLogs: true,
 });
-app.useLogger(app.get(Logger));
-// SIGTERM (deploys) stops polling and lets running jobs finish (JobRunner).
-app.enableShutdownHooks();
+const logger = app.get(Logger);
+app.useLogger(logger);
+
+// SIGTERM (deploys) and SIGINT (Ctrl+C): drain jobs, then close the clients (`shutdownWorker`).
+// Not `enableShutdownHooks`, which would close Prisma and S3 under running jobs.
+let stopping = false;
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.once(signal, () => {
+    if (stopping) return;
+    stopping = true;
+    logger.log({ msg: 'worker stopping', signal });
+    shutdownWorker(app).then(
+      () => process.exit(0),
+      (error: unknown) => {
+        logger.error({ msg: 'worker shutdown failed', reason: describeError(error) });
+        process.exit(1);
+      },
+    );
+  });
+}

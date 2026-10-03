@@ -210,28 +210,29 @@ export class CollectionsService {
    */
   async delete(principal: AccountPrincipal, id: string, requestId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
-      // Includes DELETING (for the no-op) and locks the row, so `fromStatus` is accurate.
-      const [row] = await tx.$queryRaw<{ status: CollectionRow['status'] }[]>`
-        SELECT "status" FROM "Collection"
+      // Includes DELETING (for the no-op) and locks the row, so `fromStatus` is accurate. The id
+      // is read back: PostgreSQL matches a UUID in any case, storage keys are case-sensitive.
+      const [row] = await tx.$queryRaw<{ id: string; status: CollectionRow['status'] }[]>`
+        SELECT "id"::text AS "id", "status" FROM "Collection"
         WHERE "id" = ${id}::uuid AND "ownerId" = ${principal.userId}::uuid
         FOR UPDATE`;
       if (row === undefined) throw new AppError('NOT_FOUND', 404);
       if (row.status === 'DELETING') return;
       await tx.collection.update({
-        where: { id },
+        where: { id: row.id },
         data: { status: 'DELETING', deletionRequestedAt: new Date(), archivedAt: null },
       });
       await this.recordTransition(
         tx,
         principal,
-        id,
+        row.id,
         'collection.delete',
         row.status,
         'DELETING',
         requestId,
       );
       await this.jobs.enqueue(tx, 'collection.purge', {
-        collectionId: id,
+        collectionId: row.id,
         ...(requestId === undefined ? {} : { requestId }),
       });
     });

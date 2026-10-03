@@ -1,10 +1,4 @@
-import {
-  type BeforeApplicationShutdown,
-  Inject,
-  Injectable,
-  Logger,
-  type OnApplicationBootstrap,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import type { Job } from 'pg-boss';
 import type { JobData, JobName } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
@@ -21,15 +15,13 @@ const SCHEDULES: Partial<Record<JobName, string>> = {
 };
 
 const POLLING_INTERVAL_SECONDS = 2;
-/** Running jobs get this long to finish on SIGTERM; pg-boss retries what is left. */
-const SHUTDOWN_TIMEOUT_MS = 30_000;
 
 /**
  * Registers a pg-boss worker per handler and the periodic schedules. One job per fetch; media
  * jobs run `WORKER_MEDIA_CONCURRENCY` at a time, the others one at a time.
  */
 @Injectable()
-export class JobRunner implements OnApplicationBootstrap, BeforeApplicationShutdown {
+export class JobRunner implements OnApplicationBootstrap {
   private readonly logger = new Logger(JobRunner.name);
   private readonly handlers: readonly JobHandler[];
 
@@ -66,10 +58,6 @@ export class JobRunner implements OnApplicationBootstrap, BeforeApplicationShutd
       }
     }
     this.logger.log({ msg: 'worker started', jobs: this.handlers.map((handler) => handler.name) });
-  }
-
-  async beforeApplicationShutdown(): Promise<void> {
-    await this.client.stop(true, SHUTDOWN_TIMEOUT_MS);
   }
 
   /** Logs ids only: payloads are ids too, but never text, names or file names. */

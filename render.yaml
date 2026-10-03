@@ -82,6 +82,9 @@ services:
     autoDeployTrigger: checksPass
     dockerfilePath: ./apps/api/worker.Dockerfile
     dockerContext: .
+    # On SIGTERM the worker gives running jobs 25 s, then closes its clients (apps/api/src/worker/
+    # shutdown.ts); Render's default grace is 30 s, this leaves headroom.
+    maxShutdownDelaySeconds: 60
     # Also runs on the API; Prisma's advisory lock makes concurrent runs safe, and either service
     # deploying first finds the schema it needs.
     preDeployCommand: node_modules/.bin/prisma migrate deploy

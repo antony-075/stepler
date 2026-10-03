@@ -64,13 +64,14 @@ export class AdminContentService {
    */
   async delete(a: AccountPrincipal, id: string, requestId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      // The canonical id comes from the row: the route accepts a UUID in any case.
       const row = await tx.contentItem.findFirst({
         where: { id, collection: ownedBy(a) },
-        select: { collectionId: true, kind: true, frameNo: true },
+        select: { id: true, collectionId: true, kind: true, frameNo: true },
       });
       if (row === null) throw new AppError('NOT_FOUND', 404);
       const { count } = await tx.contentItem.updateMany({
-        where: { id, deletedAt: null },
+        where: { id: row.id, deletedAt: null },
         data: { deletedAt: new Date() },
       });
       if (count === 0) return;
@@ -79,12 +80,12 @@ export class AdminContentService {
         actor: a,
         action: 'content.delete',
         targetType: 'content',
-        targetId: id,
+        targetId: row.id,
         metadata: { kind: row.kind, frameNo: row.frameNo, bulk: false },
         ...(requestId === undefined ? {} : { requestId }),
       });
       await this.jobs.enqueue(tx, 'content.purge', {
-        contentItemId: id,
+        contentItemId: row.id,
         ...(requestId === undefined ? {} : { requestId }),
       });
     });

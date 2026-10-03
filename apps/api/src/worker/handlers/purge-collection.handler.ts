@@ -24,7 +24,7 @@ export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
   async handle({ collectionId }: JobData['collection.purge']): Promise<void> {
     const collection = await this.prisma.collection.findUnique({
       where: { id: collectionId },
-      select: { status: true },
+      select: { id: true, status: true },
     });
     if (collection?.status !== 'DELETING') return;
     // With the upload slice: mark its INITIATED uploads ABORTED and abort their multipart uploads.
@@ -32,9 +32,10 @@ export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
     // object after this listing; the upload slice must cover that (e.g. purge only after the TTL).
     await deletePrefix(
       this.storage,
-      collectionPrefix(collectionId),
+      // The stored (lowercase) id: storage keys are case-sensitive, a payload id may not be.
+      collectionPrefix(collection.id),
       this.env.WORKER_PURGE_BATCH_SIZE,
     );
-    await this.prisma.collection.deleteMany({ where: { id: collectionId, status: 'DELETING' } });
+    await this.prisma.collection.deleteMany({ where: { id: collection.id, status: 'DELETING' } });
   }
 }

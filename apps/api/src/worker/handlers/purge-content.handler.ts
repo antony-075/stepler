@@ -24,22 +24,23 @@ export class PurgeContentHandler implements JobHandler<'content.purge'> {
   async handle({ contentItemId }: JobData['content.purge']): Promise<void> {
     const item = await this.prisma.contentItem.findUnique({
       where: { id: contentItemId },
-      select: { collectionId: true, deletedAt: true },
+      select: { id: true, collectionId: true, deletedAt: true },
     });
     if (item === null) return;
     if (item.deletedAt === null) {
       this.logger.warn({ msg: 'content.purge skipped: item is not deleted', contentItemId });
       return;
     }
-    // The original's key (MediaObject) joins this list with the upload slice.
+    // Keys are built from the ids as stored (lowercase): storage keys are case-sensitive, and a
+    // payload id may differ in case. The original's key (MediaObject) joins with the upload slice.
     await deletePrefix(
       this.storage,
-      derivedPrefix(item.collectionId, contentItemId),
+      derivedPrefix(item.collectionId, item.id),
       this.env.WORKER_PURGE_BATCH_SIZE,
     );
     // Conditional: an item can never be purged unless it is still deleted.
     await this.prisma.contentItem.deleteMany({
-      where: { id: contentItemId, deletedAt: { not: null } },
+      where: { id: item.id, deletedAt: { not: null } },
     });
   }
 }

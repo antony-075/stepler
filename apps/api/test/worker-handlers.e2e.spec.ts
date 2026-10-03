@@ -1,18 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
-import type { INestApplication, INestApplicationContext } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
-import type { ObjectStorage } from '../src/storage/object-storage.js';
+import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
+import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
@@ -133,6 +135,16 @@ describe('worker handlers', () => {
       await handler().handle({ contentItemId: item.id });
     });
 
+    test('an upper-case id in the payload still deletes the objects (keys are lowercase)', async () => {
+      const { collectionId } = await seed();
+      const item = await addItem(collectionId, 1);
+      const prefix = `collections/${collectionId}/derived/${item.id}/`;
+      await putObject(storage, `${prefix}thumbnail.webp`);
+      await handler().handle({ contentItemId: item.id.toUpperCase() });
+      expect(await allKeys(storage, prefix)).toEqual([]);
+      expect(await prisma.contentItem.count({ where: { id: item.id } })).toBe(0);
+    });
+
     test('succeeds when the objects are already gone', async () => {
       const { collectionId } = await seed();
       const item = await addItem(collectionId, 1);
@@ -191,6 +203,17 @@ describe('worker handlers', () => {
       expect(await prisma.auditEvent.count({ where: { collectionId } })).toBe(1);
 
       await new PurgeCollectionHandler(prisma, storage, env).handle({ collectionId });
+    });
+
+    test('an upper-case id in the payload still deletes the objects', async () => {
+      const { collectionId } = await seed({ status: 'DELETING' });
+      const prefix = `collections/${collectionId}/`;
+      await putObject(storage, `${prefix}originals/a`);
+      await new PurgeCollectionHandler(prisma, storage, env).handle({
+        collectionId: collectionId.toUpperCase(),
+      });
+      expect(await allKeys(storage, prefix)).toEqual([]);
+      expect(await prisma.collection.count({ where: { id: collectionId } })).toBe(0);
     });
 
     test('leaves a collection that is not DELETING alone', async () => {
@@ -277,6 +300,27 @@ describe('worker handlers', () => {
       expect(jobs[0]?.data).toHaveProperty('requestId');
     });
 
+    test('an upper-case id in the URL enqueues the canonical (stored) ids', async () => {
+      const owner = await signInAs(app, prisma, 'olena@example.com');
+      const { collectionId } = await seedCollection(prisma, tokens, { ownerId: owner.userId });
+      const item = await addItem(collectionId, 1, null);
+      await request(server())
+        .delete(`/api/v1/content/${item.id.toUpperCase()}`)
+        .set('Cookie', owner.cookie)
+        .set('Origin', ORIGIN)
+        .expect(204);
+      await request(server())
+        .delete(`/api/v1/collections/${collectionId.toUpperCase()}`)
+        .set('Cookie', owner.cookie)
+        .set('Origin', ORIGIN)
+        .expect(204);
+      const jobs = await queuedJobs(prisma);
+      expect(jobs.map((job) => [job.singletonKey, job.data])).toEqual([
+        [`content.purge:${item.id}`, expect.objectContaining({ contentItemId: item.id })],
+        [`collection.purge:${collectionId}`, expect.objectContaining({ collectionId })],
+      ]);
+    });
+
     test('DELETE /collections/:id', async () => {
       const owner = await signInAs(app, prisma, 'olena@example.com');
       const { collectionId } = await seedCollection(prisma, tokens, { ownerId: owner.userId });
@@ -294,27 +338,73 @@ describe('worker handlers', () => {
   });
 
   describe('worker process', () => {
-    let worker: INestApplicationContext;
-
-    afterAll(async () => {
-      await worker.close();
-    });
-
     test('runs a queued purge job', { timeout: 20_000 }, async () => {
-      worker = await NestFactory.createApplicationContext(WorkerModule.forRoot({ env }), {
+      const worker = await NestFactory.createApplicationContext(WorkerModule.forRoot({ env }), {
         logger: false,
       });
-      const { collectionId } = await seed();
-      const item = await addItem(collectionId, 1);
-      await prisma.$transaction(async (tx) => {
-        await queue.enqueue(tx, 'content.purge', { contentItemId: item.id });
-      });
-      await expect
-        .poll(() => prisma.contentItem.count({ where: { id: item.id } }), {
-          timeout: 15_000,
-          interval: 250,
-        })
-        .toBe(0);
+      try {
+        const { collectionId } = await seed();
+        const item = await addItem(collectionId, 1);
+        await prisma.$transaction(async (tx) => {
+          await queue.enqueue(tx, 'content.purge', { contentItemId: item.id });
+        });
+        await expect
+          .poll(() => prisma.contentItem.count({ where: { id: item.id } }), {
+            timeout: 15_000,
+            interval: 250,
+          })
+          .toBe(0);
+      } finally {
+        await shutdownWorker(worker);
+      }
     });
+
+    test(
+      'shutdown lets a running job finish before the clients close',
+      { timeout: 30_000 },
+      async () => {
+        const events: string[] = [];
+        let release: () => void = () => undefined;
+        const gate = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const slowStorage = Object.assign(Object.create(storage) as ObjectStorage, {
+          listKeys: async () => {
+            events.push('job running');
+            await gate;
+            events.push('job storage call done');
+            return { keys: [] };
+          },
+          onModuleDestroy: () => {
+            events.push('storage closed');
+          },
+        });
+        const worker = await Test.createTestingModule({ imports: [WorkerModule.forRoot({ env })] })
+          .overrideProvider(OBJECT_STORAGE)
+          .useValue(slowStorage)
+          .compile();
+        worker.useLogger(false);
+        await worker.init();
+
+        const { collectionId } = await seed();
+        const item = await addItem(collectionId, 1);
+        await prisma.$transaction(async (tx) => {
+          await queue.enqueue(tx, 'content.purge', { contentItemId: item.id });
+        });
+        await expect.poll(() => events.includes('job running'), { timeout: 15_000 }).toBe(true);
+
+        const stopped = shutdownWorker(worker);
+        setTimeout(release, 500);
+        await stopped;
+
+        expect(events).toEqual(['job running', 'job storage call done', 'storage closed']);
+        expect(await prisma.contentItem.count({ where: { id: item.id } })).toBe(0);
+        const [job] = await prisma.$queryRawUnsafe<{ state: string }[]>(
+          `SELECT state FROM pgboss.job WHERE name = 'content.purge' AND data->>'contentItemId' = $1`,
+          item.id,
+        );
+        expect(job?.state).toBe('completed');
+      },
+    );
   });
 });
