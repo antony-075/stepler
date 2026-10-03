@@ -536,8 +536,6 @@
   "guestLink": {
     "loading": "Opening the collection",
     "retry": "Try again",
-    "soonAdd": "You’ll be able to add them here soon.",
-    "soonView": "Soon you’ll be able to see what guests added here.",
     "paused": {
       "title": "This link is paused",
       "text": "The organiser has paused adding for now."
@@ -561,7 +559,68 @@
     "rateLimited": {
       "title": "Too many tries: try again in a minute"
     },
-    "failed": "Couldn’t open the collection. Check your connection and try again."
+    "failed": "Couldn’t open the collection. Check your connection and try again.",
+    "quotaFull": {
+      "title": "This collection is full",
+      "text": "New frames can’t be added."
+    }
+  },
+  "guest": {
+    "counts": "{count, plural, one {# frame} other {# frames}}",
+    "lastAt": "latest at {time}",
+    "onlyOrganizer": "Only the organiser will see what you add",
+    "ownTitle": "Your frames from this device",
+    "ownEmpty": "Frames you add will appear here.",
+    "allTitle": "All frames",
+    "allEmpty": "You’ll be the first",
+    "allEmptyText": "Guests’ photos, videos and wishes will appear here.",
+    "listLabelOwn": "Your frames",
+    "listLabelAll": "All frames of the collection",
+    "loadingFrames": "Loading frames…",
+    "loadMore": "Show more",
+    "listError": "Couldn’t load the frames.",
+    "retry": "Try again",
+    "addFilesSoon": "You’ll be able to add photos and videos very soon.",
+    "writeWish": "Write a wish",
+    "you": "You: {name}",
+    "noName": "You haven’t given a name",
+    "changeName": "Change",
+    "setName": "Add your name",
+    "frame": {
+      "textOwn": "Frame {number}, wish, {time}",
+      "textOther": "Wish, {time}",
+      "fileOwn": "Frame {number}, {time}, preview on its way",
+      "fileOther": "Frame, {time}, preview on its way",
+      "pendingPreview": "Preview on its way"
+    },
+    "textSent": "Wish added",
+    "name": {
+      "title": "What’s your name?",
+      "editTitle": "Your name",
+      "hint": "The organiser sees it next to your frames. Other guests don’t.",
+      "label": "Name",
+      "continue": "Continue",
+      "skip": "Skip",
+      "save": "Save",
+      "clear": "No name",
+      "required": "Enter a name or choose Skip",
+      "tooLong": "At most {max, number} characters",
+      "invalid": "Use one line without special characters",
+      "close": "Close",
+      "failed": "Couldn’t save your name. Try again."
+    },
+    "composer": {
+      "title": "Your wish",
+      "label": "Wish",
+      "counter": "{count, number} / {max, number}",
+      "send": "Send",
+      "sending": "Sending…",
+      "empty": "Write a few words",
+      "tooLong": "At most {max, number} characters",
+      "invalid": "Remove special characters from the text",
+      "close": "Close",
+      "failed": "Couldn’t send it. Try again — your wish won’t be added twice."
+    }
   },
   "account": {
     "pageTitle": "Account",
