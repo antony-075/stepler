@@ -146,7 +146,7 @@ export const WithoutNumber: Story = {
   },
 };
 
-/** 5000 characters clamp to five lines inside the square; the frame keeps its width. */
+/** 5000 characters clamp to the lines the square holds (four in a 160px frame); the width holds. */
 export const LongText: Story = {
   args: {
     kind: 'text',
@@ -161,7 +161,7 @@ export const LongText: Story = {
     await expect(root.getBoundingClientRect().width).toBe(160);
     const box = media.getBoundingClientRect();
     await expect(Math.round(box.height)).toBe(Math.round(box.width));
-    await expect(getComputedStyle(media.querySelector('p')!).webkitLineClamp).toBe('5');
+    await expect(getComputedStyle(media.querySelector('p')!).webkitLineClamp).toBe('4');
   },
 };
 

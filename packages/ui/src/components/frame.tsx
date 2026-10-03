@@ -1,7 +1,8 @@
 // Frame: one contribution in the contact sheet (DESIGN-SYSTEM.md §5.9, §5.10, §5.13).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - The sheet is the interface: a card with 6/6/4 padding, a square media slot (2px radius) and a
-//   mono label (number left, time and data right). No shadow, no rotation; the grid line is the
+//   mono label (number left, time and data right). A text frame is a wish card on the frame's own
+//   sheet (no inner box). No shadow, no rotation; the grid line is the
 //   only separator. Content decides colour: neutral `--muted` placeholders, never tinted.
 // - One interactive target per frame (a button: open, or toggle in selection mode with
 //   `aria-pressed`), named by the caller ("Кадр 86, фото, 21:10, Ірина"); media is aria-hidden.
@@ -11,7 +12,7 @@
 //   caller's accessible name. Focus is the violet ring drawn inside, so `overflow: hidden` of the
 //   grid sheet cannot clip it in the first column.
 // - Long content never widens the frame: text clamps to 5 lines, titles break anywhere.
-import { Check, FileText, ImageIcon, Play } from 'lucide-react';
+import { Check, FileText, ImageIcon, Play, Quote } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { focusRingInset } from '../lib/focus';
 import { formatFrameNumber } from '../lib/frame-number';
@@ -151,14 +152,20 @@ function FrameMedia({
       );
     case 'text':
       return (
-        // As many lines as the square holds (container = the text box): 3 in a 95px phone frame, 4 from
-        // about 120px, 5 at 15px from about 150px.
-        <div className="@container flex size-full flex-col justify-between gap-1 border border-border bg-card p-2">
-          <p className="line-clamp-3 min-h-0 overflow-hidden text-[0.8125rem] leading-snug whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[100px]:line-clamp-4 @min-[128px]:line-clamp-5 @min-[128px]:text-[0.9375rem]">
+        // A wish card (owner review 2026-10-03): the words on the frame's own sheet, no inner box,
+        // comfortable padding and type that grow with the square (container = the text box): 13px
+        // and 4 lines in a phone frame, 15px from 128px, 16px with 6 lines from 168px. A quiet
+        // opening quote says "wish" before the words do.
+        <div className="@container flex size-full flex-col gap-1.5 bg-card px-1.5 pt-1 pb-1.5 @min-[168px]:gap-2 @min-[168px]:px-2.5 @min-[168px]:pt-2">
+          <Quote
+            aria-hidden="true"
+            className="size-3.5 shrink-0 text-muted-foreground @min-[168px]:size-4"
+          />
+          <p className="line-clamp-4 min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:line-clamp-4 @min-[128px]:text-[0.9375rem] @min-[168px]:line-clamp-6 @min-[168px]:text-base @min-[168px]:leading-[1.45]">
             {text}
           </p>
           {name ? (
-            <span className="truncate type-caption text-muted-foreground">{name}</span>
+            <span className="mt-auto truncate type-caption text-muted-foreground">{name}</span>
           ) : null}
         </div>
       );
