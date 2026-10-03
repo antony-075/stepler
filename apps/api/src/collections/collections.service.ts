@@ -7,7 +7,7 @@ import type {
   UpdateCollectionRequest,
 } from '@stepler/contracts';
 import { type AuditAction, AuditService } from '../audit/audit.service.js';
-import type { Principal } from '../auth/principal.js';
+import type { AccountPrincipal } from '../auth/principal.js';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -17,6 +17,7 @@ import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import {
   type CollectionWithDefaultLink,
+  type ContentStats,
   toCollectionDto,
   WITH_DEFAULT_LINK,
 } from './collection-dto.js';
@@ -36,7 +37,7 @@ export class CollectionsService {
 
   /** Daily cap first, then the active limit, both under the owner's row lock (spec §10.3). */
   async create(
-    principal: Principal,
+    principal: AccountPrincipal,
     body: CreateCollectionRequest,
     requestId?: string,
   ): Promise<Collection> {
@@ -81,7 +82,10 @@ export class CollectionsService {
   }
 
   /** Newest first, keyset over `(createdAt, id)` (ADR 0004). */
-  async list(principal: Principal, query: ListCollectionsQuery): Promise<CollectionListResponse> {
+  async list(
+    principal: AccountPrincipal,
+    query: ListCollectionsQuery,
+  ): Promise<CollectionListResponse> {
     const position = query.cursor === undefined ? undefined : decodeCursor(query.cursor);
     if (position === null) {
       throw new AppError('VALIDATION_FAILED', 400, {
@@ -107,19 +111,20 @@ export class CollectionsService {
     });
     const items = rows.slice(0, query.limit);
     const last = items.at(-1);
+    const content = await this.contentStats(items.map((row) => row.id));
     return {
-      items: items.map(toCollectionDto),
+      items: items.map((row) => toCollectionDto(row, content.get(row.id))),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
     };
   }
 
-  async get(principal: Principal, id: string): Promise<Collection> {
-    return toCollectionDto(await this.findOwned(id, principal.userId));
+  async get(principal: AccountPrincipal, id: string): Promise<Collection> {
+    return this.toDto(await this.findOwned(id, principal.userId));
   }
 
   /** Last write wins. Archived collections stay editable (D9). */
   async update(
-    principal: Principal,
+    principal: AccountPrincipal,
     id: string,
     body: UpdateCollectionRequest,
   ): Promise<Collection> {
@@ -132,7 +137,7 @@ export class CollectionsService {
         },
         include: WITH_DEFAULT_LINK,
       });
-      return toCollectionDto(row);
+      return await this.toDto(row);
     } catch (error) {
       if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
       throw error;
@@ -140,7 +145,7 @@ export class CollectionsService {
   }
 
   /** `ACTIVE` → `ARCHIVED`; guests lose access. Idempotent: an archived one is returned as is. */
-  async archive(principal: Principal, id: string, requestId?: string): Promise<Collection> {
+  async archive(principal: AccountPrincipal, id: string, requestId?: string): Promise<Collection> {
     return this.prisma.$transaction(async (tx) => {
       // Conditional, so concurrent archives change (and audit) the row once.
       const { count } = await tx.collection.updateMany({
@@ -158,18 +163,22 @@ export class CollectionsService {
           requestId,
         );
       }
-      return toCollectionDto(await this.findOwned(id, principal.userId, tx));
+      return this.toDto(await this.findOwned(id, principal.userId, tx), tx);
     });
   }
 
   /** `ARCHIVED` → `ACTIVE` under the owner lock, refused at the active limit (D1). Idempotent. */
-  async unarchive(principal: Principal, id: string, requestId?: string): Promise<Collection> {
+  async unarchive(
+    principal: AccountPrincipal,
+    id: string,
+    requestId?: string,
+  ): Promise<Collection> {
     const { userId } = principal;
     const limits = this.limits.forUser({ id: userId });
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
       const row = await this.findOwned(id, userId, tx);
-      if (row.status !== 'ARCHIVED') return toCollectionDto(row);
+      if (row.status !== 'ARCHIVED') return this.toDto(row, tx);
       if ((await this.usage.activeCollections(userId, tx)) >= limits.activeCollections) {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
@@ -188,7 +197,7 @@ export class CollectionsService {
           requestId,
         );
       }
-      return toCollectionDto(await this.findOwned(id, userId, tx));
+      return this.toDto(await this.findOwned(id, userId, tx), tx);
     });
   }
 
@@ -196,7 +205,7 @@ export class CollectionsService {
    * Requests deletion (D2): the collection becomes `DELETING`, which is gone for everyone; the
    * purge job removes the rows and objects later. Repeating it for an owned collection is a no-op.
    */
-  async delete(principal: Principal, id: string, requestId?: string): Promise<void> {
+  async delete(principal: AccountPrincipal, id: string, requestId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       // Includes DELETING (for the no-op) and locks the row, so `fromStatus` is accurate.
       const [row] = await tx.$queryRaw<{ status: CollectionRow['status'] }[]>`
@@ -221,9 +230,37 @@ export class CollectionsService {
     });
   }
 
+  private async toDto(
+    row: CollectionWithDefaultLink,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Collection> {
+    const content = await this.contentStats([row.id], tx);
+    return toCollectionDto(row, content.get(row.id));
+  }
+
+  /** One grouped query for a whole page, never one per collection (no N+1). */
+  private async contentStats(
+    collectionIds: string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, ContentStats>> {
+    if (collectionIds.length === 0) return new Map();
+    const groups = await tx.contentItem.groupBy({
+      by: ['collectionId'],
+      where: { collectionId: { in: collectionIds }, deletedAt: null },
+      _count: { _all: true },
+      _max: { createdAt: true },
+    });
+    return new Map(
+      groups.map((group) => [
+        group.collectionId,
+        { count: group._count._all, lastAt: group._max.createdAt },
+      ]),
+    );
+  }
+
   private recordTransition(
     tx: Prisma.TransactionClient,
-    actor: Principal,
+    actor: AccountPrincipal,
     id: string,
     action: AuditAction,
     fromStatus: CollectionRow['status'],

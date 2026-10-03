@@ -21,6 +21,20 @@ export interface CollectionLimits {
   guestLinks: number;
 }
 
+/** Per-file maxima by kind and the files a guest may pick at once (D2). */
+export interface FileRules {
+  fileBytes: Record<'PHOTO' | 'VIDEO' | 'DOCUMENT', bigint>;
+  /** Enforced by the guest page; the server limits concurrency instead. */
+  filesPerBatch: number;
+}
+
+/** Per guest session (spec §13.1, F1); a session is one browser in one collection. */
+export interface GuestSessionLimits {
+  textsPerHour: number;
+  uploadInitiationsPerHour: number;
+  concurrentUploads: number;
+}
+
 /**
  * Single source of limits. Values are config-backed today; plans and entitlements plug in
  * behind `forUser` later without changing callers (ADR 0010).
@@ -40,6 +54,43 @@ export class LimitsService {
   /** Public guest link resolution per client IP per minute [G10]. */
   guestLinkResolvePerIpPerMinute(): number {
     return this.env.LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE;
+  }
+
+  /** Guest session exchanges per client IP per minute; venue NAT shares an IP, as [G10]. */
+  guestSessionCreatePerIpPerMinute(): number {
+    return this.env.LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE;
+  }
+
+  forGuestSession(): GuestSessionLimits {
+    return {
+      textsPerHour: this.env.LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR,
+      uploadInitiationsPerHour: this.env.LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR,
+      concurrentUploads: this.env.LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION,
+    };
+  }
+
+  /**
+   * Guest texts per client IP per minute, across sessions: a new session costs one call, so the
+   * per-session limit alone would not bound one client.
+   */
+  guestTextCreatePerIpPerMinute(): number {
+    return this.env.LIMIT_TEXTS_PER_IP_PER_MINUTE;
+  }
+
+  /** Guest reads per client IP per minute and route; generous, a bound on load. */
+  guestReadsPerIpPerMinute(): number {
+    return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
+  }
+
+  fileRules(): FileRules {
+    return {
+      fileBytes: {
+        PHOTO: this.env.LIMIT_FILE_BYTES_PHOTO,
+        VIDEO: this.env.LIMIT_FILE_BYTES_VIDEO,
+        DOCUMENT: this.env.LIMIT_FILE_BYTES_DOCUMENT,
+      },
+      filesPerBatch: this.env.LIMIT_FILES_PER_BATCH,
+    };
   }
 
   forCollection(_collection: { id: string }): CollectionLimits {

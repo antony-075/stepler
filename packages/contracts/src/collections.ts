@@ -44,6 +44,10 @@ export const collectionSchema = z
      * it); `null` with `defaultLinkStatus`. Permissions stay per link: this is a read-only copy.
      */
     defaultLinkPermissions: guestLinkPermissionsSchema.nullable(),
+    /** Non-deleted frames of every kind. */
+    contentCount: z.number().int().min(0),
+    /** When the newest non-deleted frame was added; `null` while there is none. */
+    lastContentAt: z.iso.datetime().nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

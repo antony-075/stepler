@@ -37,8 +37,6 @@ import {
 } from '@stepler/ui/components/select';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
-import { focusRing } from '@stepler/ui/lib/focus';
-import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Copy, Download, ExternalLink, Share2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -48,6 +46,7 @@ import { useInvalidateCollections } from '@/api/collections';
 import { activateGuestLink, guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { errorMessageKey } from '@/errors/error-message';
 import { findLink, linkKey as linkKeyOf, MAIN_LINK, useLinkName } from '@/guest-links/link-pages';
+import { LinkUrlBlock } from '@/guest-links/link-url-block';
 import { QrCode } from '@/qr/qr-code';
 import { downloadQr, type QrFileFormat, qrFileName } from '@/qr/qr';
 
@@ -316,17 +315,7 @@ function SharedLink({ collection, link }: { collection: Collection; link: GuestL
                 {tShare('link')}
               </label>
               {/* The whole address: it grows with its text (wrapping anywhere), never clipped. */}
-              <textarea
-                id={fieldId}
-                readOnly
-                rows={3}
-                value={link.url}
-                onFocus={(event) => event.currentTarget.select()}
-                className={cn(
-                  'min-h-24 w-full flex-1 resize-none rounded-control border border-input bg-background px-3 py-2.5 align-top font-mono text-sm leading-relaxed break-all text-foreground [field-sizing:content]',
-                  focusRing,
-                )}
-              />
+              <LinkUrlBlock id={fieldId} value={link.url} />
             </div>
             <div className="grid gap-2">
               {paused ? (

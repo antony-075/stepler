@@ -9,7 +9,7 @@ import {
   type UsageResponse,
 } from '@stepler/contracts';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import type { Principal } from '../auth/principal.js';
+import type { AccountPrincipal } from '../auth/principal.js';
 import { UsageService } from '../limits/usage.service.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { UsersService } from './users.service.js';
@@ -25,14 +25,14 @@ export class MeController {
 
   @Get()
   @ApiResponse({ status: 200, standardSchema: meResponseSchema })
-  me(@CurrentPrincipal() principal: Principal): Promise<MeResponse> {
+  me(@CurrentPrincipal() principal: AccountPrincipal): Promise<MeResponse> {
     return this.users.me(principal);
   }
 
   @Patch()
   @ApiResponse({ status: 200, standardSchema: meResponseSchema })
   update(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Body({ schema: updateMeRequestSchema }) body: UpdateMeRequest,
   ): Promise<MeResponse> {
     return this.users.updateMe(principal, body);
@@ -41,7 +41,7 @@ export class MeController {
   /** The account's usage against its limits, for the dashboard counter. */
   @Get('usage')
   @ApiResponse({ status: 200, standardSchema: usageResponseSchema })
-  usageOf(@CurrentPrincipal() principal: Principal): Promise<UsageResponse> {
+  usageOf(@CurrentPrincipal() principal: AccountPrincipal): Promise<UsageResponse> {
     return this.usage.forUser(principal.userId);
   }
 }

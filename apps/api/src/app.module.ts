@@ -4,6 +4,7 @@ import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CollectionsModule } from './collections/collections.module.js';
 import { ConfigModule } from './config/config.module.js';
+import { ContentModule } from './content/content.module.js';
 import type { ApiEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { ErrorsModule } from './errors/errors.module.js';
@@ -40,6 +41,7 @@ export class AppModule {
         UsersModule,
         CollectionsModule,
         GuestAccessModule,
+        ContentModule,
         HealthModule,
       ],
     };

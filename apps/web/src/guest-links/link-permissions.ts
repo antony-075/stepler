@@ -42,55 +42,37 @@ export const addsNothing = (form: PermissionForm): boolean =>
 /** Nothing to add and only one's own content to see would leave guests nothing to do. */
 export const isValidForm = (form: PermissionForm): boolean => !addsNothing(form) || form.seeAll;
 
-/** Keys under `guestLinks.permissions` in the catalogs. */
-export type PermissionWordKey =
-  | 'photos'
-  | 'videos'
-  | 'documents'
-  | 'texts'
-  | 'add'
-  | 'seeAll'
-  | 'ownOnly'
-  | 'both'
-  | 'viewOnly'
-  | 'guestsCan'
-  | 'allowed';
-export type PermissionWordsT = (key: PermissionWordKey, values?: Record<string, string>) => string;
-/** Joins words as a sentence does («фото, відео і побажання»): next-intl `format.list`. */
-export type ListFormat = (items: string[]) => string;
+/** Keys under `guestLinks.summary` in the catalogs. */
+export type SummaryKey =
+  'photos' | 'videos' | 'documents' | 'texts' | 'viewOnly' | 'seeOwn' | 'seeAll';
+export type SummaryT = (key: SummaryKey) => string;
 
-/** «додавати фото, відео і побажання», or `null` when guests can add nothing. */
-function addClause(p: GuestLinkPermissions, t: PermissionWordsT, list: ListFormat): string | null {
+/** The separator of the compact summary (owner 2026-10-03: «Фото · Відео · Побажання»). */
+export const SUMMARY_SEPARATOR = ' · ';
+
+/**
+ * A link's permissions in a few words, for every place that sums a link up (owner 2026-10-03):
+ * `add` lists what guests may add («Фото · Відео · Документи · Побажання», or «Лише перегляд»),
+ * `see` whose content they see («Бачать лише своє» / «Бачать усе»), shown after it, muted.
+ */
+export function permissionSummary(
+  p: GuestLinkPermissions,
+  t: SummaryT,
+): { add: string; see: string } {
   const items = [
     ...(p.canUploadPhotos ? [t('photos')] : []),
     ...(p.canUploadVideos ? [t('videos')] : []),
     ...(p.canUploadDocuments ? [t('documents')] : []),
     ...(p.canSubmitText ? [t('texts')] : []),
   ];
-  return items.length === 0 ? null : t('add', { items: list(items) });
+  return {
+    add: items.length === 0 ? t('viewOnly') : items.join(SUMMARY_SEPARATOR),
+    see: p.canViewGallery ? t('seeAll') : t('seeOwn'),
+  };
 }
 
-/** For the admin: «Гості можуть додавати фото й відео та бачити лише своє» or «Лише перегляд». */
-export function permissionWords(
-  p: GuestLinkPermissions,
-  t: PermissionWordsT,
-  list: ListFormat,
-): string {
-  const add = addClause(p, t, list);
-  if (add === null) return t('viewOnly');
-  return t('guestsCan', {
-    what: t('both', { add, see: p.canViewGallery ? t('seeAll') : t('ownOnly') }),
-  });
-}
-
-/** For the guest: only what was granted, «Організатор дозволив …». */
-export function allowedWords(
-  p: GuestLinkPermissions,
-  t: PermissionWordsT,
-  list: ListFormat,
-): string {
-  const add = addClause(p, t, list);
-  const see = p.canViewGallery ? t('seeAll') : null;
-  const what = add !== null && see !== null ? t('both', { add, see }) : (add ?? see ?? '');
-  return t('allowed', { what });
+/** The whole summary as one line of text («Лише перегляд · Бачать усе»). */
+export function permissionSummaryText(p: GuestLinkPermissions, t: SummaryT): string {
+  const { add, see } = permissionSummary(p, t);
+  return `${add}${SUMMARY_SEPARATOR}${see}`;
 }

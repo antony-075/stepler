@@ -14,7 +14,8 @@ export type AuditAction =
   | 'guest_link.activate'
   | 'guest_link.revoke'
   | 'guest_link.delete'
-  | 'guest_link.rotate';
+  | 'guest_link.rotate'
+  | 'content.delete';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -23,11 +24,11 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link';
+  targetType: 'collection' | 'guest_link' | 'content';
   targetId: string;
   /**
-   * Ids and states only: never titles, descriptions, labels or other user content, and never
-   * tokens or URLs (spec §7.4).
+   * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other
+   * user content, and never tokens or URLs (spec §7.4).
    */
   metadata?: Record<string, string | number | boolean | null>;
   requestId?: string;
@@ -36,7 +37,14 @@ export interface AuditEventInput {
 const ACTOR_TYPES: Record<Principal['kind'], AuditActorType> = {
   admin: 'ADMIN',
   operator: 'OPERATOR',
+  guest: 'GUEST',
 };
+
+/** An account acts as its user; a guest as its guest session (no personal data). */
+function actorId(actor: AuditActor): string | null {
+  if (actor === 'system') return null;
+  return actor.kind === 'guest' ? actor.guestSessionId : actor.userId;
+}
 
 /**
  * Appends audit events. It takes the caller's transaction, so an event exists if and only if
@@ -49,7 +57,7 @@ export class AuditService {
       data: {
         collectionId: event.collectionId ?? null,
         actorType: event.actor === 'system' ? 'SYSTEM' : ACTOR_TYPES[event.actor.kind],
-        actorId: event.actor === 'system' ? null : event.actor.userId,
+        actorId: actorId(event.actor),
         action: event.action,
         targetType: event.targetType,
         targetId: event.targetId,

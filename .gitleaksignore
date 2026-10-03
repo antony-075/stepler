@@ -1,3 +1,5 @@
 # Reviewed false positives (gitleaks fingerprint: commit:file:rule:line).
 # Placeholder APP_SECRET in the image smoke-test env, removed in a later commit; never a real key.
 183a6cd9f027eb3f6093ab5e8d2150b38821715d:docker/scripts/verify-api.env:generic-api-key:10
+# A fixed UUID used as an idempotency key in a database test; not a credential.
+07e98fa87aeb8390c8f116bdb981ba1b41cee37f:apps/api/test/database.e2e.spec.ts:generic-api-key:463

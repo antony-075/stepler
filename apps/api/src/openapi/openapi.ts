@@ -4,12 +4,19 @@ import { problemDetailsSchema } from '@stepler/contracts';
 import { z } from 'zod';
 
 export const SESSION_COOKIE_SCHEME = 'st_session';
+/** The per-collection guest session cookie, path-scoped to its collection's guest routes. */
+export const GUEST_SESSION_COOKIE_SCHEME = 'st_gs';
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const config = new DocumentBuilder()
     .setTitle('Stepler API')
     .setVersion('1')
     .addCookieAuth(SESSION_COOKIE_SCHEME, { type: 'apiKey', in: 'cookie' }, SESSION_COOKIE_SCHEME)
+    .addCookieAuth(
+      GUEST_SESSION_COOKIE_SCHEME,
+      { type: 'apiKey', in: 'cookie' },
+      GUEST_SESSION_COOKIE_SCHEME,
+    )
     .build();
   return withProblemResponses(SwaggerModule.createDocument(app, config));
 }

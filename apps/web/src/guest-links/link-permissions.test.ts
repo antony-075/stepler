@@ -1,24 +1,20 @@
 import { guestLinkPermissionsSchema } from '@stepler/contracts';
 import { describe, expect, it } from 'vitest';
+import en from '../../messages/en.json';
 import uk from '../../messages/uk.json';
 import {
   addsNothing,
-  allowedWords,
   fromPermissions,
   isValidForm,
   type PermissionForm,
-  type PermissionWordKey,
-  permissionWords,
+  permissionSummary,
+  permissionSummaryText,
+  type SummaryKey,
   toPermissions,
 } from './link-permissions';
 
-const words = uk.guestLinks.permissions;
-const t = (key: PermissionWordKey, values: Record<string, string> = {}) =>
-  Object.entries(values).reduce(
-    (text, [name, value]) => text.replace(`{${name}}`, value),
-    words[key],
-  );
-const list = (items: string[]) => new Intl.ListFormat('uk', { type: 'conjunction' }).format(items);
+const t = (key: SummaryKey) => uk.guestLinks.summary[key];
+const tEn = (key: SummaryKey) => en.guestLinks.summary[key];
 
 const FLAGS = ['photos', 'videos', 'documents', 'texts', 'seeAll'] as const;
 /** Every combination of the five answers (32 forms). */
@@ -80,32 +76,30 @@ describe('isValidForm and addsNothing', () => {
   });
 });
 
-describe('permissionWords', () => {
-  it('says «Лише перегляд» for a view-only link', () => {
-    expect(permissionWords(toPermissions(form({ seeAll: true })), t, list)).toBe('Лише перегляд');
-  });
-
-  it('lists what guests can do, upload types by name', () => {
-    expect(
-      permissionWords(
-        toPermissions(form({ photos: true, videos: true, documents: true, texts: true })),
-        t,
-        list,
-      ),
-    ).toBe('Гості можуть додавати фото, відео, документи і побажання та бачити лише своє');
-    expect(permissionWords(toPermissions(form({ photos: true, seeAll: true })), t, list)).toBe(
-      'Гості можуть додавати фото та бачити вміст усіх гостей',
+describe('permissionSummary', () => {
+  it('lists the allowed types joined by a middle dot, then whose content guests see', () => {
+    const all = toPermissions(form({ photos: true, videos: true, documents: true, texts: true }));
+    expect(permissionSummary(all, t)).toEqual({
+      add: 'Фото · Відео · Документи · Побажання',
+      see: 'Бачать лише своє',
+    });
+    expect(permissionSummaryText(all, tEn)).toBe(
+      'Photos · Videos · Documents · Wishes · See only their own',
     );
   });
-});
 
-describe('allowedWords', () => {
-  it('names only what the organiser allowed', () => {
+  it('names only what is allowed, in a fixed order', () => {
     expect(
-      allowedWords(toPermissions(form({ photos: true, videos: true, texts: true })), t, list),
-    ).toBe('Організатор дозволив додавати фото, відео і побажання');
-    expect(allowedWords(toPermissions(form({ seeAll: true })), t, list)).toBe(
-      'Організатор дозволив бачити вміст усіх гостей',
+      permissionSummaryText(toPermissions(form({ texts: true, photos: true, seeAll: true })), t),
+    ).toBe('Фото · Побажання · Бачать усе');
+  });
+
+  it('a view-only link reads «Лише перегляд · Бачать усе»', () => {
+    expect(permissionSummaryText(toPermissions(form({ seeAll: true })), t)).toBe(
+      'Лише перегляд · Бачать усе',
+    );
+    expect(permissionSummaryText(toPermissions(form({ seeAll: true })), tEn)).toBe(
+      'View only · See everything',
     );
   });
 });

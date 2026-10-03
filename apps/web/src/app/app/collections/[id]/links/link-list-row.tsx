@@ -3,30 +3,16 @@
 import type { Collection, GuestLink } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
-import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { CopyButton } from '@stepler/ui/components/copy-button';
 import { QrFrame } from '@stepler/ui/components/qr-frame';
-import { useToast } from '@stepler/ui/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@stepler/ui/components/dropdown-menu';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
-import { Ellipsis, Maximize2, Pause, Play, SlidersHorizontal, Trash2 } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
-import { useFormatter, useTranslations } from 'next-intl';
-import { useCallback, useRef, useState } from 'react';
-import { isApiError } from '@/api/client';
-import { useInvalidateCollections } from '@/api/collections';
-import { activateGuestLink, deactivateGuestLink, deleteGuestLink } from '@/api/guest-links';
-import { errorMessageKey } from '@/errors/error-message';
+import { Maximize2, SlidersHorizontal } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useRef } from 'react';
 import { linkKey, useLinkName } from '@/guest-links/link-pages';
-import { permissionWords } from '@/guest-links/link-permissions';
+import { PermissionSummary } from '@/guest-links/permission-summary';
 import { QrCode } from '@/qr/qr-code';
 import { ShareDialog } from '../share-dialog';
 
@@ -36,8 +22,8 @@ import { ShareDialog } from '../share-dialog';
  * share dialog: the QR large with its download, the link with Copy and Open), the name with its status (never truncated), what guests can do
  * (two lines at most) and the link (one line, cut with an ellipsis; the full address is its
  * `title`) with a small copy icon right after it (a check and «Скопійовано» when done; without
- * a clipboard the address is selected). One «⋯» top right holds the rest: «Керувати» (the
- * link's settings), «Призупинити / Увімкнути» and, for an additional link, «Видалити». The same three columns at every width, so nothing squeezes in a narrow sheet.
+ * a clipboard the address is selected). On the right one «Керувати» (`LinkActions`); on phones
+ * it moves under the address.
  */
 export function LinkListRow({
   collection,
@@ -54,8 +40,6 @@ export function LinkListRow({
 }) {
   const t = useTranslations('links');
   const tShare = useTranslations('links.share');
-  const tWords = useTranslations('guestLinks.permissions');
-  const format = useFormatter();
   const name = useLinkName()(link);
   const paused = link.status === 'INACTIVE';
   const statusKey = paused ? 'status.INACTIVE' : 'status.ACTIVE';
@@ -75,7 +59,7 @@ export function LinkListRow({
   return (
     <li
       data-slot="link-list-row"
-      className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-start gap-x-4 p-4 sm:px-5"
+      className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-start gap-x-4 p-4 sm:grid-cols-[3.5rem_minmax(0,1fr)_auto] sm:px-5"
     >
       {link.url === null ? (
         <QrFrame className="size-14 p-1" />
@@ -123,7 +107,7 @@ export function LinkListRow({
           </Badge>
         </div>
         <p className="line-clamp-2 text-sm text-pretty text-muted-foreground">
-          {permissionWords(link.permissions, tWords, (words) => format.list(words))}
+          <PermissionSummary permissions={link.permissions} />
         </p>
         {link.url === null ? (
           <p className="text-sm text-muted-foreground">{t('row.hidden')}</p>
@@ -149,122 +133,33 @@ export function LinkListRow({
           </div>
         )}
       </div>
-      <LinkMenu link={link} name={name} onSettings={() => onSettings(linkKey(link))} />
+      <LinkActions name={name} onSettings={() => onSettings(linkKey(link))} />
     </li>
   );
 }
 
 /**
- * «⋯» (owner 2026-10-02): pause or turn the link back on (saved at once; the toast takes the
- * colour of the new state, a failure is an error toast) and, for an additional link, delete it
- * (destructive, the name typed to confirm). Replacing the main link stays inside «Керувати».
- * Focus returns to the trigger after the dialog.
+ * The row's one action (owner 2026-10-03): «Керувати» opens the link's sheet, where it is paused
+ * or resumed («Стан посилання») and, for an additional link, deleted (its danger zone). The
+ * status badge on the row says when it is paused. On phones it goes under the address.
  */
-function LinkMenu({
-  link,
-  name,
-  onSettings,
-}: {
-  link: GuestLink;
-  name: string;
-  onSettings: () => void;
-}) {
+function LinkActions({ name, onSettings }: { name: string; onSettings: () => void }) {
   const t = useTranslations('links');
-  const tRoot = useTranslations();
-  const { toast } = useToast();
-  const invalidate = useInvalidateCollections();
-  const [confirming, setConfirming] = useState(false);
-  const paused = link.status === 'INACTIVE';
-  const toggle = useMutation({
-    mutationFn: () => (paused ? activateGuestLink(link.id) : deactivateGuestLink(link.id)),
-    onSuccess: async (updated) => {
-      const nowPaused = updated.status === 'INACTIVE';
-      toast({
-        variant: nowPaused ? 'warning' : 'success',
-        title: nowPaused ? t('state.paused') : t('state.resumed'),
-      });
-      await invalidate();
-    },
-    onError: (error) =>
-      toast({
-        variant: 'error',
-        title: tRoot(errorMessageKey(isApiError(error) ? error.code : 'INTERNAL')),
-      }),
-  });
-  const remove = useMutation({
-    mutationFn: () => deleteGuestLink(link.id),
-    onSuccess: async () => {
-      toast({ variant: 'info', title: t('delete.done') });
-      await invalidate();
-    },
-  });
-  const failure = isApiError(remove.error) ? remove.error.code : null;
-  const label = t('row.menu', { name });
-  const failureMessage = tRoot(errorMessageKey(failure ?? 'INTERNAL'));
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={label}
-            title={label}
-            className="-mt-1.5 -mr-2 text-muted-foreground hover:text-foreground"
-          >
-            <Ellipsis aria-hidden="true" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-60">
-          <DropdownMenuItem onSelect={onSettings}>
-            <SlidersHorizontal aria-hidden="true" />
-            {t('row.settings')}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            disabled={toggle.isPending}
-            onSelect={() => {
-              if (!toggle.isPending) toggle.mutate();
-            }}
-          >
-            {paused ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
-            {paused ? t('row.resume') : t('row.pause')}
-          </DropdownMenuItem>
-          {link.isDefault ? null : (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => {
-                  remove.reset();
-                  setConfirming(true);
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                {t('delete.button')}
-              </DropdownMenuItem>
-            </>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      {link.isDefault ? null : (
-        <ConfirmDialog
-          open={confirming}
-          onOpenChange={setConfirming}
-          destructive
-          title={t('delete.confirmTitle', { name })}
-          description={t('delete.confirmText')}
-          confirmPhrase={name}
-          confirmPhraseLabel={t('delete.phrase', { name })}
-          confirmLabel={t('delete.confirm')}
-          cancelLabel={t('danger.cancel')}
-          pendingLabel={t('delete.pending')}
-          onConfirm={async () => {
-            await remove.mutateAsync();
-          }}
-          errorMessage={failureMessage}
-        />
-      )}
-    </>
+    <div
+      data-slot="link-actions"
+      className="col-span-2 mt-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:mt-0"
+    >
+      {/* Every row has this button: the name in the accessible name tells them apart. */}
+      <Button
+        variant="outline"
+        className="w-full sm:w-auto"
+        aria-label={t('row.settingsName', { name })}
+        onClick={onSettings}
+      >
+        <SlidersHorizontal aria-hidden="true" />
+        {t('row.settings')}
+      </Button>
+    </div>
   );
 }

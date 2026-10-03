@@ -43,13 +43,13 @@ test.describe('guest link page', () => {
     expect(res?.headers()['x-robots-tag']).toBe('noindex');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
     await expect(page.getByText('Субота, 14 червня.')).toBeVisible();
-    await expect(
-      page.getByText('Організатор дозволив додавати фото, відео, документи і побажання'),
-    ).toBeVisible();
+    // The main link is contribution-only: the guest learns who sees what they add.
+    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     // Never the token or the title in the tab title.
     await expect(page).toHaveTitle('Stepler');
-    // A placeholder, not a fake upload (rule 18).
-    await expect(page.getByRole('button')).toHaveCount(0);
+    // No file button until uploads exist (rule 18): the wish is the main action.
+    await expect(page.getByRole('button', { name: /Додати фото/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Написати побажання' }).first()).toBeVisible();
   });
 
   test('pausing hides the title; rotating retires the old URL', async ({ page }) => {

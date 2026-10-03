@@ -331,3 +331,181 @@ describe('guest link schema', () => {
     expect(await prisma.guestLink.count()).toBe(0);
   });
 });
+
+describe('guest session and content schema', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  let sequence = 0;
+  const check = (constraint: string) => ({ kind: 'check', constraint });
+
+  /** A collection with a live default link and one guest session on it. */
+  async function setup() {
+    const ownerId = (await prisma.user.create({ data: { email: `o${sequence++}@x.io` } })).id;
+    const collectionId = (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
+    const link = await prisma.guestLink.create({
+      data: {
+        collectionId,
+        isDefault: true,
+        tokenHash: `link-${sequence++}`,
+        tokenCiphertext: 'ct',
+        tokenKeyId: 'app-secret-v1',
+        canUploadPhotos: true,
+        canUploadVideos: true,
+        canUploadDocuments: true,
+        canSubmitText: true,
+        canViewGallery: false,
+        canDeleteOwn: true,
+      },
+    });
+    const session = await prisma.guestSession.create({
+      data: { collectionId, currentLinkId: link.id, tokenHash: `session-${sequence++}` },
+    });
+    return { collectionId, linkId: link.id, sessionId: session.id };
+  }
+
+  /** A valid text item; tests override one field to break one rule. */
+  function item(
+    ids: { collectionId: string; sessionId: string },
+    overrides: Record<string, unknown> = {},
+  ) {
+    return prisma.contentItem.create({
+      data: {
+        collectionId: ids.collectionId,
+        contributorGuestSessionId: ids.sessionId,
+        frameNo: ++sequence,
+        kind: 'TEXT',
+        textBody: 'Вітаємо!',
+        processingStatus: 'NOT_REQUIRED',
+        ...overrides,
+      },
+    });
+  }
+
+  test('frame numbers start at 1 and are unique per collection', async () => {
+    const ids = await setup();
+    const collection = await prisma.collection.findUniqueOrThrow({
+      where: { id: ids.collectionId },
+    });
+    expect(collection.nextFrameNo).toBe(1);
+    await item(ids, { frameNo: 7 });
+    expect(await violation(item(ids, { frameNo: 7 }))).toEqual({
+      kind: 'unique',
+      constraint: 'ContentItem_collectionId_frameNo_key',
+    });
+    await item(await setup(), { frameNo: 7 });
+    expect(await violation(item(ids, { frameNo: 0 }))).toEqual(check('ContentItem_frame_positive'));
+    expect(
+      await violation(
+        prisma.collection.update({ where: { id: ids.collectionId }, data: { nextFrameNo: 0 } }),
+      ),
+    ).toEqual(check('Collection_next_frame_positive'));
+  });
+
+  test('a TEXT item has a body and only a TEXT item has one', async () => {
+    const ids = await setup();
+    const rule = check('ContentItem_text_consistent');
+    expect(await violation(item(ids, { textBody: null }))).toEqual(rule);
+    expect(
+      await violation(item(ids, { kind: 'DOCUMENT', processingStatus: 'NOT_REQUIRED' })),
+    ).toEqual(rule);
+  });
+
+  test('a text is 1 to 5000 code points', async () => {
+    const ids = await setup();
+    const rule = check('ContentItem_text_length');
+    await item(ids, { textBody: '😀'.repeat(5000) });
+    expect(await violation(item(ids, { textBody: '😀'.repeat(5001) }))).toEqual(rule);
+    expect(await violation(item(ids, { textBody: 'a'.repeat(5001) }))).toEqual(rule);
+    expect(await violation(item(ids, { textBody: '' }))).toEqual(rule);
+  });
+
+  test('a contributor name is 1 to 80 characters, on the session and on the item', async () => {
+    const ids = await setup();
+    await item(ids, { contributorName: 'я'.repeat(80) });
+    expect(await violation(item(ids, { contributorName: 'я'.repeat(81) }))).toEqual(
+      check('ContentItem_name_length'),
+    );
+    expect(await violation(item(ids, { contributorName: '' }))).toEqual(
+      check('ContentItem_name_length'),
+    );
+    await prisma.guestSession.update({
+      where: { id: ids.sessionId },
+      data: { contributorName: 'я'.repeat(80) },
+    });
+    expect(
+      await violation(
+        prisma.guestSession.update({
+          where: { id: ids.sessionId },
+          data: { contributorName: 'я'.repeat(81) },
+        }),
+      ),
+    ).toEqual(check('GuestSession_name_length'));
+  });
+
+  test('texts and documents need no processing; photos and videos do', async () => {
+    const ids = await setup();
+    const rule = check('ContentItem_processing_by_kind');
+    expect(await violation(item(ids, { processingStatus: 'PENDING' }))).toEqual(rule);
+    expect(
+      await violation(
+        item(ids, { kind: 'PHOTO', textBody: null, processingStatus: 'NOT_REQUIRED' }),
+      ),
+    ).toEqual(rule);
+    await item(ids, { kind: 'PHOTO', textBody: null, processingStatus: 'PENDING' });
+    await item(ids, { kind: 'VIDEO', textBody: null, processingStatus: 'FAILED' });
+    await item(ids, { kind: 'DOCUMENT', textBody: null, processingStatus: 'NOT_REQUIRED' });
+  });
+
+  test('an idempotency key is unique per guest session', async () => {
+    const ids = await setup();
+    const idempotencyKey = '01a0ee76-0574-7fe5-a38b-53b07a9b40f9';
+    await item(ids, { idempotencyKey });
+    expect(await violation(item(ids, { idempotencyKey }))).toEqual({
+      kind: 'unique',
+      constraint: 'ContentItem_contributorGuestSessionId_idempotencyKey_key',
+    });
+    await item(await setup(), { idempotencyKey });
+  });
+
+  test('deleting a guest session keeps its items, without the session', async () => {
+    const ids = await setup();
+    const { id } = await item(ids);
+    await prisma.guestSession.delete({ where: { id: ids.sessionId } });
+    const row = await prisma.contentItem.findUniqueOrThrow({ where: { id } });
+    expect(row.contributorGuestSessionId).toBeNull();
+  });
+
+  test("a session's link and an item's session belong to the row's own collection", async () => {
+    const x = await setup();
+    const y = await setup();
+    await expect(
+      prisma.guestSession.create({
+        data: { collectionId: x.collectionId, currentLinkId: y.linkId, tokenHash: 'cross' },
+      }),
+    ).rejects.toThrow();
+    await expect(item({ collectionId: x.collectionId, sessionId: y.sessionId })).rejects.toThrow();
+    await expect(
+      prisma.guestSession.update({
+        where: { id: x.sessionId },
+        data: { currentLinkId: y.linkId },
+      }),
+    ).rejects.toThrow();
+    expect(await prisma.contentItem.count()).toBe(0);
+  });
+
+  test('a link a session points at cannot be deleted', async () => {
+    const ids = await setup();
+    await expect(prisma.guestLink.delete({ where: { id: ids.linkId } })).rejects.toThrow();
+    expect(await prisma.guestLink.count()).toBe(1);
+  });
+
+  test('deleting a collection deletes its sessions and items', async () => {
+    const ids = await setup();
+    await item(ids);
+    await prisma.collection.delete({ where: { id: ids.collectionId } });
+    expect(await prisma.guestSession.count()).toBe(0);
+    expect(await prisma.contentItem.count()).toBe(0);
+  });
+});

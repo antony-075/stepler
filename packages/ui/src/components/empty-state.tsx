@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { formatFrameNumber } from '../lib/frame-number';
 import { cn } from '../lib/utils';
 
 type EmptyStateProps = {
@@ -16,11 +17,6 @@ type EmptyStateProps = {
   headingLevel?: 2 | 3;
   className?: string;
 };
-
-/** `#` and at least three digits (`#001`); four from 1000 (DESIGN-SYSTEM.md §3.4). */
-function formatFrameNumber(value: number): string {
-  return `#${String(value).padStart(3, '0')}`;
-}
 
 // Direction C (DESIGN-SYSTEM.md §5.16): an empty frame instead of an icon in a circle, then a
 // panel heading, one line and the next step.

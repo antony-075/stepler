@@ -23,18 +23,25 @@ type SheetContentProps = ComponentProps<typeof SheetPrimitive.Content> & {
   /**
    * `left`: the admin navigation on phones and tablets, at most 20rem. `right`: a panel of work
    * over the page (a guest link's settings), full screen on phones, up to 44rem from `sm`.
+   * `bottom`: a short task on the guest page (name, a wish): from the bottom edge on phones, in
+   * the thumb zone, with the safe area; a centred dialog of at most 560px from `sm`.
    */
-  side?: 'left' | 'right';
+  side?: 'left' | 'right' | 'bottom';
 };
 
 const SIDES = {
-  left: 'left-0 w-[min(20rem,calc(100vw-3rem))] border-r motion-safe:data-[state=closed]:slide-out-to-left motion-safe:data-[state=open]:slide-in-from-left',
+  left: 'inset-y-0 left-0 w-[min(20rem,calc(100vw-3rem))] border-r motion-safe:data-[state=closed]:slide-out-to-left motion-safe:data-[state=open]:slide-in-from-left',
   right:
-    'right-0 w-full border-l sm:w-[min(44rem,calc(100vw-3rem))] motion-safe:data-[state=closed]:slide-out-to-right motion-safe:data-[state=open]:slide-in-from-right',
+    'inset-y-0 right-0 w-full border-l sm:w-[min(44rem,calc(100vw-3rem))] motion-safe:data-[state=closed]:slide-out-to-right motion-safe:data-[state=open]:slide-in-from-right',
+  bottom: cn(
+    'inset-x-0 bottom-0 mx-auto max-h-[calc(100dvh-3rem)] w-full max-w-[560px] rounded-t-dialog border-t bg-popover pb-[env(safe-area-inset-bottom)]',
+    'motion-safe:data-[state=closed]:slide-out-to-bottom motion-safe:data-[state=open]:slide-in-from-bottom',
+    'sm:top-1/2 sm:bottom-auto sm:w-[calc(100%-2rem)] sm:-translate-y-1/2 sm:rounded-dialog sm:border sm:pb-0',
+  ),
 } as const;
 
 // Based on shadcn/ui (new-york) sheet (DESIGN-SYSTEM.md §5.4, §6.0). Deviations: the page
-// colour, not a popover (the left one is the same sidebar the desktop shows, moved over the
+// colour, not a popover (the bottom one is a popover: it sits over the guest page like a dialog) (the left one is the same sidebar the desktop shows, moved over the
 // page; the right one holds sheets of its own), never wider than the screen minus a 3rem strip
 // of the page to tap away (the right one fills a phone), a 1px edge, no shadow in dark, the
 // dialog overlay, the close button in `SheetHeader` (it never scrolls), slides in (240ms) and out (160ms);
@@ -48,7 +55,7 @@ function SheetContent({ className, children, side = 'left', ...props }: SheetCon
         data-slot="sheet-content"
         data-side={side}
         className={cn(
-          'fixed inset-y-0 z-(--z-modal) flex flex-col overflow-hidden bg-background text-foreground shadow-dialog outline-none',
+          'fixed z-(--z-modal) flex flex-col overflow-hidden bg-background text-foreground shadow-dialog outline-none',
           SIDES[side],
           'ease-out animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
           'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:data-[state=closed]:fade-out-0 motion-reduce:data-[state=open]:fade-in-0',

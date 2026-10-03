@@ -110,9 +110,13 @@ export const resolveGuestLinkRequestSchema = z
   .strict();
 export type ResolveGuestLinkRequest = z.infer<typeof resolveGuestLinkRequestSchema>;
 
-/** What a guest may learn about a live link: no ids, no owner, no other links. */
+/**
+ * What a guest may learn about a live link: the collection id (not a secret; the guest needs it
+ * for the session exchange [C3] and every later call), no link or owner ids, no other links.
+ */
 export const resolveGuestLinkResponseSchema = z
   .object({
+    collectionId: z.uuid(),
     collection: z.object({ title: z.string(), description: z.string().nullable() }).strict(),
     permissions: guestLinkPermissionsSchema,
   })

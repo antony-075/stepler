@@ -1,34 +1,29 @@
 'use client';
 
 // Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри» tab of the collection
-// page. Cards in the order an admin needs them: «Доступ гостей» (a read-only summary of the main
-// link; permissions stay per link, «Змінити» opens its settings), «Архівування» (asks once;
-// bringing it back just happens) and the danger zone (the only red on the page; a destructive
-// ConfirmDialog names the collection). Errors stay inline; toasts only confirm.
+// page. Two cards: «Архівування» (asks once; bringing it back just happens) and the danger zone
+// (the only red on the page; a destructive ConfirmDialog names the collection). Guest access is
+// not here: permissions belong to each link, on «Посилання» (owner 2026-10-03). Errors stay
+// inline; toasts only confirm.
 
 import type { Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { useToast } from '@stepler/ui/components/toast';
-import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Archive, ArchiveRestore, Eye, Link2, Trash2, TriangleAlert } from 'lucide-react';
-import Link from 'next/link';
+import { Archive, ArchiveRestore, Trash2, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { collectionKey, deleteCollection, useInvalidateCollections } from '@/api/collections';
 import { errorMessageKey } from '@/errors/error-message';
-import { linkSettingsPath, MAIN_LINK } from '@/guest-links/link-pages';
-import { PermissionChips } from '@/guest-links/permission-chips';
 import { useArchiveToggle } from '../../use-archive';
 
 /**
  * The collection's «Параметри» tab (owner 2026-10-02: one page, no separate settings page; the
- * title and description are edited in place in the header): what guests may do through the main
- * link (a read-only summary, «Змінити» opens it), archiving, and the danger zone.
+ * title and description are edited in place in the header): archiving and the danger zone.
  */
 export function CollectionSettingsPanel({
   collection,
@@ -39,7 +34,6 @@ export function CollectionSettingsPanel({
 }) {
   return (
     <div className="grid min-w-0 gap-6">
-      <AccessCard collection={collection} />
       <ArchiveCard collection={collection} />
       <DangerCard collection={collection} onDeleted={onDeleted} />
     </div>
@@ -89,58 +83,7 @@ function SectionCard({
   );
 }
 
-/**
- * 2 «Доступ гостей»: what the main link lets guests add (chips) and see, and whether it works,
- * read-only. Permissions belong to each link (owner 2026-10-02), so «Змінити» opens the main
- * link's page instead of editing here.
- */
-function AccessCard({ collection }: { collection: Collection }) {
-  const t = useTranslations('collection.settingsPage');
-  const tCollections = useTranslations('collections');
-  const tPermissions = useTranslations('links.permissions');
-  const permissions = collection.defaultLinkPermissions;
-  const linkStatus = collection.defaultLinkStatus;
-  const seeKey = permissions?.canViewGallery === true ? 'seeAll' : 'seeOwn';
-  const linkIconTone = linkStatus === 'ACTIVE' ? 'text-success' : 'text-warning';
-  return (
-    <SectionCard id="collection-access" title={t('access')} hint={t('accessHint')}>
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-        {permissions === null ? (
-          <p className="text-sm text-muted-foreground">{t('accessNoLink')}</p>
-        ) : (
-          <div className="grid gap-3">
-            <PermissionChips permissions={permissions} />
-            <p className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Eye aria-hidden="true" className="size-4 shrink-0" />
-                {tPermissions(seeKey)}
-              </span>
-              {linkStatus === null ? null : (
-                <span className="inline-flex items-center gap-1.5">
-                  <Link2 aria-hidden="true" className={cn('size-4 shrink-0', linkIconTone)} />
-                  {linkStatus === 'ACTIVE'
-                    ? tCollections('linkActive')
-                    : tCollections('linkPaused')}
-                </span>
-              )}
-            </p>
-          </div>
-        )}
-        <Button asChild variant="outline" className="w-full sm:w-auto">
-          <Link
-            href={linkSettingsPath(collection.id, MAIN_LINK)}
-            aria-label={t('accessChangeName')}
-            className="no-underline"
-          >
-            {t('accessChange')}
-          </Link>
-        </Button>
-      </div>
-    </SectionCard>
-  );
-}
-
-/** 3 «Архівування»: one row, an icon, what happens and the button. */
+/** «Архівування»: one row, an icon, what happens and the button. */
 function ArchiveCard({ collection }: { collection: Collection }) {
   const t = useTranslations('collection.settingsPage');
   const tRoot = useTranslations();

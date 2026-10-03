@@ -104,10 +104,25 @@ describe('collectionSchema', () => {
       canViewGallery: false,
       canDeleteOwn: true,
     },
+    contentCount: 0,
+    lastContentAt: null,
   };
 
   test('accepts a collection', () => {
     expect(collectionSchema.parse(collection)).toEqual(collection);
+  });
+
+  test('carries the frame count and the newest frame time', () => {
+    const withContent = {
+      ...collection,
+      contentCount: 3,
+      lastContentAt: '2026-10-03T21:10:00.000Z',
+    };
+    expect(collectionSchema.parse(withContent)).toEqual(withContent);
+    expect(collectionSchema.safeParse({ ...collection, contentCount: -1 }).success).toBe(false);
+    const withoutCount: Partial<typeof collection> = { ...collection };
+    delete withoutCount.contentCount;
+    expect(collectionSchema.safeParse(withoutCount).success).toBe(false);
   });
 
   test('defaultLinkStatus is ACTIVE, INACTIVE or null (no live default yet)', () => {

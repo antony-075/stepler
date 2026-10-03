@@ -192,30 +192,40 @@ GuestLink
   SQL UNIQUE (collectionId) WHERE isDefault AND status <> 'REVOKED'   -- exactly one live default
 
 GuestSession
-  id, collectionId → Collection (cascade), currentLinkId → GuestLink,
-  tokenHash (unique), createdAt, lastSeenAt
-  INDEX (collectionId)
+  id, collectionId → Collection (cascade), currentLinkId → GuestLink (no action),
+  tokenHash (unique), contributorName? (1–80), nameAnsweredAt?, createdAt, lastSeenAt
+  FOREIGN KEY (currentLinkId, collectionId) → GuestLink (id, collectionId)   -- same collection
+  UNIQUE (id, collectionId)
+  INDEX (collectionId), INDEX (currentLinkId)
 ```
 
-*`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` and the rest of this section are not implemented yet.
+*`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` is implemented in slice 2. *`GuestSession` implemented in slice 3* (PR A, 2026-10-03), as above: the link key is composite with the collection, so PostgreSQL itself refuses a session bound to another collection's link; `NO ACTION` (not `RESTRICT`) lets deleting a collection cascade to its links and sessions in one statement while refusing to delete a link a session points at.
 
 - **Token:** 32 random bytes, base64url (43 chars). Lookup by SHA-256 hash (high-entropy token, no slow hash needed). The owner must be able to re-display the link/QR, so the token is also stored encrypted (AES-256-GCM, key from config, `tokenKeyId` for key rotation). Rejected alternatives: plaintext (DB leak exposes every gallery); HMAC-derived tokens (rotating the secret kills every printed QR).
-- **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time. The guest name is **not** stored on the session (privacy: the session must not become a hidden profile).
+- **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time; every guest request re-checks that link, the collection and its owner ([G5] order) and writes `lastSeenAt` at most once an hour.
+- **The guest's name lives on the session** ([O4], [C4], amended 2026-10-03; it was "not stored on the session"): `contributorName` is optional, asked once before the first contribution («Пропустити» is an answer: `nameAnsweredAt` is set either way), editable, and copied to each new item. Renaming also updates this session's non-deleted items in the same transaction, so the admin never sees two names for one guest. It is never shown to other guests. The session holds nothing else about the guest.
 - Future `expiresAt` / scheduled activation are nullable columns added later (D9).
 
 ### 7.3 Content
 
 ```text
-ContentItem
-  id, collectionId → Collection (cascade), kind (PHOTO|VIDEO|DOCUMENT|TEXT),
-  contributorGuestSessionId? → GuestSession (set null), contributorUserId? → User (set null),
-  contributorName? (≤ 80), originalFilename?, textBody? (≤ 5000),
-  processingStatus (NOT_REQUIRED|PENDING|READY|FAILED),
-  hiddenAt?, hiddenBy?, deletedAt?, createdAt
+ContentItem                                         (as built in slice 3, 2026-10-03)
+  id, collectionId → Collection (cascade), frameNo, kind (PHOTO|VIDEO|DOCUMENT|TEXT),
+  contributorGuestSessionId? → GuestSession, contributorName? (1–80),
+  originalFilename?, textBody? (1–5000 code points), idempotencyKey? (uuid),
+  processingStatus (NOT_REQUIRED|PENDING|READY|FAILED), deletedAt?, createdAt
+  FOREIGN KEY (contributorGuestSessionId, collectionId) → GuestSession (id, collectionId)
+    ON DELETE SET NULL (contributorGuestSessionId)                   -- same collection, item stays
+  UNIQUE (collectionId, frameNo)
+  UNIQUE (contributorGuestSessionId, idempotencyKey)
   SQL CHECK ((kind = 'TEXT') = (textBody IS NOT NULL))
-  SQL CHECK (num_nonnulls(contributorGuestSessionId, contributorUserId) <= 1)
-  INDEX (collectionId, createdAt DESC, id) WHERE deletedAt IS NULL AND hiddenAt IS NULL
-  INDEX (contributorGuestSessionId)
+  SQL CHECK (frameNo > 0); char_length checks on textBody and contributorName
+  SQL CHECK ((kind IN ('TEXT','DOCUMENT')) = (processingStatus = 'NOT_REQUIRED'))
+  INDEX (collectionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL         -- feed
+  INDEX (collectionId, kind, createdAt DESC, id DESC) WHERE deletedAt IS NULL   -- feed by kind
+  INDEX (contributorGuestSessionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL -- own
+  INDEX (deletedAt) WHERE deletedAt IS NOT NULL                                 -- purge
+  Collection.nextFrameNo (≥ 1)
 
 MediaObject
   id, contentItemId → ContentItem (cascade), role (ORIGINAL|THUMBNAIL|PREVIEW|POSTER),
@@ -240,7 +250,8 @@ UploadSession
 - `hiddenAt` is the first moderation state (operator/admin "hide"). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
-- **Planned, not implemented (ADR 0015, upload slice):** stable frame numbers — `Collection.nextFrameNo` and `ContentItem.frameNo` with `SQL UNIQUE (collectionId, frameNo)`, assigned in the completion transaction, never reused after deletion; shown to the owner for every item and to a guest only for their own. Optional `ContentItem.capturedAt?` (EXIF / video metadata) if the processing pipeline reads it cheaply; the MVP timeline uses `createdAt`.
+- **Frame numbers (ADR 0015), implemented in slice 3 [C8]:** `UPDATE "Collection" SET "nextFrameNo" = "nextFrameNo" + 1 WHERE id = $1 AND status = 'ACTIVE' RETURNING "nextFrameNo" - 1` inside the transaction that creates the item; that statement row-locks the collection (so concurrent creations get consecutive numbers, and a rolled-back one gives its number back) and is the "still active" re-check. Texts and files share the sequence; gaps after deletion are never filled. The owner sees every number; a guest only their own. Lock order [C9]: a transaction that locks both takes the owner's `User` row first, then the `Collection`.
+- **Not in slice 3 [C19]:** `contributorUserId`, `hiddenAt`/`hiddenBy` (hide belongs to slice 9) and `capturedAt`; each is an additive column later. `MediaObject` and `UploadSession` below arrive with uploads (PR C).
 
 ### 7.4 Reports and audit
 
@@ -323,9 +334,11 @@ Admin
   PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
   POST                /collections/{id}/guest-links/default/rotate
-  GET                 /collections/{id}/content?kind=&cursor=
-  GET/DELETE          /content/{id}
-  POST                /content/{id}/hide | /unhide
+  GET                 /collections/{id}/content?kind=&sort=newest|frame&cursor=&limit=   (slice 3)
+  GET                 /collections/{id}/content/counts                                   (slice 3)
+  GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
+  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) [C7]
+  POST                /content/{id}/hide | /unhide            (slice 9)
   GET                 /collections/{id}/reports
   PATCH               /reports/{id}
 
@@ -337,12 +350,14 @@ Operator
   POST                /operator/users/{id}/block | /unblock
 
 Guest (cookie scoped per collection, see §9.1)
-  POST   /guest/sessions                         {linkToken} → {collectionId, collection, permissions}
-  GET    /guest/collections/{cid}
-  GET    /guest/collections/{cid}/content?cursor=
-  GET    /guest/collections/{cid}/content/{id}
+  POST   /guest/links/resolve                    {linkToken} → {collectionId, collection, permissions}
+  POST   /guest/collections/{cid}/session        {linkToken} → GuestContext + Set-Cookie   (slice 3)
+  PATCH  /guest/collections/{cid}/session        {name | null} → GuestContext            (slice 3)
+  GET    /guest/collections/{cid}/context        → GuestContext                           (slice 3)
+  GET    /guest/collections/{cid}/content?scope=own|all&cursor=                          (slice 3)
+  GET    /guest/collections/{cid}/content/{id}                                           (slice 3)
   DELETE /guest/collections/{cid}/content/{id}
-  POST   /guest/collections/{cid}/texts
+  POST   /guest/collections/{cid}/texts      Idempotency-Key header (uuid), 201 / replay 200   (slice 3)
   POST   /guest/collections/{cid}/uploads
   POST   /guest/collections/{cid}/uploads/{uid}/parts
   POST   /guest/collections/{cid}/uploads/{uid}/complete
@@ -357,11 +372,14 @@ Why a separate guest namespace: different principal, different DTOs (admin field
 
 ### 9.1 Guest session exchange
 
-1. Guest opens `/g/{token}`; web calls `POST /api/v1/guest/sessions {linkToken}`.
-2. API looks up the link by token hash; requires link `ACTIVE` and a valid collection.
-3. If the request carries a valid session cookie for the same collection → **re-bind** `currentLinkId` to this link (ownership preserved, permissions from the new link). Otherwise create a new `GuestSession`.
-4. Cookie: `st_gs` with `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
-5. Reloading `/g/{token}` repeats the exchange idempotently.
+Amended and implemented in slice 3 ([C3], 2026-10-03): **two calls, not one.** The cookie is path-scoped to `/api/v1/guest/collections/{collectionId}`, so the browser would never send it to a `POST /guest/sessions` outside that path: the API could not re-bind, and every reload would create a new session and lose "my frames".
+
+1. Guest opens `/g/{token}`; web calls `POST /api/v1/guest/links/resolve {linkToken}`. The answer carries the link's state ([G5] codes) and the `collectionId` (not a secret, CLAUDE.md §8; the guest needs it for every later call).
+2. Web calls `POST /api/v1/guest/collections/{collectionId}/session {linkToken}` — under the cookie's path. The API resolves the token again; a link of another collection than the path's is `404` (nobody can plant a cookie for another collection).
+3. If the request carries a valid session cookie of this collection → **re-bind** `currentLinkId` to this link (ownership preserved, permissions from the new link, F5) and set the same cookie again to renew it. Otherwise create a new `GuestSession`; the raw token goes only into the cookie, its SHA-256 into the row.
+4. Cookie: `st_gs` with `HttpOnly; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}; Max-Age=34560000` (400 days, the browsers' cap; no server-side expiry, D12) and `Secure` per `COOKIE_SECURE` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
+5. Every guest collection route (`GuestSessionGuard`) needs that cookie (`401 GUEST_SESSION_REQUIRED` without it, or with another collection's), then re-checks the session's link and collection in [G5] order on each request. The web re-runs the exchange once on `GUEST_SESSION_REQUIRED` (it has the token in the address bar) and retries the call; a link or collection state from any call switches the page to that state.
+6. Reloading `/g/{token}` repeats the exchange idempotently.
 
 Known limitation: QR scanners and messenger in-app browsers often use a separate cookie jar; a guest who uploads in one browser cannot delete from another. Accepted for MVP (D12).
 
@@ -484,9 +502,13 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Concurrent `INITIATED` uploads per guest session | 10 [assumption] |
 | Upload initiations per guest session | 300 / hour |
 | Magic link requests | 5 / hour per email, 20 / hour per IP |
-| Guest session creation | 30 / minute per IP |
+| Guest session creation | 120 / minute per IP (raised from 30 like [G10]: venue NAT) |
+| Guest texts | 60 / hour per guest session and 60 / minute per IP |
+| Guest reads (context, content list, one item) | 600 / minute per IP and route |
 | Collection creation | 10 per rolling 24 hours per account |
 | Per-file size | §10.1 |
+
+*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
 
 *Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 
@@ -525,7 +547,7 @@ Decision details: ADR 0013.
 - Admin registration records `LegalAcceptance(document, version, acceptedAt)` (Phase 4 slice 10; not in Phase 2). No IP stored by default. Document updates do not force re-acceptance without a separate decision.
 - Guest page shows a short notice with links (no checkbox).
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
-- Data minimization: guest name optional and per-submission; guest session holds no profile data; logs exclude personal content.
+- Data minimization: the guest name is optional, held on the guest session ([O4], amended 2026-10-03) and snapshotted per submission; the session holds nothing else about the guest; other guests never see a name or another guest's file name or frame number; logs and audit events exclude text bodies, names, file names, cookies, tokens and signed URLs.
 
 ---
 
