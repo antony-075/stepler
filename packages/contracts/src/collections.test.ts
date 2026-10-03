@@ -169,10 +169,17 @@ describe('collectionSchema', () => {
 });
 
 describe('usageResponseSchema', () => {
-  test('accepts active-collection usage and rejects extra keys', () => {
-    const usage = { activeCollections: { used: 1, limit: 3 } };
+  test('accepts active-collection and storage usage and rejects extra keys', () => {
+    const usage = {
+      activeCollections: { used: 1, limit: 3 },
+      storage: { usedBytes: 1_200_000_000, limitBytes: 21_474_836_480 },
+    };
     expect(usageResponseSchema.parse(usage)).toEqual(usage);
+    expect(usageResponseSchema.safeParse({ ...usage, extra: 1 }).success).toBe(false);
     expect(usageResponseSchema.safeParse({ ...usage, storage: {} }).success).toBe(false);
+    expect(
+      usageResponseSchema.safeParse({ activeCollections: usage.activeCollections }).success,
+    ).toBe(false);
   });
 });
 

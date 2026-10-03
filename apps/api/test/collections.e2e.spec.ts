@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import {
   collectionListResponseSchema,
+  collectionDetailSchema,
   collectionSchema,
   usageResponseSchema,
 } from '@stepler/contracts';
@@ -227,8 +228,9 @@ describe('collections API', () => {
         .get('/api/v1/me/usage')
         .set('Cookie', cookie)
         .expect(200);
-      expect(usageResponseSchema.parse(usage.body)).toEqual({
+      expect(usageResponseSchema.parse(usage.body)).toMatchObject({
         activeCollections: { used: 3, limit: 3 },
+        storage: { usedBytes: 0 },
       });
     });
   });
@@ -370,7 +372,7 @@ describe('collections API', () => {
         .get(`/api/v1/collections/${id}`)
         .set('Cookie', owner.cookie)
         .expect(200);
-      expect(collectionSchema.parse(res.body).id).toBe(id);
+      expect(collectionDetailSchema.parse(res.body).id).toBe(id);
     });
   });
 });

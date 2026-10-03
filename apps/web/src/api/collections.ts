@@ -1,5 +1,6 @@
 import {
   type Collection,
+  collectionDetailSchema,
   collectionListResponseSchema,
   collectionSchema,
   type CollectionStatus,
@@ -25,7 +26,7 @@ export function listCollections(status: CollectionStatus, cursor?: string) {
 }
 
 export const fetchCollection = (id: string) =>
-  apiRequest(`/collections/${encodeURIComponent(id)}`, { schema: collectionSchema });
+  apiRequest(`/collections/${encodeURIComponent(id)}`, { schema: collectionDetailSchema });
 
 export const fetchUsage = () => apiRequest('/me/usage', { schema: usageResponseSchema });
 

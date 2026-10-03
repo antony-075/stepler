@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
   NO_CONTROL_CHARACTERS,
@@ -51,6 +52,12 @@ export const collectionSchema = z
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;
+
+/** `GET /api/v1/collections/:id`: the collection plus its storage use (not in lists). */
+export const collectionDetailSchema = collectionSchema
+  .extend({ storage: storageUsageSchema })
+  .strict();
+export type CollectionDetail = z.infer<typeof collectionDetailSchema>;
 
 /** `POST /api/v1/collections`. */
 export const createCollectionRequestSchema = z

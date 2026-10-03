@@ -14,11 +14,13 @@ import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
   collectionListResponseSchema,
+  collectionDetailSchema,
   collectionSchema,
   createCollectionRequestSchema,
   listCollectionsQuerySchema,
   updateCollectionRequestSchema,
   type Collection,
+  type CollectionDetail,
   type CollectionListResponse,
   type CreateCollectionRequest,
   type ListCollectionsQuery,
@@ -66,11 +68,11 @@ export class CollectionsController {
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, standardSchema: collectionSchema })
+  @ApiResponse({ status: 200, standardSchema: collectionDetailSchema })
   get(
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
-  ): Promise<Collection> {
+  ): Promise<CollectionDetail> {
     return this.collections.get(principal, params.id);
   }
 

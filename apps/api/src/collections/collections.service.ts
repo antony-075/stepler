@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
+  CollectionDetail,
   Collection,
   CollectionListResponse,
   CreateCollectionRequest,
@@ -120,8 +121,10 @@ export class CollectionsService {
     };
   }
 
-  async get(principal: AccountPrincipal, id: string): Promise<Collection> {
-    return this.toDto(await this.findOwned(id, principal.userId));
+  /** The detail view: the collection and its storage use (lists leave the sums out). */
+  async get(principal: AccountPrincipal, id: string): Promise<CollectionDetail> {
+    const dto = await this.toDto(await this.findOwned(id, principal.userId));
+    return { ...dto, storage: await this.usage.forCollection(id) };
   }
 
   /** Last write wins. Archived collections stay editable (D9). */

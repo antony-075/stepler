@@ -943,6 +943,26 @@
                       ],
                       "type": "string"
                     },
+                    "storage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "limitBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "usedBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "usedBytes",
+                        "limitBytes"
+                      ],
+                      "type": "object"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -963,7 +983,8 @@
                     "defaultLinkStatus",
                     "defaultLinkPermissions",
                     "contentCount",
-                    "lastContentAt"
+                    "lastContentAt",
+                    "storage"
                   ],
                   "type": "object"
                 }
@@ -4864,10 +4885,31 @@
                         "limit"
                       ],
                       "type": "object"
+                    },
+                    "storage": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "limitBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "usedBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "usedBytes",
+                        "limitBytes"
+                      ],
+                      "type": "object"
                     }
                   },
                   "required": [
-                    "activeCollections"
+                    "activeCollections",
+                    "storage"
                   ],
                   "type": "object"
                 }

@@ -1,6 +1,6 @@
 'use client';
 
-import type { Collection } from '@stepler/contracts';
+import type { Collection, CollectionDetail } from '@stepler/contracts';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
@@ -26,7 +26,10 @@ export function useArchiveToggle(collection: Collection) {
     mutationFn: (to: 'archive' | 'unarchive') =>
       to === 'archive' ? archiveCollection(collection.id) : unarchiveCollection(collection.id),
     onSuccess: async (updated, to) => {
-      queryClient.setQueryData(collectionKey(updated.id), updated);
+      // The detail also holds the storage line, which a mutation's answer leaves out.
+      queryClient.setQueryData<CollectionDetail>(collectionKey(updated.id), (previous) =>
+        previous === undefined ? undefined : { ...previous, ...updated },
+      );
       toast({
         variant: to === 'archive' ? 'info' : 'success',
         title: to === 'archive' ? t('settingsPage.archived') : t('unarchived'),
