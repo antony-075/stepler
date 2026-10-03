@@ -69,6 +69,19 @@ export class LimitsService {
     };
   }
 
+  /**
+   * Guest texts per client IP per minute, across sessions: a new session costs one call, so the
+   * per-session limit alone would not bound one client.
+   */
+  guestTextCreatePerIpPerMinute(): number {
+    return this.env.LIMIT_TEXTS_PER_IP_PER_MINUTE;
+  }
+
+  /** Guest reads per client IP per minute and route; generous, a bound on load. */
+  guestReadsPerIpPerMinute(): number {
+    return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {

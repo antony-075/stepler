@@ -3337,6 +3337,9 @@
           "410": {
             "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
           },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
           "default": {
             "content": {
               "application/problem+json": {
@@ -3519,6 +3522,9 @@
           },
           "404": {
             "description": "NOT_FOUND: no such item in this collection, or one the guest may not see"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
           },
           "default": {
             "content": {
@@ -3715,6 +3721,9 @@
           },
           "410": {
             "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
           },
           "default": {
             "content": {
@@ -4347,7 +4356,7 @@
             "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
           },
           "429": {
-            "description": "RATE_LIMITED: texts per session per hour"
+            "description": "RATE_LIMITED: texts per session per hour, or per client IP per minute"
           },
           "default": {
             "content": {

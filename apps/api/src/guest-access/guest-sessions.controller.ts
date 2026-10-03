@@ -113,7 +113,8 @@ export class GuestSessionsController {
   }
 
   @Get('context')
-  @UseGuards(GuestSessionGuard)
+  @UseGuards(RateLimitGuard, GuestSessionGuard)
+  @RateLimit('guest-read')
   @ApiCookieAuth(GUEST_SESSION_COOKIE_SCHEME)
   @ApiResponse({ status: 200, standardSchema: guestContextSchema })
   @ApiResponse({
@@ -122,6 +123,7 @@ export class GuestSessionsController {
   })
   @ApiResponse(STATE_ERRORS[0])
   @ApiResponse(STATE_ERRORS[1])
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
   context(@CurrentGuest() guest: GuestPrincipal): Promise<GuestContext> {
     return this.sessions.context(guest);
   }

@@ -274,7 +274,6 @@ describe('guest text rate limit', () => {
 
   afterAll(async () => {
     await app.close();
-    await prisma.$disconnect();
   });
 
   test('the third text in an hour → 429 RATE_LIMITED; another session is not affected', async () => {
@@ -295,4 +294,61 @@ describe('guest text rate limit', () => {
     expect(Number(res.headers['retry-after'])).toBeGreaterThanOrEqual(1);
     await post(await joinAsGuest(server(), collectionId, link.token)).expect(201);
   });
+});
+
+describe('guest text and read limits per IP', () => {
+  let app: INestApplication;
+  let tokens: GuestLinkTokens;
+  const server = (): Server => app.getHttpServer() as Server;
+
+  beforeAll(async () => {
+    app = await createApp(
+      testEnv({ LIMIT_TEXTS_PER_IP_PER_MINUTE: '2', LIMIT_GUEST_READS_PER_IP_PER_MINUTE: '2' }),
+    );
+    await app.init();
+    tokens = app.get(GuestLinkTokens);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  test('new sessions do not reset it: the third text from one IP in a minute → 429', async () => {
+    await resetDatabase(prisma);
+    const { collectionId, link } = await seedCollection(prisma, tokens);
+    const post = (cookie: string) =>
+      request(server())
+        .post(`/api/v1/guest/collections/${collectionId}/texts`)
+        .set('Origin', ORIGIN)
+        .set('Cookie', cookie)
+        .set('Idempotency-Key', randomUUID())
+        .send({ body: 'x' });
+    const fresh = () => joinAsGuest(server(), collectionId, link.token);
+    await post(await fresh()).expect(201);
+    await post(await fresh()).expect(201);
+    const res = await post(await fresh()).expect(429);
+    expect(res.body).toMatchObject({ code: 'RATE_LIMITED', retryable: true });
+    expect(Number(res.headers['retry-after'])).toBeGreaterThanOrEqual(1);
+    expect(await prisma.contentItem.count()).toBe(2);
+  });
+
+  test('guest reads are limited per IP and route', async () => {
+    await resetDatabase(prisma);
+    const { collectionId, link } = await seedCollection(prisma, tokens);
+    const cookie = await joinAsGuest(server(), collectionId, link.token);
+    const read = (path: string) =>
+      request(server())
+        .get(`/api/v1/guest/collections/${collectionId}/${path}`)
+        .set('Cookie', cookie);
+    await read('context').expect(200);
+    await read('context').expect(200);
+    expect((await read('context').expect(429)).body).toMatchObject({ code: 'RATE_LIMITED' });
+    await read('content?scope=own').expect(200);
+    await read('content?scope=own').expect(200);
+    await read('content?scope=own').expect(429);
+  });
+});
+
+afterAll(async () => {
+  await prisma.$disconnect();
 });

@@ -13,7 +13,12 @@ import type { LimitsService } from '../limits/limits.service.js';
  * The magic-link request limit is not here: it is counted only after Turnstile passes
  * (`MagicLinkService`), so junk requests cannot use it up for everyone behind one IP.
  */
-export type RateLimitName = 'magic-link-preview' | 'guest-link-resolve' | 'guest-session-create';
+export type RateLimitName =
+  | 'magic-link-preview'
+  | 'guest-link-resolve'
+  | 'guest-session-create'
+  | 'guest-text-create'
+  | 'guest-read';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const MINUTE_MS = 60_000;
@@ -44,6 +49,9 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       // hence the generous default [G10].
       named('guest-link-resolve', limits.guestLinkResolvePerIpPerMinute(), MINUTE_MS),
       named('guest-session-create', limits.guestSessionCreatePerIpPerMinute(), MINUTE_MS),
+      named('guest-text-create', limits.guestTextCreatePerIpPerMinute(), MINUTE_MS),
+      // Counted per route (the throttler keys by handler): context, content list, one item.
+      named('guest-read', limits.guestReadsPerIpPerMinute(), MINUTE_MS),
     ],
     setHeaders: false,
   };

@@ -21,6 +21,8 @@ describe('LimitsService', () => {
     });
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(120);
     expect(limits.guestSessionCreatePerIpPerMinute()).toBe(120);
+    expect(limits.guestTextCreatePerIpPerMinute()).toBe(60);
+    expect(limits.guestReadsPerIpPerMinute()).toBe(600);
     expect(limits.fileRules()).toEqual({
       fileBytes: { PHOTO: 50_000_000n, VIDEO: 2_000_000_000n, DOCUMENT: 50_000_000n },
       filesPerBatch: 100,

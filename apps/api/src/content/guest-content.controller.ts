@@ -29,6 +29,7 @@ import {
 } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
+import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { AppError } from '../errors/app-error.js';
 import { CurrentGuest } from '../guest-access/current-guest.decorator.js';
 import { GuestSessionGuard } from '../guest-access/guest-session.guard.js';
@@ -57,7 +58,8 @@ function parseIdempotencyKey(value: string | undefined): string {
 @ApiTags('Guest')
 @ApiCookieAuth(GUEST_SESSION_COOKIE_SCHEME)
 @Public()
-@UseGuards(GuestSessionGuard)
+// The per-IP limit first, so a flood is refused before any session lookup.
+@UseGuards(RateLimitGuard, GuestSessionGuard)
 @Controller({ path: 'guest/collections/:collectionId', version: '1' })
 export class GuestContentController {
   constructor(
@@ -67,6 +69,7 @@ export class GuestContentController {
 
   /** `own`: this browser's items; `all`: everyone's, only with the shared gallery [C16]. */
   @Get('content')
+  @RateLimit('guest-read')
   @ApiResponse({ status: 200, standardSchema: guestContentPageSchema })
   @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
   @ApiResponse({
@@ -75,6 +78,7 @@ export class GuestContentController {
       'FORBIDDEN (scope=all without the shared gallery), COLLECTION_ARCHIVED or LINK_INACTIVE',
   })
   @ApiResponse({ status: 410, description: 'COLLECTION_UNAVAILABLE, or LINK_REVOKED' })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
   list(
     @CurrentGuest() guest: GuestPrincipal,
     @Query({ schema: guestContentListQuerySchema }) query: GuestContentListQuery,
@@ -83,12 +87,14 @@ export class GuestContentController {
   }
 
   @Get('content/:id')
+  @RateLimit('guest-read')
   @ApiResponse({ status: 200, standardSchema: guestContentDetailSchema })
   @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
   @ApiResponse({
     status: 404,
     description: 'NOT_FOUND: no such item in this collection, or one the guest may not see',
   })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
   get(
     @CurrentGuest() guest: GuestPrincipal,
     @Param({ schema: guestContentParamsSchema }) params: GuestContentParams,
@@ -97,6 +103,7 @@ export class GuestContentController {
   }
 
   @Post('texts')
+  @RateLimit('guest-text-create')
   @HttpCode(HttpStatus.CREATED)
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'A UUID per draft' })
   @ApiResponse({ status: 201, standardSchema: guestContentItemSchema })
@@ -114,7 +121,10 @@ export class GuestContentController {
     description: 'IDEMPOTENCY_CONFLICT: the key was used for another text',
   })
   @ApiResponse({ status: 410, description: 'COLLECTION_UNAVAILABLE, or LINK_REVOKED' })
-  @ApiResponse({ status: 429, description: 'RATE_LIMITED: texts per session per hour' })
+  @ApiResponse({
+    status: 429,
+    description: 'RATE_LIMITED: texts per session per hour, or per client IP per minute',
+  })
   async createText(
     @CurrentGuest() guest: GuestPrincipal,
     @Body({ schema: createTextRequestSchema }) body: CreateTextRequest,
