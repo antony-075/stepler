@@ -67,6 +67,10 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 1 status: implemented on branch `feat/phase-4-collections-c` (2026-10-02, web in direction C), PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-01-phase-4-slice-1-collections.md` (owner decisions D1–D9). Open acceptance criterion: "A default guest link is created" with a new collection (D3) is delivered by slice 2, which adds the link to the create transaction and backfills existing collections.
 
+**Slices 3–4 status (PR A, branch `feat/phase-4-guest-session`, 2026-10-03): implemented, PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-03-phase-4-guest-content.md` (owner decisions O1–O4, C1–C20). Guest session exchange and per-collection cookie, the guest page (name prompt, wishes, own frames, the shared gallery for texts), frame numbers, the admin «Вміст» tab for texts (viewer, delete) and content counts on the dashboard. Uploads, the worker and processing follow in PRs B–D; guest own-delete and bulk delete in PR E.
+
+**Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
+
 Each slice should be fully tested before moving on.
 
 Not in MVP (post-MVP per `PRODUCT.md`): folders, billing, retention policies, analytics, downloads/ZIP, custom form builder.

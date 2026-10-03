@@ -13,8 +13,8 @@ This file is a concise implementation checklist.
 - [ ] Guest photo upload
 - [ ] Guest video upload
 - [ ] Guest document upload
-- [ ] Guest text submission
-- [ ] Guest visibility setting
+- [ ] Guest text submission — built in slice 3 (PR A): plain-text wishes up to 5000 characters, numbered frames, an optional name asked once
+- [ ] Guest visibility setting — built in slice 3 (PR A): a link shows the guest only their own frames or everyone's (`canViewGallery`); other guests' names and numbers are never shown
 - [ ] Guest own-content deletion when allowed
 - [ ] Admin content deletion
 - [ ] Responsive guest UI

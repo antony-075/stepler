@@ -26,3 +26,12 @@ Guests have no accounts. Links are revocable capabilities. Guests may delete the
 
 - Losing the cookie (other browser, in-app browser, cleared data) loses delete ability for prior content.
 - An encryption key becomes a managed secret per environment.
+
+## Implementation notes (slice 3, 2026-10-03)
+
+- **Two-step exchange ([C3]):** `POST /guest/links/resolve` returns the link's state and the `collectionId`; `POST /guest/collections/{collectionId}/session` then creates or re-binds the session and sets the cookie. The second call is under the cookie's path, which is what makes re-binding possible at all. A token of another collection on the path is `404`. Spec §9.1 is amended accordingly.
+- **Cookie:** `st_gs`, `HttpOnly; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}; Max-Age=34560000` (400 days, the browsers' cap), `Secure` per `COOKIE_SECURE`; renewed on every exchange. No server-side expiry (D12).
+- **Revalidation:** `GuestSessionGuard` resolves the session from the cookie on every guest collection request and applies the [G5] states of its current link and collection (`assertLinkUsable`, shared with the resolver). Missing, unknown or foreign cookie: `401 GUEST_SESSION_REQUIRED`; the web re-runs the exchange once.
+- **Name on the session ([O4], [C4]):** `GuestSession.contributorName` and `nameAnsweredAt`; a rename updates the session's live items in the same transaction. This amends the earlier "the name is not stored on the session".
+- **PostgreSQL enforces the collection:** composite keys tie a session's current link and an item's session to the row's own collection (`ON DELETE SET NULL (contributorGuestSessionId)` for items, PostgreSQL 15+).
+- **Limits:** session exchanges 120 / minute per IP; guest texts 60 / hour per session and 60 / minute per IP; guest reads 600 / minute per IP and route.
