@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { JOB_NAMES } from '../src/jobs/job-names.js';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { createTestPrisma, queuedJobs, resetDatabase } from './support/database.js';
@@ -90,10 +91,12 @@ describe('PgBossQueue (transactional enqueue, spike S7)', () => {
 
   test('start is idempotent and queues use the exclusive policy', async () => {
     await client.start();
+    // pg-boss may add internal queues (e.g. for schedules); ours are the job names.
     const rows = await prisma.$queryRawUnsafe<{ name: string; policy: string }[]>(
-      `SELECT name, policy FROM pgboss.queue ORDER BY name`,
+      `SELECT name, policy FROM pgboss.queue WHERE name = ANY($1::text[]) ORDER BY name`,
+      JOB_NAMES,
     );
-    expect(rows.map((row) => row.policy)).toEqual(rows.map(() => 'exclusive'));
-    expect(rows).toHaveLength(7);
+    expect(rows.map((row) => row.name)).toEqual([...JOB_NAMES].sort());
+    expect(new Set(rows.map((row) => row.policy))).toEqual(new Set(['exclusive']));
   });
 });

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   AdminContentDetail,
   AdminContentListQuery,
@@ -10,6 +10,7 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { toAdminContentDetail, toAdminContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
 
@@ -24,6 +25,7 @@ export class AdminContentService {
     private readonly prisma: PrismaService,
     private readonly queries: ContentQueries,
     private readonly audit: AuditService,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   async list(
@@ -55,7 +57,8 @@ export class AdminContentService {
   }
 
   /**
-   * Soft-deletes the item: gone from every view at once; the worker purges it later. Idempotent:
+   * Soft-deletes the item: gone from every view at once; the `content.purge` job, enqueued in the
+   * same transaction, removes its objects and row later. Idempotent:
    * an already deleted item is a no-op, and concurrent deletes audit once (the conditional
    * update changes the row once).
    */
@@ -78,6 +81,10 @@ export class AdminContentService {
         targetType: 'content',
         targetId: id,
         metadata: { kind: row.kind, frameNo: row.frameNo, bulk: false },
+        ...(requestId === undefined ? {} : { requestId }),
+      });
+      await this.jobs.enqueue(tx, 'content.purge', {
+        contentItemId: id,
         ...(requestId === undefined ? {} : { requestId }),
       });
     });

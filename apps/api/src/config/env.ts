@@ -2,8 +2,9 @@ import { z } from 'zod';
 
 const GIB = 1024n ** 3n;
 
-const bool = z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] });
-const positiveInt = (fallback: number) => z.coerce.number().int().positive().default(fallback);
+export const bool = z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] });
+export const positiveInt = (fallback: number) =>
+  z.coerce.number().int().positive().default(fallback);
 const byteCount = (fallback: bigint) =>
   z
     .string()
@@ -43,14 +44,26 @@ const emailList = z
   )
   .pipe(z.array(z.email()));
 
+/** Variables the API and the worker (`worker/worker-env.ts`) both read. */
+export const sharedEnvShape = {
+  NODE_ENV: z.enum(['development', 'test', 'production']),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
+
+  S3_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
+  S3_REGION: z.string().min(1),
+  S3_BUCKET: z.string().min(1),
+  S3_ACCESS_KEY_ID: z.string().min(1),
+  S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_FORCE_PATH_STYLE: bool.default(false),
+};
+
 const apiEnvSchema = z
   .object({
-    NODE_ENV: z.enum(['development', 'test', 'production']),
+    ...sharedEnvShape,
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
-    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
     APP_ORIGIN: origin,
-    DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     COOKIE_SECURE: bool.optional(),
     SESSION_TTL_DAYS: positiveInt(30),
     MAGIC_LINK_TTL_MINUTES: positiveInt(15),
@@ -66,13 +79,6 @@ const apiEnvSchema = z
 
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
-
-    S3_ENDPOINT: z.url({ protocol: /^https?$/ }).optional(),
-    S3_REGION: z.string().min(1),
-    S3_BUCKET: z.string().min(1),
-    S3_ACCESS_KEY_ID: z.string().min(1),
-    S3_SECRET_ACCESS_KEY: z.string().min(1),
-    S3_FORCE_PATH_STYLE: bool.default(false),
 
     LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: positiveInt(5),
     LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: positiveInt(20),
@@ -117,13 +123,21 @@ export class EnvValidationError extends Error {
   }
 }
 
-export function loadApiEnv(source: Record<string, string | undefined>): ApiEnv {
+/** Parses `source` with `schema`; throws `EnvValidationError` naming the invalid variables. */
+export function parseEnv<S extends z.ZodType>(
+  schema: S,
+  source: Record<string, string | undefined>,
+): z.infer<S> {
   // Empty strings (e.g. `S3_ENDPOINT=` in an env file) mean "unset".
   const defined = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ''));
-  const result = apiEnvSchema.safeParse(defined);
+  const result = schema.safeParse(defined);
   if (!result.success) {
     const names = [...new Set(result.error.issues.map((issue) => String(issue.path[0])))];
     throw new EnvValidationError(names);
   }
   return result.data;
+}
+
+export function loadApiEnv(source: Record<string, string | undefined>): ApiEnv {
+  return parseEnv(apiEnvSchema, source);
 }

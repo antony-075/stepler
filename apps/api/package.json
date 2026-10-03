@@ -7,6 +7,7 @@
     "build": "nest build -p tsconfig.build.json",
     "build:e2e": "nest build -p tsconfig.build-e2e.json",
     "dev": "nest start --watch --exec \"node --env-file-if-exists=.env\"",
+    "worker:dev": "nest start --watch -p tsconfig.build-worker.json --entryFile worker/main --exec \"node --env-file-if-exists=.env\"",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p scripts/tsconfig.json",
     "lint": "eslint .",

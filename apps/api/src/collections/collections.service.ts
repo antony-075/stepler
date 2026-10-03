@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   Collection,
   CollectionListResponse,
@@ -13,6 +13,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { Prisma, type Collection as CollectionRow } from '../generated/prisma/client.js';
 import { GuestLinksService } from '../guest-access/guest-links.service.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import {
@@ -33,6 +34,7 @@ export class CollectionsService {
     private readonly usage: UsageService,
     private readonly audit: AuditService,
     private readonly guestLinks: GuestLinksService,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   /** Daily cap first, then the active limit, both under the owner's row lock (spec §10.3). */
@@ -203,7 +205,8 @@ export class CollectionsService {
 
   /**
    * Requests deletion (D2): the collection becomes `DELETING`, which is gone for everyone; the
-   * purge job removes the rows and objects later. Repeating it for an owned collection is a no-op.
+   * `collection.purge` job, enqueued in the same transaction, removes the objects and rows later.
+   * Repeating it for an owned collection is a no-op.
    */
   async delete(principal: AccountPrincipal, id: string, requestId?: string): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
@@ -227,6 +230,10 @@ export class CollectionsService {
         'DELETING',
         requestId,
       );
+      await this.jobs.enqueue(tx, 'collection.purge', {
+        collectionId: id,
+        ...(requestId === undefined ? {} : { requestId }),
+      });
     });
   }
 

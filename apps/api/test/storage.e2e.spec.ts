@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { testEnv } from './support/env.js';
+import { allKeys, putObject } from './support/storage.js';
 
 const env = testEnv();
 const storage = new S3ObjectStorage(env);
@@ -90,5 +91,34 @@ describe('S3ObjectStorage (emulator)', () => {
     expect(await storage.head(k)).toBeNull();
     await storage.delete(k);
     await storage.delete(k);
+  });
+
+  test('listKeys pages through a prefix in key order', async () => {
+    const prefix = `${key()}/`;
+    const keys = ['a', 'b', 'c', 'd', 'e'].map((name) => `${prefix}${name}`);
+    for (const k of keys) await putObject(storage, k);
+    await putObject(storage, `${prefix.slice(0, -1)}-other`);
+
+    const first = await storage.listKeys(prefix, { limit: 2 });
+    expect(first.keys).toEqual(keys.slice(0, 2));
+    expect(first.nextToken).toBeDefined();
+    expect(await allKeys(storage, prefix)).toEqual(keys);
+    expect(await storage.listKeys(`${key()}/`)).toEqual({ keys: [] });
+  });
+
+  test('deleteMany removes existing keys and ignores missing ones', async () => {
+    const prefix = `${key()}/`;
+    const keys = [`${prefix}1`, `${prefix}2`, `${prefix}3`];
+    for (const k of keys.slice(0, 2)) await putObject(storage, k);
+    await storage.deleteMany(keys);
+    expect(await allKeys(storage, prefix)).toEqual([]);
+    await storage.deleteMany([]);
+    await expect(
+      storage.deleteMany(Array.from({ length: 1001 }, (_, i) => `${prefix}${i}`)),
+    ).rejects.toThrow(RangeError);
+  });
+
+  test('abortMultipart of an unknown upload succeeds', async () => {
+    await storage.abortMultipart(key(), 'unknown-upload-id');
   });
 });
