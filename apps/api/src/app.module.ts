@@ -10,6 +10,7 @@ import { DatabaseModule } from './database/database.module.js';
 import { ErrorsModule } from './errors/errors.module.js';
 import { GuestAccessModule } from './guest-access/guest-access.module.js';
 import { HealthModule } from './health/health.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
 import { LimitsModule } from './limits/limits.module.js';
 import { LoggingModule } from './logging/logging.module.js';
 import { MailModule } from './mail/mail.module.js';
@@ -33,6 +34,7 @@ export class AppModule {
         ErrorsModule,
         DatabaseModule,
         StorageModule,
+        JobsModule,
         MailModule,
         TurnstileModule,
         LimitsModule,
