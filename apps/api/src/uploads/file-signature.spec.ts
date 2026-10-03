@@ -61,20 +61,37 @@ describe('detectFileType', () => {
     expect(detectFileType(new Uint8Array([0xef, 0xbb, 0xbf, 0x68, 0x69]))?.mime).toBe('text/plain');
   });
 
-  test('an AVIF ftyp is not an allowed photo', () => {
-    const avif = new Uint8Array([
+  const ftyp = (major: string, compatible: string[], rest = '') => {
+    const brands = new TextEncoder().encode(compatible.join(''));
+    const size = 16 + brands.length;
+    return new Uint8Array([
       0,
       0,
       0,
-      0x1c,
-      ...new TextEncoder().encode('ftypavif'),
+      size,
+      ...new TextEncoder().encode(`ftyp${major}`),
       0,
       0,
       0,
       0,
-      ...new TextEncoder().encode('avifmif1miaf'),
+      ...brands,
+      ...new TextEncoder().encode(rest),
     ]);
-    expect(detectFileType(avif)).toBeNull();
+  };
+
+  test('AVIF is refused: its brands, or a generic HEIF with an av01 item', () => {
+    expect(detectFileType(ftyp('avif', ['avif', 'mif1', 'miaf']))).toBeNull();
+    expect(detectFileType(ftyp('avis', ['avis', 'msf1']))).toBeNull();
+    expect(detectFileType(ftyp('mif1', ['mif1', 'avif', 'miaf']))).toBeNull();
+    expect(detectFileType(ftyp('mif1', ['mif1', 'heic'], 'metainfe....av01'))).toBeNull();
+    expect(detectFileType(ftyp('mif1', ['mif1', 'miaf']))).toBeNull();
+  });
+
+  test('a generic HEIF with an HEVC brand is HEIC', () => {
+    expect(detectFileType(ftyp('mif1', ['mif1', 'heic', 'miaf']))).toEqual({
+      kind: 'PHOTO',
+      mime: 'image/heic',
+    });
   });
 });
 

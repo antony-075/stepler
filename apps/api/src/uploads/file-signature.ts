@@ -59,18 +59,51 @@ const MP4_BRANDS = new Set([
 ]);
 const QUICKTIME_BRAND = 'qt  ';
 
-/** `ftyp` box: major brand at 8, compatible brands from 16 to the box end (within the head). */
+/** AV1 still images (AVIF) are not on the allowed list (D3); browsers and the worker differ. */
+const AVIF_BRANDS = new Set(['avif', 'avis']);
+/** The generic HEIF brands say nothing about the codec inside. */
+const GENERIC_HEIF_BRANDS = new Set(['mif1', 'msf1']);
+
+const brandsOf = (bytes: Uint8Array): { major: string; compatible: string[] } => {
+  const end = Math.min(u32be(bytes, 0), bytes.length);
+  const compatible: string[] = [];
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    compatible.push(ascii(bytes, offset, offset + 4));
+  }
+  return { major: ascii(bytes, 8, 12), compatible };
+};
+
+/** An `av01` item type anywhere in the head: an AV1-coded HEIF image, i.e. AVIF. */
+const hasAv1Item = (bytes: Uint8Array): boolean => {
+  for (let i = 0; i + 4 <= bytes.length; i += 1) {
+    if (bytes[i] === 0x61 && ascii(bytes, i, i + 4) === 'av01') return true;
+  }
+  return false;
+};
+
+/**
+ * `ftyp` box: major brand at 8, compatible brands from 16 to the box end (within the head).
+ * AVIF is refused wherever its brand appears, and a generic `mif1`/`msf1` image counts as HEIC
+ * only when an HEVC brand is compatible and no `av01` item shows.
+ */
 const isoBmff = (bytes: Uint8Array): DetectedType | null => {
   if (!startsWithAscii(bytes, 'ftyp', 4) || bytes.length < 12) return null;
-  const major = ascii(bytes, 8, 12);
-  if (HEIF_BRANDS.has(major)) return { kind: 'PHOTO', mime: 'image/heic' };
+  const { major, compatible } = brandsOf(bytes);
+  if (AVIF_BRANDS.has(major) || compatible.some((brand) => AVIF_BRANDS.has(brand))) return null;
+  if (GENERIC_HEIF_BRANDS.has(major)) {
+    const hevc = compatible.some(
+      (brand) => HEIF_BRANDS.has(brand) && !GENERIC_HEIF_BRANDS.has(brand),
+    );
+    return hevc && !hasAv1Item(bytes) ? { kind: 'PHOTO', mime: 'image/heic' } : null;
+  }
+  if (HEIF_BRANDS.has(major)) {
+    return hasAv1Item(bytes) ? null : { kind: 'PHOTO', mime: 'image/heic' };
+  }
   if (major === QUICKTIME_BRAND) return { kind: 'VIDEO', mime: 'video/quicktime' };
   if (MP4_BRANDS.has(major)) return { kind: 'VIDEO', mime: 'video/mp4' };
   // An unknown major brand (a vendor's own) still counts when a compatible brand is a video one.
-  // HEIF is only taken from the major brand: AVIF, for one, lists `mif1` as compatible.
-  const end = Math.min(u32be(bytes, 0), bytes.length);
-  for (let offset = 16; offset + 4 <= end; offset += 4) {
-    const brand = ascii(bytes, offset, offset + 4);
+  // HEIF is only taken from the major brand.
+  for (const brand of compatible) {
     if (brand === QUICKTIME_BRAND) return { kind: 'VIDEO', mime: 'video/quicktime' };
     if (MP4_BRANDS.has(brand)) return { kind: 'VIDEO', mime: 'video/mp4' };
   }
