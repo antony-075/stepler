@@ -1,4 +1,4 @@
-// Identity (spec §7.1), collections, guest links and audit (§7.2, §7.4). Constraints the schema cannot express (citext extension, CHECKs,
+// Identity (spec §7.1), collections, guest links, guest sessions, content and audit (§7.2–§7.4). Constraints the schema cannot express (citext extension, CHECKs,
 // partial indexes) live as named raw SQL in the migrations (ADR 0005, spike S6).
 
 generator client {
@@ -34,6 +34,22 @@ enum GuestLinkStatus {
   INACTIVE
   /// Terminal: revoked, or rotated out (a default link). The token ciphertext is wiped.
   REVOKED
+}
+
+enum ContentKind {
+  PHOTO
+  VIDEO
+  DOCUMENT
+  TEXT
+}
+
+/// TEXT and DOCUMENT are NOT_REQUIRED; PHOTO and VIDEO stay PENDING until the worker finishes
+/// (CHECK "ContentItem_processing_by_kind").
+enum ProcessingStatus {
+  NOT_REQUIRED
+  PENDING
+  READY
+  FAILED
 }
 
 enum AuditActorType {
@@ -118,10 +134,15 @@ model Collection {
   status              CollectionStatus @default(ACTIVE)
   archivedAt          DateTime?        @db.Timestamptz(3)
   deletionRequestedAt DateTime?        @db.Timestamptz(3)
+  /// The next frame number (ADR 0015); taken and incremented in the transaction that creates an
+  /// item. Gaps are never filled. At least 1 (CHECK "Collection_next_frame_positive").
+  nextFrameNo         Int              @default(1)
   createdAt           DateTime         @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime         @updatedAt @db.Timestamptz(3)
   owner               User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   guestLinks          GuestLink[]
+  guestSessions       GuestSession[]
+  contentItems        ContentItem[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
 }
@@ -161,8 +182,65 @@ model GuestLink {
   collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   replacedBy      GuestLink?      @relation("LinkRotation", fields: [replacedById], references: [id], onDelete: SetNull)
   replaces        GuestLink?      @relation("LinkRotation")
+  guestSessions   GuestSession[]
 
   @@index([collectionId, isDefault, status, createdAt])
+}
+
+/// A guest's browser in one collection (ADR 0007, spec §7.2): the `st_gs` cookie holds the raw
+/// token. Bound to the link it last came through; every request re-checks that link and the
+/// collection. The name is optional, asked once [O4]; 1 to 80 characters when set
+/// (CHECK "GuestSession_name_length").
+model GuestSession {
+  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId    String        @db.Uuid
+  /// A link with sessions is never deleted (links are revoked and hidden instead). NO ACTION, not
+  /// RESTRICT, so deleting the collection still cascades to both in one statement.
+  currentLinkId   String        @db.Uuid
+  /// SHA-256 of the cookie token; the raw token is never stored.
+  tokenHash       String        @unique
+  contributorName String?
+  /// Set when the guest saved or skipped the name prompt, so it is asked once per session.
+  nameAnsweredAt  DateTime?     @db.Timestamptz(3)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+  lastSeenAt      DateTime      @default(now()) @db.Timestamptz(3)
+  collection      Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  currentLink     GuestLink     @relation(fields: [currentLinkId], references: [id], onDelete: NoAction)
+  contentItems    ContentItem[]
+
+  @@index([collectionId])
+  @@index([currentLinkId])
+}
+
+/// One frame: a text now, files later (spec §7.3). Rules live as named CHECKs:
+/// "ContentItem_text_consistent", "ContentItem_text_length", "ContentItem_name_length",
+/// "ContentItem_frame_positive", "ContentItem_processing_by_kind"; the feed, own and purge
+/// indexes are partial ("ContentItem_feed_idx", "ContentItem_feed_kind_idx",
+/// "ContentItem_own_idx", "ContentItem_deleted_idx").
+model ContentItem {
+  id                        String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId              String           @db.Uuid
+  /// Per-collection number shown as #086 (ADR 0015); never reused.
+  frameNo                   Int
+  kind                      ContentKind
+  /// NULL once the session row is gone; the item stays.
+  contributorGuestSessionId String?          @db.Uuid
+  /// Snapshot of the session's name when the item was created; renaming updates live items [C4].
+  contributorName           String?
+  originalFilename          String?
+  /// TEXT items only, 1 to 5000 code points.
+  textBody                  String?
+  /// The client's `Idempotency-Key` for texts; unique per session.
+  idempotencyKey            String?          @db.Uuid
+  processingStatus          ProcessingStatus
+  /// Soft delete: hidden at once, purged by the worker.
+  deletedAt                 DateTime?        @db.Timestamptz(3)
+  createdAt                 DateTime         @default(now()) @db.Timestamptz(3)
+  collection                Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  contributorGuestSession   GuestSession?    @relation(fields: [contributorGuestSessionId], references: [id], onDelete: SetNull)
+
+  @@unique([collectionId, frameNo])
+  @@unique([contributorGuestSessionId, idempotencyKey])
 }
 
 /// Append-only. Plain ids without foreign keys, so events outlive what they describe (spec §7.4).
