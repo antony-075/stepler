@@ -93,11 +93,17 @@ export class PgBossClient implements OnApplicationBootstrap, OnApplicationShutdo
 
   private async boot(): Promise<PgBoss> {
     await this.boss.start();
-    for (const name of JOB_NAMES) {
-      // `exclusive`: at most one queued, retrying or active job per singleton key (spike S7).
-      // createQueue is a no-op for an existing queue; updateQueue applies changed options.
-      await this.boss.createQueue(name, { policy: 'exclusive', ...JOB_OPTIONS[name] });
-      await this.boss.updateQueue(name, { ...JOB_OPTIONS[name] });
+    try {
+      for (const name of JOB_NAMES) {
+        // `exclusive`: at most one queued, retrying or active job per singleton key (spike S7).
+        // createQueue is a no-op for an existing queue; updateQueue applies changed options.
+        await this.boss.createQueue(name, { policy: 'exclusive', ...JOB_OPTIONS[name] });
+        await this.boss.updateQueue(name, { ...JOB_OPTIONS[name] });
+      }
+    } catch (error) {
+      // Leave nothing running, so the next `start` begins from scratch.
+      await this.boss.stop({ graceful: false, close: true }).catch(() => undefined);
+      throw error;
     }
     return this.boss;
   }

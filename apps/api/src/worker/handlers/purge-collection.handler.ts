@@ -28,6 +28,8 @@ export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
     });
     if (collection?.status !== 'DELETING') return;
     // With the upload slice: mark its INITIATED uploads ABORTED and abort their multipart uploads.
+    // A single-PUT URL issued before DELETING stays valid for its TTL and could still land an
+    // object after this listing; the upload slice must cover that (e.g. purge only after the TTL).
     await deletePrefix(
       this.storage,
       collectionPrefix(collectionId),
