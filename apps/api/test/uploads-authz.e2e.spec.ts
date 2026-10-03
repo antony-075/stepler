@@ -7,7 +7,7 @@ import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { joinAsGuest, seedCollection } from './support/guests.js';
-import { asSession, fixture, uploadCalls, uploadSingle } from './support/uploads.js';
+import { asSession, fixture, uploadCalls, uploadFile } from './support/uploads.js';
 
 const env = testEnv();
 const prisma = new PrismaService(env);
@@ -60,7 +60,7 @@ describe('uploads authorization', () => {
 
   test("guest B cannot complete, cancel or sign parts of guest A's upload: 404", async () => {
     const s = await setup();
-    const session = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const session = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     const multipart = asSession(
       (await s.a.initiate({ filename: 'clip.mp4', sizeBytes: 200_000_000 }).expect(201)).body,
     );
@@ -82,7 +82,7 @@ describe('uploads authorization', () => {
 
   test("a guest of another collection gets 401 on this collection's routes", async () => {
     const s = await setup();
-    const session = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const session = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     const res = await s.cInX.complete(session.uploadId).expect(401);
     expect(res.body).toMatchObject({ code: 'GUEST_SESSION_REQUIRED' });
     await s.cInX.initiate({ filename: 'b.pdf', sizeBytes: 10 }).expect(401);
@@ -90,7 +90,7 @@ describe('uploads authorization', () => {
 
   test('link paused between PUT and complete: 403 LINK_INACTIVE, REJECTED', async () => {
     const s = await setup();
-    const session = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const session = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     await prisma.guestLink.update({ where: { id: s.linkId }, data: { status: 'INACTIVE' } });
     const res = await s.a.complete(session.uploadId).expect(403);
     expect(res.body).toMatchObject({ code: 'LINK_INACTIVE' });
@@ -101,7 +101,7 @@ describe('uploads authorization', () => {
 
   test('link revoked: 410 LINK_REVOKED, REJECTED', async () => {
     const s = await setup();
-    const session = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const session = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     await prisma.guestLink.update({
       where: { id: s.linkId },
       data: { status: 'REVOKED', revokedAt: new Date(), tokenCiphertext: null, tokenKeyId: null },
@@ -114,7 +114,7 @@ describe('uploads authorization', () => {
   test('videos switched off before completion: 403 FORBIDDEN, REJECTED', async () => {
     const s = await setup();
     const video = Buffer.from(fixture('clip.mp4'));
-    const session = await uploadSingle(s.a, 'clip.mp4', video);
+    const session = await uploadFile(s.a, 'clip.mp4', video);
     await prisma.guestLink.update({ where: { id: s.linkId }, data: { canUploadVideos: false } });
     const res = await s.a.complete(session.uploadId).expect(403);
     expect(res.body).toMatchObject({ code: 'FORBIDDEN' });
@@ -125,7 +125,7 @@ describe('uploads authorization', () => {
 
   test('collection archived: 403 COLLECTION_ARCHIVED, REJECTED', async () => {
     const s = await setup();
-    const session = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const session = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     await prisma.collection.update({
       where: { id: s.x.collectionId },
       data: { status: 'ARCHIVED', archivedAt: new Date() },
@@ -137,7 +137,7 @@ describe('uploads authorization', () => {
 
   test('collection deleted: 410 COLLECTION_UNAVAILABLE, REJECTED; cancel still frees it', async () => {
     const s = await setup();
-    const done = await uploadSingle(s.a, 'a.pdf', fixture('doc.pdf'));
+    const done = await uploadFile(s.a, 'a.pdf', fixture('doc.pdf'));
     const open = asSession(
       (await s.a.initiate({ filename: 'b.pdf', sizeBytes: 10 }).expect(201)).body,
     );

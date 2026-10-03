@@ -110,9 +110,8 @@ const apiEnvSchema = z
     LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR: positiveInt(60),
     LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR: positiveInt(300),
     LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION: positiveInt(10),
-    // Upload protocol (spec §10.2): files up to this size go as one PUT, larger ones multipart.
-    UPLOAD_SINGLE_PUT_MAX_BYTES: byteCount(100_000_000n),
-    // S3 and R2 need parts of at least 5 MiB (except the last).
+    // Upload protocol (spec §10.2): every file is a multipart upload of parts this size (the last
+    // shorter). S3 and R2 need parts of at least 5 MiB (except the last).
     UPLOAD_PART_SIZE_BYTES: byteCount(10_485_760n).refine((value) => value >= 5_242_880n, {
       message: 'at least 5242880',
     }),

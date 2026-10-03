@@ -63,11 +63,6 @@ enum UploadStatus {
   REJECTED
 }
 
-enum UploadStrategy {
-  SINGLE
-  MULTIPART
-}
-
 enum MediaRole {
   ORIGINAL
   THUMBNAIL
@@ -298,42 +293,42 @@ model MediaObject {
 
 /// One file on its way from a guest's browser to storage (spec §7.3, §10). Rules live as named
 /// CHECKs: "UploadSession_kind_is_file", "UploadSession_size_positive",
-/// "UploadSession_multipart_consistent", "UploadSession_completed_consistent",
+/// "UploadSession_parts_positive", "UploadSession_completed_consistent",
 /// "UploadSession_reject_reason"; open uploads per guest session use the partial index
 /// "UploadSession_active_idx". The guest session and link belong to the row's own collection
 /// (composite keys). `INITIATED` rows reserve `declaredSizeBytes` of quota (ADR 0010).
 model UploadSession {
-  id                String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId      String         @db.Uuid
+  id                String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String       @db.Uuid
   /// Deleting the guest session deletes its uploads; the idle sweep keeps sessions with uploads.
-  guestSessionId    String         @db.Uuid
+  guestSessionId    String       @db.Uuid
   /// The link the upload came through. NO ACTION (links are never deleted while referenced), so
   /// deleting the collection still cascades in one statement.
-  guestLinkId       String         @db.Uuid
+  guestLinkId       String       @db.Uuid
   /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId).
-  clientUploadId    String         @db.Uuid
+  clientUploadId    String       @db.Uuid
   kind              ContentKind
   originalFilename  String
   declaredMime      String
   declaredSizeBytes BigInt
   /// `collections/{collectionId}/uploads/{id}/original`.
-  storageKey        String         @unique
-  strategy          UploadStrategy
-  multipartUploadId String?
-  partSizeBytes     BigInt?
-  partCount         Int?
-  status            UploadStatus   @default(INITIATED)
+  storageKey        String       @unique
+  /// Every upload is multipart (ADR 0008 addendum 2026-10-03): storage's upload id.
+  multipartUploadId String
+  partSizeBytes     BigInt
+  partCount         Int
+  status            UploadStatus @default(INITIATED)
   /// A stable error code when REJECTED.
   rejectReason      String?
-  expiresAt         DateTime       @db.Timestamptz(3)
-  completedAt       DateTime?      @db.Timestamptz(3)
+  expiresAt         DateTime     @db.Timestamptz(3)
+  completedAt       DateTime?    @db.Timestamptz(3)
   /// The item it became; NULL once that item is purged.
-  contentItemId     String?        @unique @db.Uuid
-  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
-  collection        Collection     @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  guestSession      GuestSession   @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
-  guestLink         GuestLink      @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
-  contentItem       ContentItem?   @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  contentItemId     String?      @unique @db.Uuid
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  collection        Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  guestSession      GuestSession @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
+  guestLink         GuestLink    @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
+  contentItem       ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
 
   @@unique([guestSessionId, clientUploadId])
   @@index([status, expiresAt])

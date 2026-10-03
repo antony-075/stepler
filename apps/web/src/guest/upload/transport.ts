@@ -8,8 +8,9 @@ import { isApiError } from '@/api/client';
 
 // Browser → storage transfer of one file (spec §10.2, ADR 0008; spike S9 chose this in-house
 // transport over Uppy: Uppy 6 completes multipart uploads from the browser, and the server must
-// be the only party that does). A single presigned PUT, or multipart with at most 3 parts in
-// flight, part URLs requested on demand in batches of at most 20. Every PUT goes through
+// be the only party that does). Every file is a multipart upload (ADR 0008 addendum 2026-10-03:
+// a presigned single PUT stayed writable after the upload closed), a small file being one part;
+// at most 3 parts in flight, part URLs requested on demand in batches of at most 20. Every PUT goes through
 // XMLHttpRequest for upload progress. Each PUT retries on its own with a backoff of 31 s in all:
 // a broken path does not flip `navigator.onLine`, and spike S9 needed four retries to ride out
 // a 10 s outage. The server verifies and completes; this file never trusts an ETag.
@@ -199,7 +200,7 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
       };
       // Not aborted mid-call: an aborted initiation may still create the session, and only its
       // id lets us cancel it (and free its quota reservation) instead of waiting for expiry.
-      let session = await api.initiate(request);
+      const session = await api.initiate(request);
       events.onInitiated?.(session.uploadId);
 
       let reported = 0;
@@ -216,25 +217,7 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
 
       try {
         signal.throwIfAborted();
-        if (session.strategy === 'SINGLE') {
-          await withRetry(
-            signal,
-            () => {
-              if (session.strategy !== 'SINGLE') throw new Error('Strategy changed');
-              return put(createXhr, session.url, file, session.headers, signal, (bytes) => {
-                loaded.set(0, bytes);
-                report();
-              });
-            },
-            async (error) => {
-              loaded.set(0, 0);
-              // An expired URL: the same `clientUploadId` returns the same session, freshly signed.
-              if (error.status === 403) session = await api.initiate(request);
-            },
-          );
-        } else {
-          await sendParts(session, null);
-        }
+        await sendParts(session, null);
         events.onTransferred?.();
 
         try {
@@ -242,7 +225,7 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
         } catch (error) {
           // Once: storage lost some parts; send what the server lists, then complete again.
           const missing = missingParts(error);
-          if (missing === null || session.strategy !== 'MULTIPART') throw error;
+          if (missing === null) throw error;
           await sendParts(session, missing);
           return await api.complete(session.uploadId, signal);
         }
@@ -255,7 +238,7 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
       }
 
       async function sendParts(
-        multipart: Extract<UploadSessionResponse, { strategy: 'MULTIPART' }>,
+        multipart: UploadSessionResponse,
         only: readonly number[] | null,
       ): Promise<void> {
         const { uploadId, partSizeBytes: size, partCount } = multipart;

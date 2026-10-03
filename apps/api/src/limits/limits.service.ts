@@ -37,7 +37,6 @@ export interface GuestSessionLimits {
 
 /** The direct-upload protocol's sizes and lifetimes (spec §10.2, §10.6). */
 export interface UploadSettings {
-  singlePutMaxBytes: bigint;
   partSizeBytes: bigint;
   sessionTtlHours: number;
   urlTtlSeconds: number;
@@ -104,7 +103,6 @@ export class LimitsService {
 
   uploads(): UploadSettings {
     return {
-      singlePutMaxBytes: this.env.UPLOAD_SINGLE_PUT_MAX_BYTES,
       partSizeBytes: this.env.UPLOAD_PART_SIZE_BYTES,
       sessionTtlHours: this.env.UPLOAD_SESSION_TTL_HOURS,
       urlTtlSeconds: this.env.UPLOAD_URL_TTL_SECONDS,

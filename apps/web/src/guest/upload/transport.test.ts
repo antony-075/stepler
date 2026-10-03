@@ -103,26 +103,20 @@ function setup(options: {
   };
 }
 
-const single: UploadSessionResponse = {
-  uploadId: UPLOAD_ID,
-  strategy: 'SINGLE',
-  url: 'https://s3.test/single',
-  headers: { 'content-type': 'video/mp4' },
-  expiresAt,
-};
 const multipart = (partSizeBytes: number, partCount: number): UploadSessionResponse => ({
   uploadId: UPLOAD_ID,
-  strategy: 'MULTIPART',
   partSizeBytes,
   partCount,
   expiresAt,
 });
+/** A small file: one part (every upload is multipart). */
+const single = multipart(10_485_760, 1);
 
 const partOf = (url: string) => Number(/part\/(\d+)/.exec(url)?.[1]);
 const nonDecreasing = (values: number[]) => values.every((v, i) => i === 0 || v >= values[i - 1]!);
 
 describe('UploadTransport', () => {
-  test('single PUT with the signed content-type, then complete', async () => {
+  test('a small file is one part: initiate, sign part 1, PUT it, complete', async () => {
     const t = setup({ size: 20, session: single });
     const events = { onInitiated: vi.fn(), onTransferred: vi.fn() };
     const done = await t.transport.upload(
@@ -140,11 +134,9 @@ describe('UploadTransport', () => {
       sizeBytes: 20,
     });
     expect(FakeXhr.all).toHaveLength(1);
-    expect(FakeXhr.all[0]).toMatchObject({
-      method: 'PUT',
-      url: 'https://s3.test/single',
-      headers: { 'content-type': 'video/mp4' },
-    });
+    expect(FakeXhr.all[0]).toMatchObject({ method: 'PUT', headers: {} });
+    expect(partOf(FakeXhr.all[0]?.url ?? '')).toBe(1);
+    expect(t.api.parts.mock.calls.map((call) => call[1])).toEqual([[1]]);
     expect(t.progress).toEqual([10, 20]);
     expect(events.onInitiated).toHaveBeenCalledWith(UPLOAD_ID);
     expect(events.onTransferred).toHaveBeenCalledOnce();
@@ -213,22 +205,6 @@ describe('UploadTransport', () => {
     expect(FakeXhr.all).toHaveLength(t.sleeps.length + 1);
     expect(t.api.complete).not.toHaveBeenCalled();
     expect(t.api.cancel).not.toHaveBeenCalled();
-  });
-
-  test('a 403 on a single PUT re-initiates for a fresh URL', async () => {
-    let first = true;
-    const t = setup({
-      size: 10,
-      session: single,
-      behave: () => {
-        if (!first) return 'ok';
-        first = false;
-        return 403;
-      },
-    });
-    await t.transport.upload(t.item, t.api, new AbortController().signal, t.onProgress);
-    expect(t.api.initiate).toHaveBeenCalledTimes(2);
-    expect(t.api.initiate.mock.calls[1]?.[0].clientUploadId).toBe('c1');
   });
 
   test('a 403 on a part signs that part again', async () => {

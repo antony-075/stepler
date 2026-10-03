@@ -1,21 +1,22 @@
-// How a file of a given size travels (spec §10.2): one presigned PUT up to the single-PUT
-// maximum, multipart above it with fixed-size parts (R2 requires every part but the last to be
-// the same size, ADR 0008 S4). Pure, so the arithmetic is tested on its own.
+// How a file travels (spec §10.2, ADR 0008 addendum 2026-10-03): always a multipart upload with
+// fixed-size parts, a file up to the part size being one part. R2 requires every part but the
+// last to be the same size (ADR 0008 S4). Multipart for every size because the server's
+// CompleteMultipartUpload or AbortMultipartUpload ends the upload, and with it every part URL;
+// a presigned single PUT stayed writable for its whole TTL (review I1). Pure, so the arithmetic
+// is tested on its own.
 
-export type UploadPlan =
-  { strategy: 'SINGLE' } | { strategy: 'MULTIPART'; partSizeBytes: bigint; partCount: number };
+export interface UploadPlan {
+  partSizeBytes: bigint;
+  partCount: number;
+}
 
 /** S3 allows at most 10 000 parts per upload. */
 export const MAX_PARTS = 10_000;
 
-export function planUpload(
-  sizeBytes: bigint,
-  cfg: { singlePutMax: bigint; partSize: bigint },
-): UploadPlan {
-  if (sizeBytes <= cfg.singlePutMax) return { strategy: 'SINGLE' };
-  const partCount = Number((sizeBytes + cfg.partSize - 1n) / cfg.partSize);
+export function planUpload(sizeBytes: bigint, partSize: bigint): UploadPlan {
+  const partCount = Number((sizeBytes + partSize - 1n) / partSize);
   if (partCount > MAX_PARTS) throw new RangeError('too many parts for this part size');
-  return { strategy: 'MULTIPART', partSizeBytes: cfg.partSize, partCount };
+  return { partSizeBytes: partSize, partCount: Math.max(1, partCount) };
 }
 
 /** The exact length of part `partNumber` (1-based): the part size, the remainder for the last. */

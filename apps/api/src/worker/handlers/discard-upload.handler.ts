@@ -25,9 +25,9 @@ export class DiscardUploadHandler implements JobHandler<'storage.discard-upload'
     });
     if (row === null) return;
     if (row.status !== 'REJECTED' && row.status !== 'ABORTED' && row.status !== 'EXPIRED') return;
-    if (row.multipartUploadId !== null) {
-      await this.storage.abortMultipart(row.storageKey, row.multipartUploadId);
-    }
+    // Aborting ends the upload and every part URL with it (ADR 0008 addendum 2026-10-03); the
+    // delete covers an upload whose parts had already been assembled.
+    await this.storage.abortMultipart(row.storageKey, row.multipartUploadId);
     await this.storage.delete(row.storageKey);
   }
 }

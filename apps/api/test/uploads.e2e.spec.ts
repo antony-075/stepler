@@ -13,6 +13,7 @@ import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { DiscardUploadHandler } from '../src/worker/handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from '../src/worker/handlers/expire-uploads.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
+import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
@@ -22,16 +23,14 @@ import {
   asSession,
   bigBuffer,
   fixture,
+  partUrls,
   putTo,
   uploadCalls,
-  uploadSingle,
+  uploadFile,
 } from './support/uploads.js';
 
 const MIB = 1_048_576;
-const UPLOAD_ENV = {
-  UPLOAD_SINGLE_PUT_MAX_BYTES: '6291456',
-  UPLOAD_PART_SIZE_BYTES: '5242880',
-};
+const UPLOAD_ENV = { UPLOAD_PART_SIZE_BYTES: '5242880' };
 const env = testEnv(UPLOAD_ENV);
 const prisma = new PrismaService(env);
 const storage = new S3ObjectStorage(env);
@@ -84,11 +83,11 @@ describe('uploads API', () => {
     await resetDatabase(prisma);
   });
 
-  test('single PUT: initiate → PUT with the signed content-type → complete', async () => {
+  test('a small file is one part: initiate → sign → PUT → complete', async () => {
     const g = await guest();
     const photo = fixture('photo.jpg');
-    const session = await uploadSingle(g.calls, 'IMG_0001.jpg', photo);
-    expect(session.headers).toEqual({ 'content-type': 'image/jpeg' });
+    const session = await uploadFile(g.calls, 'IMG_0001.jpg', photo);
+    expect(session.partCount).toBe(1);
 
     const res = await g.calls.complete(session.uploadId).expect(200);
     const item = guestContentItemSchema.parse(res.body);
@@ -117,7 +116,7 @@ describe('uploads API', () => {
     const owner = await signInAs(app, prisma, 'olena@example.com');
     const g = await guest({ ownerId: owner.userId });
     const pdf = fixture('doc.pdf');
-    const session = await uploadSingle(g.calls, 'План вечора.pdf', pdf);
+    const session = await uploadFile(g.calls, 'План вечора.pdf', pdf);
     const item = guestContentItemSchema.parse((await g.calls.complete(session.uploadId)).body);
     expect(item).toMatchObject({ kind: 'DOCUMENT', processingStatus: 'NOT_REQUIRED' });
 
@@ -143,7 +142,7 @@ describe('uploads API', () => {
 
   test('a JPEG named .png is accepted and recorded as image/jpeg', async () => {
     const g = await guest();
-    const session = await uploadSingle(g.calls, 'photo.png', fixture('photo.jpg'));
+    const session = await uploadFile(g.calls, 'photo.png', fixture('photo.jpg'));
     const item = guestContentItemSchema.parse(
       (await g.calls.complete(session.uploadId).expect(200)).body,
     );
@@ -157,7 +156,6 @@ describe('uploads API', () => {
     const session = asSession(
       (await g.calls.initiate({ filename: 'clip.mp4', sizeBytes: video.length }).expect(201)).body,
     );
-    if (session.strategy !== 'MULTIPART') throw new Error('expected multipart');
     expect(session).toMatchObject({ partSizeBytes: 5 * MIB, partCount: 3 });
 
     const { parts } = (await g.calls.parts(session.uploadId, [1, 2, 3]).expect(200)).body as {
@@ -183,8 +181,9 @@ describe('uploads API', () => {
     expect((await queuedJobs(prisma, 'media.video-poster')).map((job) => job.data)).toEqual([
       { contentItemId: item.id },
     ]);
-    // Part numbers beyond the upload, or on a single PUT, are invalid.
-    await g.calls.parts(session.uploadId, [4]).expect(409); // completed now: closed
+    // Completed: no more part URLs, and the old ones are dead (storage ended the upload).
+    await g.calls.parts(session.uploadId, [1]).expect(409);
+    expect(await putTo(parts[0]?.url ?? '', slice(1))).toBeGreaterThanOrEqual(400);
   });
 
   test('part numbers beyond partCount → 400', async () => {
@@ -220,8 +219,8 @@ describe('uploads API', () => {
       .expect(409);
     expect(conflict.body).toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
 
-    if (first.strategy !== 'SINGLE') throw new Error('expected a single PUT');
-    expect(await putTo(first.url, photo, first.headers)).toBe(200);
+    const urls = await partUrls(g.calls, first.uploadId, [1]);
+    expect(await putTo(urls.get(1) ?? '', photo)).toBe(200);
     const [a, b] = await Promise.all([
       g.calls.complete(first.uploadId),
       g.calls.complete(first.uploadId),
@@ -241,7 +240,7 @@ describe('uploads API', () => {
 
   test('content that is not what it claims: 422, REJECTED, bytes discarded', async () => {
     const g = await guest();
-    const session = await uploadSingle(g.calls, 'holiday.jpg', fixture('fake.jpg'));
+    const session = await uploadFile(g.calls, 'holiday.jpg', fixture('fake.jpg'));
     const res = await g.calls.complete(session.uploadId).expect(422);
     expect(res.body).toMatchObject({ code: 'FILE_TYPE_NOT_ALLOWED' });
     const row = await prisma.uploadSession.findUniqueOrThrow({ where: { id: session.uploadId } });
@@ -263,6 +262,9 @@ describe('uploads API', () => {
       (await g.calls.initiate({ filename: 'a.pdf', sizeBytes: pdf.length + 10 }).expect(201)).body,
     );
     const row = await prisma.uploadSession.findUniqueOrThrow({ where: { id: session.uploadId } });
+    // Signed part lengths make this impossible through the URLs; it covers an object assembled
+    // earlier (a completion that failed after CompleteMultipartUpload) of an unexpected size.
+    await storage.abortMultipart(row.storageKey, row.multipartUploadId);
     await storage.putObject(row.storageKey, pdf, 'application/pdf');
     const res = await g.calls.complete(session.uploadId).expect(422);
     expect(res.body).toMatchObject({ code: 'UPLOAD_SIZE_MISMATCH' });
@@ -338,7 +340,7 @@ describe('uploads API', () => {
     await g.calls.cancel(open.uploadId).expect(204);
     await g.calls.parts(open.uploadId, [1]).expect(409);
 
-    const done = await uploadSingle(g.calls, 'b.pdf', fixture('doc.pdf'));
+    const done = await uploadFile(g.calls, 'b.pdf', fixture('doc.pdf'));
     await g.calls.complete(done.uploadId).expect(200);
     const res = await g.calls.cancel(done.uploadId).expect(409);
     expect(res.body).toMatchObject({ code: 'UPLOAD_CLOSED' });
@@ -355,7 +357,7 @@ describe('uploads API', () => {
 
   test('discard keeps a completed upload; a purge aborts open multipart uploads', async () => {
     const g = await guest();
-    const done = await uploadSingle(g.calls, 'a.pdf', fixture('doc.pdf'));
+    const done = await uploadFile(g.calls, 'a.pdf', fixture('doc.pdf'));
     await g.calls.complete(done.uploadId).expect(200);
     const doneRow = await prisma.uploadSession.findUniqueOrThrow({ where: { id: done.uploadId } });
     await new DiscardUploadHandler(prisma, storage).handle({ uploadSessionId: done.uploadId });
@@ -399,9 +401,68 @@ describe('uploads API', () => {
     expect(await prisma.collection.count({ where: { id: g.collectionId } })).toBe(1);
   });
 
+  describe('part URLs die with their upload (review I1)', () => {
+    const keyOf = async (uploadId: string) =>
+      (await prisma.uploadSession.findUniqueOrThrow({ where: { id: uploadId } })).storageKey;
+
+    test('after completion a part URL cannot replace the verified original', async () => {
+      const g = await guest();
+      const photo = fixture('photo.jpg');
+      const session = await uploadFile(g.calls, 'a.jpg', photo);
+      await g.calls.complete(session.uploadId).expect(200);
+      const html = Buffer.from('<html><script>alert(1)</script></html>'.padEnd(photo.length));
+      expect(await putTo(session.urls.get(1) ?? '', html)).toBeGreaterThanOrEqual(400);
+      const head = await storage.readRange(await keyOf(session.uploadId), 0, 3);
+      expect([...head.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
+    });
+
+    test('after cancel and discard a part URL writes nothing; no object exists', async () => {
+      const g = await guest();
+      const pdf = fixture('doc.pdf');
+      const session = asSession(
+        (await g.calls.initiate({ filename: 'a.pdf', sizeBytes: pdf.length }).expect(201)).body,
+      );
+      const urls = await partUrls(g.calls, session.uploadId, [1]);
+      await g.calls.cancel(session.uploadId).expect(204);
+      await new DiscardUploadHandler(prisma, storage).handle({ uploadSessionId: session.uploadId });
+      expect(await putTo(urls.get(1) ?? '', pdf)).toBeGreaterThanOrEqual(400);
+      const key = await keyOf(session.uploadId);
+      expect(await storage.head(key)).toBeNull();
+    });
+
+    test('an admin delete then purge leaves no object, even when an old URL is reused', async () => {
+      const owner = await signInAs(app, prisma, 'olena@example.com');
+      const g = await guest({ ownerId: owner.userId });
+      const pdf = fixture('doc.pdf');
+      const session = await uploadFile(g.calls, 'a.pdf', pdf);
+      const item = guestContentItemSchema.parse(
+        (await g.calls.complete(session.uploadId).expect(200)).body,
+      );
+      const key = await keyOf(session.uploadId);
+      await request(server)
+        .delete(`/api/v1/content/${item.id}`)
+        .set('Cookie', owner.cookie)
+        .set('Origin', ORIGIN)
+        .expect(204);
+      await new PurgeContentHandler(prisma, storage, workerEnv).handle({ contentItemId: item.id });
+      expect(await storage.head(key)).toBeNull();
+      expect(await putTo(session.urls.get(1) ?? '', pdf)).toBeGreaterThanOrEqual(400);
+      expect(await storage.head(key)).toBeNull();
+    });
+
+    test('a part PUT of another length than signed → 403', async () => {
+      const g = await guest();
+      const session = asSession(
+        (await g.calls.initiate({ filename: 'a.pdf', sizeBytes: 100 }).expect(201)).body,
+      );
+      const urls = await partUrls(g.calls, session.uploadId, [1]);
+      expect(await putTo(urls.get(1) ?? '', Buffer.alloc(101))).toBe(403);
+    });
+  });
+
   test('presigned URLs never appear in error bodies', async () => {
     const g = await guest();
-    const session = await uploadSingle(g.calls, 'holiday.jpg', fixture('fake.jpg'));
+    const session = await uploadFile(g.calls, 'holiday.jpg', fixture('fake.jpg'));
     const res = await g.calls.complete(session.uploadId);
     expect(res.text).not.toMatch(/X-Amz-|https?:\/\//);
   });
@@ -411,7 +472,6 @@ describe('uploads API: quotas', () => {
   const MB = 1_000_000;
   const quotaEnv = testEnv({
     ...UPLOAD_ENV,
-    UPLOAD_SINGLE_PUT_MAX_BYTES: '100000000',
     LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10 * MB),
     LIMIT_STORAGE_BYTES_PER_ACCOUNT: String(10 * MB),
   });
@@ -469,7 +529,7 @@ describe('uploads API: quotas', () => {
     });
     const calls = await quotaGuest(collectionId, link.token);
     const video = bigBuffer(6 * MB, mp4Header());
-    const session = await uploadSingle(calls, 'a.mp4', video);
+    const session = await uploadFile(calls, 'a.mp4', video);
     const item = guestContentItemSchema.parse(
       (await calls.complete(session.uploadId).expect(200)).body,
     );

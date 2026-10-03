@@ -73,10 +73,10 @@ export class UploadsService {
   ) {}
 
   /**
-   * Opens an upload session, or (same `clientUploadId` and file) returns the open one with fresh
-   * URLs. Order: type, permission, size, idempotent replay, rate limits, then the quota
-   * reservation under the owner lock. Multipart uploads are created in storage before the row:
-   * an orphan from a failed insert is aborted by the bucket's lifecycle rule.
+   * Opens an upload session, or (same `clientUploadId` and file) returns the open one. Order:
+   * type, permission, size, idempotent replay, rate limits, then the quota reservation under the
+   * owner lock. Every upload is multipart (ADR 0008 addendum 2026-10-03), created in storage
+   * before the row; a failed insert aborts it (and the bucket's lifecycle rule is the backstop).
    */
   async initiate(p: GuestPrincipal, body: CreateUploadRequest): Promise<UploadSessionResponse> {
     const type = fileTypeFor(body.filename, body.mimeType);
@@ -100,16 +100,12 @@ export class UploadsService {
     await this.assertWithinSessionLimits(p);
 
     const settings = this.limits.uploads();
-    const plan = planUpload(size, {
-      singlePutMax: settings.singlePutMaxBytes,
-      partSize: settings.partSizeBytes,
-    });
+    const plan = planUpload(size, settings.partSizeBytes);
     const [{ id }] = await this.prisma.$queryRaw<[{ id: string }]>`SELECT uuidv7()::text AS "id"`;
     const key = uploadKey(p.collectionId, id);
-    const multipartUploadId =
-      plan.strategy === 'MULTIPART'
-        ? await viaStorage(() => this.storage.createMultipart(key, type.canonicalMime))
-        : null;
+    const multipartUploadId = await viaStorage(() =>
+      this.storage.createMultipart(key, type.canonicalMime),
+    );
 
     let row: UploadSession;
     try {
@@ -136,24 +132,22 @@ export class UploadsService {
             declaredMime: type.canonicalMime,
             declaredSizeBytes: size,
             storageKey: key,
-            strategy: plan.strategy,
-            ...(plan.strategy === 'MULTIPART'
-              ? {
-                  multipartUploadId,
-                  partSizeBytes: plan.partSizeBytes,
-                  partCount: plan.partCount,
-                }
-              : {}),
+            multipartUploadId,
+            partSizeBytes: plan.partSizeBytes,
+            partCount: plan.partCount,
             expiresAt: new Date(Date.now() + settings.sessionTtlHours * HOUR_MS),
           },
         });
       });
     } catch (error) {
-      if (multipartUploadId !== null) {
-        await this.storage.abortMultipart(key, multipartUploadId).catch(() => undefined);
-      }
-      // A concurrent retry with the same id won: answer as its replay.
-      if (constraintViolation(error)?.constraint === IDEMPOTENCY_INDEX) {
+      await this.storage.abortMultipart(key, multipartUploadId).catch(() => undefined);
+      // A concurrent retry with the same id won: answer as its replay. Near the quota the loser
+      // sees the winner's reservation and fails with QUOTA_EXCEEDED before the unique index.
+      const code = error instanceof AppError ? error.code : undefined;
+      if (
+        constraintViolation(error)?.constraint === IDEMPOTENCY_INDEX ||
+        code === 'QUOTA_EXCEEDED'
+      ) {
         const winner = await this.prisma.uploadSession.findUnique({
           where: {
             guestSessionId_clientUploadId: {
@@ -171,7 +165,7 @@ export class UploadsService {
       uploadSessionId: row.id,
       collectionId: row.collectionId,
       kind: row.kind,
-      strategy: row.strategy,
+      partCount: row.partCount,
       sizeBytes: Number(row.declaredSizeBytes),
     });
     return this.describe(row);
@@ -185,14 +179,6 @@ export class UploadsService {
   ): Promise<UploadPartsResponse> {
     const row = await findOwnUpload(this.prisma, p, uploadId);
     assertOpen(row);
-    if (
-      row.strategy !== 'MULTIPART' ||
-      row.multipartUploadId === null ||
-      row.partSizeBytes === null ||
-      row.partCount === null
-    ) {
-      throw invalidParts('This upload is a single PUT');
-    }
     const { partCount, partSizeBytes, multipartUploadId } = row;
     if (partNumbers.some((n) => n > partCount)) throw invalidParts(`At most ${partCount} parts`);
     const ttl = this.limits.uploads().urlTtlSeconds;
@@ -240,7 +226,7 @@ export class UploadsService {
   }
 
   /** The same file again: the open session with fresh URLs; otherwise the reason it is not. */
-  private replay(row: UploadSession, body: CreateUploadRequest): Promise<UploadSessionResponse> {
+  private replay(row: UploadSession, body: CreateUploadRequest): UploadSessionResponse {
     const same =
       row.originalFilename === body.filename && row.declaredSizeBytes === BigInt(body.sizeBytes);
     if (!same) throw new AppError('IDEMPOTENCY_CONFLICT', 409);
@@ -248,30 +234,12 @@ export class UploadsService {
     return this.describe(row);
   }
 
-  private async describe(row: UploadSession): Promise<UploadSessionResponse> {
-    const expiresAt = row.expiresAt.toISOString();
-    if (row.strategy === 'MULTIPART' && row.partSizeBytes !== null && row.partCount !== null) {
-      return {
-        uploadId: row.id,
-        strategy: 'MULTIPART',
-        partSizeBytes: Number(row.partSizeBytes),
-        partCount: row.partCount,
-        expiresAt,
-      };
-    }
-    const url = await viaStorage(() =>
-      this.storage.presignPut(row.storageKey, {
-        contentType: row.declaredMime,
-        contentLength: Number(row.declaredSizeBytes),
-        expiresInSeconds: this.limits.uploads().urlTtlSeconds,
-      }),
-    );
+  private describe(row: UploadSession): UploadSessionResponse {
     return {
       uploadId: row.id,
-      strategy: 'SINGLE',
-      url,
-      headers: { 'content-type': row.declaredMime },
-      expiresAt,
+      partSizeBytes: Number(row.partSizeBytes),
+      partCount: row.partCount,
+      expiresAt: row.expiresAt.toISOString(),
     };
   }
 

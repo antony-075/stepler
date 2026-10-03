@@ -89,3 +89,23 @@ With these variables set, anonymous requests are rejected (403) and a wrong secr
 - R2 lifecycle rules (abort incomplete multipart uploads).
 
 Not tested in the spike (Task 8 decides and tests): signing `Content-Length` on each part URL so a part cannot exceed the fixed part size.
+
+## Addendum (2026-10-03): every upload is multipart; the single PUT is dropped
+
+**Status:** accepted (owner/coordinator decision after the independent review of PR C, finding I1).
+
+**Context.** The first implementation used one presigned `PUT` for files up to 100 MB (spec §10.2). On SeaweedFS the review proved that such a URL stays writable for its whole TTL (15 min) whatever happens to the upload:
+- after cancel, rejection, expiry or an admin delete, the same URL recreates the object: an orphan that no quota counts and no job deletes;
+- after a successful completion, a second `PUT` of the same length and type replaces the verified original with arbitrary bytes (HTML instead of a JPEG, or input crafted for the media worker).
+
+Signing `Content-Length` and `Content-Type` does not help: the attacker re-sends a body of the same length and type.
+
+**Decision.** Every upload is a multipart upload, whatever its size; a file up to `UPLOAD_PART_SIZE_BYTES` is one part. Each part URL signs its exact `Content-Length`. The server creates the multipart upload at initiation and is the only party that completes it (`ListParts` → `CompleteMultipartUpload`) or aborts it (cancel, rejection, expiry, collection purge). Either ends the upload, and with it every part URL: a later part `PUT` fails (`NoSuchUpload`), so nothing is writable after the upload closes. The `SINGLE` strategy is removed from the contract, the code and the schema (migration `uploads_multipart_only`).
+
+**Cost.** Two extra API round trips per small file (`POST …/parts`, and the server's `CompleteMultipartUpload` inside `complete`), plus the `CreateMultipartUpload` at initiation. For a phone uploading photos over venue Wi-Fi this is tens of milliseconds per file next to seconds of transfer; accepted.
+
+**Consequences.**
+- Discards need no delay: they abort the multipart upload (killing its URLs) and then delete the key.
+- The delayed collection purge (`UPLOAD_URL_TTL_SECONDS` + 1 h) stays, as a margin: S3 lets a part `PUT` that is already running finish after an abort.
+- The R2 lifecycle rule (abort incomplete multipart uploads after 2 days) now covers every upload a crashed API never recorded.
+- Derivative bytes (thumbnails, previews, posters, PR D) are not reserved at initiation; they count once stored. They are small next to originals; accepted.

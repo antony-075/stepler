@@ -111,40 +111,19 @@ describe('createUploadRequestSchema', () => {
 });
 
 describe('uploadSessionResponseSchema', () => {
-  const expiresAt = '2026-10-03T12:00:00.000Z';
+  const session = {
+    uploadId: id,
+    partSizeBytes: 10_485_760,
+    partCount: 1,
+    expiresAt: '2026-10-03T12:00:00.000Z',
+  };
 
-  test('parses both strategies', () => {
+  test('every upload is multipart: a part size and count, no URL', () => {
+    expect(uploadSessionResponseSchema.parse(session)).toEqual(session);
     expect(
-      uploadSessionResponseSchema.parse({
-        uploadId: id,
-        strategy: 'SINGLE',
-        url: 'https://s3.test/b/k?X-Amz-Signature=x',
-        headers: { 'content-type': 'image/jpeg' },
-        expiresAt,
-      }).strategy,
-    ).toBe('SINGLE');
-    expect(
-      uploadSessionResponseSchema.parse({
-        uploadId: id,
-        strategy: 'MULTIPART',
-        partSizeBytes: 10_485_760,
-        partCount: 3,
-        expiresAt,
-      }).strategy,
-    ).toBe('MULTIPART');
-  });
-
-  test('a multipart session carries no URL', () => {
-    expect(
-      uploadSessionResponseSchema.safeParse({
-        uploadId: id,
-        strategy: 'MULTIPART',
-        partSizeBytes: 10,
-        partCount: 1,
-        url: 'https://s3.test/x',
-        expiresAt,
-      }).success,
+      uploadSessionResponseSchema.safeParse({ ...session, url: 'https://s3.test/x' }).success,
     ).toBe(false);
+    expect(uploadSessionResponseSchema.safeParse({ ...session, partCount: 0 }).success).toBe(false);
   });
 });
 

@@ -106,10 +106,8 @@ export class UploadCompletion {
       return this.reject(tx, row, new AppError('FORBIDDEN', 403));
     }
 
-    if (row.strategy === 'MULTIPART') {
-      const incomplete = await this.completeMultipart(row);
-      if (incomplete !== null) throw incomplete;
-    }
+    const incomplete = await this.completeMultipart(row);
+    if (incomplete !== null) throw incomplete;
 
     const head = await viaStorage(() => this.storage.head(row.storageKey));
     if (head === null) throw new AppError('UPLOAD_INCOMPLETE', 409, { retryable: true });
@@ -189,9 +187,6 @@ export class UploadCompletion {
    */
   private async completeMultipart(row: UploadSession): Promise<AppError | null> {
     const { multipartUploadId, partSizeBytes, partCount } = row;
-    if (multipartUploadId === null || partSizeBytes === null || partCount === null) {
-      throw new Error('multipart upload without its parameters');
-    }
     const parts = await viaStorage(() => this.storage.listParts(row.storageKey, multipartUploadId));
     if (parts === null) return null;
     const byNumber = new Map(parts.map((part) => [part.partNumber, part]));

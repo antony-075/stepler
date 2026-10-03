@@ -4452,92 +4452,36 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "oneOf": [
-                    {
-                      "additionalProperties": false,
-                      "properties": {
-                        "expiresAt": {
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
-                          "type": "string"
-                        },
-                        "headers": {
-                          "additionalProperties": false,
-                          "properties": {
-                            "content-type": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "content-type"
-                          ],
-                          "type": "object"
-                        },
-                        "strategy": {
-                          "enum": [
-                            "SINGLE"
-                          ],
-                          "type": "string"
-                        },
-                        "uploadId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        },
-                        "url": {
-                          "format": "uri",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "uploadId",
-                        "strategy",
-                        "url",
-                        "headers",
-                        "expiresAt"
-                      ],
-                      "type": "object"
+                  "additionalProperties": false,
+                  "properties": {
+                    "expiresAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
                     },
-                    {
-                      "additionalProperties": false,
-                      "properties": {
-                        "expiresAt": {
-                          "format": "date-time",
-                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
-                          "type": "string"
-                        },
-                        "partCount": {
-                          "maximum": 10000,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "partSizeBytes": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "type": "integer"
-                        },
-                        "strategy": {
-                          "enum": [
-                            "MULTIPART"
-                          ],
-                          "type": "string"
-                        },
-                        "uploadId": {
-                          "format": "uuid",
-                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "uploadId",
-                        "strategy",
-                        "partSizeBytes",
-                        "partCount",
-                        "expiresAt"
-                      ],
-                      "type": "object"
+                    "partCount": {
+                      "maximum": 10000,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "partSizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "uploadId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
                     }
-                  ]
+                  },
+                  "required": [
+                    "uploadId",
+                    "partSizeBytes",
+                    "partCount",
+                    "expiresAt"
+                  ],
+                  "type": "object"
                 }
               }
             },
@@ -4921,7 +4865,7 @@
             "description": ""
           },
           "400": {
-            "description": "VALIDATION_FAILED: a single PUT, or parts beyond partCount"
+            "description": "VALIDATION_FAILED: parts beyond partCount"
           },
           "404": {
             "description": "NOT_FOUND: no such upload of this guest"

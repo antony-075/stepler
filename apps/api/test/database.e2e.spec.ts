@@ -542,7 +542,7 @@ describe('upload session and media object schema', () => {
     return { collectionId, linkId: link.id, sessionId: session.id };
   }
 
-  /** A valid single-PUT upload; tests override fields to break one rule. */
+  /** A valid one-part upload; tests override fields to break one rule. */
   function upload(
     ids: { collectionId: string; linkId: string; sessionId: string },
     overrides: Record<string, unknown> = {},
@@ -559,7 +559,9 @@ describe('upload session and media object schema', () => {
         declaredMime: 'image/jpeg',
         declaredSizeBytes: 1000n,
         storageKey: `collections/${ids.collectionId}/uploads/${n}/original`,
-        strategy: 'SINGLE',
+        multipartUploadId: `mp-${n}`,
+        partSizeBytes: 10_485_760n,
+        partCount: 1,
         expiresAt: new Date(Date.now() + 3600_000),
         ...overrides,
       },
@@ -576,22 +578,11 @@ describe('upload session and media object schema', () => {
     );
   });
 
-  test('multipart has its upload id, part size and count; single PUT none of them', async () => {
+  test('every upload has a positive part size and at least one part', async () => {
     const ids = await setup();
-    const rule = check('UploadSession_multipart_consistent');
-    expect(await violation(upload(ids, { strategy: 'MULTIPART' }))).toEqual(rule);
-    expect(
-      await violation(
-        upload(ids, { strategy: 'MULTIPART', multipartUploadId: 'mp', partCount: 2 }),
-      ),
-    ).toEqual(rule);
-    expect(await violation(upload(ids, { partSizeBytes: 10n }))).toEqual(rule);
-    await upload(ids, {
-      strategy: 'MULTIPART',
-      multipartUploadId: 'mp',
-      partSizeBytes: 10_485_760n,
-      partCount: 3,
-    });
+    const rule = check('UploadSession_parts_positive');
+    expect(await violation(upload(ids, { partCount: 0 }))).toEqual(rule);
+    expect(await violation(upload(ids, { partSizeBytes: 0n }))).toEqual(rule);
   });
 
   test('COMPLETED iff completedAt; REJECTED iff a reason', async () => {

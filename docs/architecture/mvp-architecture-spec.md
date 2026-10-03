@@ -235,7 +235,7 @@ MediaObject
 UploadSession
   id, collectionId → Collection (cascade), guestSessionId? → GuestSession, userId? → User,
   guestLinkId → GuestLink, clientUploadId, kind, originalFilename, declaredMime,
-  declaredSizeBytes (bigint), storageKey (unique), strategy (SINGLE|MULTIPART),
+  declaredSizeBytes (bigint), storageKey (unique), (always multipart since 2026-10-03)
   multipartUploadId?, partSizeBytes?,
   status (INITIATED|COMPLETED|ABORTED|EXPIRED|REJECTED), rejectReason?,
   expiresAt, completedAt?, contentItemId? (unique) → ContentItem, createdAt
@@ -402,8 +402,7 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 
 ### 10.2 Strategy
 
-- `size ≤ 100 MB` → single presigned `PUT` (signed `Content-Type` and `Content-Length`), URL TTL 15 min.
-- `size > 100 MB` → S3 multipart: `CreateMultipartUpload`, fixed part size (10 MiB [assumption]), part URLs issued on demand in batches, each URL TTL 15 min; parts retried individually.
+- **Every file is an S3 multipart upload** (addendum 2026-10-03, ADR 0008; replaces "`size ≤ 100 MB` → single presigned `PUT`"): `CreateMultipartUpload` at initiation, fixed part size (10 MiB), a file up to the part size being one part; part URLs issued on demand in batches, each signing its exact `Content-Length`, URL TTL 15 min; parts retried individually. Why: a presigned single `PUT` stayed writable after the upload closed (an orphan after cancel/reject/expiry/delete, or an overwrite of the verified original after completion); `CompleteMultipartUpload` and `AbortMultipartUpload` end the upload and every part URL with it. Cost: two extra API round trips per small file.
 - Upload session TTL: 24 h [assumption] (2 GB over a poor mobile link can take hours); part URLs are re-issuable while the session lives.
 - R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; EU-jurisdiction buckets use a distinct endpoint. Bucket CORS must expose `ETag`; the emulator reproduces this, so it is tested locally too.
 - Client: headless Uppy (`@uppy/aws-s3`) vs in-house uploader — decided in the upload slice after bundle-size check (S9). Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).

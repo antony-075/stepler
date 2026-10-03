@@ -13,9 +13,11 @@ import type { WorkerEnv } from '../worker-env.js';
  * key). Any other status is left alone.
  *
  * It runs only once `collectionPurgeDelaySeconds` have passed since the deletion (the API
- * schedules it so): a single-PUT URL issued before the deletion could otherwise land an object
- * after the listing. A run that comes early (a manual or retried job) skips; the hourly sweep
- * enqueues it again later.
+ * schedules it so). Every upload is multipart now and aborting one ends its part URLs, so the
+ * delay is a margin rather than the guard it was for single-PUT URLs: S3 lets a part PUT that is
+ * already running finish after an abort, and a slow one may run for a while. Discards need no
+ * delay (they abort, then delete). A run that comes early (a manual or retried job) skips; the
+ * hourly sweep enqueues it again later.
  */
 @Injectable()
 export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
@@ -60,9 +62,7 @@ export class PurgeCollectionHandler implements JobHandler<'collection.purge'> {
       select: { id: true, storageKey: true, multipartUploadId: true },
     });
     for (const upload of open) {
-      if (upload.multipartUploadId !== null) {
-        await this.storage.abortMultipart(upload.storageKey, upload.multipartUploadId);
-      }
+      await this.storage.abortMultipart(upload.storageKey, upload.multipartUploadId);
     }
     await this.prisma.uploadSession.updateMany({
       where: { id: { in: open.map((upload) => upload.id) }, status: 'INITIATED' },

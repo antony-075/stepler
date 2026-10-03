@@ -105,7 +105,7 @@ const RETRYABLE = new Set<UploadErrorCode>([
 ]);
 
 /**
- * Worth another automatic try: the network, storage (an expired URL: re-initiation signs a fresh
+ * Worth another automatic try: the network, storage (an expired part URL: the next try signs a fresh
  * one), the API's dependencies or rate limit, missing parts. File, size, quota, permission and
  * link or collection state errors are final.
  */

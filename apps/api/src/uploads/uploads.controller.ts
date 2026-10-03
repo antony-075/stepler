@@ -86,7 +86,7 @@ export class UploadsController {
   @ApiResponse({ status: 200, standardSchema: uploadPartsResponseSchema })
   @ApiResponse({
     status: 400,
-    description: 'VALIDATION_FAILED: a single PUT, or parts beyond partCount',
+    description: 'VALIDATION_FAILED: parts beyond partCount',
   })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: no such upload of this guest' })
   @ApiResponse({ status: 409, description: 'UPLOAD_CLOSED' })

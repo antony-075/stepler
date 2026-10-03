@@ -101,30 +101,18 @@ export const createUploadRequestSchema = z
 export type CreateUploadRequest = z.infer<typeof createUploadRequestSchema>;
 
 /**
- * How to send the bytes. `SINGLE`: one presigned `PUT` to `url`, with exactly `headers` (they are
- * signed). `MULTIPART`: parts of `partSizeBytes` (the last one shorter); part URLs come from
- * `POST …/uploads/:uploadId/parts`. `expiresAt` is the upload session's end, not the URL's.
+ * How to send the bytes: always a multipart upload (spec §10.2, ADR 0008 addendum
+ * 2026-10-03), parts of `partSizeBytes` with the last one shorter; a small file is one part. Part
+ * URLs come from `POST …/uploads/:uploadId/parts`. `expiresAt` is the upload session's end.
  */
-export const uploadSessionResponseSchema = z.discriminatedUnion('strategy', [
-  z
-    .object({
-      uploadId: z.uuid(),
-      strategy: z.literal('SINGLE'),
-      url: z.url(),
-      headers: z.object({ 'content-type': z.string() }).strict(),
-      expiresAt: z.iso.datetime(),
-    })
-    .strict(),
-  z
-    .object({
-      uploadId: z.uuid(),
-      strategy: z.literal('MULTIPART'),
-      partSizeBytes: z.number().int().min(1),
-      partCount: z.number().int().min(1).max(10_000),
-      expiresAt: z.iso.datetime(),
-    })
-    .strict(),
-]);
+export const uploadSessionResponseSchema = z
+  .object({
+    uploadId: z.uuid(),
+    partSizeBytes: z.number().int().min(1),
+    partCount: z.number().int().min(1).max(10_000),
+    expiresAt: z.iso.datetime(),
+  })
+  .strict();
 export type UploadSessionResponse = z.infer<typeof uploadSessionResponseSchema>;
 
 const partNumber = z.number().int().min(1).max(10_000);
@@ -139,7 +127,7 @@ export const uploadPartsRequestSchema = z
   });
 export type UploadPartsRequest = z.infer<typeof uploadPartsRequestSchema>;
 
-/** Each URL signs its part's exact `Content-Length`. */
+/** Each URL signs its part's exact `Content-Length`; `expiresAt` is when these URLs expire. */
 export const uploadPartsResponseSchema = z
   .object({
     parts: z.array(z.object({ partNumber, url: z.url() }).strict()),
