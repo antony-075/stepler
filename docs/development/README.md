@@ -57,7 +57,7 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
-- The worker process arrives with the processing slice.
+- `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden) and, from the processing slice on, previews stay pending. It serves no page; it logs `worker started` once it polls.
 
 ## Commands
 
@@ -71,14 +71,15 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm infra:up` / `pnpm infra:down`             | Start (and wait for healthy) / stop Postgres, Mailpit and the S3 emulator |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
+| `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
-| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
+| `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm e2e -- --shard=1/2`                       | Run one half of the Playwright tests (CI runs shards `1/2` and `2/2` in parallel); any Playwright flag works after `--`, e.g. `-- --grep @desktop` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
-| `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
+| `bash docker/scripts/verify-images.sh`          | Build the api, worker and web images and check non-root, no `.env`, no dev deps, health, proxy, and that the worker starts and stops on SIGTERM |
 | `pnpm db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
 | `pnpm db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
 | `pnpm db:studio`          | Prisma Studio on 5555 against `DATABASE_URL` (the API's `.env`) |
@@ -157,12 +158,15 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION` | api | no | Uploads one guest session may have in progress at once; default `10` |
 | `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
 | `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
+| `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
+| `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
+| `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
-Both apps validate their env at startup and exit when it is invalid. Error messages name the variables but never print their values.
+The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables and the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` rows above; it needs no SMTP, Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
 
 ## Dependency policy
 

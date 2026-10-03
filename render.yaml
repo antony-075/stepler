@@ -72,6 +72,40 @@ services:
       - key: S3_SECRET_ACCESS_KEY
         sync: false
 
+  # Background jobs (ADR 0009): purges, sweeps, later media processing. No port, no public access.
+  - type: worker
+    name: stepler-staging-worker
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: stage
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./apps/api/worker.Dockerfile
+    dockerContext: .
+    # Also runs on the API; Prisma's advisory lock makes concurrent runs safe, and either service
+    # deploying first finds the schema it needs.
+    preDeployCommand: node_modules/.bin/prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stepler-staging-db
+          property: connectionString
+      # The same staging bucket as the API (Render cannot copy values between services).
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
   - type: web
     name: stepler-staging
     runtime: docker

@@ -84,7 +84,9 @@
         "WORKER_PURGE_BATCH_SIZE",
         "GUEST_SESSION_IDLE_DAYS",
         "E2E_DATABASE_URL",
-        "E2E_MAILPIT_URL"
+        "E2E_MAILPIT_URL",
+        "E2E_SMTP_URL",
+        "E2E_S3_ENDPOINT"
       ]
     },
     "dev": {

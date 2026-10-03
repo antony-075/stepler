@@ -7,18 +7,7 @@ The steps below are done once, in this order. `<staging-host>` means the web ser
 ## 1. Cloudflare R2: bucket and key
 
 1. Cloudflare dashboard → R2 → **Create bucket**: name `stepler-staging`, location **Jurisdiction: European Union**.
-2. **No CORS policy yet.** CORS only matters when browsers upload straight to the bucket, which arrives with the upload slice (Phase 4). Today only the API talks to R2 (the readiness check), and CORS does not apply to server requests. The rule to add then (with the real staging host):
-   ```json
-   [
-     {
-       "AllowedOrigins": ["https://<staging-host>"],
-       "AllowedMethods": ["PUT", "GET"],
-       "AllowedHeaders": ["*"],
-       "ExposeHeaders": ["ETag"],
-       "MaxAgeSeconds": 600
-     }
-   ]
-   ```
+2. CORS and the multipart lifecycle rule are set later, in step 9 (they are needed only once browsers upload straight to the bucket).
 3. R2 → **Manage R2 API tokens** → Create token. Permission **Object Read & Write**, applied to the `stepler-staging` bucket only. Keep the Access Key ID and Secret Access Key for step 5.
 4. The S3 endpoint for an EU-jurisdiction bucket is `https://<account-id>.eu.r2.cloudflarestorage.com`.
 
@@ -44,7 +33,7 @@ While the app is in Testing mode, only the listed test users can sign in.
 ## 5. Render: create the Blueprint
 
 1. Render dashboard → **New → Blueprint**. Connect the GitHub repository `antony-075/stepler` and choose branch **`stage`**. Render reads `render.yaml`.
-2. It proposes `stepler-staging-db`, `stepler-staging-api` and `stepler-staging`. Fill in the prompted values:
+2. It proposes `stepler-staging-db`, `stepler-staging-api` and `stepler-staging` (and, once Phase 4 PR B is on `stage`, `stepler-staging-worker`: see step 8). Fill in the prompted values:
 
    | Variable | Value |
    | --- | --- |
@@ -76,5 +65,45 @@ A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `sta
   3. The same test from another network must still get 400, not 429: clients do not share one bucket. On a phone on mobile data, opening `https://<staging-host>/auth/verify?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` must show "link invalid", not "too many attempts".
   4. Remove the override afterwards.
 - The Render logs contain request ids but no cookies, tokens or email addresses.
+
+## 8. Background worker (before promoting Phase 4 PR B to `stage`)
+
+The worker runs background jobs: it purges deleted content and deleted collections (including collections deleted before the worker existed) and cleans up long-idle guest sessions. Later it also makes previews. Architecture: ADR 0009; hosting: ADR 0014, "Addendum: staging worker".
+
+1. When the `dev` → `stage` PR that contains the worker is merged, Render shows a pending Blueprint change: **Blueprints → stepler → Sync** (or the banner on the dashboard). It adds the background worker **`stepler-staging-worker`**: Frankfurt, branch `stage`, deploy after CI passes, image `apps/api/worker.Dockerfile`.
+2. Plan **`0.5c-512mb`** (0.5 CPU / 512 MB), the same as the API. Background workers have no free tier: confirm the monthly cost shown by Render before you approve.
+3. Render asks for the worker's 4 secret values. Copy them from the API service (**stepler-staging-api → Environment**, reveal each value), because Render cannot share values between services:
+
+   | Variable | Value |
+   | --- | --- |
+   | `S3_ENDPOINT` | same as the API: `https://<account-id>.eu.r2.cloudflarestorage.com` |
+   | `S3_BUCKET` | same as the API: `stepler-staging` |
+   | `S3_ACCESS_KEY_ID` | same as the API |
+   | `S3_SECRET_ACCESS_KEY` | same as the API |
+
+   `DATABASE_URL`, `NODE_ENV`, `LOG_LEVEL` and `S3_REGION` come from the Blueprint. Optional tuning (`WORKER_PURGE_BATCH_SIZE`, `GUEST_SESSION_IDLE_DAYS`, `WORKER_MEDIA_CONCURRENCY`; docs/development/README.md) can be added later; the defaults are meant for staging.
+4. Apply. The worker runs the migrations (pre-deploy, like the API) and starts.
+5. Check: **stepler-staging-worker → Logs** contains a line with `"msg":"worker started"` within a minute of the deploy. Within the next hour (at minute :07) a `"msg":"maintenance.sweep done"` line appears. A collection deleted earlier on staging is then gone from the database: the sweep re-enqueues its purge.
+
+If `worker started` is missing, the log shows why: an env error names the missing variable (never its value); a database error means `DATABASE_URL` is wrong.
+
+## 9. R2 for direct uploads (before promoting Phase 4 uploads to `stage`)
+
+Browsers upload straight to the bucket with short-lived signed URLs (ADR 0003, 0008). Do this before the upload slice reaches staging; it is harmless earlier.
+
+1. Cloudflare dashboard → R2 → `stepler-staging` → **Settings → CORS policy → Add CORS policy**, JSON:
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://stepler-staging.onrender.com"],
+       "AllowedMethods": ["PUT", "GET", "HEAD"],
+       "AllowedHeaders": ["content-type"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+   If the staging host is different (step 5), use the real one. No wildcard origins or headers: uploads send only `Content-Type`, and the browser must be able to read `ETag` for multipart parts.
+2. Same bucket → **Settings → Object lifecycle rules → Add rule**: name `abort-incomplete-multipart`, applies to the whole bucket (no prefix), action **Abort incomplete multipart uploads** after **2 days**. This is the safety net for uploads the app could not abort itself (spec §10.5); the app aborts cancelled and expired uploads on its own.
 
 Last full verification: 2026-09-30 (ADR 0014, "Staging verified").
