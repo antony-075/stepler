@@ -156,6 +156,11 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Texts one guest session may send per rolling hour; default `60` |
 | `LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR` | api | no | Upload starts one guest session may make per rolling hour; default `300` |
 | `LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION` | api | no | Uploads one guest session may have in progress at once; default `10` |
+| `UPLOAD_SINGLE_PUT_MAX_BYTES` | api | no | Files up to this size upload with one presigned PUT, larger ones multipart; default `100000000` |
+| `UPLOAD_PART_SIZE_BYTES` | api | no | Multipart part size, at least `5242880`; default `10485760` (10 MiB) |
+| `UPLOAD_SESSION_TTL_HOURS` | api | no | An upload not completed within this many hours expires and its bytes are discarded; default `24` |
+| `UPLOAD_URL_TTL_SECONDS` | api, worker | no | Lifetime of presigned upload URLs; a deleted collection's purge waits this long plus an hour; default `900` |
+| `MEDIA_URL_WINDOW_SECONDS` | api | no | Media download URLs are signed per window of this length and stay valid for two; default `3600` |
 | `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
 | `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
 | `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |

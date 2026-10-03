@@ -389,6 +389,9 @@ describe('worker handlers', () => {
       const jobs = await queuedJobs(prisma);
       expect(jobs).toHaveLength(1);
       expect(jobs[0]).toMatchObject({ name: 'collection.purge', data: { collectionId } });
+      // Scheduled after every upload URL issued before the deletion has expired (TTL + 1 h).
+      const delayMs = (jobs[0]?.startAfter.getTime() ?? 0) - (jobs[0]?.createdOn.getTime() ?? 0);
+      expect(Math.round(delayMs / 1000)).toBe(900 + 3600);
     });
   });
 

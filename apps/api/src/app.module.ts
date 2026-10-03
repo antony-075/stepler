@@ -16,6 +16,7 @@ import { LoggingModule } from './logging/logging.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { TurnstileModule } from './turnstile/turnstile.module.js';
+import { UploadsModule } from './uploads/uploads.module.js';
 import { UsersModule } from './users/users.module.js';
 
 export interface AppModuleOptions {
@@ -44,6 +45,7 @@ export class AppModule {
         CollectionsModule,
         GuestAccessModule,
         ContentModule,
+        UploadsModule,
         HealthModule,
       ],
     };

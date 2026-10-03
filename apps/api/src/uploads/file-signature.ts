@@ -132,23 +132,22 @@ export const detectFileType = (head: Uint8Array): DetectedType | null => {
   return isoBmff(head) ?? webm(head) ?? ooxml(head) ?? text(head);
 };
 
-/** Types that are one format under several names; anything else is its own family. */
-const family = (mime: string): string => {
-  if (mime === 'image/heic' || mime === 'image/heif') return 'heif';
-  if (mime === 'video/mp4' || mime === 'video/quicktime') return 'iso-video';
-  if (mime.startsWith(OOXML_MIME)) return 'ooxml';
-  return mime;
-};
+/** Document formats that are one format under several names; anything else is its own family. */
+const documentFamily = (mime: string): string => (mime.startsWith(OOXML_MIME) ? 'ooxml' : mime);
 
 /**
- * The content agrees with the declared file type: the same kind and the same format family (a
- * `.mov` whose `ftyp` is MP4-style passes; a JPEG named `.png` does not).
+ * The content agrees with the declared file type (owner decision 2026-10-03): photos and videos
+ * match on kind alone, so a JPEG named `.png` or an MP4 named `.mov` is accepted and recorded
+ * with its detected type (`verifiedMime`); documents must be the declared format (a PDF named
+ * `.docx` is refused). Disallowed content never gets here: `detectFileType` returns `null`.
  */
 export const matchesDeclared = (
   detected: DetectedType,
   declared: { kind: FileKind; canonicalMime: string },
 ): boolean =>
-  detected.kind === declared.kind && family(detected.mime) === family(declared.canonicalMime);
+  detected.kind === declared.kind &&
+  (detected.kind !== 'DOCUMENT' ||
+    documentFamily(detected.mime) === documentFamily(declared.canonicalMime));
 
 /**
  * The MIME type to record for a matching upload: the detected one, except for OOXML, where only

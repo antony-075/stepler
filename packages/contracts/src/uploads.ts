@@ -147,3 +147,6 @@ export const uploadPartsResponseSchema = z
   })
   .strict();
 export type UploadPartsResponse = z.infer<typeof uploadPartsResponseSchema>;
+
+/** `…/uploads/:uploadId/…` path parameters. */
+export const guestUploadParamsSchema = z.object({ collectionId: z.uuid(), uploadId: z.uuid() });

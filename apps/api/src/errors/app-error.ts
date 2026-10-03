@@ -7,6 +7,8 @@ export interface AppErrorOptions {
   detail?: string;
   retryable?: boolean;
   errors?: IssueList;
+  /** RFC 9457 extension members, e.g. `missingPartNumbers`. Never secrets or personal data. */
+  extensions?: Record<string, unknown>;
   /** Sets `Retry-After` on the response (seconds). */
   retryAfterSeconds?: number;
   cause?: unknown;
@@ -18,6 +20,7 @@ export class AppError extends Error {
   readonly retryable: boolean;
   readonly errors: IssueList | undefined;
   readonly retryAfterSeconds: number | undefined;
+  readonly extensions: Record<string, unknown> | undefined;
 
   constructor(
     readonly code: ErrorCode,
@@ -30,5 +33,6 @@ export class AppError extends Error {
     this.retryable = options.retryable ?? false;
     this.errors = options.errors;
     this.retryAfterSeconds = options.retryAfterSeconds;
+    this.extensions = options.extensions;
   }
 }

@@ -78,22 +78,45 @@ export class GuestSessionsService {
     collectionId: string,
     cookieToken: string | undefined,
   ): Promise<GuestPrincipal> {
+    const { principal, closed } = await this.identify(collectionId, cookieToken);
+    if (closed !== null) throw closed;
+    return principal;
+  }
+
+  /**
+   * Like `authenticate`, but a link or collection that no longer accepts guests is returned as
+   * `closed` instead of thrown, for the few routes that must still act on it: an upload's
+   * completion records the refusal and discards the bytes, and a cancel still frees them.
+   */
+  async identify(
+    collectionId: string,
+    cookieToken: string | undefined,
+  ): Promise<{ principal: GuestPrincipal; closed: AppError | null }> {
     const session = await this.findByCookie(cookieToken);
     if (session === null || session.collectionId !== collectionId) {
       throw new AppError('GUEST_SESSION_REQUIRED', 401);
     }
-    assertLinkUsable({ link: session.currentLink, collection: session.collection });
-    if (Date.now() - session.lastSeenAt.getTime() > LAST_SEEN_RESOLUTION_MS) {
+    let closed: AppError | null = null;
+    try {
+      assertLinkUsable({ link: session.currentLink, collection: session.collection });
+    } catch (error) {
+      if (!(error instanceof AppError)) throw error;
+      closed = error;
+    }
+    if (closed === null && Date.now() - session.lastSeenAt.getTime() > LAST_SEEN_RESOLUTION_MS) {
       await this.prisma.guestSession.update({
         where: { id: session.id },
         data: { lastSeenAt: new Date() },
       });
     }
     return {
-      kind: 'guest',
-      guestSessionId: session.id,
-      collectionId,
-      link: { id: session.currentLink.id, permissions: permissionsOf(session.currentLink) },
+      principal: {
+        kind: 'guest',
+        guestSessionId: session.id,
+        collectionId,
+        link: { id: session.currentLink.id, permissions: permissionsOf(session.currentLink) },
+      },
+      closed,
     };
   }
 

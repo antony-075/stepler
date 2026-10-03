@@ -27,7 +27,7 @@ describe('S3ObjectStorage multipart and range reads (emulator)', () => {
       const url = await storage.presignPart(k, uploadId, index + 1, size, 60);
       expect((await putPart(url, new Uint8Array(size).fill(index + 1))).status).toBe(200);
     }
-    const parts = await storage.listParts(k, uploadId);
+    const parts = (await storage.listParts(k, uploadId)) ?? [];
     expect(parts.map((p) => [p.partNumber, p.size])).toEqual([
       [1, 5 * MIB],
       [2, 5 * MIB],
@@ -35,6 +35,8 @@ describe('S3ObjectStorage multipart and range reads (emulator)', () => {
     ]);
     await storage.completeMultipart(k, uploadId, parts);
     expect((await storage.head(k))?.size).toBe(10 * MIB + 1234);
+    // A completed (or aborted) multipart upload is gone.
+    expect(await storage.listParts(k, uploadId)).toBeNull();
     expect(await storage.readRange(k, 5 * MIB - 1, 5 * MIB)).toEqual(new Uint8Array([1, 2]));
     await storage.delete(k);
   });

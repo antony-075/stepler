@@ -101,23 +101,31 @@ describe('matchesDeclared', () => {
     }
   });
 
-  test('MP4 and MOV are one family; HEIC and HEIF are one family', () => {
+  test('photos and videos match on kind: a JPEG named .png, an MP4 named .mov or .webm', () => {
     const mp4 = detectFileType(head('clip.mp4'));
     const heic = detectFileType(head('photo.heic'));
-    if (mp4 === null || heic === null) throw new Error('fixtures not detected');
+    const jpg = detectFileType(head('photo.jpg'));
+    if (mp4 === null || heic === null || jpg === null) throw new Error('fixtures not detected');
     expect(matchesDeclared(mp4, declared('IMG_1.MOV'))).toBe(true);
+    expect(matchesDeclared(mp4, declared('clip.webm'))).toBe(true);
     expect(matchesDeclared(heic, declared('IMG_1.HEIF'))).toBe(true);
+    expect(matchesDeclared(jpg, declared('a.png'))).toBe(true);
+    expect(verifiedMime(jpg, declared('a.png'))).toBe('image/jpeg');
   });
 
-  test('another kind or another family does not match', () => {
+  test('another kind, or another document format, does not match', () => {
     const jpg = detectFileType(head('photo.jpg'));
     const pdf = detectFileType(head('doc.pdf'));
     const txt = detectFileType(head('notes.txt'));
-    if (jpg === null || pdf === null || txt === null) throw new Error('fixtures not detected');
+    const docx = detectFileType(head('doc.docx'));
+    if (jpg === null || pdf === null || txt === null || docx === null) {
+      throw new Error('fixtures not detected');
+    }
     expect(matchesDeclared(jpg, declared('a.mp4'))).toBe(false);
-    expect(matchesDeclared(jpg, declared('a.png'))).toBe(false);
+    expect(matchesDeclared(jpg, declared('a.pdf'))).toBe(false);
     expect(matchesDeclared(pdf, declared('a.docx'))).toBe(false);
     expect(matchesDeclared(txt, declared('a.pdf'))).toBe(false);
+    expect(matchesDeclared(docx, declared('a.xlsx'))).toBe(true);
   });
 });
 

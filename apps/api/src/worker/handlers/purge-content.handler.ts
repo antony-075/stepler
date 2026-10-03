@@ -7,7 +7,8 @@ import { deletePrefix, derivedPrefix } from '../storage-purge.js';
 import type { WorkerEnv } from '../worker-env.js';
 
 /**
- * Permanently removes a soft-deleted content item (spec §11): its objects first, then the row.
+ * Permanently removes a soft-deleted content item (spec §11): its objects first (the original
+ * and every derivative), then the row.
  * An item that is not deleted is left alone: visible content is never purged.
  */
 @Injectable()
@@ -31,8 +32,18 @@ export class PurgeContentHandler implements JobHandler<'content.purge'> {
       this.logger.warn({ msg: 'content.purge skipped: item is not deleted', contentItemId });
       return;
     }
-    // Keys are built from the ids as stored (lowercase): storage keys are case-sensitive, and a
-    // payload id may differ in case. The original's key (MediaObject) joins with the upload slice.
+    // The original lives under the upload's key (from its MediaObject row); derivatives under the
+    // item's derived prefix, built from the ids as stored (lowercase): storage keys are
+    // case-sensitive, and a payload id may differ in case.
+    const media = await this.prisma.mediaObject.findMany({
+      where: { contentItemId: item.id },
+      select: { storageKey: true },
+    });
+    for (let i = 0; i < media.length; i += this.env.WORKER_PURGE_BATCH_SIZE) {
+      await this.storage.deleteMany(
+        media.slice(i, i + this.env.WORKER_PURGE_BATCH_SIZE).map((m) => m.storageKey),
+      );
+    }
     await deletePrefix(
       this.storage,
       derivedPrefix(item.collectionId, item.id),

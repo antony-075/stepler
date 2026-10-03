@@ -56,6 +56,16 @@ export const sharedEnvShape = {
   S3_ACCESS_KEY_ID: z.string().min(1),
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_FORCE_PATH_STYLE: bool.default(false),
+  /**
+   * Presigned upload URLs live this long (spec §10.2). The worker needs it too: a collection's
+   * purge waits until every URL issued before deletion has expired.
+   */
+  UPLOAD_URL_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(60)
+    .max(7 * 24 * 3600)
+    .default(900),
 };
 
 const apiEnvSchema = z
@@ -100,6 +110,15 @@ const apiEnvSchema = z
     LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR: positiveInt(60),
     LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR: positiveInt(300),
     LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION: positiveInt(10),
+    // Upload protocol (spec §10.2): files up to this size go as one PUT, larger ones multipart.
+    UPLOAD_SINGLE_PUT_MAX_BYTES: byteCount(100_000_000n),
+    // S3 and R2 need parts of at least 5 MiB (except the last).
+    UPLOAD_PART_SIZE_BYTES: byteCount(10_485_760n).refine((value) => value >= 5_242_880n, {
+      message: 'at least 5242880',
+    }),
+    UPLOAD_SESSION_TTL_HOURS: positiveInt(24),
+    // Media GET URLs are signed per window of this length and valid for two (spec §10.6).
+    MEDIA_URL_WINDOW_SECONDS: positiveInt(3600),
   })
   .superRefine((env, ctx) => {
     if ((env.GOOGLE_CLIENT_ID === undefined) !== (env.GOOGLE_CLIENT_SECRET === undefined)) {

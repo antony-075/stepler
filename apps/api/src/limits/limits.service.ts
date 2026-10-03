@@ -35,6 +35,15 @@ export interface GuestSessionLimits {
   concurrentUploads: number;
 }
 
+/** The direct-upload protocol's sizes and lifetimes (spec §10.2, §10.6). */
+export interface UploadSettings {
+  singlePutMaxBytes: bigint;
+  partSizeBytes: bigint;
+  sessionTtlHours: number;
+  urlTtlSeconds: number;
+  mediaUrlWindowSeconds: number;
+}
+
 /**
  * Single source of limits. Values are config-backed today; plans and entitlements plug in
  * behind `forUser` later without changing callers (ADR 0010).
@@ -90,6 +99,16 @@ export class LimitsService {
         DOCUMENT: this.env.LIMIT_FILE_BYTES_DOCUMENT,
       },
       filesPerBatch: this.env.LIMIT_FILES_PER_BATCH,
+    };
+  }
+
+  uploads(): UploadSettings {
+    return {
+      singlePutMaxBytes: this.env.UPLOAD_SINGLE_PUT_MAX_BYTES,
+      partSizeBytes: this.env.UPLOAD_PART_SIZE_BYTES,
+      sessionTtlHours: this.env.UPLOAD_SESSION_TTL_HOURS,
+      urlTtlSeconds: this.env.UPLOAD_URL_TTL_SECONDS,
+      mediaUrlWindowSeconds: this.env.MEDIA_URL_WINDOW_SECONDS,
     };
   }
 

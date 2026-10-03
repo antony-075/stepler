@@ -38,4 +38,12 @@ describe('redactUrl', () => {
     const path = '/api/v1/guest/collections/01a0ee76-0574-7fe5-a38b-53b07a9b40f9/session';
     expect(redactUrl(path)).toBe(path);
   });
+
+  test('redacts the signature and credential of a presigned part or download URL', () => {
+    const out = redactUrl(
+      '/stepler/collections/c/uploads/u/original?partNumber=2&uploadId=mp1&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA%2F20261003&X-Amz-Signature=abc123',
+    );
+    expect(out).not.toMatch(/AKIA|abc123/);
+    expect(out).toContain('partNumber=2');
+  });
 });

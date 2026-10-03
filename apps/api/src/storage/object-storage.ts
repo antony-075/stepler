@@ -81,8 +81,11 @@ export interface ObjectStorage {
     contentLength: number,
     expiresInSeconds: number,
   ): Promise<string>;
-  /** Every uploaded part, across pages, by part number. */
-  listParts(key: string, uploadId: string): Promise<StoredPart[]>;
+  /**
+   * Every uploaded part, across pages, by part number; `null` when the multipart upload no longer
+   * exists (completed or aborted).
+   */
+  listParts(key: string, uploadId: string): Promise<StoredPart[] | null>;
   /** Assembles the object from these parts (ETags as `listParts` returned them). */
   completeMultipart(
     key: string,

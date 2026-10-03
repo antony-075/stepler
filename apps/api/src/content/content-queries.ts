@@ -4,9 +4,11 @@ import { z } from 'zod';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
-import type { ContentItem as ContentRow, Prisma } from '../generated/prisma/client.js';
+import type { ContentItem, Prisma } from '../generated/prisma/client.js';
+import { type MediaRow, WITH_MEDIA } from './media-urls.js';
 
-export type { ContentRow };
+/** A content row with its stored files (`WITH_MEDIA`). */
+export type ContentRow = ContentItem & { mediaObjects: MediaRow[] };
 
 const frameCursorSchema = z.object({ f: z.number().int().min(1) }).strict();
 
@@ -58,6 +60,7 @@ export class ContentQueries {
         where: after === undefined ? scoped : { ...scoped, frameNo: { gt: after } },
         orderBy: { frameNo: 'asc' },
         take: limit + 1,
+        include: WITH_MEDIA,
       });
       const items = rows.slice(0, limit);
       const last = items.at(-1);
@@ -80,6 +83,7 @@ export class ContentQueries {
             },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
+      include: WITH_MEDIA,
     });
     const items = rows.slice(0, limit);
     const last = items.at(-1);

@@ -185,11 +185,11 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
   }
 
-  async listParts(key: string, uploadId: string): Promise<StoredPart[]> {
+  async listParts(key: string, uploadId: string): Promise<StoredPart[] | null> {
     const parts: StoredPart[] = [];
     let marker: string | undefined;
     for (;;) {
-      const res = await this.client.send(
+      const res = await this.sendListParts(
         new ListPartsCommand({
           Bucket: this.bucket,
           Key: key,
@@ -197,6 +197,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
           ...(marker === undefined ? {} : { PartNumberMarker: marker }),
         }),
       );
+      if (res === null) return null;
       for (const part of res.Parts ?? []) {
         if (part.PartNumber === undefined || part.ETag === undefined) continue;
         parts.push({ partNumber: part.PartNumber, etag: part.ETag, size: part.Size ?? 0 });
@@ -205,6 +206,15 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
       marker = res.NextPartNumberMarker;
     }
     return parts.sort((a, b) => a.partNumber - b.partNumber);
+  }
+
+  private async sendListParts(command: ListPartsCommand) {
+    try {
+      return await this.client.send(command);
+    } catch (error) {
+      if (error instanceof NoSuchUpload) return null;
+      throw error;
+    }
   }
 
   async completeMultipart(

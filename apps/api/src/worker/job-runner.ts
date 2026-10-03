@@ -2,6 +2,8 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs
 import type { Job } from 'pg-boss';
 import type { JobData, JobName } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
+import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
+import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
@@ -31,9 +33,17 @@ export class JobRunner implements OnApplicationBootstrap {
     purgeContent: PurgeContentHandler,
     purgeCollection: PurgeCollectionHandler,
     sweep: MaintenanceSweepHandler,
+    discardUpload: DiscardUploadHandler,
+    expireUploads: ExpireUploadsHandler,
   ) {
-    // Discard-upload and upload-expiry handlers join with the upload slice, media with processing.
-    this.handlers = [purgeContent, purgeCollection, sweep] as JobHandler[];
+    // Media handlers join with media processing (PR D).
+    this.handlers = [
+      purgeContent,
+      purgeCollection,
+      sweep,
+      discardUpload,
+      expireUploads,
+    ] as JobHandler[];
   }
 
   async onApplicationBootstrap(): Promise<void> {

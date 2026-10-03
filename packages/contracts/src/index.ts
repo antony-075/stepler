@@ -136,6 +136,7 @@ export {
   FILE_TYPES,
   fileKindSchema,
   fileTypeFor,
+  guestUploadParamsSchema,
   uploadPartsRequestSchema,
   uploadPartsResponseSchema,
   uploadSessionResponseSchema,

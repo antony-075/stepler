@@ -14,6 +14,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { Prisma, type Collection as CollectionRow } from '../generated/prisma/client.js';
 import { GuestLinksService } from '../guest-access/guest-links.service.js';
+import { collectionPurgeDelaySeconds } from '../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
@@ -208,7 +209,8 @@ export class CollectionsService {
 
   /**
    * Requests deletion (D2): the collection becomes `DELETING`, which is gone for everyone; the
-   * `collection.purge` job, enqueued in the same transaction, removes the objects and rows later.
+   * `collection.purge` job, enqueued in the same transaction, removes the objects and rows once
+   * every upload URL issued before the deletion has expired (`collectionPurgeDelaySeconds`).
    * Repeating it for an owned collection is a no-op.
    */
   async delete(principal: AccountPrincipal, id: string, requestId?: string): Promise<void> {
@@ -236,10 +238,14 @@ export class CollectionsService {
         'DELETING',
         requestId,
       );
-      await this.jobs.enqueue(tx, 'collection.purge', {
-        collectionId: row.id,
-        ...(requestId === undefined ? {} : { requestId }),
-      });
+      await this.jobs.enqueue(
+        tx,
+        'collection.purge',
+        { collectionId: row.id, ...(requestId === undefined ? {} : { requestId }) },
+        {
+          startAfterSeconds: collectionPurgeDelaySeconds(this.limits.uploads().urlTtlSeconds),
+        },
+      );
     });
   }
 
