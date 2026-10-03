@@ -13,9 +13,11 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: `http://127.0.0.1:${WEB_PORT}`, trace: 'retain-on-failure' },
+  // Admin-only management journeys are tagged `@desktop` and run on desktop Chrome only; every
+  // other test (guest journeys included) runs on all three projects.
   projects: [
-    { name: 'mobile-safari', use: { ...devices['iPhone 15'] } },
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] } },
+    { name: 'mobile-safari', use: { ...devices['iPhone 15'] }, grepInvert: /@desktop/ },
+    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, grepInvert: /@desktop/ },
     { name: 'desktop-chrome', use: { ...devices['Desktop Chrome'] } },
   ],
   // Runs the production builds (turbo builds them first). The API is built into

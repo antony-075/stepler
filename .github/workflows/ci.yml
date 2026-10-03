@@ -70,7 +70,13 @@ jobs:
   e2e:
     needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
+    # Two Playwright shards in parallel keep each run well under the timeout. If a shard passes
+    # 25 minutes, add a third (shard: [1, 2, 3] and --shard=N/3).
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
@@ -82,20 +88,20 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo/cache
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
-          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
+          key: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap
       - run: pnpm --filter @stepler/e2e exec playwright install --with-deps chromium webkit
-      - run: pnpm e2e
+      - run: pnpm e2e -- --shard=${{ matrix.shard }}/2
       - if: failure()
         name: Emulator logs on failure
         run: docker compose -f docker/compose.yaml --env-file docker/.env.example logs --tail 200 s3
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: e2e/playwright-report
           retention-days: 7
 

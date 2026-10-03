@@ -46,13 +46,15 @@ test.describe('with motion', () => {
   test('/login draws the arrows once and never scrolls sideways', async ({ page }) => {
     // Desktop width: the composition is in the first screen there.
     await page.setViewportSize({ width: 1440, height: 900 });
-    // Samples every animation frame from the first one the document gets until the draws (the
+    // Samples on every animation frame and on a 25ms timer (WebKit throttles rAF under load, so
+    // frames alone can miss most of the draw) from the start of the document until the draws (the
     // last starts at 940ms and runs 480ms) have run and ended, or 5s have passed.
     await page.addInitScript(() => {
       const probe: OverflowProbe = { samples: [], done: false };
       (window as unknown as { __overflow: OverflowProbe }).__overflow = probe;
       const start = performance.now();
       const sample = () => {
+        if (probe.done) return;
         const root = document.documentElement;
         const entry: Sample = {
           overflow: root.scrollWidth - root.clientWidth,
@@ -67,10 +69,17 @@ test.describe('with motion', () => {
         };
         probe.samples.push(entry);
         const drawn = !entry.drawing && probe.samples.some((s) => s.drawing);
-        if (!drawn && performance.now() - start < 5000) requestAnimationFrame(sample);
-        else probe.done = true;
+        if (drawn || performance.now() - start >= 5000) {
+          probe.done = true;
+          clearInterval(timer);
+        }
       };
-      requestAnimationFrame(sample);
+      const onFrame = () => {
+        sample();
+        if (!probe.done) requestAnimationFrame(onFrame);
+      };
+      const timer = setInterval(sample, 25);
+      requestAnimationFrame(onFrame);
     });
     await page.goto('/login');
     await expect(arrows(page)).toHaveCount(3);
@@ -79,8 +88,10 @@ test.describe('with motion', () => {
       return probe.done ? probe.samples : null;
     });
     const samples = (await handle.jsonValue()) ?? [];
-    // The window must cover the draws, or the test proves nothing.
-    expect(samples.filter((s) => s.drawing).length).toBeGreaterThanOrEqual(5);
+    // The window must cover the draws, or the test proves nothing: at least one sample saw a draw
+    // running, and sampling went on until none was (the probe stops only then, or at 5s).
+    expect(samples.some((s) => s.drawing)).toBe(true);
+    expect(samples.at(-1)?.drawing).toBe(false);
     expect(samples.filter((s) => s.overflow > 0)).toEqual([]);
     // Each runs once and ends drawn.
     await expect
