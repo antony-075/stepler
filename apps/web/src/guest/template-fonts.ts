@@ -6,6 +6,8 @@ import localFont from 'next/font/local';
 // family. Nothing is preloaded: a file downloads only when the template root carries its class
 // (`fontVariables`) and text uses it, so a page pays for one or two families at most. The build
 // never fetches fonts over the network. `@stepler/templates/core` FONTS lists the same files.
+// next/font names each CSS family after its variable, so the four families with a Reserved Font
+// Name are declared under their Stepler names (CREDITS.md: a subset may not use an RFN).
 
 type TemplateFont = {
   /** The CSS variable templates read the family stack from. */
@@ -28,7 +30,7 @@ const unbounded = localFont({
   display: 'swap',
   preload: false,
 });
-const playfairDisplay = localFont({
+const steplerDisplaySerif = localFont({
   src: '../../../templates/fonts/playfair-display.woff2',
   weight: '400 900',
   variable: '--font-tpl-playfair-display',
@@ -44,7 +46,7 @@ const cormorant = localFont({
   preload: false,
   adjustFontFallback: 'Times New Roman',
 });
-const lora = localFont({
+const steplerBookSerif = localFont({
   src: '../../../templates/fonts/lora.woff2',
   weight: '400 700',
   variable: '--font-tpl-lora',
@@ -75,14 +77,14 @@ const montserratAlternates = localFont({
   display: 'swap',
   preload: false,
 });
-const comfortaa = localFont({
+const steplerRounded = localFont({
   src: '../../../templates/fonts/comfortaa.woff2',
   weight: '300 700',
   variable: '--font-tpl-comfortaa',
   display: 'swap',
   preload: false,
 });
-const ptSerif = localFont({
+const steplerTextSerif = localFont({
   src: [
     { path: '../../../templates/fonts/pt-serif-400.woff2', weight: '400' },
     { path: '../../../templates/fonts/pt-serif-700.woff2', weight: '700' },
@@ -111,14 +113,14 @@ export const TEMPLATE_FONTS: Record<FontId, TemplateFont> = {
   geologica: { variable: '--font-tpl-geologica', className: '' },
   manrope: font('manrope', manrope),
   unbounded: font('unbounded', unbounded),
-  'playfair-display': font('playfair-display', playfairDisplay),
+  'playfair-display': font('playfair-display', steplerDisplaySerif),
   cormorant: font('cormorant', cormorant),
-  lora: font('lora', lora),
+  lora: font('lora', steplerBookSerif),
   nunito: font('nunito', nunito),
   rubik: font('rubik', rubik),
   'montserrat-alternates': font('montserrat-alternates', montserratAlternates),
-  comfortaa: font('comfortaa', comfortaa),
-  'pt-serif': font('pt-serif', ptSerif),
+  comfortaa: font('comfortaa', steplerRounded),
+  'pt-serif': font('pt-serif', steplerTextSerif),
   'golos-text': font('golos-text', golosText),
 };
 

@@ -2,8 +2,8 @@
 // each checked by the same play function and by axe (`a11y: { test: 'error' }`).
 import type { StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
-import { GuestTemplateRoot } from '../react/root.js';
-import { FIXTURES, type FixtureName, onFiles, onText } from './models.js';
+import { GuestTemplateRoot } from '../react/root.tsx';
+import { FIXTURES, type FixtureName, onFiles, onText } from './models.tsx';
 
 export const VIEWPORTS = ['phone360', 'phone390', 'tablet768', 'desktop1440'] as const;
 type Viewport = (typeof VIEWPORTS)[number];

@@ -1,6 +1,6 @@
 import type { ThemeSettings } from '@stepler/contracts';
-import { settingsSchemaFor, type TemplateDefinition } from './definition.js';
-import { DEFAULT_TEMPLATE_ID, TEMPLATE_DEFINITIONS } from './registry.js';
+import { settingsSchemaFor, type TemplateDefinition } from './definition.ts';
+import { DEFAULT_TEMPLATE_ID, TEMPLATE_DEFINITIONS } from './registry.ts';
 
 export type ResolvedTheme = {
   def: TemplateDefinition;

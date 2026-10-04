@@ -1,7 +1,7 @@
 import { statSync } from 'node:fs';
 import { FONT_IDS } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
-import { fontCssVar, FONTS } from './fonts.js';
+import { fontCssVar, FONTS } from './fonts.ts';
 
 const MAX_BYTES = 160 * 1024;
 

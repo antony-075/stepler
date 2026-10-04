@@ -1,4 +1,4 @@
-export { applyTemplate } from './apply-template.js';
+export { applyTemplate } from './apply-template.ts';
 export {
   bestTextOn,
   composite,
@@ -8,16 +8,16 @@ export {
   readableOn,
   relativeLuminance,
   withAlpha,
-} from './contrast.js';
+} from './contrast.ts';
 export {
   isLocked,
   settingsSchemaFor,
   type GradientOption,
   type LockableSetting,
   type TemplateDefinition,
-} from './definition.js';
-export { DEFAULT_TEMPLATE_ID, definitionOf, TEMPLATE_DEFINITIONS } from './registry.js';
-export { resolveTheme, type ResolvedTheme } from './resolve.js';
+} from './definition.ts';
+export { DEFAULT_TEMPLATE_ID, definitionOf, TEMPLATE_DEFINITIONS } from './registry.ts';
+export { resolveTheme, type ResolvedTheme } from './resolve.ts';
 export {
   accentContrast,
   assertReadable,
@@ -25,5 +25,5 @@ export {
   themeTokens,
   type AccentContrast,
   type ThemeTokens,
-} from './tokens.js';
-export { fontCssVar, FONTS, type FontEntry, type FontFile } from './fonts.js';
+} from './tokens.ts';
+export { fontCssVar, FONTS, type FontEntry, type FontFile } from './fonts.ts';

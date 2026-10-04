@@ -1,9 +1,9 @@
 import type { Hex } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
-import { classic } from '../templates/classic/definition.js';
-import { contrastRatio, MIN_RATIO } from './contrast.js';
-import { fullscreenLike } from './test-definitions.js';
-import { accentContrast, assertReadable, ContrastError, themeTokens } from './tokens.js';
+import { classic } from '../templates/classic/definition.ts';
+import { contrastRatio, MIN_RATIO } from './contrast.ts';
+import { fullscreenLike } from './test-definitions.ts';
+import { accentContrast, assertReadable, ContrastError, themeTokens } from './tokens.ts';
 
 describe('themeTokens', () => {
   test('classic defaults: the palette as is, the pencil accent with a white label', () => {

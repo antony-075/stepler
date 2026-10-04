@@ -1,9 +1,9 @@
 import type { FontId } from '@stepler/contracts';
 import type { CSSProperties } from 'react';
-import { resolveTheme } from '../core/resolve.js';
-import { themeTokens } from '../core/tokens.js';
-import type { GuestPageModel, TemplateActions, TemplateSlots } from './model.js';
-import { TEMPLATES } from './registry.js';
+import { resolveTheme } from '../core/resolve.ts';
+import { themeTokens } from '../core/tokens.ts';
+import type { GuestPageModel, TemplateActions, TemplateSlots } from './model.ts';
+import { TEMPLATES } from './registry.ts';
 
 type GuestTemplateRootProps = {
   /** As stored; an unknown or removed template renders the default one. */

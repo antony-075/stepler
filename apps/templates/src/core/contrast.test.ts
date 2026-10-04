@@ -7,8 +7,8 @@ import {
   minVeil,
   readableOn,
   relativeLuminance,
-} from './contrast.js';
-import { randomColors } from './test-random.js';
+} from './contrast.ts';
+import { randomColors } from './test-random.ts';
 
 describe('contrastRatio', () => {
   test('white on black is 21:1, and the ratio is symmetric', () => {

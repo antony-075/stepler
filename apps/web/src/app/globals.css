@@ -1,4 +1,7 @@
 @import '@stepler/ui/styles.css';
+/* The guest page templates' scoped sheets (ADR 0017); their sources use Tailwind classes too. */
+@import '@stepler/templates/styles.css';
+@source '../../../templates/src';
 
 /* The landing's page column (DESIGN-SYSTEM.md §7.1: up to 1600px of content from 1920px), wider
    than `stepler-container` so the photos fill a 1440px screen; the same gutters. */

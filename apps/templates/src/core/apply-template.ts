@@ -1,5 +1,5 @@
 import type { ThemeSettings } from '@stepler/contracts';
-import type { TemplateDefinition } from './definition.js';
+import type { TemplateDefinition } from './definition.ts';
 
 /**
  * The settings after switching to `next` (plan "Template switch"): accent, background and

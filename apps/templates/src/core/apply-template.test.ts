@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { classic } from '../templates/classic/definition.js';
-import { applyTemplate } from './apply-template.js';
-import { fullscreenLike } from './test-definitions.js';
+import { classic } from '../templates/classic/definition.ts';
+import { applyTemplate } from './apply-template.ts';
+import { fullscreenLike } from './test-definitions.ts';
 
 describe('applyTemplate', () => {
   const classicCenterSoft = {

@@ -5,6 +5,7 @@ export type {
   TemplateImage,
   TemplateLayoutProps,
   TemplateSlots,
-} from './model.js';
-export { TEMPLATES } from './registry.js';
-export { GuestTemplateRoot } from './root.js';
+} from './model.ts';
+export { TEMPLATES } from './registry.ts';
+export { GuestTemplateRoot } from './root.tsx';
+export { classic } from '../templates/classic/index.ts';

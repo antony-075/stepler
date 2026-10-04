@@ -1,5 +1,5 @@
-import { minVeil } from '../../core/contrast.js';
-import type { TemplateDefinition } from '../../core/definition.js';
+import { minVeil } from '../../core/contrast.ts';
+import type { TemplateDefinition } from '../../core/definition.ts';
 
 const TEXT = '#141614';
 const VEIL = '#F0F1EE';

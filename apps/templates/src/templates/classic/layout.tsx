@@ -19,7 +19,7 @@ import { UploadDock } from '@stepler/ui/components/upload-dock';
 import { cn } from '@stepler/ui/lib/utils';
 import { ImagePlus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { TemplateActions, TemplateImage, TemplateLayoutProps } from '../../react/model.js';
+import type { TemplateActions, TemplateImage, TemplateLayoutProps } from '../../react/model.ts';
 
 /**
  * The hero's rendered width: the phone column (16px gutters), the 720px tablet column (24px

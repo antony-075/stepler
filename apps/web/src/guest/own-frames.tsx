@@ -8,7 +8,7 @@ import { FrameGrid } from '@stepler/ui/components/frame-grid';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { formatDuration } from '@/format/bytes';
 import { MediaImg } from '@/media/media-img';
@@ -151,6 +151,7 @@ export function GuestFrames({
   empty,
   hide,
   onDeleted,
+  onHasItems,
 }: {
   collectionId: string;
   scope: 'own' | 'all';
@@ -161,6 +162,8 @@ export function GuestFrames({
   hide?: ReadonlySet<string>;
   /** After the guest deleted one of their frames (the page refreshes its counts). */
   onDeleted?: () => void;
+  /** Whether the loaded list has any frame, each time that changes (the page's phase). */
+  onHasItems?: (hasItems: boolean) => void;
 }) {
   const t = useTranslations('guest');
   const queryClient = useQueryClient();
@@ -191,6 +194,11 @@ export function GuestFrames({
         : false,
     refetchIntervalInBackground: false,
   });
+  const hasItems =
+    query.data === undefined ? undefined : query.data.pages.some((page) => page.items.length > 0);
+  useEffect(() => {
+    if (hasItems !== undefined) onHasItems?.(hasItems);
+  }, [hasItems, onHasItems]);
 
   if (query.isPending) {
     return (

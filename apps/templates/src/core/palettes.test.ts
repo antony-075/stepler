@@ -1,10 +1,10 @@
 import { ACCENT_PRESETS, type ThemeSettings } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
-import { minVeil } from './contrast.js';
-import type { TemplateDefinition } from './definition.js';
-import { TEMPLATE_DEFINITIONS } from './registry.js';
-import { randomColors } from './test-random.js';
-import { assertReadable } from './tokens.js';
+import { minVeil } from './contrast.ts';
+import type { TemplateDefinition } from './definition.ts';
+import { TEMPLATE_DEFINITIONS } from './registry.ts';
+import { randomColors } from './test-random.ts';
+import { assertReadable } from './tokens.ts';
 
 /** Every background a template offers: each swatch, each gradient, and an image at both ends. */
 function backgrounds(def: TemplateDefinition): ThemeSettings['background'][] {

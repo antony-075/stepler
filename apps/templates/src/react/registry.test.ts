@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { TEMPLATE_DEFINITIONS } from '../core/registry.js';
-import { TEMPLATES } from './registry.js';
+import { TEMPLATE_DEFINITIONS } from '../core/registry.ts';
+import { TEMPLATES } from './registry.ts';
 
 describe('TEMPLATES', () => {
   test('has a React side for exactly the registered definitions', () => {

@@ -12,8 +12,8 @@ import type {
   TemplateActions,
   TemplateImage,
   TemplateSlots,
-} from '../react/model.js';
-import { samplePhoto } from './sample-photo.js';
+} from '../react/model.ts';
+import { samplePhoto } from './sample-photo.ts';
 
 export function sampleImage(hue: number, width = 1600, height = 1000): TemplateImage {
   const src = samplePhoto(hue);

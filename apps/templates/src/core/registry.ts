@@ -1,5 +1,5 @@
-import { classic } from '../templates/classic/definition.js';
-import type { TemplateDefinition } from './definition.js';
+import { classic } from '../templates/classic/definition.ts';
+import type { TemplateDefinition } from './definition.ts';
 
 /** Every template, in the order the editor shows them. Ids match the folders in `src/templates`. */
 export const TEMPLATE_DEFINITIONS: readonly TemplateDefinition[] = [classic];

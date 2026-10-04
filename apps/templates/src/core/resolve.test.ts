@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { classic } from '../templates/classic/definition.js';
-import { resolveTheme } from './resolve.js';
-import { classicV2 } from './test-definitions.js';
+import { classic } from '../templates/classic/definition.ts';
+import { resolveTheme } from './resolve.ts';
+import { classicV2 } from './test-definitions.ts';
 
 describe('resolveTheme', () => {
   test('a valid stored page resolves as stored', () => {

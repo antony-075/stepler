@@ -1,5 +1,5 @@
-import type { TemplateDefinition } from './definition.js';
-import { classic } from '../templates/classic/definition.js';
+import type { TemplateDefinition } from './definition.ts';
+import { classic } from '../templates/classic/definition.ts';
 
 /**
  * A stand-in for T2 «На весь екран» (plan Appendix A) until PR K registers it: the cover is the

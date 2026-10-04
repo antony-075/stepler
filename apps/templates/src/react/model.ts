@@ -1,6 +1,6 @@
 import type { ThemeSettings } from '@stepler/contracts';
 import type { ComponentType, ReactNode } from 'react';
-import type { TemplateDefinition } from '../core/definition.js';
+import type { TemplateDefinition } from '../core/definition.ts';
 
 /**
  * The contract between apps/web and a template (ADR 0017). The app owns data, state, copy and

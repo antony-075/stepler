@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
 import { describe, expect, test } from 'vitest';
 import { boundaries } from '../../eslint.boundaries.js';
-import { DEFAULT_TEMPLATE_ID, definitionOf, TEMPLATE_DEFINITIONS } from './registry.js';
+import { DEFAULT_TEMPLATE_ID, definitionOf, TEMPLATE_DEFINITIONS } from './registry.ts';
 
 const packageRoot = fileURLToPath(new URL('../../', import.meta.url));
 const templatesDir = fileURLToPath(new URL('../templates/', import.meta.url));

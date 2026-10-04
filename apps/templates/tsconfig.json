@@ -3,7 +3,11 @@
   "compilerOptions": {
     "types": ["node"],
     // The lint boundary (eslint.boundaries.js) is imported by a test.
-    "allowJs": true
+    "allowJs": true,
+    // Relative imports name the .ts/.tsx file, which Next (Turbopack), Vite and tsc all resolve
+    // (Turbopack does not map `.js` to `.ts`); the core build rewrites them to .js
+    // (tsconfig.build.json), and its declarations resolve under nodenext as they are.
+    "allowImportingTsExtensions": true
   },
   "include": ["src", ".storybook/*.ts", ".storybook/*.tsx", "*.ts", "eslint.boundaries.js"]
 }

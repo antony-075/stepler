@@ -8,8 +8,8 @@ import {
   readableOn,
   relativeLuminance,
   withAlpha,
-} from './contrast.js';
-import type { TemplateDefinition } from './definition.js';
+} from './contrast.ts';
+import type { TemplateDefinition } from './definition.ts';
 
 /** CSS custom properties a template root carries (`GuestTemplateRoot`), all `--tpl-*`. */
 export type ThemeTokens = Record<`--tpl-${string}`, string>;

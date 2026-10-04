@@ -1,5 +1,5 @@
 import type { Meta } from '@storybook/react-vite';
-import { storyAt, TemplateStory } from '../../fixtures/stories.js';
+import { storyAt, TemplateStory } from '../../fixtures/stories.tsx';
 
 const meta = {
   title: 'Templates/Класика (classic)',
