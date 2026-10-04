@@ -29,7 +29,7 @@ import { useCoverUpload } from './use-cover-upload';
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.heic,.heif';
 
 /**
- * «Обкладинка» on the «Вигляд» tab (plan Task 10): the cover as guests will see it (16:10, the
+ * «Обкладинка» on the «Гостьова сторінка» tab (plan Task 10): the cover as guests will see it (16:10, the
  * phone's hero) and what can be done with it now. Every state keeps the picture's box in place:
  * none (the initials), uploading (dimmed, the progress line, «Скасувати»), a failed transfer
  * (why, «Повторити»), processing («Готується обкладинка…», the tab polls), failed (why, replace

@@ -37,14 +37,14 @@ import { useCollection } from '../use-collection';
  * The collection's page (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02). The header (title,
  * status, date, «Дії»), the description, the archive state with its one action, then a
  * segmented control between «Вміст» (the frames, `ContentTab`, with their count), «Посилання»
- * (`?tab=links` in the URL), «Вигляд» (`?tab=appearance`: cover and welcome message) and
- * «Параметри» (`?tab=settings`).
+ * (`?tab=links` in the URL), «Гостьова сторінка» (`?tab=appearance`: cover and welcome message) and
+ * «Параметри колекції» (`?tab=settings`).
  * A link's settings open in a sheet (`?link=`).
  */
 export function CollectionOverview({ id }: { id: string }) {
   const t = useTranslations('collection');
   const tList = useTranslations('collections');
-  // Once deleted (the «Параметри» tab), the page is on its way to /app: stop refetching.
+  // Once deleted (the «Параметри колекції» tab), the page is on its way to /app: stop refetching.
   const [deleted, setDeleted] = useState(false);
   const query = useCollection(id, !deleted);
 
@@ -114,28 +114,29 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
   return (
     <>
       <CollectionHeader collection={collection} />
-      {/* On «Параметри» the archiving card says the same with its own button: never two. */}
+      {/* On «Параметри колекції» the archiving card says the same with its own button: never two. */}
       {archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null}
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
-        {/* Phones show icon + count only (owner 2026-10-03); the label stays as the accessible name. */}
+        {/* Phones show icon + count only (owner 2026-10-03), and so does 640–767 since the longer
+            names (owner 2026-10-04) do not fit there; the label stays as the accessible name. */}
         <TabsList variant="segmented" aria-label={t('tabs.label')}>
           <TabsTrigger value="content">
-            <Images aria-hidden="true" className="max-sm:size-5" />
-            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.content')}</span>
+            <Images aria-hidden="true" className="max-md:size-5" />
+            <span className="min-w-0 truncate max-md:sr-only">{t('tabs.content')}</span>
             {contentTotal === undefined ? null : <TabsCount>{contentTotal}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="links">
-            <Link2 aria-hidden="true" className="max-sm:size-5" />
-            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.links')}</span>
+            <Link2 aria-hidden="true" className="max-md:size-5" />
+            <span className="min-w-0 truncate max-md:sr-only">{t('tabs.links')}</span>
             {live === undefined ? null : <TabsCount>{live}</TabsCount>}
           </TabsTrigger>
           <TabsTrigger value="appearance">
-            <Palette aria-hidden="true" className="max-sm:size-5" />
-            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.appearance')}</span>
+            <Palette aria-hidden="true" className="max-md:size-5" />
+            <span className="min-w-0 truncate max-md:sr-only">{t('tabs.appearance')}</span>
           </TabsTrigger>
           <TabsTrigger value="settings">
-            <SlidersHorizontal aria-hidden="true" className="max-sm:size-5" />
-            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.settings')}</span>
+            <SlidersHorizontal aria-hidden="true" className="max-md:size-5" />
+            <span className="min-w-0 truncate max-md:sr-only">{t('tabs.settings')}</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="content">

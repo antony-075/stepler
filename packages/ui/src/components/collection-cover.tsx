@@ -21,7 +21,7 @@ const BOX = {
   sm: 'size-11 rounded-frame',
   /** 80px on phones, 128px from `sm`: a dashboard card. */
   cover: 'size-20 rounded-frame sm:size-32',
-  /** The full width of its column at 16:10: the guest page and the «Вигляд» tab. */
+  /** The full width of its column at 16:10: the guest page and the «Гостьова сторінка» tab. */
   hero: 'aspect-[16/10] w-full rounded-sheet',
 } as const;
 

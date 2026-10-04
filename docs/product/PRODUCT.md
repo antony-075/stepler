@@ -180,7 +180,7 @@ Minimum configuration:
 
 - title/name;
 - optional description;
-- optional cover image and welcome message (set afterwards on the collection's «Вигляд» tab; moved into MVP by owner decision 2026-10-04).
+- optional cover image and welcome message (set afterwards on the collection's «Гостьова сторінка» tab; moved into MVP by owner decision 2026-10-04).
 
 Creating a collection automatically creates its default guest link.
 

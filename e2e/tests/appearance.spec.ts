@@ -10,7 +10,7 @@ import {
 import { guestLinks, mainLinkPath, openGuestLink } from '../support/guest.js';
 import { fixture, uploadViaApi } from '../support/media.js';
 
-// Slice 8a: the collection's cover and welcome message («Вигляд»). Admin-only management is
+// Slice 8a: the collection's cover and welcome message («Гостьова сторінка»). Admin-only management is
 // `@desktop`; what guests see, and the tab at phone width, run on all three projects. The worker
 // started by Playwright makes the cover's thumbnail and preview. Ukrainian UI.
 test.use({ locale: 'de-DE' });
@@ -61,7 +61,7 @@ test.describe('collection appearance', () => {
   }) => {
     const { id } = await setUp(page);
     await page.goto(`/app/collections/${id}?tab=appearance`);
-    await expect(page.getByRole('tab', { name: 'Вигляд' })).toHaveAttribute(
+    await expect(page.getByRole('tab', { name: 'Гостьова сторінка' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -165,7 +165,7 @@ test.describe('collection appearance', () => {
     await guest.context().close();
   });
 
-  test('the «Вигляд» tab fits the screen; the picker opens with a 44px action', async ({
+  test('the «Гостьова сторінка» tab fits the screen; the picker opens with a 44px action', async ({
     page,
     browser,
   }) => {
@@ -185,6 +185,22 @@ test.describe('collection appearance', () => {
     const confirm = picker.locator('[data-slot="cover-picker-confirm"]');
     expect((await confirm.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+  });
+
+  test('the four tab labels are never cut at 768, 1024 and 1440 @desktop', async ({ page }) => {
+    const { id } = await setUp(page);
+    for (const width of [768, 1024, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/app/collections/${id}?tab=appearance`);
+      const tabs = page.getByRole('tablist', { name: 'Розділи колекції' });
+      await expect(tabs.getByRole('tab', { name: 'Гостьова сторінка' })).toBeVisible();
+      const cut = await tabs
+        .locator('[role="tab"] > span:not([data-slot])')
+        .evaluateAll((labels) =>
+          labels.filter((label) => label.scrollWidth > label.clientWidth).map((l) => l.textContent),
+        );
+      expect(cut, `cut labels at ${width}px`).toEqual([]);
+    }
   });
 
   test('the cover stays when the guest deletes the frame it came from', async ({

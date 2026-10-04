@@ -1,9 +1,9 @@
 'use client';
 
-// The collection's «Вигляд» tab (`?tab=appearance`; plan Task 10, [A5], [A6]; DESIGN-SYSTEM.md
+// The collection's «Гостьова сторінка» tab (`?tab=appearance`; plan Task 10, [A5], [A6]; DESIGN-SYSTEM.md
 // §6.6, §6.8). Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines,
 // responsive-design):
-// - Two numbered section cards like «Параметри» (same `SectionCard`, the same left edge and
+// - Two numbered section cards like «Параметри колекції» (same `SectionCard`, the same left edge and
 //   width): 1 «Обкладинка», 2 «Привітання для гостей», in the order guests meet them (the
 //   picture, then the words above their button). No live preview of the whole guest page: the
 //   cover is shown at the phone's hero ratio (16:10), which is what most guests see.

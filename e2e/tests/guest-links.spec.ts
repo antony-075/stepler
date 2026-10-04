@@ -85,7 +85,12 @@ test.describe('links tab', () => {
     const tabUrl = page.url();
     // Two segments, the active one in the URL; where we are: «Колекції › title».
     const tabs = page.getByRole('tablist', { name: 'Розділи колекції' });
-    await expect(tabs.getByRole('tab')).toHaveText(['Вміст0', 'Посилання1', 'Вигляд', 'Параметри']);
+    await expect(tabs.getByRole('tab')).toHaveText([
+      'Вміст0',
+      'Посилання1',
+      'Гостьова сторінка',
+      'Параметри колекції',
+    ]);
     await expect(tabs.getByRole('tab', { name: /^Посилання/ })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -95,7 +100,7 @@ test.describe('links tab', () => {
     }
     const crumbs = page.getByRole('navigation', { name: 'Де ви зараз' });
     await expect(crumbs.getByRole('listitem')).toHaveText(['Колекції', 'Весілля Олі та Тараса']);
-    await expect(tabs.getByRole('tab', { name: 'Параметри' })).toBeVisible();
+    await expect(tabs.getByRole('tab', { name: 'Параметри колекції' })).toBeVisible();
 
     const panel = await openAll(page);
     const main = row(panel, T.main);
