@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { configureApp, createApp } from '../src/create-app.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
+import { listenOnLoopback } from './support/app.js';
 import { testEnv } from './support/env.js';
 
 const server = (app: INestApplication): Server => app.getHttpServer() as Server;
@@ -17,7 +18,7 @@ async function appWith(env: ApiEnv, storage?: Partial<ObjectStorage>): Promise<I
   if (storage !== undefined) builder = builder.overrideProvider(OBJECT_STORAGE).useValue(storage);
   const app = (await builder.compile()).createNestApplication({ bufferLogs: true });
   configureApp(app, env);
-  await app.init();
+  await listenOnLoopback(app);
   return app;
 }
 
@@ -26,7 +27,7 @@ describe('health', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv());
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

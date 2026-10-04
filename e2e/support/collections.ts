@@ -69,3 +69,31 @@ export async function waitForCoverReady(page: Page, id: string, timeoutMs = 30_0
     )
     .toBe('READY');
 }
+
+/**
+ * Waits until the collection holds `count` frames and the worker is done with each: every
+ * `processingStatus` is `READY` or `NOT_REQUIRED` (as the signed-in admin of `page`). Call it
+ * before a reload or navigation that should find the thumbnails already made; otherwise the page
+ * legitimately waits for its next poll (15–20 s for a guest) and the test's budget runs out.
+ */
+export async function waitForContentProcessed(
+  page: Page,
+  id: string,
+  count: number,
+  timeoutMs = 30_000,
+): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get(`/api/v1/collections/${id}/content?limit=100`);
+        const { items } = (await res.json()) as { items: { processingStatus: string }[] };
+        const done = ['READY', 'NOT_REQUIRED'];
+        return {
+          frames: items.length,
+          unfinished: items.filter((item) => !done.includes(item.processingStatus)).length,
+        };
+      },
+      { timeout: timeoutMs },
+    )
+    .toEqual({ frames: count, unfinished: 0 });
+}

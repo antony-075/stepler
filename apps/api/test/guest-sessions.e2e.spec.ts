@@ -7,6 +7,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import {
@@ -37,7 +38,7 @@ describe('guest sessions [C3]', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LOG_LEVEL: 'info' }), { logDestination: logs });
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -333,7 +334,7 @@ describe('guest session exchange rate limit', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '2' }));
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 

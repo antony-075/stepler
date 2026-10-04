@@ -58,8 +58,8 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - `signInAs(app, prisma, email)` in API tests creates a user who has accepted the current legal documents (ADR 0016); pass `legal = false` (fifth argument) for an account the acceptance gate stops. In Playwright, `requestLink`/`signIn` tick the sign-in card's checkbox.
-- A second e2e stack can run alongside the first: `E2E_DATABASE_URL`, `E2E_SMTP_URL`, `E2E_MAILPIT_URL`, `E2E_S3_ENDPOINT` point at other services, and `E2E_WEB_PORT` / `E2E_API_PORT` (default 3100/4100) move the servers (upload journeys then need that web origin in the bucket's CORS).
-- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
+- A second e2e stack can run alongside the first: `E2E_DATABASE_URL`, `E2E_SMTP_URL`, `E2E_MAILPIT_URL`, `E2E_S3_ENDPOINT` point at other services, and `E2E_WEB_PORT` / `E2E_API_PORT` (default 3100/4100) move the servers. Upload journeys need that web origin in the bucket's CORS: rerun `E2E_WEB_PORT=<port> pnpm storage:bootstrap` (or set `STORAGE_CORS_ORIGINS`).
+- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins (`STORAGE_CORS_ORIGINS`, plus the `E2E_WEB_PORT` origin when set), and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
 - `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden), and photo and video frames stay «Готується прев’ю». It needs the media tools from Prerequisites (`heif-dec`/`heif-convert`, `ffmpeg`, `ffprobe` on `PATH`). It serves no page; it logs `worker started` once it polls.
 
 ## Commands
@@ -157,6 +157,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `S3_ACCESS_KEY_ID` | api | yes | Bucket-scoped access key |
 | `S3_SECRET_ACCESS_KEY` | api | yes | Bucket-scoped secret key |
 | `S3_FORCE_PATH_STYLE` | api | no | `true` for the emulator; default `false` |
+| `STORAGE_CORS_ORIGINS` | `storage:bootstrap` | no | Dev/CI only: comma-separated browser origins for the local buckets' CORS rule; default `http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:3100`. `E2E_WEB_PORT`, when set, adds `http://127.0.0.1:<port>` |
 | `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
 | `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
 | `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |

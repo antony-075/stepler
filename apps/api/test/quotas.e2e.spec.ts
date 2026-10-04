@@ -14,6 +14,7 @@ import { AppError } from '../src/errors/app-error.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { LimitsService } from '../src/limits/limits.service.js';
 import { UsageService } from '../src/limits/usage.service.js';
+import { listenOnLoopback } from './support/app.js';
 import { resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { seedCollection } from './support/guests.js';
@@ -106,7 +107,7 @@ async function photo(
 describe('storage usage and quotas', () => {
   beforeAll(async () => {
     app = await createApp(env);
-    await app.init();
+    await listenOnLoopback(app);
     server = app.getHttpServer() as Server;
     tokens = app.get(GuestLinkTokens);
   });

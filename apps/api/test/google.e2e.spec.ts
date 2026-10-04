@@ -19,6 +19,7 @@ import { encodeTransaction } from '../src/auth/google/oauth-cookie.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { configureApp } from '../src/create-app.js';
 import { deriveKey } from '../src/crypto/keys.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 
@@ -49,7 +50,7 @@ async function buildApp(env: ApiEnv, google?: GoogleIdentity): Promise<INestAppl
   if (google !== undefined) builder = builder.overrideProvider(GOOGLE_IDENTITY).useValue(google);
   const app = (await builder.compile()).createNestApplication({ bufferLogs: true });
   configureApp(app, env);
-  await app.init();
+  await listenOnLoopback(app);
   return app;
 }
 

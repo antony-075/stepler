@@ -12,6 +12,7 @@ import type {
   UserStatus,
 } from '../src/generated/prisma/client.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -86,7 +87,7 @@ describe('guest link resolution', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LOG_LEVEL: 'info' }), { logDestination: logs });
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -292,7 +293,7 @@ describe('guest link resolution rate limit', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '2' }));
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

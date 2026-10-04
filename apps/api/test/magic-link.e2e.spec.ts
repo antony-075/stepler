@@ -10,6 +10,7 @@ import { hashToken } from '../src/auth/tokens.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { configureApp } from '../src/create-app.js';
 import { TURNSTILE_VERIFIER, type TurnstileVerifier } from '../src/turnstile/turnstile-verifier.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { magicLinkToken, messagesAfter, messageText, waitForMessages } from './support/mailpit.js';
@@ -27,7 +28,7 @@ async function buildApp(env: ApiEnv): Promise<INestApplication> {
     .compile();
   const app = moduleRef.createNestApplication({ bufferLogs: true });
   configureApp(app, env);
-  await app.init();
+  await listenOnLoopback(app);
   return app;
 }
 

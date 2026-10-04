@@ -17,6 +17,7 @@ import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storag
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
@@ -42,7 +43,7 @@ const workerEnv = loadWorkerEnv({
 
 async function startApp(apiEnv: ApiEnv) {
   const app = await createApp(apiEnv);
-  await app.init();
+  await listenOnLoopback(app);
   return { app, server: app.getHttpServer() as Server, tokens: app.get(GuestLinkTokens) };
 }
 
