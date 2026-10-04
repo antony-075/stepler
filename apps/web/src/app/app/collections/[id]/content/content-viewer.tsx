@@ -6,7 +6,7 @@ import { FrameViewer } from '@stepler/ui/components/frame-viewer';
 import { useToast } from '@stepler/ui/components/toast';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { useQuery } from '@tanstack/react-query';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, ImageIcon, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { getContent } from '@/api/content';
@@ -20,9 +20,9 @@ const DETAIL_STALE_MS = 30 * 60_000;
 /**
  * One frame for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): full screen on phones and
  * tablets, a large centred dialog from `lg`. The number, date and contributor's name on top,
- * «Видалити» beside «Закрити», ←/→ across the frames already loaded in the grid. A wish is a
- * centred card in large type (20–24px, at most 60 characters a line; a long one scrolls in its
- * own focusable box). Files load their detail for presigned links: a photo shows its 1600px
+ * «Зробити обкладинкою» (a photo with a thumbnail) and «Видалити» beside «Закрити», ←/→ across
+ * the frames already loaded in the grid. A wish is a centred card in large type (20–24px, at
+ * most 60 characters a line; a long one scrolls in its own focusable box). Files load their detail for presigned links: a photo shows its 1600px
  * preview (upright, HEIC included; before it exists, the original where the browser can show
  * it), a video plays natively over its poster (`preload="metadata"`, with a fallback line when
  * the browser cannot play it), a document or a photo without a preview is a type tile with
@@ -36,6 +36,7 @@ export function ContentViewer({
   onNavigate,
   onClose,
   onDelete,
+  onSetCover,
 }: {
   items: AdminContentItem[];
   frameNo: number | undefined;
@@ -43,12 +44,15 @@ export function ContentViewer({
   onClose: () => void;
   /** Deletes the frame; the caller updates the grid and closes the viewer. */
   onDelete: (item: AdminContentItem) => Promise<void>;
+  /** «Зробити обкладинкою» for a photo with a thumbnail; absent when the cover can't change. */
+  onSetCover?: (item: AdminContentItem) => Promise<void>;
 }) {
   const t = useTranslations('content');
   const format = useFormatter();
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [videoFailed, setVideoFailed] = useState<string | null>(null);
+  const [settingCover, setSettingCover] = useState(false);
   const index = frameNo === undefined ? -1 : items.findIndex((item) => item.frameNo === frameNo);
   const item = index === -1 ? undefined : items[index];
   const prev = index > 0 ? items[index - 1] : undefined;
@@ -104,6 +108,26 @@ export function ContentViewer({
                 <Download aria-hidden="true" className="size-4" />
                 <span className="max-sm:sr-only">{t('viewer.download')}</span>
               </a>
+            ) : null}
+            {onSetCover !== undefined && item.kind === 'PHOTO' && item.thumbnailUrl !== null ? (
+              <button
+                type="button"
+                data-slot="viewer-set-cover"
+                aria-disabled={settingCover || undefined}
+                onClick={() => {
+                  if (settingCover) return;
+                  setSettingCover(true);
+                  onSetCover(item)
+                    .catch(() => {
+                      // The caller toasted why.
+                    })
+                    .finally(() => setSettingCover(false));
+                }}
+                className={viewerButton}
+              >
+                <ImageIcon aria-hidden="true" className="size-4" />
+                <span className="max-sm:sr-only">{t('viewer.setCover')}</span>
+              </button>
             ) : null}
             <button type="button" onClick={() => setConfirming(true)} className={viewerButton}>
               <Trash2 aria-hidden="true" className="size-4" />

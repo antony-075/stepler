@@ -307,7 +307,8 @@
       "removeConfirmText": "The collection’s initials will show in its place again. The guest’s frame it came from stays.",
       "removeConfirm": "Remove",
       "removePending": "Removing",
-      "leave": "The cover is still uploading. Leave the page and cancel the upload?"
+      "leave": "The cover is still uploading. Leave the page and cancel the upload?",
+      "setFailed": "Couldn’t make it the cover"
     },
     "welcome": {
       "title": "Welcome message for guests",
@@ -323,6 +324,25 @@
       "saved": "Saved",
       "failed": "Couldn’t save",
       "none": "No welcome message."
+    },
+    "picker": {
+      "title": "Choose a photo for the cover",
+      "description": "The photo is copied into the cover: if the guest deletes it, the cover stays.",
+      "close": "Close",
+      "listLabel": "Guests’ photos",
+      "loading": "Loading photos",
+      "loadFailed": "Couldn’t load the photos.",
+      "retry": "Try again",
+      "empty": "Guests haven’t added photos yet",
+      "emptyText": "As soon as the first photo arrives, you can make it the cover.",
+      "loadMore": "Show more",
+      "cancel": "Cancel",
+      "confirm": "Make it the cover",
+      "pending": "Saving…",
+      "notReady": "Preparing preview",
+      "unavailable": "Preview unavailable",
+      "frameName": "Frame {number}, photo",
+      "frameNotReady": "Frame {number}, photo still preparing — can’t be chosen"
     }
   },
   "content": {
@@ -397,7 +417,8 @@
       "noPreviewYet": "The preview comes later",
       "documentOpen": "Documents open after you download them.",
       "photoAlt": "Frame {number}",
-      "dimensionsValue": "{width, number} × {height, number}"
+      "dimensionsValue": "{width, number} × {height, number}",
+      "setCover": "Make it the cover"
     },
     "delete": {
       "title": "Delete frame {frame}?",
