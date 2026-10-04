@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { authMethodsResponseSchema } from '@stepler/contracts';
+import { authMethodsResponseSchema, currentLegalVersions } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -101,6 +101,7 @@ describe('Google sign-in', () => {
       magicLink: true,
       google: true,
       turnstileSiteKey: '1x00000000000000000000AA',
+      legal: currentLegalVersions(),
     });
   });
 

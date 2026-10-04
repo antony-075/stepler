@@ -105,23 +105,30 @@ enum AuthProvider {
   EMAIL
 }
 
+/// Legal documents (registry in @stepler/contracts `LEGAL_DOCUMENTS`; ADR 0016).
+enum LegalDocument {
+  TERMS
+  PRIVACY
+}
+
 model User {
-  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email           String          @unique @db.Citext
-  emailVerifiedAt DateTime?       @db.Timestamptz(3)
+  id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email            String            @unique @db.Citext
+  emailVerifiedAt  DateTime?         @db.Timestamptz(3)
   /// At most 80 characters (CHECK "User_displayName_length").
-  displayName     String?
-  locale          Locale          @default(uk)
+  displayName      String?
+  locale           Locale            @default(uk)
   /// BLOCKED if and only if blockedAt is set (CHECK "User_blocked_consistent").
-  status          UserStatus      @default(ACTIVE)
-  blockedAt       DateTime?       @db.Timestamptz(3)
-  blockedReason   String?
-  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
-  accounts        AuthAccount[]
-  sessions        AuthSession[]
-  collections     Collection[]
-  uploadSessions  UploadSession[]
+  status           UserStatus        @default(ACTIVE)
+  blockedAt        DateTime?         @db.Timestamptz(3)
+  blockedReason    String?
+  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
+  accounts         AuthAccount[]
+  sessions         AuthSession[]
+  collections      Collection[]
+  uploadSessions   UploadSession[]
+  legalAcceptances LegalAcceptance[]
 }
 
 model AuthAccount {
@@ -147,6 +154,21 @@ model AuthSession {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// One acceptance of one version of a legal document (spec §7.1, ADR 0016). No IP address is
+/// stored (owner decision L2); `requestId` correlates the row with the request log. The version
+/// is one of the registry's (CHECK "LegalAcceptance_version_format").
+model LegalAcceptance {
+  id         String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId     String        @db.Uuid
+  document   LegalDocument
+  version    String
+  acceptedAt DateTime      @default(now()) @db.Timestamptz(3)
+  requestId  String?
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, document, version])
 }
 
 model MagicLinkToken {

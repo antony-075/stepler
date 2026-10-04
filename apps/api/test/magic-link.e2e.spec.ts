@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { currentLegalVersions } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -40,7 +41,7 @@ describe('magic link sign-in', () => {
     request(server())
       .post('/api/v1/auth/magic-link')
       .set('Origin', ORIGIN)
-      .send({ email, turnstileToken: 'pass', ...extra });
+      .send({ email, turnstileToken: 'pass', legal: currentLegalVersions(), ...extra });
   const preview = (token: string) =>
     request(server()).post('/api/v1/auth/magic-link/preview').set('Origin', ORIGIN).send({ token });
   const verify = (token: string) =>
@@ -266,7 +267,7 @@ describe('magic link per-IP limits', () => {
       request(server())
         .post('/api/v1/auth/magic-link')
         .set('Origin', ORIGIN)
-        .send({ email: newEmail(), turnstileToken: 'pass' });
+        .send({ email: newEmail(), turnstileToken: 'pass', legal: currentLegalVersions() });
     await send().expect(202);
     await send().expect(202);
     const res = await send().expect(429);
@@ -287,7 +288,7 @@ describe('magic link per-IP limits', () => {
       request(server())
         .post('/api/v1/auth/magic-link')
         .set('Origin', ORIGIN)
-        .send({ email: newEmail(), turnstileToken });
+        .send({ email: newEmail(), turnstileToken, legal: currentLegalVersions() });
     // Anyone can send junk tokens; they must not lock out real users behind the same IP.
     for (let i = 0; i < 5; i++) await send('junk').expect(400);
     await send('pass').expect(202);

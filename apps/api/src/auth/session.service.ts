@@ -1,7 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { legalStatus } from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { LEGAL_ACCEPTANCE_FIELDS, toAcceptanceRecords } from '../legal/legal.service.js';
 import { generateToken, hashToken, TOKEN_PATTERN } from './tokens.js';
 
 const DAY_MS = 24 * 3600_000;
@@ -12,6 +14,8 @@ export interface ResolvedSession {
   userId: string;
   email: string;
   emailVerifiedAt: Date | null;
+  /** Both legal documents accepted (ADR 0016); `AuthGuard` gates on it. */
+  legalAccepted: boolean;
 }
 
 /** Opaque server-side sessions (ADR 0006): the cookie holds the token, the DB only its hash. */
@@ -40,7 +44,16 @@ export class SessionService {
         id: true,
         expiresAt: true,
         lastUsedAt: true,
-        user: { select: { id: true, email: true, emailVerifiedAt: true, status: true } },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            emailVerifiedAt: true,
+            status: true,
+            // Same query, no second round trip per request (plan: session resolution).
+            legalAcceptances: { select: LEGAL_ACCEPTANCE_FIELDS },
+          },
+        },
       },
     });
     const now = Date.now();
@@ -56,6 +69,7 @@ export class SessionService {
       userId: session.user.id,
       email: session.user.email,
       emailVerifiedAt: session.user.emailVerifiedAt,
+      legalAccepted: legalStatus(toAcceptanceRecords(session.user.legalAcceptances)).accepted,
     };
   }
 

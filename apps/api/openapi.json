@@ -37,7 +37,9 @@
               "IDEMPOTENCY_CONFLICT",
               "CONTENT_NOT_FOUND",
               "UPLOAD_IN_PROGRESS",
-              "COVER_SOURCE_INVALID"
+              "COVER_SOURCE_INVALID",
+              "LEGAL_ACCEPTANCE_REQUIRED",
+              "LEGAL_VERSION_OUTDATED"
             ],
             "type": "string"
           },
@@ -207,6 +209,24 @@
                   "email": {
                     "type": "string"
                   },
+                  "legal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "privacy": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      },
+                      "terms": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "terms",
+                      "privacy"
+                    ],
+                    "type": "object"
+                  },
                   "locale": {
                     "enum": [
                       "uk",
@@ -222,7 +242,8 @@
                 },
                 "required": [
                   "email",
-                  "turnstileToken"
+                  "turnstileToken",
+                  "legal"
                 ],
                 "type": "object"
               }
@@ -406,6 +427,24 @@
                     "google": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "privacy": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        },
+                        "terms": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "terms",
+                        "privacy"
+                      ],
+                      "type": "object"
+                    },
                     "magicLink": {
                       "enum": [
                         true
@@ -419,7 +458,8 @@
                   "required": [
                     "magicLink",
                     "google",
-                    "turnstileSiteKey"
+                    "turnstileSiteKey",
+                    "legal"
                   ],
                   "type": "object"
                 }
@@ -6652,6 +6692,54 @@
                     "isOperator": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
                     "locale": {
                       "enum": [
                         "uk",
@@ -6665,7 +6753,8 @@
                     "email",
                     "displayName",
                     "locale",
-                    "isOperator"
+                    "isOperator",
+                    "legal"
                   ],
                   "type": "object"
                 }
@@ -6747,6 +6836,54 @@
                     "isOperator": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
                     "locale": {
                       "enum": [
                         "uk",
@@ -6760,13 +6897,181 @@
                     "email",
                     "displayName",
                     "locale",
-                    "isOperator"
+                    "isOperator",
+                    "legal"
                   ],
                   "type": "object"
                 }
               }
             },
             "description": ""
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/v1/me/legal-acceptances": {
+      "post": {
+        "operationId": "LegalAcceptancesController_accept_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "acceptances": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "document": {
+                          "enum": [
+                            "TERMS",
+                            "PRIVACY"
+                          ],
+                          "type": "string"
+                        },
+                        "version": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "document",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 2,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "acceptances"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "email": {
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isOperator": {
+                      "type": "boolean"
+                    },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
+                    "locale": {
+                      "enum": [
+                        "uk",
+                        "en"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName",
+                    "locale",
+                    "isOperator",
+                    "legal"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /me and retry); nothing is written"
+          },
+          "401": {
+            "description": "UNAUTHENTICATED"
           },
           "default": {
             "content": {

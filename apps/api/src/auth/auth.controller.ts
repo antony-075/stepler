@@ -1,7 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
-import { authMethodsResponseSchema, type AuthMethodsResponse } from '@stepler/contracts';
+import {
+  authMethodsResponseSchema,
+  type AuthMethodsResponse,
+  currentLegalVersions,
+} from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
 import { GOOGLE_IDENTITY, type GoogleIdentity } from './google/google-identity.js';
@@ -18,7 +22,10 @@ export class AuthController {
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
-  /** Sign-in options for the web app, read at runtime so it needs no provider config itself. */
+  /**
+   * Sign-in options for the web app, read at runtime so it needs no provider config itself, and
+   * the current legal versions.
+   */
   @Public()
   @Get('methods')
   @ApiResponse({ status: 200, standardSchema: authMethodsResponseSchema })
@@ -27,6 +34,8 @@ export class AuthController {
       magicLink: true,
       google: this.google !== null,
       turnstileSiteKey: this.env.TURNSTILE_SITE_KEY,
+      // The versions the sign-in card's checkbox accepts and sends back (ADR 0016).
+      legal: currentLegalVersions(),
     };
   }
 
