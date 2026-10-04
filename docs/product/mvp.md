@@ -17,6 +17,8 @@ This file is a concise implementation checklist.
 - [ ] Guest visibility setting — built in slice 3 (PR A): a link shows the guest only their own frames or everyone's (`canViewGallery`); other guests' names and numbers are never shown
 - [ ] Guest own-content deletion when allowed — built in PR E: own frames only, when the link allows it («Гості можуть видаляти своє»), from the viewer after a confirm
 - [ ] Admin content deletion — built in slice 3 (one frame) and PR E (multi-select and bulk delete, up to 100 per request)
+- [ ] Collection cover — built in slice 8a (PR F API, PR G web): upload an image (JPEG/PNG/WebP/HEIC/HEIF/GIF up to 50 MB) or make a guest photo the cover, replace, remove; shown on the dashboard card, in the share dialog and as the guest page hero
+- [ ] Guest welcome message — built in slice 8a: one paragraph up to 160 characters, shown to guests above their main action
 - [ ] Responsive guest UI
 - [ ] Responsive admin UI
 - [ ] QR generation

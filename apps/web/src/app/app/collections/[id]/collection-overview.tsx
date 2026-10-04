@@ -8,7 +8,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Images, Link2, SlidersHorizontal } from 'lucide-react';
+import { Images, Link2, Palette, SlidersHorizontal } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -24,7 +24,9 @@ import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
 import { CollectionNotFound } from '../collection-not-found';
+import { AppearanceTab } from './appearance/appearance-tab';
 import { CollectionHeader } from './collection-header';
+import { tabOf } from './collection-tab';
 import { ContentTab } from './content/content-tab';
 import { CollectionSettingsPanel } from './settings/collection-settings';
 import { LinksList } from './links/links-list';
@@ -34,8 +36,9 @@ import { useCollection } from '../use-collection';
 /**
  * The collection's page (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02). The header (title,
  * status, date, «Дії»), the description, the archive state with its one action, then a
- * segmented control between «Вміст» (the frames, `ContentTab`, with their count) and «Посилання»
- * (`?tab=links` in the URL).
+ * segmented control between «Вміст» (the frames, `ContentTab`, with their count), «Посилання»
+ * (`?tab=links` in the URL), «Вигляд» (`?tab=appearance`: cover and welcome message) and
+ * «Параметри» (`?tab=settings`).
  * A link's settings open in a sheet (`?link=`).
  */
 export function CollectionOverview({ id }: { id: string }) {
@@ -74,12 +77,6 @@ export function CollectionOverview({ id }: { id: string }) {
   return <OverviewSkeleton label={t('loading')} />;
 }
 
-export type CollectionTab = 'content' | 'links' | 'settings';
-
-/** `?tab=links` / `?tab=settings` open those tabs; anything else (or nothing) the content. */
-export const tabOf = (value: string | null): CollectionTab =>
-  value === 'links' || value === 'settings' ? value : 'content';
-
 function Overview({ collection, onDeleted }: { collection: Collection; onDeleted: () => void }) {
   const t = useTranslations('collection');
   const tLinks = useTranslations('links');
@@ -105,7 +102,8 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
   // link sheet's `?link=` stays as it is.
   const selectTab = (next: string) => {
     const query = new URLSearchParams(params.toString());
-    if (next === 'links' || next === 'settings') query.set('tab', next);
+    const selected = tabOf(next);
+    if (selected !== 'content') query.set('tab', selected);
     else query.delete('tab');
     const search = query.toString();
     router.push(`/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`, {
@@ -130,6 +128,10 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
             <Link2 aria-hidden="true" className="max-sm:size-5" />
             <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.links')}</span>
             {live === undefined ? null : <TabsCount>{live}</TabsCount>}
+          </TabsTrigger>
+          <TabsTrigger value="appearance">
+            <Palette aria-hidden="true" className="max-sm:size-5" />
+            <span className="min-w-0 truncate max-sm:sr-only">{t('tabs.appearance')}</span>
           </TabsTrigger>
           <TabsTrigger value="settings">
             <SlidersHorizontal aria-hidden="true" className="max-sm:size-5" />
@@ -168,6 +170,9 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
               onSettings={sheet.openLink}
             />
           )}
+        </TabsContent>
+        <TabsContent value="appearance">
+          <AppearanceTab collection={collection} />
         </TabsContent>
         <TabsContent value="settings">
           <CollectionSettingsPanel collection={collection} onDeleted={onDeleted} />
