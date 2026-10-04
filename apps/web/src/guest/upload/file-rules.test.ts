@@ -3,7 +3,13 @@ import { describe, expect, test } from 'vitest';
 import { allowedKinds, precheck } from './file-rules';
 
 const context: GuestContext = {
-  collection: { id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9', title: 'Весілля', description: null },
+  collection: {
+    id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
+    title: 'Весілля',
+    description: null,
+    welcomeMessage: null,
+    cover: null,
+  },
   permissions: {
     canUploadPhotos: true,
     canUploadVideos: true,

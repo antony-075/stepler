@@ -30,7 +30,8 @@
     "UPLOAD_IN_PROGRESS": "This upload is being checked; try again in a moment.",
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
     "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
-    "CONTENT_NOT_FOUND": "This frame was deleted."
+    "CONTENT_NOT_FOUND": "This frame was deleted.",
+    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover."
   },
   "login": {
     "pageTitle": "Sign in",
