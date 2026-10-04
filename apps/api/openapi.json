@@ -154,7 +154,7 @@
         "parameters": [],
         "responses": {
           "302": {
-            "description": "To Google; 404 when Google sign-in is off"
+            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy`, or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
           },
           "default": {
             "content": {
@@ -273,6 +273,9 @@
               }
             },
             "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (also without `legal`), TURNSTILE_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /auth/methods)"
           },
           "default": {
             "content": {

@@ -2,7 +2,11 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { authMethodsResponseSchema, currentLegalVersions } from '@stepler/contracts';
+import {
+  authMethodsResponseSchema,
+  currentLegalVersions,
+  meResponseSchema,
+} from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -11,14 +15,18 @@ import {
   type GoogleClaims,
   type GoogleIdentity,
 } from '../src/auth/google/google-identity.js';
+import { encodeTransaction } from '../src/auth/google/oauth-cookie.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { configureApp } from '../src/create-app.js';
+import { deriveKey } from '../src/crypto/keys.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 
 const ORIGIN = 'http://localhost:3000';
 const prisma = createTestPrisma();
 const GOOGLE_ENV = { GOOGLE_CLIENT_ID: 'test-client', GOOGLE_CLIENT_SECRET: 'test-secret' };
+/** What the sign-in card appends to the Google start link once its checkbox is ticked. */
+const LEGAL_QUERY = currentLegalVersions();
 
 /** Records the verifier it was given and returns whatever claims the test sets. */
 class FakeGoogle implements GoogleIdentity {
@@ -66,7 +74,10 @@ describe('Google sign-in', () => {
   async function signIn(query: { returnTo?: string; code?: string; state?: string } = {}) {
     const start = await request(server())
       .get('/api/v1/auth/google/start')
-      .query(query.returnTo === undefined ? {} : { returnTo: query.returnTo })
+      .query({
+        ...LEGAL_QUERY,
+        ...(query.returnTo === undefined ? {} : { returnTo: query.returnTo }),
+      })
       .expect(302);
     const state = new URL(start.headers.location ?? '').searchParams.get('state') ?? '';
     const oauth = cookieValue(start, 'st_oauth') ?? '';
@@ -106,10 +117,111 @@ describe('Google sign-in', () => {
   });
 
   test('/start redirects to Google and sets st_oauth with the required attributes', async () => {
-    const res = await request(server()).get('/api/v1/auth/google/start').expect(302);
+    const res = await request(server())
+      .get('/api/v1/auth/google/start')
+      .query(LEGAL_QUERY)
+      .expect(302);
     expect(res.headers.location).toMatch(/^https:\/\/accounts\.example\/auth\?state=/);
     const line = setCookies(res).find((c) => c.startsWith('st_oauth=')) ?? '';
     expect(line).toMatch(/; Path=\/api\/v1\/auth\/google; Max-Age=600; HttpOnly; SameSite=Lax$/);
+  });
+
+  describe('legal acceptance at sign-in (ADR 0016)', () => {
+    test('Review Focus 2 (a): /start without versions → back to /login, no st_oauth cookie', async () => {
+      for (const query of [
+        {},
+        { terms: LEGAL_QUERY.terms },
+        { terms: '<script>', privacy: 'v1' },
+      ]) {
+        const res = await request(server())
+          .get('/api/v1/auth/google/start')
+          .query(query)
+          .expect(302);
+        expect(res.headers.location).toBe(`${ORIGIN}/login?error=LEGAL_ACCEPTANCE_REQUIRED`);
+        expect(setCookies(res).some((c) => c.startsWith('st_oauth='))).toBe(false);
+      }
+    });
+
+    test('Review Focus 2 (a): /start with a version that is not current → LEGAL_VERSION_OUTDATED', async () => {
+      const res = await request(server())
+        .get('/api/v1/auth/google/start')
+        .query({ ...LEGAL_QUERY, terms: 'v9' })
+        .expect(302);
+      expect(res.headers.location).toBe(`${ORIGIN}/login?error=LEGAL_VERSION_OUTDATED`);
+      expect(setCookies(res).some((c) => c.startsWith('st_oauth='))).toBe(false);
+    });
+
+    test('the signed transaction carries the versions', async () => {
+      const res = await request(server())
+        .get('/api/v1/auth/google/start')
+        .query(LEGAL_QUERY)
+        .expect(302);
+      const [payload = ''] = (cookieValue(res, 'st_oauth') ?? '').split('.');
+      const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as unknown;
+      expect(decoded).toMatchObject({ legal: currentLegalVersions() });
+    });
+
+    test('a new user is accepted at the callback, in its request', async () => {
+      const start = await request(server())
+        .get('/api/v1/auth/google/start')
+        .query(LEGAL_QUERY)
+        .expect(302);
+      const state = new URL(start.headers.location ?? '').searchParams.get('state') ?? '';
+      const res = await request(server())
+        .get('/api/v1/auth/google/callback')
+        .query({ code: 'good-code', state })
+        .set('Cookie', `st_oauth=${cookieValue(start, 'st_oauth') ?? ''}`)
+        .set('x-request-id', 'callback-req-0001')
+        .expect(302);
+      const session = cookieValue(res, 'st_session');
+      const me = await request(server())
+        .get('/api/v1/me')
+        .set('Cookie', `st_session=${session}`)
+        .expect(200);
+      expect(meResponseSchema.parse(me.body).legal.accepted).toBe(true);
+      const rows = await prisma.legalAcceptance.findMany();
+      expect(rows).toHaveLength(2);
+      for (const row of rows) expect(row.requestId).toBe('callback-req-0001');
+    });
+
+    test('Review Focus 3: an accepted user signing in again keeps one row per document', async () => {
+      await signIn();
+      await signIn();
+      expect(await prisma.user.count()).toBe(1);
+      expect(await prisma.legalAcceptance.count()).toBe(2);
+    });
+
+    test('a linked-by-email existing user without rows is accepted at the Google sign-in', async () => {
+      const existing = await prisma.user.create({
+        data: { email: google.claims.email, emailVerifiedAt: new Date() },
+      });
+      await signIn();
+      expect(await prisma.legalAcceptance.count({ where: { userId: existing.id } })).toBe(2);
+    });
+
+    test('Review Focus 2 (b): a transaction whose versions went stale signs in, records nothing, is gated', async () => {
+      // A transaction signed when other versions were current (valid format, not current now).
+      const key = deriveKey(testEnv(GOOGLE_ENV).APP_SECRET, 'st_oauth');
+      google.lastVerifier = 'stale-verifier';
+      const cookie = encodeTransaction(key, {
+        state: 'stale-state',
+        codeVerifier: 'stale-verifier',
+        returnTo: '/app',
+        legal: { terms: 'v9999', privacy: 'v9999' },
+      });
+      const res = await request(server())
+        .get('/api/v1/auth/google/callback')
+        .query({ code: 'good-code', state: 'stale-state' })
+        .set('Cookie', `st_oauth=${cookie}`)
+        .expect(302);
+      expect(res.headers.location).toBe(`${ORIGIN}/app`);
+      const session = `st_session=${cookieValue(res, 'st_session') ?? ''}`;
+      expect(await prisma.legalAcceptance.count()).toBe(0);
+      const me = await request(server()).get('/api/v1/me').set('Cookie', session).expect(200);
+      expect(meResponseSchema.parse(me.body).legal.accepted).toBe(false);
+      const gated = await request(server()).get('/api/v1/collections').set('Cookie', session);
+      expect(gated.body).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
+    });
   });
 
   test('a new sub and email → user created, session set, 302 to /app', async () => {
@@ -220,10 +332,13 @@ describe('Google sign-in', () => {
       .expect(302);
     expect(noCookie.headers.location).toBe(`${ORIGIN}/login?error=OAUTH_FAILED`);
 
-    const start = await request(server()).get('/api/v1/auth/google/start').expect(302);
+    const start = await request(server())
+      .get('/api/v1/auth/google/start')
+      .query(LEGAL_QUERY)
+      .expect(302);
     const state = new URL(start.headers.location ?? '').searchParams.get('state') ?? '';
     const oauth = cookieValue(start, 'st_oauth') ?? '';
-    const [payload = ''] = oauth.split('.');
+    const [payload = '', signature = ''] = oauth.split('.');
     const forged = `${payload}.${'A'.repeat(43)}`;
     const res = await request(server())
       .get('/api/v1/auth/google/callback')
@@ -231,6 +346,22 @@ describe('Google sign-in', () => {
       .set('Cookie', `st_oauth=${forged}`)
       .expect(302);
     expect(res.headers.location).toBe(`${ORIGIN}/login?error=OAUTH_FAILED`);
+
+    // The legal versions ride inside the signed payload: editing them breaks the signature.
+    const decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as Record<
+      string,
+      unknown
+    >;
+    const edited = Buffer.from(
+      JSON.stringify({ ...decoded, legal: { terms: 'v2', privacy: 'v2' } }),
+    ).toString('base64url');
+    const tampered = await request(server())
+      .get('/api/v1/auth/google/callback')
+      .query({ code: 'good-code', state })
+      .set('Cookie', `st_oauth=${edited}.${signature}`)
+      .expect(302);
+    expect(tampered.headers.location).toBe(`${ORIGIN}/login?error=OAUTH_FAILED`);
+    expect(await prisma.legalAcceptance.count()).toBe(0);
   });
 
   test('a failed code exchange or a provider error → OAUTH_FAILED', async () => {

@@ -1,12 +1,19 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectThrottlerStorage, type ThrottlerStorage } from '@nestjs/throttler';
-import type { Locale, MagicLinkPreviewResponse, MagicLinkRequest } from '@stepler/contracts';
+import {
+  isCurrentLegalVersions,
+  type LegalVersions,
+  type Locale,
+  type MagicLinkPreviewResponse,
+  type MagicLinkRequest,
+} from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
 import { deriveKey, hashIp } from '../crypto/keys.js';
 import { constraintViolation } from '../database/constraint-violation.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
+import { LegalService } from '../legal/legal.service.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { MAILER, type Mailer } from '../mail/mailer.js';
 import { renderMagicLinkEmail } from '../mail/templates/magic-link.js';
@@ -18,6 +25,8 @@ const HOUR_MS = 3600_000;
 interface ConsumedToken {
   email: string;
   locale: Locale;
+  legalTermsVersion: string | null;
+  legalPrivacyVersion: string | null;
 }
 
 @Injectable()
@@ -28,6 +37,7 @@ export class MagicLinkService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly limits: LimitsService,
+    private readonly legal: LegalService,
     @Inject(MAILER) private readonly mailer: Mailer,
     @Inject(TURNSTILE_VERIFIER) private readonly turnstile: TurnstileVerifier,
     @Inject(API_ENV) private readonly env: ApiEnv,
@@ -39,11 +49,14 @@ export class MagicLinkService {
   /**
    * Issues a link if allowed. Every outcome after Turnstile looks the same to the caller
    * (Review Focus 3), and mail goes out after the response so timing doesn't differ either.
+   * The accepted legal versions must be the current ones (a stale card: `400
+   * LEGAL_VERSION_OUTDATED`, before the IP counter and any row); they ride on the token row.
    */
   async request(input: MagicLinkRequest, ip: string | undefined): Promise<void> {
     if (!(await this.turnstile.verify(input.turnstileToken, ip))) {
       throw new AppError('TURNSTILE_FAILED', 400);
     }
+    if (!isCurrentLegalVersions(input.legal)) throw new AppError('LEGAL_VERSION_OUTDATED', 400);
     await this.countIpRequest(ip);
     const { email } = input;
     const recent = await this.prisma.magicLinkToken.count({
@@ -65,6 +78,8 @@ export class MagicLinkService {
         tokenHash: hashToken(token),
         expiresAt: new Date(Date.now() + this.env.MAGIC_LINK_TTL_MINUTES * 60_000),
         locale,
+        legalTermsVersion: input.legal.terms,
+        legalPrivacyVersion: input.legal.privacy,
         ...(ip === undefined ? {} : { requestIpHash: hashIp(this.ipKey, ip) }),
       },
     });
@@ -100,30 +115,42 @@ export class MagicLinkService {
   }
 
   /** Consumes the token atomically and returns the signed-in user id. */
-  async verify(token: string): Promise<string> {
+  async verify(token: string, requestId: string | undefined): Promise<string> {
     // One statement: of two concurrent verifies, only one sees the row (Review Focus 2).
     const [consumed] = await this.prisma.$queryRaw<ConsumedToken[]>`
       UPDATE "MagicLinkToken" SET "consumedAt" = now()
       WHERE "tokenHash" = ${hashToken(token)} AND "consumedAt" IS NULL AND "expiresAt" > now()
-      RETURNING "email"::text AS email, "locale"::text AS locale`;
+      RETURNING "email"::text AS email, "locale"::text AS locale,
+                "legalTermsVersion", "legalPrivacyVersion"`;
     if (consumed === undefined) throw new AppError('MAGIC_LINK_INVALID', 400);
-    return this.signInByEmail(consumed);
+    return this.signInByEmail(consumed, requestId);
   }
 
-  private async signInByEmail({ email, locale }: ConsumedToken): Promise<string> {
+  /**
+   * Completes the sign-in and records the legal acceptance the link carries, in one transaction
+   * (ADR 0016). A link from before the checkbox carries none and records nothing; a version that
+   * is no longer current is skipped by `recordAcceptance`; either way the gate takes over.
+   */
+  private async signInByEmail(
+    consumed: ConsumedToken,
+    requestId: string | undefined,
+  ): Promise<string> {
+    const { email, locale } = consumed;
     const user = await this.findOrCreateUser(email, locale);
     if (user.status === 'BLOCKED') throw new AppError('ACCOUNT_BLOCKED', 403);
-    await this.prisma.$transaction([
-      this.prisma.user.updateMany({
+    const legal = legalVersionsOf(consumed);
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
         where: { id: user.id, emailVerifiedAt: null },
         data: { emailVerifiedAt: new Date() },
-      }),
-      this.prisma.authAccount.upsert({
+      });
+      await tx.authAccount.upsert({
         where: { provider_providerAccountId: { provider: 'EMAIL', providerAccountId: email } },
         create: { userId: user.id, provider: 'EMAIL', providerAccountId: email },
         update: {},
-      }),
-    ]);
+      });
+      if (legal !== null) await this.legal.recordAcceptance(tx, user.id, legal, requestId);
+    });
     return user.id;
   }
 
@@ -154,6 +181,12 @@ export class MagicLinkService {
       this.logger.error({ msg: 'Magic link email failed', ...smtpErrorFields(error) });
     }
   }
+}
+
+/** The versions stored on a token row, or `null` for a link issued before slice 10. */
+function legalVersionsOf(row: ConsumedToken): LegalVersions | null {
+  if (row.legalTermsVersion === null || row.legalPrivacyVersion === null) return null;
+  return { terms: row.legalTermsVersion, privacy: row.legalPrivacyVersion };
 }
 
 /**

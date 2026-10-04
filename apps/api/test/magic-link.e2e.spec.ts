@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { currentLegalVersions } from '@stepler/contracts';
+import { currentLegalVersions, meResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { AppModule } from '../src/app.module.js';
@@ -44,8 +44,13 @@ describe('magic link sign-in', () => {
       .send({ email, turnstileToken: 'pass', legal: currentLegalVersions(), ...extra });
   const preview = (token: string) =>
     request(server()).post('/api/v1/auth/magic-link/preview').set('Origin', ORIGIN).send({ token });
-  const verify = (token: string) =>
-    request(server()).post('/api/v1/auth/magic-link/verify').set('Origin', ORIGIN).send({ token });
+  const verify = (token: string, requestId?: string) => {
+    const req = request(server()).post('/api/v1/auth/magic-link/verify').set('Origin', ORIGIN);
+    if (requestId !== undefined) req.set('x-request-id', requestId);
+    return req.send({ token });
+  };
+  const sessionOf = (res: request.Response): string =>
+    res.headers['set-cookie']?.[0]?.split(';')[0] ?? '';
 
   /** Requests a link and returns the token from the newest email (Mailpit lists newest first). */
   async function linkFor(email: string): Promise<string> {
@@ -103,6 +108,94 @@ describe('magic link sign-in', () => {
     expect(await prisma.authAccount.count({ where: { userId: user.id, provider: 'EMAIL' } })).toBe(
       1,
     );
+  });
+
+  describe('legal acceptance at sign-in (ADR 0016)', () => {
+    test('Review Focus 2 (a): no `legal` → 400 VALIDATION_FAILED, no row, no mail', async () => {
+      const email = newEmail();
+      const res = await request(server())
+        .post('/api/v1/auth/magic-link')
+        .set('Origin', ORIGIN)
+        .send({ email, turnstileToken: 'pass' })
+        .expect(400);
+      expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect(await prisma.magicLinkToken.count()).toBe(0);
+      expect(await messagesAfter(email, 300)).toHaveLength(0);
+    });
+
+    test('Review Focus 2 (a): a malformed version → 400 VALIDATION_FAILED', async () => {
+      const res = await requestLink(newEmail(), {
+        legal: { ...currentLegalVersions(), terms: '<script>' },
+      }).expect(400);
+      expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      expect(await prisma.magicLinkToken.count()).toBe(0);
+    });
+
+    test('Review Focus 2 (a): a version that is not current → 400 LEGAL_VERSION_OUTDATED, no row, no mail', async () => {
+      const email = newEmail();
+      const res = await requestLink(email, {
+        legal: { ...currentLegalVersions(), terms: 'v9' },
+      }).expect(400);
+      expect(res.body).toMatchObject({ code: 'LEGAL_VERSION_OUTDATED' });
+      expect(await prisma.magicLinkToken.count()).toBe(0);
+      expect(await messagesAfter(email, 300)).toHaveLength(0);
+    });
+
+    test('a new address: the token row holds the versions; verify records both in its request', async () => {
+      const email = newEmail();
+      const token = await linkFor(email);
+      const row = await prisma.magicLinkToken.findFirstOrThrow({ where: { email } });
+      expect({ terms: row.legalTermsVersion, privacy: row.legalPrivacyVersion }).toEqual(
+        currentLegalVersions(),
+      );
+
+      const signedIn = await verify(token, 'verify-req-0001').expect(200);
+      const me = await request(server())
+        .get('/api/v1/me')
+        .set('Cookie', sessionOf(signedIn))
+        .expect(200);
+      expect(meResponseSchema.parse(me.body).legal.accepted).toBe(true);
+      const rows = await prisma.legalAcceptance.findMany();
+      expect(rows).toHaveLength(2);
+      for (const acceptance of rows) expect(acceptance.requestId).toBe('verify-req-0001');
+      await request(server())
+        .get('/api/v1/collections')
+        .set('Cookie', sessionOf(signedIn))
+        .expect(200);
+    });
+
+    test('Review Focus 3: an accepted user signing in again keeps one row per document', async () => {
+      const email = newEmail();
+      await verify(await linkFor(email)).expect(200);
+      await verify(await linkFor(email)).expect(200);
+      expect(await prisma.legalAcceptance.count()).toBe(2);
+    });
+
+    test('Review Focus 2 (b): a link from before the checkbox signs in, records nothing and is gated', async () => {
+      const email = newEmail();
+      const token = await linkFor(email);
+      // A pre-slice row: no versions (a stale version cannot be stored: the CHECK).
+      await prisma.magicLinkToken.updateMany({
+        where: { email },
+        data: { legalTermsVersion: null, legalPrivacyVersion: null },
+      });
+      const signedIn = await verify(token).expect(200);
+      const cookie = sessionOf(signedIn);
+      const me = await request(server()).get('/api/v1/me').set('Cookie', cookie).expect(200);
+      expect(meResponseSchema.parse(me.body).legal.accepted).toBe(false);
+      const gated = await request(server()).get('/api/v1/collections').set('Cookie', cookie);
+      expect(gated.status).toBe(403);
+      expect(gated.body).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
+      expect(await prisma.legalAcceptance.count()).toBe(0);
+    });
+
+    test('the database refuses a malformed version on the token row', async () => {
+      const email = newEmail();
+      await linkFor(email);
+      await expect(
+        prisma.magicLinkToken.updateMany({ where: { email }, data: { legalTermsVersion: 'v0' } }),
+      ).rejects.toThrow();
+    });
   });
 
   test('the token is stored hashed and the request IP only as an HMAC', async () => {
@@ -275,7 +368,7 @@ describe('magic link per-IP limits', () => {
     expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
   });
 
-  test('requests with a failed Turnstile check do not use up the IP limit', async () => {
+  test('requests with a failed Turnstile check or outdated legal versions do not use up the IP limit', async () => {
     // Fresh counters: the previous test filled this IP's bucket.
     await app.close();
     app = await buildApp(
@@ -291,6 +384,18 @@ describe('magic link per-IP limits', () => {
         .send({ email: newEmail(), turnstileToken, legal: currentLegalVersions() });
     // Anyone can send junk tokens; they must not lock out real users behind the same IP.
     for (let i = 0; i < 5; i++) await send('junk').expect(400);
+    // Nor can a stale or bypassed sign-in card (outdated legal versions).
+    for (let i = 0; i < 5; i++) {
+      await request(server())
+        .post('/api/v1/auth/magic-link')
+        .set('Origin', ORIGIN)
+        .send({
+          email: newEmail(),
+          turnstileToken: 'pass',
+          legal: { ...currentLegalVersions(), terms: 'v9' },
+        })
+        .expect(400);
+    }
     await send('pass').expect(202);
     await send('pass').expect(202);
     await send('pass').expect(429);

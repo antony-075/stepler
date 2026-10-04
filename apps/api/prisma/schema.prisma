@@ -172,16 +172,20 @@ model LegalAcceptance {
 }
 
 model MagicLinkToken {
-  id            String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email         String    @db.Citext
+  id                  String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email               String    @db.Citext
   /// SHA-256 of the emailed token; the raw token is never stored.
-  tokenHash     String    @unique
-  expiresAt     DateTime  @db.Timestamptz(3)
-  consumedAt    DateTime? @db.Timestamptz(3)
-  locale        Locale
+  tokenHash           String    @unique
+  expiresAt           DateTime  @db.Timestamptz(3)
+  consumedAt          DateTime? @db.Timestamptz(3)
+  locale              Locale
   /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
-  requestIpHash String?
-  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+  requestIpHash       String?
+  /// Legal versions accepted on the sign-in card (ADR 0016), recorded at verify. NULL on links
+  /// issued before slice 10 (nothing is recorded). CHECK "MagicLinkToken_legal_versions_format".
+  legalTermsVersion   String?
+  legalPrivacyVersion String?
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([email, createdAt])
 }
