@@ -90,6 +90,11 @@ export class LimitsService {
     return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
   }
 
+  /** Guest deletes of their own frames per client IP per minute and route [C15]. */
+  guestWritesPerIpPerMinute(): number {
+    return this.env.LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE;
+  }
+
   /** Upload API calls per client IP per minute, per route (venue NAT shares an IP). */
   uploadCallsPerIpPerMinute(): number {
     return this.env.LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE;

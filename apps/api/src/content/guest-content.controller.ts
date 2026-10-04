@@ -106,7 +106,7 @@ export class GuestContentController {
 
   /** The guest's own item, when the link allows it [C15]; idempotent. */
   @Delete('content/:id')
-  @RateLimit('guest-read')
+  @RateLimit('guest-write')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse({
     status: 204,
