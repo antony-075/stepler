@@ -175,7 +175,12 @@ export class MagicLinkService {
     try {
       await this.mailer.send({
         to: email,
-        ...renderMagicLinkEmail({ url, locale, expiresInMinutes: this.env.MAGIC_LINK_TTL_MINUTES }),
+        ...renderMagicLinkEmail({
+          url,
+          locale,
+          expiresInMinutes: this.env.MAGIC_LINK_TTL_MINUTES,
+          appOrigin: this.env.APP_ORIGIN,
+        }),
       });
     } catch (error) {
       this.logger.error({ msg: 'Magic link email failed', ...smtpErrorFields(error) });

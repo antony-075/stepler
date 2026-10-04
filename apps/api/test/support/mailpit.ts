@@ -30,10 +30,15 @@ export async function messagesAfter(to: string, ms: number): Promise<MailpitSumm
   return search(to);
 }
 
+/** The plain-text body of a message. */
+export async function messageText(id: string): Promise<string> {
+  const res = await fetch(`${MAILPIT}/api/v1/message/${id}`);
+  return ((await res.json()) as { Text: string }).Text;
+}
+
 /** The `token` query value of the sign-in link in the plain-text body. */
 export async function magicLinkToken(id: string): Promise<string> {
-  const res = await fetch(`${MAILPIT}/api/v1/message/${id}`);
-  const text = ((await res.json()) as { Text: string }).Text;
+  const text = await messageText(id);
   const token = /\/auth\/verify\?token=([A-Za-z0-9_-]+)/.exec(text)?.[1];
   if (token === undefined) throw new Error('no magic link in the message');
   return token;

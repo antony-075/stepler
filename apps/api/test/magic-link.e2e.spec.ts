@@ -12,7 +12,7 @@ import { configureApp } from '../src/create-app.js';
 import { TURNSTILE_VERIFIER, type TurnstileVerifier } from '../src/turnstile/turnstile-verifier.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
-import { magicLinkToken, messagesAfter, waitForMessages } from './support/mailpit.js';
+import { magicLinkToken, messagesAfter, messageText, waitForMessages } from './support/mailpit.js';
 
 const ORIGIN = 'http://localhost:3000';
 const prisma = createTestPrisma();
@@ -174,7 +174,7 @@ describe('magic link sign-in', () => {
     test('Review Focus 2 (b): a link from before the checkbox signs in, records nothing and is gated', async () => {
       const email = newEmail();
       const token = await linkFor(email);
-      // A pre-slice row: no versions (a stale version cannot be stored: the CHECK).
+      // A pre-slice row: no versions.
       await prisma.magicLinkToken.updateMany({
         where: { email },
         data: { legalTermsVersion: null, legalPrivacyVersion: null },
@@ -187,6 +187,33 @@ describe('magic link sign-in', () => {
       expect(gated.status).toBe(403);
       expect(gated.body).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
       expect(await prisma.legalAcceptance.count()).toBe(0);
+    });
+
+    test('Review Focus 2 (b): a link whose versions went stale signs in, records nothing and is gated', async () => {
+      const email = newEmail();
+      const token = await linkFor(email);
+      // Well-formed but not current: the registry moved on after the link was requested.
+      await prisma.magicLinkToken.updateMany({
+        where: { email },
+        data: { legalTermsVersion: 'v9999', legalPrivacyVersion: 'v9999' },
+      });
+      const cookie = sessionOf(await verify(token).expect(200));
+      expect(await prisma.legalAcceptance.count()).toBe(0);
+      const me = await request(server()).get('/api/v1/me').set('Cookie', cookie).expect(200);
+      expect(meResponseSchema.parse(me.body).legal.accepted).toBe(false);
+      const gated = await request(server()).get('/api/v1/collections').set('Cookie', cookie);
+      expect(gated.status).toBe(403);
+      expect(gated.body).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
+    });
+
+    test('the email tells the mailbox owner that signing in accepts both documents', async () => {
+      const email = newEmail();
+      await requestLink(email).expect(202);
+      const [message] = await waitForMessages(email);
+      const text = await messageText(message?.ID ?? '');
+      expect(text).toContain('Продовжуючи, ви приймаєте Умови використання');
+      expect(text).toContain('http://localhost:3000/legal/terms');
+      expect(text).toContain('http://localhost:3000/legal/privacy');
     });
 
     test('the database refuses a malformed version on the token row', async () => {

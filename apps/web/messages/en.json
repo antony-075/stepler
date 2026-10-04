@@ -64,6 +64,7 @@
     "title": "Sign in to Stepler",
     "signInAs": "You're signing in as {email}",
     "notYou": "Not you? Don't press the button, just close this page.",
+    "legal": "By continuing, you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.",
     "submit": "Sign in",
     "signingIn": "Signing in…",
     "backToLogin": "Get a new link",

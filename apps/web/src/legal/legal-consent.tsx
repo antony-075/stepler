@@ -54,15 +54,22 @@ export function LegalConsent({
       />
       <Label htmlFor={id} className="block min-w-0 flex-1 font-normal text-pretty">
         {t.rich(messageKey, {
-          terms: (chunks) => <DocumentLink document="TERMS">{chunks}</DocumentLink>,
-          privacy: (chunks) => <DocumentLink document="PRIVACY">{chunks}</DocumentLink>,
+          terms: (chunks) => <LegalDocumentLink document="TERMS">{chunks}</LegalDocumentLink>,
+          privacy: (chunks) => <LegalDocumentLink document="PRIVACY">{chunks}</LegalDocumentLink>,
         })}
       </Label>
     </div>
   );
 }
 
-function DocumentLink({ document, children }: { document: LegalDocumentKey; children: ReactNode }) {
+/** A document title linking to its page in a new tab, in the link style of running text. */
+export function LegalDocumentLink({
+  document,
+  children,
+}: {
+  document: LegalDocumentKey;
+  children: ReactNode;
+}) {
   return (
     <a
       href={legalPath(document)}

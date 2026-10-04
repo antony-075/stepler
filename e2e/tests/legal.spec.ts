@@ -152,6 +152,24 @@ test.describe('acceptance at sign-in (ADR 0016)', () => {
     await submit.click();
     await expect(page.getByRole('heading', { name: SIGN_IN_UK.sent })).toBeVisible();
     await page.goto(await latestMagicLink(email));
+    // The mailbox owner accepts here, by signing in (ADR 0016): the line names both documents.
+    const line = page.getByText(/^Продовжуючи, ви приймаєте/);
+    await expect(line).toBeVisible();
+    for (const [name, path] of [
+      [TITLES.terms, '/legal/terms'],
+      ['Політику конфіденційності', '/legal/privacy'],
+    ] as const) {
+      const docLink = line.getByRole('link', { name });
+      await expect(docLink).toHaveAttribute('href', path);
+      await expect(docLink).toHaveAttribute('target', '_blank');
+    }
+    const [privacy] = await Promise.all([
+      context.waitForEvent('page'),
+      line.getByRole('link', { name: 'Політику конфіденційності' }).click(),
+    ]);
+    await privacy.waitForLoadState();
+    await expect(privacy.getByRole('heading', { level: 1 })).toHaveText(TITLES.privacy);
+    await privacy.close();
     await page.getByRole('button', { name: SIGN_IN_UK.signIn }).click();
     await expect(page).toHaveURL(/\/app$/);
     expect(visited).not.toContain('/accept-terms');
