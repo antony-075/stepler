@@ -7,8 +7,9 @@
 // - Privacy first: another guest's frame is only its time and kind. No number, no name, no file
 //   name or size (the API does not send them). The guest's own frame shows its `#012`, file
 //   name and size, like the admin's details.
-// - «Завантажити» on every file; «Видалити» only on the guest's own frame and only when the link
-//   allows it, behind a plain confirm («Видалити кадр #012?»), never typed.
+// - «Завантажити» on every file: another guest's downloads as a neutral `stepler.<ext>` (the API
+//   signs no file name or number into its link); «Видалити» only on the guest's own frame and
+//   only when the link allows it, behind a plain confirm («Видалити кадр #012?»), never typed.
 import type { GuestContentItem } from '@stepler/contracts';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { FrameViewer } from '@stepler/ui/components/frame-viewer';

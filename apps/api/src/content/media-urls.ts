@@ -95,6 +95,14 @@ export function fallbackFilename(item: ItemWithMedia, mimeType: string): string 
   return `stepler-${String(item.frameNo).padStart(3, '0')}.${ext}`;
 }
 
+/**
+ * `stepler.jpg`: the download name of another guest's file. No frame number and nothing of the
+ * original name (spec §8, ADR 0015, [C16]); only the verified type's extension, else `bin`.
+ */
+export function neutralFilename(mimeType: string): string {
+  return `stepler.${EXT_BY_MIME.get(mimeType) ?? 'bin'}`;
+}
+
 @Injectable()
 export class MediaUrls {
   constructor(
@@ -116,9 +124,15 @@ export class MediaUrls {
 
   /**
    * The original, to view (photos and videos only: a document is never opened inline from our
-   * storage origin) and to download (an attachment for every file).
+   * storage origin) and to download (an attachment for every file). The download carries the
+   * original name and frame number only for the admin and the guest who added it (`own`, the
+   * default); for anyone else's file it is a neutral `stepler.<ext>` (the disposition is part of
+   * the signed URL, which the guest can read).
    */
-  async original(item: ItemWithMedia, now = new Date()): Promise<OriginalUrls> {
+  async original(
+    item: ItemWithMedia,
+    { own = true, now = new Date() }: { own?: boolean; now?: Date } = {},
+  ): Promise<OriginalUrls> {
     const original = mediaOf(item, 'ORIGINAL');
     if (original === undefined) return { originalUrl: null, downloadUrl: null };
     const viewable = item.kind === 'PHOTO' || item.kind === 'VIDEO';
@@ -126,10 +140,9 @@ export class MediaUrls {
       viewable ? this.inline(item, 'ORIGINAL', now) : Promise.resolve(null),
       this.sign(original.storageKey, now, {
         contentType: original.mimeType,
-        contentDisposition: contentDispositionFor(
-          item.originalFilename,
-          fallbackFilename(item, original.mimeType),
-        ),
+        contentDisposition: own
+          ? contentDispositionFor(item.originalFilename, fallbackFilename(item, original.mimeType))
+          : `attachment; filename="${neutralFilename(original.mimeType)}"`,
       }),
     ]);
     return { originalUrl: originalUrl ?? null, downloadUrl };
