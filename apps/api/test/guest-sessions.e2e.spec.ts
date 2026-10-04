@@ -84,7 +84,13 @@ describe('guest sessions [C3]', () => {
     expect(sessions[0]?.currentLinkId).toBe(link.id);
 
     expect(guestContextSchema.parse(res.body)).toEqual({
-      collection: { id: collectionId, title: 'Весілля', description: 'Опис' },
+      collection: {
+        id: collectionId,
+        title: 'Весілля',
+        description: 'Опис',
+        welcomeMessage: null,
+        cover: null,
+      },
       permissions: CONTRIBUTE_ONLY,
       guest: { name: null, nameAnswered: false },
       limits: {

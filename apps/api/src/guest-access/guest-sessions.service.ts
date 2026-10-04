@@ -17,6 +17,7 @@ interface ContextCollection {
   id: string;
   title: string;
   description: string | null;
+  welcomeMessage: string | null;
 }
 
 /**
@@ -143,7 +144,9 @@ export class GuestSessionsService {
   async context(p: GuestPrincipal): Promise<GuestContext> {
     const session = await this.prisma.guestSession.findUniqueOrThrow({
       where: { id: p.guestSessionId },
-      include: { collection: { select: { id: true, title: true, description: true } } },
+      include: {
+        collection: { select: { id: true, title: true, description: true, welcomeMessage: true } },
+      },
     });
     return this.buildContext(p, session.collection, session);
   }
@@ -170,6 +173,9 @@ export class GuestSessionsService {
         id: collection.id,
         title: collection.title,
         description: collection.description,
+        welcomeMessage: collection.welcomeMessage,
+        // Cover URLs arrive with the cover DTO (Task 3 of the appearance plan).
+        cover: null,
       },
       permissions: p.link.permissions,
       guest: { name: session.contributorName, nameAnswered: session.nameAnsweredAt !== null },

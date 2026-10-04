@@ -65,6 +65,9 @@ export function toCollectionDto(
     ...defaultLink(row.guestLinks[0]),
     contentCount: content.count,
     lastContentAt: content.lastAt?.toISOString() ?? null,
+    welcomeMessage: row.welcomeMessage,
+    // Cover URLs arrive with the cover DTO (Task 3 of the appearance plan).
+    cover: null,
   };
 }
 

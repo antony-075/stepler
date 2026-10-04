@@ -11,7 +11,12 @@ import { GuestLinkTokens } from './guest-link-tokens.js';
 
 export interface ResolvedGuestLink {
   link: GuestLinkRow;
-  collection: { id: string; title: string; description: string | null };
+  collection: {
+    id: string;
+    title: string;
+    description: string | null;
+    welcomeMessage: string | null;
+  };
 }
 
 /** The states that decide whether a guest may use a link right now. */
@@ -60,6 +65,7 @@ export class GuestLinkResolver {
                   id: true,
                   title: true,
                   description: true,
+                  welcomeMessage: true,
                   status: true,
                   owner: { select: { status: true } },
                 },
@@ -75,6 +81,7 @@ export class GuestLinkResolver {
         id: collection.id,
         title: collection.title,
         description: collection.description,
+        welcomeMessage: collection.welcomeMessage,
       },
     };
   }

@@ -24,6 +24,15 @@ import {
 /** Bytes read to detect the type ([C17]). */
 const SIGNATURE_BYTES = 4096;
 
+/**
+ * A guest's upload always has its session (CHECK `UploadSession_purpose_actor`); `findOwnUpload`
+ * only returns rows of the guest's own session, so this is a type narrowing, not a check.
+ */
+function guestSessionIdOf(row: UploadSession): string {
+  if (row.guestSessionId === null) throw new Error('content upload without a guest session');
+  return row.guestSessionId;
+}
+
 /** What storage showed about the upload: a file to record, or the reason it is refused. */
 type Verdict = { kind: 'file'; mime: string; size: number } | { kind: 'refuse'; error: AppError };
 
@@ -197,8 +206,9 @@ export class UploadCompletion {
       if (!(error instanceof AppError)) throw error;
       return this.close(tx, row, 'REJECTED', error);
     }
+    const guestSessionId = guestSessionIdOf(row);
     const session = await tx.guestSession.findUniqueOrThrow({
-      where: { id: row.guestSessionId },
+      where: { id: guestSessionId },
       select: { contributorName: true },
     });
     const kind = row.kind;
@@ -207,7 +217,7 @@ export class UploadCompletion {
         collectionId: row.collectionId,
         frameNo,
         kind,
-        contributorGuestSessionId: row.guestSessionId,
+        contributorGuestSessionId: guestSessionId,
         contributorName: session.contributorName,
         originalFilename: row.originalFilename,
         processingStatus: kind === 'DOCUMENT' ? 'NOT_REQUIRED' : 'PENDING',
@@ -255,7 +265,7 @@ export class UploadCompletion {
     row: UploadSession,
   ): Promise<AppError | null> {
     const session = await tx.guestSession.findUniqueOrThrow({
-      where: { id: row.guestSessionId },
+      where: { id: guestSessionIdOf(row) },
       include: {
         currentLink: true,
         collection: { select: { status: true, owner: { select: { status: true } } } },
