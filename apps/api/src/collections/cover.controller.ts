@@ -14,11 +14,13 @@ import {
   collectionSchema,
   coverUploadParamsSchema,
   createUploadRequestSchema,
+  setCoverFromFrameRequestSchema,
   uploadPartsRequestSchema,
   uploadPartsResponseSchema,
   uploadSessionResponseSchema,
   type Collection,
   type CreateUploadRequest,
+  type SetCoverFromFrameRequest,
   type UploadPartsRequest,
   type UploadPartsResponse,
   type UploadSessionResponse,
@@ -29,6 +31,7 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { CoverUploadsService } from './cover-uploads.service.js';
+import { CoversService } from './covers.service.js';
 
 type CollectionIdParams = z.infer<typeof collectionIdParamsSchema>;
 type CoverUploadParams = z.infer<typeof coverUploadParamsSchema>;
@@ -36,10 +39,11 @@ type CoverUploadParams = z.infer<typeof coverUploadParamsSchema>;
 const RATE_LIMITED = 'RATE_LIMITED: calls per IP or per user (see Retry-After)';
 
 /**
- * The collection cover, set by its owner (slice 8a, [A1]): the cover file goes to storage the
- * way guest files do (a multipart upload session, verified at completion), under the admin
- * session. Only the owner's own collection and own uploads are reachable; anything else is
- * `404`. Every route also keeps the CSRF origin check (unsafe methods).
+ * The collection cover, set by its owner (slice 8a): from an uploaded photo [A1] (the file goes
+ * to storage the way guest files do: a multipart upload session, verified at completion) or from
+ * a guest photo frame [A8]; removed whole. All under the admin session: only the owner's own
+ * collection, uploads and frames are reachable; anything else is `404`. Every route also keeps
+ * the CSRF origin check (unsafe methods). No cover change on an archived collection [A6].
  */
 @ApiTags('Collections')
 @ApiCookieAuth(SESSION_COOKIE_SCHEME)
@@ -47,7 +51,53 @@ const RATE_LIMITED = 'RATE_LIMITED: calls per IP or per user (see Retry-After)';
 @UseGuards(RateLimitGuard)
 @Controller({ path: 'collections/:id/cover', version: '1' })
 export class CoverController {
-  constructor(private readonly uploads: CoverUploadsService) {}
+  constructor(
+    private readonly uploads: CoverUploadsService,
+    private readonly covers: CoversService,
+  ) {}
+
+  /** Copies a guest photo's original into the cover; the frame itself is untouched. */
+  @Post('from-frame')
+  @RateLimit('admin-cover', 'admin-cover-user')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: collectionSchema })
+  @ApiResponse({
+    status: 404,
+    description: 'NOT_FOUND: not the owner’s collection, or no such live frame in it',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'COLLECTION_ARCHIVED, QUOTA_EXCEEDED (the copy does not fit the collection or the account)',
+  })
+  @ApiResponse({
+    status: 422,
+    description: 'COVER_SOURCE_INVALID: not a photo, no original, or its processing failed',
+  })
+  @ApiResponse({ status: 429, description: RATE_LIMITED })
+  @ApiResponse({ status: 503, description: 'DEPENDENCY_UNAVAILABLE: storage; retryable' })
+  fromFrame(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
+    @Body({ schema: setCoverFromFrameRequestSchema }) body: SetCoverFromFrameRequest,
+  ): Promise<Collection> {
+    return this.covers.setFromFrame(principal, params.id, body.contentItemId);
+  }
+
+  /** Removes the cover (the initials tile shows again). Idempotent. */
+  @Delete()
+  @RateLimit('admin-cover', 'admin-cover-user')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({ status: 204, description: 'Removed (or there was none)' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: not the owner’s collection' })
+  @ApiResponse({ status: 409, description: 'COLLECTION_ARCHIVED' })
+  @ApiResponse({ status: 429, description: RATE_LIMITED })
+  remove(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
+  ): Promise<void> {
+    return this.covers.remove(principal, params.id);
+  }
 
   /** Opens a cover upload (photos only); the same `clientUploadId` and file returns the open one. */
   @Post('uploads')
