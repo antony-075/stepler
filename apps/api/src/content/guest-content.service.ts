@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   GuestContentDetail,
   GuestContentListQuery,
@@ -7,7 +7,9 @@ import type {
 import type { GuestPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
-import { canListAll, canSeeItem } from '../guest-access/guest-policy.js';
+import { canDeleteOwn, canListAll, canSeeItem, isOwnItem } from '../guest-access/guest-policy.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { ContentDeletion } from './content-deletion.js';
 import { toGuestContentDetail, toGuestContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
 import { MediaUrls, WITH_MEDIA } from './media-urls.js';
@@ -22,6 +24,8 @@ export class GuestContentService {
     private readonly prisma: PrismaService,
     private readonly queries: ContentQueries,
     private readonly media: MediaUrls,
+    private readonly deletion: ContentDeletion,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   async list(p: GuestPrincipal, query: GuestContentListQuery): Promise<GuestContentPage> {
@@ -50,5 +54,28 @@ export class GuestContentService {
       await this.media.forItem(row),
       await this.media.original(row),
     );
+  }
+
+  /**
+   * Deletes one of the guest's own items [C15]. Another guest's item, one of another collection
+   * or one that never existed are all `404`, before the permission is looked at, so the answer
+   * never tells whether someone else's item exists. An own item through a link without
+   * `canDeleteOwn` (checked against the link the session is bound to now) is `403`. Already
+   * deleted → `204` (idempotent).
+   */
+  async delete(p: GuestPrincipal, id: string, requestId?: string): Promise<void> {
+    await this.jobs.ready();
+    await this.prisma.$transaction(async (tx) => {
+      const row = await tx.contentItem.findFirst({
+        where: { id, collectionId: p.collectionId },
+        select: { id: true, contributorGuestSessionId: true },
+      });
+      if (row === null || !isOwnItem(p, row)) throw new AppError('NOT_FOUND', 404);
+      if (!canDeleteOwn(p)) throw new AppError('FORBIDDEN', 403);
+      await this.deletion.softDelete(tx, p.collectionId, [row.id], p, {
+        bulk: false,
+        ...(requestId === undefined ? {} : { requestId }),
+      });
+    });
   }
 }

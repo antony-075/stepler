@@ -6,9 +6,10 @@ import { Button } from '@stepler/ui/components/button';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
 import { Skeleton } from '@stepler/ui/components/skeleton';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
+import { isApiError } from '@/api/client';
 import { MediaImg } from '@/media/media-img';
 import {
   awaitsPreview,
@@ -16,7 +17,8 @@ import {
   gridPicture,
   guestPollDelay,
 } from '@/media/previews';
-import { listGuestContent } from './api';
+import { deleteGuestContent, listGuestContent } from './api';
+import { GuestViewer } from './guest-viewer';
 
 export const guestContentKey = (collectionId: string, scope: 'own' | 'all') =>
   ['guest-content', collectionId, scope] as const;
@@ -33,13 +35,22 @@ const LIST_STALE_MS = 30 * 60_000;
 /** Decorative: the frame's accessible name says what the picture is. */
 const DECORATIVE = '';
 
-function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: () => void }) {
+function GuestFrame({
+  item,
+  onExpired,
+  onOpen,
+}: {
+  item: GuestContentItem;
+  onExpired: () => void;
+  onOpen: () => void;
+}) {
   const t = useTranslations('guest.frame');
   const time = useFrameTime()(item.createdAt);
   const number = item.frameNo ?? undefined;
   if (item.kind === 'TEXT') {
     return (
       <Frame
+        onOpen={onOpen}
         kind="text"
         number={number}
         text={item.text ?? ''}
@@ -55,6 +66,7 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
     const type = name?.includes('.') ? (name.split('.').pop()?.toUpperCase() ?? '') : '';
     return (
       <Frame
+        onOpen={onOpen}
         kind="document"
         number={number}
         docType={type === '' ? t('documentType') : type}
@@ -76,6 +88,7 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
   if (picture.kind === 'thumbnail' || (picture.kind === 'failed' && item.kind === 'VIDEO')) {
     return (
       <Frame
+        onOpen={onOpen}
         kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
         {...(picture.kind === 'thumbnail'
           ? {
@@ -104,6 +117,7 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
   }
   return (
     <Frame
+      onOpen={onOpen}
       kind="pending-preview"
       number={number}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
@@ -132,6 +146,7 @@ export function GuestFrames({
   label,
   empty,
   hide,
+  onDeleted,
 }: {
   collectionId: string;
   scope: 'own' | 'all';
@@ -140,8 +155,12 @@ export function GuestFrames({
   empty: ReactNode;
   /** Items already shown elsewhere (this page's upload batch). */
   hide?: ReadonlySet<string>;
+  /** After the guest deleted one of their frames (the page refreshes its counts). */
+  onDeleted?: () => void;
 }) {
   const t = useTranslations('guest');
+  const queryClient = useQueryClient();
+  const [openId, setOpenId] = useState<string | null>(null);
   const query = useInfiniteQuery({
     queryKey: guestContentKey(collectionId, scope),
     queryFn: ({ pageParam }) =>
@@ -199,11 +218,34 @@ export function GuestFrames({
     .flatMap((page) => page.items)
     .filter((item) => hide === undefined || !hide.has(item.id));
   if (items.length === 0) return hide !== undefined && hide.size > 0 ? null : empty;
+
+  /** Idempotent; a frame the organiser removed meanwhile (404) is gone all the same. */
+  async function remove(item: GuestContentItem) {
+    try {
+      await call((id) => deleteGuestContent(id, item.id));
+    } catch (error) {
+      if (!isApiError(error, 'NOT_FOUND')) throw error;
+    }
+    setOpenId(null);
+    await Promise.all(
+      (['own', 'all'] as const).map((s) =>
+        queryClient.invalidateQueries({ queryKey: guestContentKey(collectionId, s) }),
+      ),
+    );
+    onDeleted?.();
+  }
+
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" data-list={scope}>
       <FrameGrid ariaLabel={label}>
         {items.map((item) => (
-          <GuestFrame key={item.id} item={item} onExpired={() => void query.refetch()} />
+          <div key={item.id} data-item={item.id}>
+            <GuestFrame
+              item={item}
+              onExpired={() => void query.refetch()}
+              onOpen={() => setOpenId(item.id)}
+            />
+          </div>
         ))}
       </FrameGrid>
       {query.hasNextPage ? (
@@ -218,6 +260,16 @@ export function GuestFrames({
           {t('loadMore')}
         </Button>
       ) : null}
+      <GuestViewer
+        collectionId={collectionId}
+        call={call}
+        listId={scope}
+        items={items}
+        openId={openId}
+        onNavigate={setOpenId}
+        onClose={() => setOpenId(null)}
+        onDelete={remove}
+      />
     </div>
   );
 }

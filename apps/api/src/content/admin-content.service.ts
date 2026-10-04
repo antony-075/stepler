@@ -5,12 +5,12 @@ import type {
   AdminContentPage,
   ContentCounts,
 } from '@stepler/contracts';
-import { AuditService } from '../audit/audit.service.js';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { ContentDeletion } from './content-deletion.js';
 import { toAdminContentDetail, toAdminContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
 import { MediaUrls, WITH_MEDIA } from './media-urls.js';
@@ -25,7 +25,7 @@ export class AdminContentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly queries: ContentQueries,
-    private readonly audit: AuditService,
+    private readonly deletion: ContentDeletion,
     private readonly media: MediaUrls,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
@@ -75,25 +75,11 @@ export class AdminContentService {
       // The canonical id comes from the row: the route accepts a UUID in any case.
       const row = await tx.contentItem.findFirst({
         where: { id, collection: ownedBy(a) },
-        select: { id: true, collectionId: true, kind: true, frameNo: true },
+        select: { id: true, collectionId: true },
       });
       if (row === null) throw new AppError('NOT_FOUND', 404);
-      const { count } = await tx.contentItem.updateMany({
-        where: { id: row.id, deletedAt: null },
-        data: { deletedAt: new Date() },
-      });
-      if (count === 0) return;
-      await this.audit.record(tx, {
-        collectionId: row.collectionId,
-        actor: a,
-        action: 'content.delete',
-        targetType: 'content',
-        targetId: row.id,
-        metadata: { kind: row.kind, frameNo: row.frameNo, bulk: false },
-        ...(requestId === undefined ? {} : { requestId }),
-      });
-      await this.jobs.enqueue(tx, 'content.purge', {
-        contentItemId: row.id,
+      await this.deletion.softDelete(tx, row.collectionId, [row.id], a, {
+        bulk: false,
         ...(requestId === undefined ? {} : { requestId }),
       });
     });

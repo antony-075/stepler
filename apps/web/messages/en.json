@@ -368,7 +368,8 @@
       "texts": "Wishes",
       "viewOnly": "View only",
       "seeOwn": "See only their own",
-      "seeAll": "See everything"
+      "seeAll": "See everything",
+      "deleteOwn": "Can delete their own"
     }
   },
   "share": {
@@ -457,7 +458,12 @@
       "addTitle": "What guests can add",
       "addDescription": "Choose what guests can add through this link.",
       "seeTitle": "What guests see",
-      "seeDescription": "Whose content guests see when they open the link."
+      "seeDescription": "Whose content guests see when they open the link.",
+      "deleteOwn": {
+        "title": "Guests can delete their own",
+        "hint": "Each guest can delete only what they added themselves.",
+        "disabled": "First let guests add something."
+      }
     },
     "state": {
       "title": "Link status",
@@ -707,6 +713,26 @@
         "NETWORK": "the connection dropped",
         "STORAGE_403": "storage refused the file"
       }
+    },
+    "viewer": {
+      "close": "Close",
+      "prev": "Previous frame",
+      "next": "Next frame",
+      "download": "Download",
+      "delete": "Delete",
+      "added": "Added",
+      "type": "Type",
+      "file": "File",
+      "size": "Size",
+      "otherHint": "Only the organiser sees who added this frame.",
+      "photoAlt": "Frame {number}",
+      "deleteTitle": "Delete frame {frame}?",
+      "deleteText": "The organiser won’t see it any more either.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deletePending": "Deleting",
+      "deleteFailed": "Couldn’t delete the frame. Try again.",
+      "deleted": "Frame deleted"
     }
   },
   "account": {

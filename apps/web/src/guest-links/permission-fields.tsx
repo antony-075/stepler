@@ -4,11 +4,12 @@ import { Alert } from '@stepler/ui/components/alert';
 import { Checkbox } from '@stepler/ui/components/checkbox';
 import { Label } from '@stepler/ui/components/label';
 import { RadioGroup, RadioGroupItem } from '@stepler/ui/components/radio-group';
+import { Switch } from '@stepler/ui/components/switch';
 import { cn } from '@stepler/ui/lib/utils';
 import { CircleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useId } from 'react';
-import { addsNothing, isValidForm, type PermissionForm } from './link-permissions';
+import { addsNothing, isValidForm, normalizeForm, type PermissionForm } from './link-permissions';
 import { ADD_TYPES } from './permission-types';
 
 type FieldsProps = {
@@ -64,7 +65,9 @@ export function AddPermissionTiles({
             </span>
             <Checkbox
               checked={value[name]}
-              onCheckedChange={(checked) => onChange({ ...value, [name]: checked === true })}
+              onCheckedChange={(checked) =>
+                onChange(normalizeForm({ ...value, [name]: checked === true }))
+              }
               aria-labelledby={`${id}-${name}`}
               aria-describedby={`${id}-${name}-hint`}
               aria-invalid={invalid || undefined}
@@ -73,6 +76,48 @@ export function AddPermissionTiles({
         ))}
       </div>
     </fieldset>
+  );
+}
+
+/**
+ * «Гості можуть видаляти своє» [C15]: a switch row under the tiles. Deleting one's own needs
+ * something to add (ADR 0007), so with nothing to add the switch is off and disabled, and the
+ * line under it says why instead of what it means.
+ */
+export function DeleteOwnToggle({
+  value,
+  onChange,
+  className,
+}: FieldsProps & { className?: string }) {
+  const t = useTranslations('links.permissions.deleteOwn');
+  const id = useId();
+  const blocked = addsNothing(value);
+  return (
+    <Label
+      data-slot="delete-own"
+      className={cn(
+        BOX,
+        'min-h-16 gap-3 px-3.5 py-3 text-base leading-normal font-normal',
+        blocked ? 'cursor-not-allowed hover:border-border' : 'cursor-pointer',
+        className,
+      )}
+    >
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span id={`${id}-title`} className="font-semibold">
+          {t('title')}
+        </span>
+        <span id={`${id}-hint`} className="text-sm leading-[1.4] text-muted-foreground">
+          {blocked ? t('disabled') : t('hint')}
+        </span>
+      </span>
+      <Switch
+        checked={value.deleteOwn && !blocked}
+        disabled={blocked}
+        onCheckedChange={(checked) => onChange({ ...value, deleteOwn: checked })}
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-hint`}
+      />
+    </Label>
   );
 }
 
@@ -159,7 +204,10 @@ export function PermissionFields({ value, onChange }: FieldsProps) {
   const t = useTranslations('links.permissions');
   return (
     <div className="grid gap-5">
-      <AddPermissionTiles value={value} onChange={onChange} legend={t('addLegend')} />
+      <div className="grid gap-3">
+        <AddPermissionTiles value={value} onChange={onChange} legend={t('addLegend')} />
+        <DeleteOwnToggle value={value} onChange={onChange} />
+      </div>
       <SeePermissionCards value={value} onChange={onChange} legend={t('seeLegend')} />
       <PermissionNotice value={value} />
     </div>

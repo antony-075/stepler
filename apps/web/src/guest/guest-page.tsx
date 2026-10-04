@@ -34,7 +34,7 @@ import { useTranslations } from 'next-intl';
 import { UploadDock } from '@stepler/ui/components/upload-dock';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkStatePage } from '@/app/g/[token]/link-state-page';
-import { submitText, updateName } from './api';
+import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 import type { GuestPageState } from './guest-state';
 import { NamePrompt } from './name-prompt';
@@ -177,6 +177,11 @@ function GuestCollection({
     }
   }, [addedCount, collectionId, onAdded, queryClient]);
 
+  /** The header's counts after the guest deleted a frame; a failure keeps the old line. */
+  function refreshContext() {
+    call((id) => getContext(id)).then(setContext, () => {});
+  }
+
   const saveName = useMutation({
     mutationFn: (name: string | null) => call((id) => updateName(id, name)),
     onSuccess: setContext,
@@ -291,6 +296,7 @@ function GuestCollection({
                 call={call}
                 label={t('listLabelOwn')}
                 hide={doneIds}
+                onDeleted={refreshContext}
                 empty={
                   <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
                     {t('ownEmpty')}
@@ -310,6 +316,7 @@ function GuestCollection({
                 scope="all"
                 call={call}
                 label={t('listLabelAll')}
+                onDeleted={refreshContext}
                 empty={
                   <EmptyState
                     frameNumber={1}

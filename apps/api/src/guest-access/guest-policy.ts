@@ -31,5 +31,8 @@ export const isOwnItem = (p: GuestPrincipal, item: ItemOwnership): boolean =>
 export const canSeeItem = (p: GuestPrincipal, item: ItemOwnership): boolean =>
   isOwnItem(p, item) || canListAll(p);
 
+/** The link lets its guests delete what they added themselves [C15]. */
+export const canDeleteOwn = (p: GuestPrincipal): boolean => p.link.permissions.canDeleteOwn;
+
 export const canDeleteItem = (p: GuestPrincipal, item: ItemOwnership): boolean =>
-  isOwnItem(p, item) && p.link.permissions.canDeleteOwn;
+  isOwnItem(p, item) && canDeleteOwn(p);

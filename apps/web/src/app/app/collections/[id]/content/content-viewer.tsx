@@ -1,32 +1,21 @@
 'use client';
 
-import type { AdminContentDetail, AdminContentItem } from '@stepler/contracts';
+import type { AdminContentItem } from '@stepler/contracts';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { FrameViewer } from '@stepler/ui/components/frame-viewer';
 import { useToast } from '@stepler/ui/components/toast';
-import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
-import { cn } from '@stepler/ui/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { Download, FileText, ImageIcon, Quote, Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { getContent } from '@/api/content';
 import { formatBytes, formatDuration } from '@/format/bytes';
-import { documentType } from './document-type';
 import { contentDetailKey } from './use-pending-previews';
-import { MediaImg } from '@/media/media-img';
-
-/** Browsers outside Safari cannot show HEIC/HEIF: only their preview is shown. */
-const NOT_SHOWN = new Set(['image/heic', 'image/heif']);
+import { FileStage, TextStage, viewerButton } from '@/media/viewer-stage';
 
 /** Media links are signed for at least an hour (spec §10.6); refetch well before. */
 const DETAIL_STALE_MS = 30 * 60_000;
-
-const viewerButton = cn(
-  'inline-flex h-11 shrink-0 items-center gap-2 rounded-control px-3 text-[0.9375rem] font-semibold text-viewer-foreground transition-colors duration-(--duration-fast) hover:bg-[rgb(255_255_255/0.12)] motion-reduce:transition-none',
-  focusRing,
-);
 
 /**
  * One frame for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): full screen on phones and
@@ -165,26 +154,11 @@ export function ContentViewer({
         }
       >
         {item.kind === 'TEXT' ? (
-          // On phones the card keeps clear of the previous/next buttons at the stage's edges.
-          <div className="flex size-full min-h-0 min-w-0 items-center justify-center max-sm:px-12">
-            <div
-              // A long wish scrolls in its own box; keyboard users scroll it too.
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-              tabIndex={0}
-              className={cn(
-                'max-h-full w-fit min-w-[min(100%,20rem)] max-w-[min(100%,60ch)] overflow-y-auto rounded-dialog border border-[rgb(255_255_255/0.1)] bg-[rgb(255_255_255/0.05)] px-6 py-7 sm:px-10 sm:py-9',
-                focusRing,
-              )}
-            >
-              <Quote aria-hidden="true" className="mb-4 size-6 text-muted-foreground" />
-              <p className="text-xl leading-[1.55] text-pretty whitespace-pre-line [overflow-wrap:anywhere] sm:text-2xl sm:leading-[1.5]">
-                {item.text}
-              </p>
-            </div>
-          </div>
+          <TextStage body={item.text} />
         ) : (
           <FileStage
             item={item}
+            photoAlt={t('viewer.photoAlt', { number: item.frameNo })}
             detail={detail.data}
             loading={detail.isPending}
             onExpired={() => void detail.refetch()}
@@ -210,100 +184,5 @@ export function ContentViewer({
         }}
       />
     </>
-  );
-}
-
-/** The file itself on the viewer's stage, or a tile that says what to do with it. */
-function FileStage({
-  item,
-  detail,
-  loading,
-  failed,
-  videoFailed,
-  onVideoError,
-  onExpired,
-}: {
-  item: AdminContentItem;
-  detail: AdminContentDetail | undefined;
-  loading: boolean;
-  failed: boolean;
-  videoFailed: boolean;
-  onVideoError: () => void;
-  /** A presigned link stopped working (the viewer stayed open past its window). */
-  onExpired: () => void;
-}) {
-  const t = useTranslations('content');
-  const tile = (text: string, icon: 'image' | 'doc' = 'image') => (
-    <div className="grid max-w-sm justify-items-center gap-3 px-6 text-center text-muted-foreground">
-      {icon === 'doc' ? (
-        <FileText aria-hidden="true" className="size-10" />
-      ) : (
-        <ImageIcon aria-hidden="true" className="size-8" />
-      )}
-      {icon === 'doc' ? (
-        <span translate="no" className="type-data text-base text-viewer-foreground">
-          {documentType(item)}
-        </span>
-      ) : null}
-      {icon === 'doc' && item.originalFilename !== null ? (
-        <span className="[overflow-wrap:anywhere] text-viewer-foreground">
-          {item.originalFilename}
-        </span>
-      ) : null}
-      <span>{text}</span>
-      {detail?.downloadUrl ? (
-        <a
-          href={detail.downloadUrl}
-          className={cn(viewerButton, 'border border-[rgb(255_255_255/0.24)]')}
-        >
-          <Download aria-hidden="true" className="size-4" />
-          {t('viewer.download')}
-        </a>
-      ) : null}
-    </div>
-  );
-
-  if (loading) return tile(t('viewer.loadingMedia'));
-  if (failed || detail === undefined) return tile(t('viewer.mediaFailed'));
-  if (item.kind === 'DOCUMENT') return tile(t('viewer.documentOpen'), 'doc');
-  if (item.kind === 'PHOTO') {
-    // The preview, else the original while the worker is on it (not HEIC: browsers can't show it).
-    const shown =
-      detail.previewUrl ??
-      (detail.processingStatus === 'PENDING' &&
-      !(detail.mimeType !== null && NOT_SHOWN.has(detail.mimeType))
-        ? detail.originalUrl
-        : null);
-    if (shown === null) {
-      return tile(
-        t(detail.processingStatus === 'FAILED' ? 'previewUnavailable' : 'pendingPreview'),
-      );
-    }
-    return (
-      <MediaImg
-        onExpired={onExpired}
-        src={shown}
-        alt={t('viewer.photoAlt', { number: item.frameNo })}
-        className="max-h-full max-w-full object-contain"
-      />
-    );
-  }
-  if (detail.originalUrl === null) return tile(t('viewer.mediaFailed'));
-  if (videoFailed) return tile(t('viewer.videoFallback'));
-  return (
-    // Guests' own recordings come without caption tracks; there is nothing to attach.
-    // eslint-disable-next-line jsx-a11y/media-has-caption
-    <video
-      key={item.id}
-      src={detail.originalUrl}
-      {...(detail.posterUrl === null ? {} : { poster: detail.posterUrl })}
-      controls
-      preload="metadata"
-      playsInline
-      onError={onVideoError}
-      className="max-h-full max-w-full"
-    >
-      {t('viewer.videoFallback')}
-    </video>
   );
 }

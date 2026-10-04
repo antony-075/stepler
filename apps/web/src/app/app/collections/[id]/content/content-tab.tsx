@@ -74,7 +74,7 @@ import {
   sortFromParam,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
-import { documentType } from './document-type';
+import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
 import { refreshFrames, usePendingPreviews } from './use-pending-previews';
 import { formatBytes, formatDuration } from '@/format/bytes';
