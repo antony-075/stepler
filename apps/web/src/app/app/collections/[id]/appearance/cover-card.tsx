@@ -20,8 +20,8 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useId, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { collectionKey, removeCover, useInvalidateCollections } from '@/api/collections';
-import { errorMessageKey } from '@/errors/error-message';
 import { CollectionCoverImage } from '../../../collection-cover-image';
+import { coverErrorKey } from './cover-errors';
 import { coverState } from './cover-state';
 import { useCoverUpload } from './use-cover-upload';
 
@@ -66,6 +66,9 @@ export function CoverCard({
       );
       toast({ variant: 'info', title: t('removed') });
       await invalidate();
+    },
+    onError: (error) => {
+      if (isApiError(error, 'COLLECTION_ARCHIVED')) void invalidate();
     },
   });
   const removeFailure = isApiError(remove.error) ? remove.error.code : 'INTERNAL';
@@ -135,7 +138,7 @@ export function CoverCard({
     upload.phase.kind === 'failed'
       ? upload.phase.code === 'NETWORK' || upload.phase.code === 'STORAGE_403'
         ? t(`reason.${upload.phase.code}`)
-        : tRoot(errorMessageKey(upload.phase.code))
+        : tRoot(coverErrorKey(upload.phase.code, 'upload'))
       : null;
 
   return (
@@ -251,7 +254,7 @@ export function CoverCard({
         confirmLabel={t('removeConfirm')}
         cancelLabel={t('cancel')}
         pendingLabel={t('removePending')}
-        errorMessage={tRoot(errorMessageKey(removeFailure))}
+        errorMessage={tRoot(coverErrorKey(removeFailure, 'remove'))}
         onConfirm={async () => {
           await remove.mutateAsync();
         }}

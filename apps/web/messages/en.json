@@ -308,7 +308,9 @@
       "removeConfirm": "Remove",
       "removePending": "Removing",
       "leave": "The cover is still uploading. Leave the page and cancel the upload?",
-      "setFailed": "Couldn’t make it the cover"
+      "setFailed": "Couldn’t make it the cover",
+      "archivedRefused": "The collection is archived — its cover can’t be changed now.",
+      "frameGone": "That frame has already been deleted."
     },
     "welcome": {
       "title": "Welcome message for guests",

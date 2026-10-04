@@ -107,6 +107,8 @@ export function useCoverUpload(
                 ? error.code
                 : 'INTERNAL';
           setPhase({ kind: 'failed', code, retryable: isRetryable(code) });
+          // Archived meanwhile: the tab turns read-only once the collection is fetched again.
+          if (code === 'COLLECTION_ARCHIVED') void invalidate();
         },
       );
   }, [collectionId, invalidate, queryClient, transport]);

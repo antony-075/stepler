@@ -23,5 +23,6 @@ describe('welcome form', () => {
 
   test('pasted lines become one paragraph', () => {
     expect(oneParagraph('Дякуємо,\r\nщо ви\tз нами')).toBe('Дякуємо, що ви з нами');
+    expect(oneParagraph('Раз\u2028два\u202eтри')).toBe('Раз дватри');
   });
 });

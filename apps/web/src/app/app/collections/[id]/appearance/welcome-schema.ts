@@ -31,9 +31,12 @@ export function toWelcomeRequest(values: WelcomeFormValues): UpdateCollectionReq
 }
 
 /**
- * What typing or pasting puts in the field: line breaks, tabs and other control characters
- * become one space each run, so a pasted two-line text stays one paragraph.
+ * What typing or pasting puts in the field: line breaks, tabs and the line and paragraph
+ * separators become one space each run, so a pasted two-line text stays one paragraph; the
+ * other characters the API refuses (DEL, C1, bidirectional controls) are dropped.
  */
 export const oneParagraph = (value: string): string =>
-  // eslint-disable-next-line no-control-regex -- control characters are exactly what goes
-  value.replace(/[\u0000-\u001f]+/g, ' ');
+  value
+    // eslint-disable-next-line no-control-regex -- control characters are exactly what goes
+    .replace(/[\u0000-\u001f\u2028\u2029]+/g, ' ')
+    .replace(/[\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '');
