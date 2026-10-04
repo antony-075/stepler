@@ -29,6 +29,10 @@ const VIEW_ONLY = {
   canViewGallery: true,
 };
 
+/** Rounds per rotate race test, and their timeout (see the race tests). */
+const RACE_ROUNDS = 5;
+const RACE_TIMEOUT_MS = 30_000;
+
 /** Every token issued during this file, so Review Focus 3 can look for any of them. */
 const issuedTokens = new Set<string>();
 
@@ -471,12 +475,18 @@ describe('guest link management', () => {
       });
     });
 
-    test('rotate racing a pause never loses the pause', async () => {
-      for (let i = 0; i < 5; i++) {
-        await prisma.$executeRawUnsafe(
-          'TRUNCATE "GuestLink", "Collection", "AuthSession", "AuthAccount", "User" CASCADE',
+    /*
+     * The two race tests below run RACE_ROUNDS rounds each. Every round has its own owner and
+     * collection, so a round never truncates tables under another request; and they get
+     * RACE_TIMEOUT_MS, because vitest does not cancel a test that times out: under CPU load the
+     * default 5 s expired mid-loop, the loop kept firing requests (and its own TRUNCATE) while
+     * the next test's beforeEach TRUNCATE ran, and the two deadlocked on table locks (40P01).
+     */
+    test('rotate racing a pause never loses the pause', { timeout: RACE_TIMEOUT_MS }, async () => {
+      for (let i = 0; i < RACE_ROUNDS; i++) {
+        const { cookie, collectionId, defaultLink } = await ownerWithCollection(
+          `race-${i}@stepler.test`,
         );
-        const { cookie, collectionId, defaultLink } = await ownerWithCollection();
         const [rotated, paused] = await Promise.all([
           rotate(cookie, collectionId, defaultLink.id),
           post(cookie, `/guest-links/${defaultLink.id}/deactivate`),
@@ -492,26 +502,29 @@ describe('guest link management', () => {
       }
     });
 
-    test('rotate racing a permission change never loses the change', async () => {
-      for (let i = 0; i < 5; i++) {
-        await prisma.$executeRawUnsafe(
-          'TRUNCATE "GuestLink", "Collection", "AuthSession", "AuthAccount", "User" CASCADE',
-        );
-        const { cookie, collectionId, defaultLink } = await ownerWithCollection();
-        const permissions = { ...defaultLink.permissions, canViewGallery: true };
-        const [rotated, updated] = await Promise.all([
-          rotate(cookie, collectionId, defaultLink.id),
-          patch(cookie, defaultLink.id, { permissions }),
-        ]);
-        expect(rotated.status).toBe(200);
-        expect([200, 409]).toContain(updated.status);
-        const [live] = await list(cookie, collectionId);
-        expect(live).toMatchObject({
-          id: parseLink(rotated.body).id,
-          permissions: updated.status === 200 ? permissions : defaultLink.permissions,
-        });
-      }
-    });
+    test(
+      'rotate racing a permission change never loses the change',
+      { timeout: RACE_TIMEOUT_MS },
+      async () => {
+        for (let i = 0; i < RACE_ROUNDS; i++) {
+          const { cookie, collectionId, defaultLink } = await ownerWithCollection(
+            `race-${i}@stepler.test`,
+          );
+          const permissions = { ...defaultLink.permissions, canViewGallery: true };
+          const [rotated, updated] = await Promise.all([
+            rotate(cookie, collectionId, defaultLink.id),
+            patch(cookie, defaultLink.id, { permissions }),
+          ]);
+          expect(rotated.status).toBe(200);
+          expect([200, 409]).toContain(updated.status);
+          const [live] = await list(cookie, collectionId);
+          expect(live).toMatchObject({
+            id: parseLink(rotated.body).id,
+            permissions: updated.status === 200 ? permissions : defaultLink.permissions,
+          });
+        }
+      },
+    );
 
     test('rejects a malformed expectedLinkId', async () => {
       const { cookie, collectionId } = await ownerWithCollection();
