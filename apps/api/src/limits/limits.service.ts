@@ -105,6 +105,16 @@ export class LimitsService {
     return this.env.LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE;
   }
 
+  /** Admin cover calls (upload, from-frame, remove) per client IP per minute, per route. */
+  coverCallsPerIpPerMinute(): number {
+    return this.env.LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE;
+  }
+
+  /** The same per signed-in user. */
+  coverCallsPerUserPerMinute(): number {
+    return this.env.LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {

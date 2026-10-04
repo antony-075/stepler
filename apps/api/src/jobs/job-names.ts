@@ -11,6 +11,10 @@ interface JobPayloads {
   'maintenance.sweep': Record<never, never>;
   'media.image-derivatives': { contentItemId: string };
   'media.video-poster': { contentItemId: string };
+  /** The cover's thumbnail and preview from its copied original [A4]. */
+  'media.cover-derivatives': { collectionId: string; coverId: string };
+  /** The objects of a replaced or removed cover (its prefix), unless a row with that id lives. */
+  'cover.purge': { collectionId: string; coverId: string };
 }
 
 /** Job payloads by queue name (ADR 0009). Payloads hold ids only, never user content. */
@@ -54,6 +58,8 @@ export const JOB_OPTIONS = {
   'maintenance.sweep': PERIODIC,
   'media.image-derivatives': MEDIA,
   'media.video-poster': MEDIA,
+  'media.cover-derivatives': MEDIA,
+  'cover.purge': PURGE,
 } as const satisfies Record<JobName, JobOptions>;
 
 export const JOB_NAMES = Object.keys(JOB_OPTIONS) as JobName[];
@@ -66,6 +72,8 @@ const ENTITY_KEY: { [N in JobName]: (data: JobData[N]) => string | null } = {
   'maintenance.sweep': () => null,
   'media.image-derivatives': (data) => data.contentItemId,
   'media.video-poster': (data) => data.contentItemId,
+  'media.cover-derivatives': (data) => data.coverId,
+  'cover.purge': (data) => data.coverId,
 };
 
 /**

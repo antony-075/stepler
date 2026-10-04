@@ -136,6 +136,11 @@ export class CollectionsService {
     return { ...dto, storage: await this.usage.forCollection(id) };
   }
 
+  /** The collection without its storage line: the shape lists and mutations answer with. */
+  async read(principal: AccountPrincipal, id: string): Promise<Collection> {
+    return this.toDto(await this.findOwned(id, principal.userId));
+  }
+
   /** Last write wins. Archived collections stay editable (D9), the welcome message too [A6]. */
   async update(
     principal: AccountPrincipal,

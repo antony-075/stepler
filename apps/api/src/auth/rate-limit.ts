@@ -8,6 +8,7 @@ import {
 import { AppError } from '../errors/app-error.js';
 import { GUEST_SESSION_COOKIE } from '../guest-access/guest-session-cookie.js';
 import type { LimitsService } from '../limits/limits.service.js';
+import type { RequestWithPrincipal } from './principal.js';
 import { readCookie } from './session-cookie.js';
 import { hashToken } from './tokens.js';
 
@@ -24,7 +25,9 @@ export type RateLimitName =
   | 'guest-read'
   | 'guest-write'
   | 'guest-upload'
-  | 'guest-upload-session';
+  | 'guest-upload-session'
+  | 'admin-cover'
+  | 'admin-cover-user';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const MINUTE_MS = 60_000;
@@ -47,6 +50,17 @@ function routeLimits(context: ExecutionContext): readonly unknown[] {
 function guestSessionTracker(req: Record<string, unknown>): string {
   const cookie = readCookie(req as unknown as IncomingMessage, GUEST_SESSION_COOKIE);
   return cookie === undefined ? `ip:${String(req.ip)}` : `gs:${hashToken(cookie)}`;
+}
+
+/**
+ * Counts per signed-in user. The global `AuthGuard` runs before route guards, so the principal is
+ * set by the time this runs on an admin route; without one (never, on those routes) the IP.
+ */
+function adminUserTracker(req: Record<string, unknown>): string {
+  const principal = (req as unknown as RequestWithPrincipal).principal;
+  return principal === undefined || principal.kind === 'guest'
+    ? `ip:${String(req.ip)}`
+    : `user:${principal.userId}`;
 }
 
 /**
@@ -78,6 +92,12 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       {
         ...named('guest-upload-session', limits.uploadCallsPerGuestSessionPerMinute(), MINUTE_MS),
         getTracker: guestSessionTracker,
+      },
+      // The admin's cover routes, per route: per IP, and per signed-in user.
+      named('admin-cover', limits.coverCallsPerIpPerMinute(), MINUTE_MS),
+      {
+        ...named('admin-cover-user', limits.coverCallsPerUserPerMinute(), MINUTE_MS),
+        getTracker: adminUserTracker,
       },
     ],
     setHeaders: false,

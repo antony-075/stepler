@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { fileTypeFor, type GuestContentItem } from '@stepler/contracts';
+import type { GuestContentItem } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { toGuestContentItem } from '../content/content-dto.js';
 import { FrameNumbers } from '../content/frame-numbers.js';
@@ -11,18 +11,9 @@ import { permissionsOf } from '../guest-access/guest-link-dto.js';
 import { assertLinkUsable } from '../guest-access/guest-link-resolver.js';
 import { canUploadKind } from '../guest-access/guest-policy.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
-import { OBJECT_STORAGE, type ObjectStorage } from '../storage/object-storage.js';
-import { detectFileType, matchesDeclared, verifiedMime } from './file-signature.js';
-import { partLength, staleClaimBefore } from './upload-plan.js';
-import {
-  findOwnUpload,
-  isBeingCompleted,
-  uploadInProgress,
-  viaStorage,
-} from './uploads.service.js';
-
-/** Bytes read to detect the type ([C17]). */
-const SIGNATURE_BYTES = 4096;
+import { UploadInspector, type Verdict } from './upload-inspector.js';
+import { staleClaimBefore } from './upload-plan.js';
+import { findOwnUpload, isBeingCompleted, uploadInProgress } from './uploads.service.js';
 
 /**
  * A guest's upload always has its session (CHECK `UploadSession_purpose_actor`); `findOwnUpload`
@@ -32,9 +23,6 @@ function guestSessionIdOf(row: UploadSession): string {
   if (row.guestSessionId === null) throw new Error('content upload without a guest session');
   return row.guestSessionId;
 }
-
-/** What storage showed about the upload: a file to record, or the reason it is refused. */
-type Verdict = { kind: 'file'; mime: string; size: number } | { kind: 'refuse'; error: AppError };
 
 /** What a short transaction decided; errors are thrown after it commits. */
 type Outcome =
@@ -48,9 +36,8 @@ type Outcome =
  * 1. a short transaction claims the upload (`COMPLETING`, `claimedAt`) after the state and
  *    permission checks; a concurrent completion then gets `409 UPLOAD_IN_PROGRESS` (retryable),
  *    a finished one the same item;
- * 2. outside any transaction, the server alone assembles the multipart upload (`ListParts` +
- *    `CompleteMultipartUpload`; client ETags are never used), then checks the stored size and
- *    the content signature; storage trouble or missing parts give the claim back;
+ * 2. outside any transaction, `UploadInspector` assembles the multipart upload and checks the
+ *    stored size and the content signature; storage trouble or missing parts give the claim back;
  * 3. a short transaction re-checks the claim, the link and the permission, then records the
  *    frame (`COMPLETED`), or the refusal (`REJECTED`, bytes queued for discarding).
  * A claim left by a crashed request is stale after `COMPLETION_CLAIM_TTL_SECONDS`: it can be
@@ -64,7 +51,7 @@ export class UploadCompletion {
     private readonly prisma: PrismaService,
     private readonly frames: FrameNumbers,
     private readonly media: MediaUrls,
-    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+    private readonly inspector: UploadInspector,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -84,7 +71,7 @@ export class UploadCompletion {
 
     let verdict: Verdict;
     try {
-      verdict = await this.inspect(claim.row);
+      verdict = await this.inspector.inspect(claim.row);
     } catch (error) {
       // Missing parts or storage trouble: give the claim back so the guest can retry at once.
       await this.release(claim.row.id, claim.claimedAt);
@@ -150,29 +137,6 @@ export class UploadCompletion {
     });
     if (count === 0) throw uploadInProgress();
     return { kind: 'claimed', claimedAt, row };
-  }
-
-  /**
-   * Step 2, outside any transaction: assemble the parts, then check size and content. Missing
-   * or wrong parts are `409 UPLOAD_INCOMPLETE` with `missingPartNumbers` (the upload stays open).
-   */
-  private async inspect(row: UploadSession): Promise<Verdict> {
-    const missing = await this.assemble(row);
-    if (missing !== null) throw missing;
-    const head = await viaStorage(() => this.storage.head(row.storageKey));
-    if (head === null) throw new AppError('UPLOAD_INCOMPLETE', 409, { retryable: true });
-    if (BigInt(head.size) !== row.declaredSizeBytes) {
-      return { kind: 'refuse', error: new AppError('UPLOAD_SIZE_MISMATCH', 422) };
-    }
-    const bytes = await viaStorage(() =>
-      this.storage.readRange(row.storageKey, 0, SIGNATURE_BYTES - 1),
-    );
-    const detected = detectFileType(bytes);
-    const declared = fileTypeFor(row.originalFilename, row.declaredMime);
-    if (detected === null || declared === null || !matchesDeclared(detected, declared)) {
-      return { kind: 'refuse', error: new AppError('FILE_TYPE_NOT_ALLOWED', 422) };
-    }
-    return { kind: 'file', mime: verifiedMime(detected, declared), size: head.size };
   }
 
   /**
@@ -304,42 +268,6 @@ export class UploadCompletion {
     });
     if (item === null || item.deletedAt !== null) throw new AppError('CONTENT_NOT_FOUND', 404);
     return { kind: 'item', contentItemId: row.contentItemId };
-  }
-
-  /**
-   * Assembles the multipart upload from the parts storage lists, after checking each has its
-   * exact length; returns the error to throw when parts are missing. Already assembled (a
-   * completion that failed after this step): nothing to do.
-   */
-  private async assemble(row: UploadSession): Promise<AppError | null> {
-    const { multipartUploadId, partSizeBytes, partCount } = row;
-    const parts = await viaStorage(() => this.storage.listParts(row.storageKey, multipartUploadId));
-    if (parts === null) return null;
-    const byNumber = new Map(parts.map((part) => [part.partNumber, part]));
-    const missing: number[] = [];
-    for (let n = 1; n <= partCount; n += 1) {
-      const part = byNumber.get(n);
-      if (
-        part === undefined ||
-        BigInt(part.size) !== partLength(row.declaredSizeBytes, partSizeBytes, n)
-      ) {
-        missing.push(n);
-      }
-    }
-    if (missing.length > 0) {
-      return new AppError('UPLOAD_INCOMPLETE', 409, {
-        retryable: true,
-        extensions: { missingPartNumbers: missing },
-      });
-    }
-    await viaStorage(() =>
-      this.storage.completeMultipart(
-        row.storageKey,
-        multipartUploadId,
-        parts.filter((part) => part.partNumber <= partCount),
-      ),
-    );
-    return null;
   }
 
   /** Records the refusal (`REJECTED` or `EXPIRED`) and queues the discard of its bytes. */
