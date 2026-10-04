@@ -110,7 +110,7 @@ feature branch ──PR──► dev ──PR──► stage ──PR──► m
 - Merge with **merge commits** (no squash, no rebase), so the branches share history and a promotion PR contains exactly what the source branch has.
 - Changes to `dev`, `stage` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
 - Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
-- CI runs on every PR and on pushes to `dev`, `stage` and `main`. Deployment (`stage` → staging, `main` → production) is wired up when hosting is chosen.
+- CI (GitHub Actions minutes are limited, owner decision 2026-10-05): a PR into `dev` runs the secrets scan, `quality` (format, lint, typecheck, unit/integration tests, builds, Storybook, migration drift) and e2e on desktop Chrome only; docs-only PRs (`docs/**`) skip CI. Release PRs into `stage`/`main` and pushes to `stage`/`main` run the full e2e matrix (three browsers, two shards) and the Docker image checks; Render deploys `stage` only after they pass. A merge into `dev` does not run CI again. Run the full three-browser `pnpm e2e` locally before opening a PR.
 
 ## Staging smoke checklist (owner action S1, after promoting media processing)
 
