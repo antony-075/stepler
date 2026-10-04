@@ -123,6 +123,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
     setAnchor(null);
   }
   const grid = useRef<HTMLDivElement>(null);
+  const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
     queryKey: contentListKey(collection.id, kind, sort),
@@ -251,12 +252,20 @@ export function ContentTab({ collection }: { collection: Collection }) {
   });
 
   /** One request per 100 frames; frames already gone count as deleted (idempotent). */
+  /**
+   * One request per 100 frames; frames already gone count as deleted (idempotent), and so do
+   * ids the API no longer finds (deleted elsewhere or purged): none of them stay on screen.
+   * Focus then moves to the frame after the first deleted one (or «Вибрати»), never to the page.
+   */
   async function removeSelected() {
     const gone = new Set<string>();
+    const order = items.map((item) => item.id);
     try {
       for (const ids of chunks([...selected])) {
         const result = await bulkDeleteContent(collection.id, ids);
-        for (const id of [...result.deleted, ...result.alreadyDeleted]) gone.add(id);
+        for (const id of [...result.deleted, ...result.alreadyDeleted, ...result.notFound]) {
+          gone.add(id);
+        }
       }
     } finally {
       if (gone.size > 0) {
@@ -264,8 +273,19 @@ export function ContentTab({ collection }: { collection: Collection }) {
         void dropFrames(gone);
       }
     }
+    const first = order.findIndex((id) => gone.has(id));
+    const next =
+      order.slice(first).find((id) => !gone.has(id)) ?? order.find((id) => !gone.has(id));
     exitSelection();
     toast({ variant: 'info', title: t('select.done', { count: gone.size }) });
+    // After the dialog has closed and returned focus to its (now removed) trigger.
+    setTimeout(() => {
+      const target =
+        next === undefined
+          ? null
+          : grid.current?.querySelector<HTMLElement>(`[data-item="${next}"] button`);
+      (target ?? selectButton.current)?.focus();
+    }, 0);
   }
 
   const longPress = useLongPress((id) => {
@@ -349,6 +369,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
               </Button>
             ) : (
               <Button
+                ref={selectButton}
                 variant="outline"
                 disabled={items.length === 0}
                 onClick={() => setSelecting(true)}

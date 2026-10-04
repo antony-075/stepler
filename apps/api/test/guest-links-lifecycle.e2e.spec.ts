@@ -218,6 +218,23 @@ describe('guest link management', () => {
       expect(JSON.stringify(event.metadata)).not.toMatch(/Секрет|Новий/);
     });
 
+    test('canDeleteOwn without anything to add → 400 DELETE_OWN_REQUIRES_CONTRIBUTION (create and update) [C15]', async () => {
+      const { cookie, collectionId, defaultLink } = await ownerWithCollection();
+      const deleteOnly = { ...VIEW_ONLY, canDeleteOwn: true };
+      const created = await post(cookie, `/collections/${collectionId}/guest-links`, {
+        label: 'Проектор',
+        permissions: deleteOnly,
+      }).expect(400);
+      const updated = await patch(cookie, defaultLink.id, { permissions: deleteOnly }).expect(400);
+      for (const res of [created, updated]) {
+        expect(res.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+        expect(JSON.stringify(res.body)).toContain('DELETE_OWN_REQUIRES_CONTRIBUTION');
+      }
+      expect(
+        (await prisma.guestLink.findUniqueOrThrow({ where: { id: defaultLink.id } })).canDeleteOwn,
+      ).toBe(defaultLink.permissions.canDeleteOwn);
+    });
+
     test('the default link takes permissions but no label', async () => {
       const { cookie, defaultLink } = await ownerWithCollection();
       const res = await patch(cookie, defaultLink.id, { label: 'Main' }).expect(400);

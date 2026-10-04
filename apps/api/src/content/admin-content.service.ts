@@ -99,6 +99,8 @@ export class AdminContentService {
     ids: readonly string[],
     requestId?: string,
   ): Promise<BulkDeleteContentResponse> {
+    // UUIDs compare case-insensitively in PostgreSQL; the answer uses the canonical form.
+    const wanted = ids.map((id) => id.toLowerCase());
     await this.jobs.ready();
     return this.prisma.$transaction(async (tx) => {
       const collection = await tx.collection.findFirst({
@@ -106,20 +108,19 @@ export class AdminContentService {
         select: { id: true },
       });
       if (collection === null) throw new AppError('NOT_FOUND', 404);
-      const deleted = await this.deletion.softDelete(tx, collection.id, ids, a, {
+      const deleted = await this.deletion.softDelete(tx, collection.id, wanted, a, {
         bulk: true,
         ...(requestId === undefined ? {} : { requestId }),
       });
       const justDeleted = new Set(deleted);
       const rows = await tx.contentItem.findMany({
-        where: { collectionId: collection.id, id: { in: [...ids] }, deletedAt: { not: null } },
+        where: { collectionId: collection.id, id: { in: wanted }, deletedAt: { not: null } },
         select: { id: true },
         orderBy: { id: 'asc' },
       });
       const alreadyDeleted = rows.map((row) => row.id).filter((id) => !justDeleted.has(id));
-      // UUIDs compare case-insensitively in PostgreSQL; the rows hold the canonical form.
       const found = new Set([...deleted, ...alreadyDeleted]);
-      const notFound = ids.map((id) => id.toLowerCase()).filter((id) => !found.has(id));
+      const notFound = wanted.filter((id) => !found.has(id));
       return { deleted: [...deleted].sort(), alreadyDeleted, notFound };
     });
   }

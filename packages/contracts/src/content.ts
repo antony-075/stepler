@@ -183,7 +183,8 @@ export type ContentCounts = z.infer<typeof contentCountsSchema>;
 export const bulkDeleteContentRequestSchema = z
   .object({ ids: z.array(z.uuid()).min(1).max(100) })
   .strict()
-  .refine((body) => new Set(body.ids).size === body.ids.length, {
+  // UUIDs are case-insensitive: `A…` and `a…` are one frame.
+  .refine((body) => new Set(body.ids.map((id) => id.toLowerCase())).size === body.ids.length, {
     message: 'Ids must be unique',
     path: ['ids'],
   });

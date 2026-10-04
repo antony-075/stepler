@@ -183,6 +183,8 @@ test.describe('admin multi-select', () => {
       page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button'),
     ).toHaveCount(1);
     await expect(page.getByRole('tab', { name: /^Вміст/ })).toHaveText('Вміст1');
+    // Focus lands on the remaining frame, not on the page.
+    await expect(page.getByRole('button', { name: /^Кадр 1,/ })).toBeFocused();
   });
 
   test('x on a focused frame selects it; Escape clears; «Вибрати все завантажене» @desktop', async ({
