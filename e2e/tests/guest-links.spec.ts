@@ -85,7 +85,7 @@ test.describe('links tab', () => {
     const tabUrl = page.url();
     // Two segments, the active one in the URL; where we are: «Колекції › title».
     const tabs = page.getByRole('tablist', { name: 'Розділи колекції' });
-    await expect(tabs.getByRole('tab')).toHaveText(['Вміст0', 'Посилання1', 'Параметри']);
+    await expect(tabs.getByRole('tab')).toHaveText(['Вміст0', 'Посилання1', 'Вигляд', 'Параметри']);
     await expect(tabs.getByRole('tab', { name: /^Посилання/ })).toHaveAttribute(
       'aria-selected',
       'true',

@@ -272,7 +272,7 @@ test.describe('dashboard', () => {
     }
 
     // A tap away from the title (on the cover) still opens the collection.
-    const cover = await row.locator('[data-slot="tint-tile"]').boundingBox();
+    const cover = await row.locator('[data-slot="collection-cover"]').boundingBox();
     await page.mouse.click(cover!.x + cover!.width / 2, cover!.y + cover!.height / 2);
     await expect(page).toHaveURL(`/app/collections/${id}`);
   });
@@ -285,7 +285,7 @@ test.describe('dashboard', () => {
     await page.reload();
     const strip = card(page, 'Ювілей бабусі');
     // The cover is decorative: the initials in the collection's tint, hidden from AT.
-    const cover = strip.locator('[data-slot="tint-tile"]');
+    const cover = strip.locator('[data-slot="collection-cover"]');
     await expect(cover).toHaveText('ЮБ');
     await expect(cover).toHaveAttribute('aria-hidden', 'true');
     // The main link's real permissions (G3: everything to add), no invented counts.
