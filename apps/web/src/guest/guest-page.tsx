@@ -18,6 +18,12 @@
 // - Frames are borderless tiles (`FrameGrid`, remark 62): numbers only on the guest's own frames,
 //   never other guests' names. The count line («86 кадрів», «останній о 21:10») only with the
 //   shared gallery (§11.3). Contribution-only links say who will see the frames instead.
+// - With the shared gallery, «Усі кадри» lists everyone's frames newest first, 48 at a time
+//   («Показати ще»), and opens each in the same viewer as the admin's: other guests' frames show
+//   no number, name, file name or size. It is never polled (a venue's guests share one IP and its
+//   read limit, and the grid must not move under a finger): «Оновити» beside the title asks for
+//   what is new, and a list older than 30 minutes is fetched again when the tab comes back.
+// - Own frames open in the viewer too, with «Видалити» when the link allows it [C15].
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.
 // - Any call that meets a link or collection state switches the whole page to that state.
 
@@ -29,7 +35,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
 import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, UserRound } from 'lucide-react';
+import { ImagePlus, RefreshCw, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UploadDock } from '@stepler/ui/components/upload-dock';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -308,9 +314,12 @@ function GuestCollection({
 
           {permissions.canViewGallery ? (
             <section aria-labelledby="all-title" className="grid gap-4">
-              <h2 id="all-title" className="type-h2">
-                {t('allTitle')}
-              </h2>
+              <div className="flex items-center justify-between gap-4">
+                <h2 id="all-title" className="type-h2">
+                  {t('allTitle')}
+                </h2>
+                <RefreshGallery collectionId={collectionId} onRefresh={refreshContext} />
+              </div>
               <GuestFrames
                 collectionId={collectionId}
                 scope="all"
@@ -367,6 +376,55 @@ function GuestCollection({
         onDone={nameDone}
       />
       <TextComposer open={composerOpen} onOpenChange={setComposerOpen} onSend={sendText} />
+    </>
+  );
+}
+
+/**
+ * «Оновити» for the shared gallery (owner, PR E: never polled): everyone's frames from the first
+ * page, and the header's counts. The icon spins meanwhile; «Оновлено» is announced when done.
+ */
+function RefreshGallery({
+  collectionId,
+  onRefresh,
+}: {
+  collectionId: string;
+  onRefresh: () => void;
+}) {
+  const t = useTranslations('guest');
+  const queryClient = useQueryClient();
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle');
+  async function refresh() {
+    if (state === 'busy') return;
+    setState('busy');
+    onRefresh();
+    try {
+      await queryClient.refetchQueries({ queryKey: guestContentKey(collectionId, 'all') });
+    } finally {
+      setState('done');
+    }
+  }
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-disabled={state === 'busy' || undefined}
+        onClick={() => void refresh()}
+        className="shrink-0 pointer-coarse:h-11"
+      >
+        <RefreshCw
+          aria-hidden="true"
+          className={cn(
+            'size-4',
+            state === 'busy' && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+          )}
+        />
+        {t('refresh')}
+      </Button>
+      <p role="status" className="sr-only">
+        {state === 'done' ? t('refreshed') : null}
+      </p>
     </>
   );
 }

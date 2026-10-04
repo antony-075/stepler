@@ -747,7 +747,9 @@
       "deletePending": "Видаляємо",
       "deleteFailed": "Не вдалося видалити кадр. Спробуйте ще.",
       "deleted": "Кадр видалено"
-    }
+    },
+    "refresh": "Оновити",
+    "refreshed": "Оновлено"
   },
   "account": {
     "pageTitle": "Акаунт",

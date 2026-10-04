@@ -300,6 +300,7 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 - `contributorName` and other guests' metadata are excluded from guest DTOs.
 - Signed URLs are issued only after the same policy check as the item itself.
 - A view-only link (`canViewGallery` only) is a full capability (F3).
+- *Implemented in PR E (2026-10-04):* guest delete. An item that is not this session's own (another guest's, another collection's, or none) is `404` before the permission is looked at; an own item through a link without `canDeleteOwn` (the link the session is bound to now) is `403 FORBIDDEN`; an already deleted own item is `204`. The audit actor is `GUEST` with the session id. Admin bulk delete takes 1–100 ids of one owned collection in one transaction: ids of other collections are reported `notFound` and untouched, a retry reports the frames `alreadyDeleted`, and audit events (`bulk: true`) and purge jobs take their ids from the updated rows.
 
 ---
 
@@ -337,7 +338,7 @@ Admin
   GET                 /collections/{id}/content?kind=&sort=newest|frame&cursor=&limit=   (slice 3)
   GET                 /collections/{id}/content/counts                                   (slice 3)
   GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
-  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) [C7]
+  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
   POST                /content/{id}/hide | /unhide            (slice 9)
   GET                 /collections/{id}/reports
   PATCH               /reports/{id}
@@ -356,7 +357,7 @@ Guest (cookie scoped per collection, see §9.1)
   GET    /guest/collections/{cid}/context        → GuestContext                           (slice 3)
   GET    /guest/collections/{cid}/content?scope=own|all&cursor=                          (slice 3)
   GET    /guest/collections/{cid}/content/{id}                                           (slice 3)
-  DELETE /guest/collections/{cid}/content/{id}
+  DELETE /guest/collections/{cid}/content/{id}         own item + canDeleteOwn; else 404 / 403 (PR E)
   POST   /guest/collections/{cid}/texts      Idempotency-Key header (uuid), 201 / replay 200   (slice 3)
   POST   /guest/collections/{cid}/uploads
   POST   /guest/collections/{cid}/uploads/{uid}/parts
@@ -488,6 +489,7 @@ Decision details: ADR 0009.
 - **Delete collection:** confirmation in UI; `DELETING` + audit → guest API returns `410`; job aborts active uploads, deletes the collection prefix in resumable batches, then hard-deletes the collection (cascade).
   - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3.
   - *Implemented in Phase 4 PR B:* the purge. Deleting content or a collection enqueues `content.purge` / `collection.purge` in the same transaction; the worker deletes the objects, then the rows (content: derived objects now, the original with the upload slice; collection: its whole prefix in resumable batches, then the cascade). Audit events stay. The hourly sweep re-enqueues anything older than an hour, which also purges collections left `DELETING` since slice 1. Aborting active uploads joins with the upload slice.
+  - *Implemented in PR E:* every content deletion (admin single, admin bulk, guest own) goes through one `ContentDeletion.softDelete`: a conditional `UPDATE … WHERE deletedAt IS NULL RETURNING`, then one audit event and one `content.purge` job per returned row, in the caller's transaction, so a retry or a concurrent delete audits once.
 - **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
 - **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
 - No automatic retention in MVP.

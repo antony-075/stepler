@@ -85,7 +85,9 @@ test.describe('guest wishes', () => {
     await composer.getByRole('textbox', { name: 'Побажання' }).fill('Вітаємо!');
     await composer.getByRole('button', { name: 'Надіслати' }).click();
     await expect(guest.getByText('Побажання додано', { exact: true })).toBeVisible();
-    await expect(ownFrames(guest).getByRole('group', { name: /^Кадр 1, побажання/ })).toBeVisible();
+    await expect(
+      ownFrames(guest).getByRole('button', { name: /^Кадр 1, побажання/ }),
+    ).toBeVisible();
     await expect(ownFrames(guest)).toContainText('#001');
     // Asked once: the next wish goes straight to the composer.
     await guest.getByRole('button', { name: 'Написати побажання' }).click();

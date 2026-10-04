@@ -747,7 +747,9 @@
       "deletePending": "Deleting",
       "deleteFailed": "Couldn’t delete the frame. Try again.",
       "deleted": "Frame deleted"
-    }
+    },
+    "refresh": "Refresh",
+    "refreshed": "Refreshed"
   },
   "account": {
     "pageTitle": "Account",

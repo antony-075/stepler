@@ -10,6 +10,7 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { isApiError } from '@/api/client';
+import { formatDuration } from '@/format/bytes';
 import { MediaImg } from '@/media/media-img';
 import {
   awaitsPreview,
@@ -85,6 +86,7 @@ function GuestFrame({
   const kind = t(`kind.${item.kind}`);
   const named = (own: string, other: string) =>
     number === undefined ? t(other, { kind, time }) : t(own, { number, kind, time });
+  const duration = item.durationMs === null ? {} : { meta: formatDuration(item.durationMs) };
   if (picture.kind === 'thumbnail' || (picture.kind === 'failed' && item.kind === 'VIDEO')) {
     return (
       <Frame
@@ -107,6 +109,7 @@ function GuestFrame({
             }
           : {})}
         number={number}
+        {...duration}
         accessibleName={
           picture.kind === 'failed'
             ? named('failedOwn', 'failedOther')
@@ -120,6 +123,7 @@ function GuestFrame({
       onOpen={onOpen}
       kind="pending-preview"
       number={number}
+      {...duration}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={
         picture.kind === 'failed'

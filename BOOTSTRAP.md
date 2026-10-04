@@ -73,6 +73,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 5 status (PR C, branch `feat/phase-4-uploads`, 2026-10-04): uploads implemented, PR to `dev` pending; not promoted to staging before PR D [C13].** Upload sessions with quota reservations, direct multipart upload to storage for every file, verified completion (parts, size, content signature) with a claim instead of a long transaction, cancel, expiry and discard jobs, rate limits, the guest uploader with every state, file frames and the viewer for the admin, downloads as attachments. Photo and video previews follow in PR D (until then «Готується прев’ю»).
 
+**Slices 7–8 status (PR E, branch `feat/phase-4-content-management`, 2026-10-04): implemented, PR to `dev` pending.** Admin multi-select and bulk delete, guest own-content deletion with the «Гості можуть видаляти своє» link switch, the guest's shared gallery («Усі кадри») with the viewer and «Оновити» (never polled), and borderless photo-grid tiles for admin and guest (owner remark 62). Hide stays with slice 9 (operator) per [O3].
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
 
 Each slice should be fully tested before moving on.

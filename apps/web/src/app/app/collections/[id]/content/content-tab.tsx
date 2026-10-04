@@ -312,7 +312,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
             </ToggleGroup>
           </div>
           <div className="flex min-w-0 items-center gap-3">
-            <span id={sortId} className="shrink-0 text-sm text-muted-foreground">
+            <span id={sortId} className="shrink-0 text-sm text-muted-foreground max-sm:sr-only">
               {t('sortLabel')}
             </span>
             <Select
@@ -323,7 +323,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
             >
               <SelectTrigger
                 aria-labelledby={sortId}
-                className="h-11 w-full min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+                className="h-11 w-full min-w-0 sm:min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
               >
                 <SelectValue />
               </SelectTrigger>
