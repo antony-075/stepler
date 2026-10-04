@@ -405,7 +405,9 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 - **Every file is an S3 multipart upload** (addendum 2026-10-03, ADR 0008; replaces "`size ≤ 100 MB` → single presigned `PUT`"): `CreateMultipartUpload` at initiation, fixed part size (10 MiB), a file up to the part size being one part; part URLs issued on demand in batches, each signing its exact `Content-Length`, URL TTL 15 min; parts retried individually. Why: a presigned single `PUT` stayed writable after the upload closed (an orphan after cancel/reject/expiry/delete, or an overwrite of the verified original after completion); `CompleteMultipartUpload` and `AbortMultipartUpload` end the upload and every part URL with it. Cost: two extra API round trips per small file.
 - Upload session TTL: 24 h [assumption] (2 GB over a poor mobile link can take hours); part URLs are re-issuable while the session lives.
 - R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; EU-jurisdiction buckets use a distinct endpoint. Bucket CORS must expose `ETag`; the emulator reproduces this, so it is tested locally too.
-- Client: headless Uppy (`@uppy/aws-s3`) vs in-house uploader — decided in the upload slice after bundle-size check (S9). Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
+- Client transport is in-house (spike S9, ADR 0008; Uppy 6 completes multipart uploads from the browser, which the server must own): XHR `PUT` for progress; ≤ 3 parts in flight per file; part URLs requested on demand in batches of ≤ 20; per-part retry with 31 s of backoff in all (a broken path does not flip `navigator.onLine`); per-file retries after 2, 8 and 30 s, then «Повторити»; progress never goes back. Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
+
+**Implemented (PR C, 2026-10-04).** Routes under `/api/v1/guest/collections/{collectionId}/uploads`: `POST` (initiate, 201: `{ uploadId, partSizeBytes, partCount, expiresAt }`), `POST /{uploadId}/parts` (`{ partNumbers }` → part URLs, each signing its exact `Content-Length`), `POST /{uploadId}/complete` (200: the guest's frame; `409 UPLOAD_INCOMPLETE` carries `missingPartNumbers`; `409 UPLOAD_IN_PROGRESS` while another completion holds the claim), `DELETE /{uploadId}` (204, idempotent). Rate limits per IP and per guest session on all four. Signature detection (`uploads/file-signature.ts`): photos and videos match their declared kind (stored with the detected MIME), documents their declared format; SVG, HTML, archives, executables and AVIF are refused. Admin and guest item details carry presigned `originalUrl` (photos and videos only) and `downloadUrl` (an attachment named from the original file, fallback `stepler-087.pdf`).
 
 ### 10.3 Initiate — `POST .../uploads`
 
@@ -618,7 +620,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 | S6 | Prisma migrations with raw SQL CHECK / partial unique without drift | Foundation (first migration) |
 | S7 | pg-boss transactional enqueue with Prisma | Upload slice |
 | S8 | next-intl without locale prefix in App Router | Bootstrap (web) |
-| S9 | Headless Uppy vs in-house uploader | Upload slice |
+| S9 | Headless Uppy vs in-house uploader — **decided: in-house** (ADR 0008) | Upload slice |
 
 ---
 

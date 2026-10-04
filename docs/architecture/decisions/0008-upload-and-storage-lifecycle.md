@@ -88,7 +88,7 @@ With these variables set, anonymous requests are rejected (403) and a wrong secr
 - R2's handling of the checksum and signed-header settings above;
 - R2 lifecycle rules (abort incomplete multipart uploads).
 
-Not tested in the spike (Task 8 decides and tests): signing `Content-Length` on each part URL so a part cannot exceed the fixed part size.
+Not tested in the spike (Task 8 decides and tests): signing `Content-Length` on each part URL so a part cannot exceed the fixed part size. **Closed (PR C, 2026-10-03):** every part URL signs its exact `Content-Length`; a part of another length is refused with 403 on SeaweedFS (`test/storage-multipart.e2e.spec.ts`), and from Chromium and WebKit in spike S9. Still to verify on real R2 in staging (owner smoke test S1).
 
 ## Addendum (2026-10-03): every upload is multipart; the single PUT is dropped
 
@@ -125,3 +125,14 @@ Signing `Content-Length` and `Content-Type` does not help: the attacker re-sends
 - **Rate limits** on initiate, parts, complete and cancel, per route: `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` (600, generous for venue NAT) and `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` (240, keyed by a hash of the session cookie).
 
 **Consequences.** A new status (`COMPLETING`) and column (`claimedAt`, CHECK `UploadSession_claim_consistent`). Completion is no longer one atomic transaction: a crash between the steps leaves a stale claim, which the rules above recover.
+
+## Spike S9 result (2026-10-03): the client transport is in-house
+
+Headless Uppy (`@uppy/core` 6.2 + `@uppy/aws-s3` 6.2, 21.9 KB gzip) was measured against an in-house transport (1.3 KB gzip). Uppy 6 dropped the hook API: it signs S3 requests for the browser, which then creates, completes and aborts the multipart upload itself. That contradicts this ADR (the server lists the parts and completes the upload, never trusting client ETags), and it uploads a file's parts one at a time. **Decision: in-house** (`apps/web/src/guest/upload/transport.ts`): XHR `PUT` with `upload.onprogress`; ≤ 3 parts in flight per file; part URLs on demand in batches of ≤ 20; per-part retry with 1+2+4+8+16 s of backoff (a 10 s outage needed four retries; a broken path does not flip `navigator.onLine`); a 403 signs the part again; progress never goes back; cancel aborts every request and cancels on the server. Measured with Playwright on SeaweedFS: 300 MB from Chromium, 120 MB from WebKit (iPhone profile), 3 files at once throttled to 8 Mbit/s with smooth progress, recovery from a 10 s connection drop without user action. Not done: a real iOS Safari device. Full numbers: the spike notes of 2026-10-03 in the plan.
+
+## Implementation notes (uploads, PR C, 2026-10-04)
+
+- Every upload is multipart (addendum above); the API creates it at initiation, the browser sends parts to presigned URLs, the API completes it from `ListParts` and verifies size and content signature (4 KB range read), then records the frame and its `MediaObject(ORIGINAL)`.
+- Cleanup: `storage.discard-upload` (rejected, cancelled, expired uploads: abort, then delete the key), `uploads.expire` every 15 minutes (also stale completion claims past their TTL), `content.purge` deletes the original's key and the derivatives, `collection.purge` aborts open uploads and runs only after the upload URL TTL + 1 h.
+- Media links (`content/media-urls.ts`): presigned `GET`, signed as of the start of a `MEDIA_URL_WINDOW_SECONDS` window and valid for two, so a URL is stable (cacheable) within a window. Photos and videos open inline; documents only download; every download is an attachment with an RFC 5987 file name.
+- Bucket CORS (dev/CI script `storage:bootstrap`, staging owner action R1): `PUT`, `GET`, `HEAD` from the app origins, `ETag` exposed.

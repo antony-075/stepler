@@ -47,8 +47,9 @@ test.describe('guest link page', () => {
     await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     // Never the token or the title in the tab title.
     await expect(page).toHaveTitle('Stepler');
-    // No file button until uploads exist (rule 18): the wish is the main action.
-    await expect(page.getByRole('button', { name: /Додати фото/ })).toHaveCount(0);
+    // Files are the main action (PR C); the wish is the second one.
+    await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Написати побажання' }).first()).toBeVisible();
   });
 

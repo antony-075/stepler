@@ -71,6 +71,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 6 status (partial; PR B, branch `feat/phase-4-worker`, 2026-10-03): worker and purges implemented, PR to `dev` pending.** pg-boss job queue with transactional enqueue (spike S7), the worker entrypoint and image, a Render background worker for staging (owner actions in `docs/deployment/staging.md` step 8), purge of deleted content and of `DELETING` collections, and an hourly sweep that also removes long-idle guest sessions. Thumbnails, previews and posters follow in PR D.
 
+**Slice 5 status (PR C, branch `feat/phase-4-uploads`, 2026-10-04): uploads implemented, PR to `dev` pending; not promoted to staging before PR D [C13].** Upload sessions with quota reservations, direct multipart upload to storage for every file, verified completion (parts, size, content signature) with a claim instead of a long transaction, cancel, expiry and discard jobs, rate limits, the guest uploader with every state, file frames and the viewer for the admin, downloads as attachments. Photo and video previews follow in PR D (until then «Готується прев’ю»).
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
 
 Each slice should be fully tested before moving on.
