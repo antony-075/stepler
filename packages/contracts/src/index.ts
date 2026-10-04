@@ -138,6 +138,18 @@ export {
   type HealthReadyResponse,
 } from './health.js';
 export {
+  currentLegalVersion,
+  LEGAL_DOCUMENTS,
+  LEGAL_VERSION_PATTERN,
+  legalDocumentKeySchema,
+  legalStatus,
+  legalStatusSchema,
+  type LegalAcceptanceRecord,
+  type LegalDocumentKey,
+  type LegalDocumentVersion,
+  type LegalStatus,
+} from './legal.js';
+export {
   storageUsageSchema,
   usageResponseSchema,
   type StorageUsage,
