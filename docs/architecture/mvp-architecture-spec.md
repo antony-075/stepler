@@ -21,7 +21,7 @@ MVP validates the loop: **create collection → share link/QR → guests contrib
 
 In scope: admin auth (magic link + Google), collections, default + additional guest links, guest sessions, photo/video/document upload, text submission, gallery visibility, own-content deletion, admin deletion, QR, thumbnails/posters, content reports + operator flow, limits/rate limits, uk/en i18n, legal pages, staging/production-ready images, CI.
 
-Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, analytics, ZIP/export, transcoding, moderation queue, link expiration, admin uploads via UI, operator admin panel, form builder, resumable upload after browser close.
+Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, analytics, ZIP/export, transcoding, moderation queue, link expiration, admin uploads via UI (one exception since slice 8a, 2026-10-04: the owner uploads the collection cover, never content), operator admin panel, form builder, resumable upload after browser close.
 
 ---
 
@@ -77,8 +77,8 @@ Trade-offs:
 
 ## 4. Frontend architecture (`apps/web`)
 
-- **Routes:** `/g/[token]` guest entry; `/app/...` admin (protected); `/login`; `/legal/terms`, `/legal/privacy`.
-- **Rendering:** mostly client components with TanStack Query. Authorization and data are owned by the API; SSR data fetching would require forwarding cookies on every server fetch and offers little for authenticated/guest app screens. RSC is used for shells, metadata and static legal pages.
+- **Routes:** `/g/[token]` guest entry; `/app/...` admin (protected); `/login`; `/legal/terms`, `/legal/privacy`. A collection's sections are tabs of `/app/collections/[id]` in the query (`?tab=links|appearance|settings`, none = the content); «Гостьова сторінка» (`appearance`, slice 8a) holds the cover and the welcome message, and the admin's cover file goes browser → storage through the same upload transport as a guest's (§10.7).
+- **Rendering:** mostly client components with TanStack Query. Authorization and data are owned by the API; SSR data fetching would require forwarding cookies on every server fetch and offers little for authenticated/guest app screens. RSC is used for shells, metadata and the server-rendered legal pages (dynamic per locale, ADR 0011; no client JavaScript).
 - **API client:** a thin typed `fetch` wrapper (`apps/web/src/api/client.ts`) that validates responses with the Zod schemas from `contracts`, the same schemas the API validates with; errors surface as `ApiError(code)`. No OpenAPI code generation: `openapi-typescript` 7.13 does not support TypeScript 6 (owner decision 2026-09-29, ADR 0005). Forms use the same schemas with React Hook Form. *Implemented in Phase 2.*
 - **State:** server state in TanStack Query only. Upload queue state is local to the uploader feature (a store is introduced only if the queue must survive route changes — then Zustand, per rules).
 - **Guest pages:** `Referrer-Policy: no-referrer`; **no third-party scripts** (token is in the URL). Mobile-first.
@@ -131,7 +131,7 @@ Decision details: ADR 0006.
 - **Magic link verification:** the email links to the web page `/auth/verify?token=…`. The page first calls a read-only `POST /auth/magic-link/preview` and shows "Sign in as <email>"; only the Sign in button calls `POST /auth/magic-link/verify`, which consumes the token. Email scanners that open links therefore cannot use them up, and a victim who opens an attacker's link sees a foreign address (owner decisions 2026-09-29). *Implemented in Phase 2.*
 - **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified.
 - **Operator:** users whose verified email is in `OPERATOR_EMAILS` config (ADR 0013).
-- **Legal acceptance:** recorded at registration (§15). *Deferred to Phase 4 slice 10 (legal pages), with a gate that also covers users created before it (owner decision 2026-09-29).*
+- **Legal acceptance (ADR 0016, owner decision L1):** given at the request that starts registration and recorded when the account is created or the sign-in completes. The sign-in card has a required checkbox; it sends the current versions with `POST /auth/magic-link` (stored on the `MagicLinkToken` row) or with `GET /auth/google/start?terms=&privacy=` (stored in the signed `st_oauth` transaction); magic-link verify and the Google callback write the `LegalAcceptance` rows in the sign-in transaction, idempotently, only for versions current at that moment. The API enforces the checkbox: a request without versions → `400 VALIDATION_FAILED` / a redirect to `/login?error=LEGAL_ACCEPTANCE_REQUIRED` without the OAuth cookie; stale versions → `400 LEGAL_VERSION_OUTDATED` / `…?error=LEGAL_VERSION_OUTDATED`. `AuthGuard` answers `403 LEGAL_ACCEPTANCE_REQUIRED` on every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` until both documents are accepted; the web sends such users to the `/accept-terms` fallback (accounts from before slice 10, a link whose versions went stale, a forced `requireReacceptance`). *Implemented in slice 10 (PR F2).*
 - **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verifies magic links only by GET).
 
 ---
@@ -158,12 +158,15 @@ AuthSession
   INDEX (userId)
 
 MagicLinkToken
-  id, email, tokenHash (unique), expiresAt, consumedAt?, requestIpHash?, createdAt
+  id, email, tokenHash (unique), expiresAt, consumedAt?, locale, requestIpHash?,
+  legalTermsVersion?, legalPrivacyVersion?, createdAt   -- versions accepted on the card (slice 10)
   INDEX (email, createdAt)          -- per-email rate limit derived from rows
+  SQL CHECK versions match ^v[1-9][0-9]{0,3}$ when set
 
-LegalAcceptance            -- Phase 4 slice 10 (legal pages); not created in Phase 2
-  id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt
+LegalAcceptance            -- slice 10 (ADR 0016)
+  id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt, requestId?
   UNIQUE (userId, document, version)
+  SQL CHECK version ~ ^v[1-9][0-9]{0,3}$    -- no IP address (owner decision L2)
 ```
 
 (Auth is implemented in-house: spike S1 rejected Better Auth because it stores session tokens in plain text and verifies magic links only by GET, see ADR 0006.)
@@ -173,11 +176,20 @@ LegalAcceptance            -- Phase 4 slice 10 (legal pages); not created in Pha
 ```text
 Collection
   id, ownerId → User (restrict), title (1–100), description? (1–1000),
+  welcomeMessage? (1–160 code points, one paragraph; slice 8a),
   status (ACTIVE|ARCHIVED|DELETING), archivedAt?, deletionRequestedAt?,
   blockedAt?, blockedReason?, createdAt, updatedAt
   SQL CHECK ((status = 'ARCHIVED') = (archivedAt IS NOT NULL))
   SQL CHECK ((status = 'DELETING') = (deletionRequestedAt IS NOT NULL))
   INDEX (ownerId, status, createdAt DESC, id DESC)
+
+CollectionCover                                     (slice 8a, 2026-10-04; [A2])
+  id, collectionId → Collection (cascade, UNIQUE: one cover, replaced whole),
+  status (PENDING|READY|FAILED), source (UPLOAD|FRAME), mimeType (verified),
+  originalSizeBytes (bigint), derivedSizeBytes (bigint, 0 until READY), width?, height?, createdAt
+  SQL CHECK (originalSizeBytes > 0 AND derivedSizeBytes >= 0)
+  SQL CHECK ((status = 'READY') = (width IS NOT NULL AND height IS NOT NULL))
+  -- no storage keys: every key is collections/{cid}/cover/{id}/{original|thumbnail.webp|preview.webp}
 
 GuestLink
   id, collectionId → Collection (cascade), isDefault, label?,
@@ -205,6 +217,7 @@ GuestSession
 - **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time; every guest request re-checks that link, the collection and its owner ([G5] order) and writes `lastSeenAt` at most once an hour.
 - **The guest's name lives on the session** ([O4], [C4], amended 2026-10-03; it was "not stored on the session"): `contributorName` is optional, asked once before the first contribution («Пропустити» is an answer: `nameAnsweredAt` is set either way), editable, and copied to each new item. Renaming also updates this session's non-deleted items in the same transaction, so the admin never sees two names for one guest. It is never shown to other guests. The session holds nothing else about the guest.
 - Future `expiresAt` / scheduled activation are nullable columns added later (D9).
+- **Cover and welcome message (slice 8a, PR F, 2026-10-04; owner decisions A1–A10 in `docs/superpowers/plans/2026-10-04-collection-appearance.md`):** `welcomeMessage` is edited through `PATCH /collections/{id}` like the title (trimmed, no control characters or line breaks, 160 code points; editable while archived, D9). The cover is one `CollectionCover` row per collection, replaced whole: replacing or removing deletes the row at once (usage drops immediately) and enqueues `cover.purge` for its prefix. Its original is a server-side copy (`CopyObject`) of the admin's verified upload or of a guest photo frame's ORIGINAL, so deleting that frame never touches the cover. Cover changes are refused on an `ARCHIVED` collection with `409 COLLECTION_ARCHIVED` [A6]. The admin DTO carries `cover: {status, thumbnailUrl, previewUrl, width, height} | null` (URLs once `READY`); the guest context carries `cover` only when `READY`, never its status, source or frame id.
 
 ### 7.3 Content
 
@@ -232,21 +245,26 @@ MediaObject
   storageKey (unique), mimeType, sizeBytes (bigint), width?, height?, durationMs?, createdAt
   UNIQUE (contentItemId, role)
 
-UploadSession
-  id, collectionId → Collection (cascade), guestSessionId? → GuestSession, userId? → User,
-  guestLinkId → GuestLink, clientUploadId, kind, originalFilename, declaredMime,
+UploadSession                                       (as built in PR C and slice 8a)
+  id, collectionId → Collection (cascade), purpose (CONTENT|COVER),
+  guestSessionId? → GuestSession, guestLinkId? → GuestLink,       -- CONTENT: both set
+  uploaderUserId? → User (cascade),                                -- COVER: set (the admin)
+  clientUploadId, kind, originalFilename, declaredMime,
   declaredSizeBytes (bigint), storageKey (unique), (always multipart since 2026-10-03)
-  multipartUploadId?, partSizeBytes?,
-  status (INITIATED|COMPLETED|ABORTED|EXPIRED|REJECTED), rejectReason?,
-  expiresAt, completedAt?, contentItemId? (unique) → ContentItem, createdAt
-  UNIQUE (guestSessionId, clientUploadId)
+  multipartUploadId, partSizeBytes, partCount,
+  status (INITIATED|COMPLETING|COMPLETED|ABORTED|EXPIRED|REJECTED), rejectReason?, claimedAt?,
+  expiresAt, completedAt?, contentItemId? (unique) → ContentItem (CONTENT only), createdAt
+  UNIQUE (guestSessionId, clientUploadId), UNIQUE (uploaderUserId, clientUploadId)
+  SQL CHECK ((purpose = 'CONTENT') = (guestSessionId IS NOT NULL AND guestLinkId IS NOT NULL)
+             AND (purpose = 'COVER') = (uploaderUserId IS NOT NULL))
+  SQL CHECK (purpose <> 'COVER' OR kind = 'PHOTO')
   INDEX (status, expiresAt)
   INDEX (collectionId, status)
 ```
 
 - One table for all content kinds: the gallery is a single mixed, cursor-paginated feed. The cost is nullable columns guarded by CHECKs. Alternatives rejected: table-per-kind (UNION feeds), EAV (loses integrity).
 - `contributorName` is stored per submission (D6), never exposed in guest DTOs.
-- `contributorUserId` exists so admin uploads are not structurally forbidden later (D14); no MVP UI uses it.
+- `contributorUserId` was drafted so admin uploads are not structurally forbidden later (D14); it does not exist on `ContentItem` ([C19]). The admin identity lands on `UploadSession.uploaderUserId` instead (the draft's `userId?`), used by the collection cover (slice 8a): an admin's upload is a cover, never content.
 - `hiddenAt` is the first moderation state (operator/admin "hide"). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
@@ -287,7 +305,8 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 | Collection metadata | own only | reported items' collections | public fields via any active link |
 | List gallery | own collections | — | `canViewGallery` → all visible items; otherwise own items only |
 | Get item / signed URL | own collections | reported items | same visibility rule as list |
-| Upload files | — (MVP) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
+| Upload files | the collection cover only (a photo; slice 8a) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
+| Set / remove the cover | own collection (upload, or any live photo frame of it) | — | — |
 | Submit text | — (MVP) | — | `canSubmitText` |
 | Delete item | any in own collection | any | `canDeleteOwn` AND contributor = this session |
 | Hide item | own collection | any | — |
@@ -318,19 +337,25 @@ Resource map (MVP):
 
 ```text
 Auth / me
-  GET    /auth/methods                         {magicLink, google, turnstileSiteKey}
-  POST   /auth/magic-link                      (Turnstile token required) → 202, same body for every email
+  GET    /auth/methods                         {magicLink, google, turnstileSiteKey, legal: {terms, privacy}}
+  POST   /auth/magic-link                      (Turnstile token and legal {terms, privacy} required) → 202, same body for every email
   POST   /auth/magic-link/preview              {token} → {email}; read-only
   POST   /auth/magic-link/verify               {token} → sets session cookie
-  GET    /auth/google/start | /auth/google/callback
+  GET    /auth/google/start?terms=&privacy=[&returnTo=] | /auth/google/callback
   POST   /auth/logout                          → 204, idempotent
-  GET    /me          PATCH /me (displayName, locale)
-  POST   /me/legal-acceptances                 (Phase 4 slice 10)
+  GET    /me          PATCH /me (displayName, locale)     (both return legal: {accepted, documents})
+  POST   /me/legal-acceptances                 {acceptances: [{document, version}]} → MeResponse; fallback path
 
 Admin
   GET/POST            /collections
-  GET/PATCH/DELETE    /collections/{id}
+  GET/PATCH/DELETE    /collections/{id}                  (PATCH: title, description, welcomeMessage)
   POST                /collections/{id}/archive | /unarchive
+  POST                /collections/{id}/cover/uploads                         (slice 8a: admin cover upload,
+  POST                /collections/{id}/cover/uploads/{uid}/parts              the guest upload protocol
+  POST                /collections/{id}/cover/uploads/{uid}/complete → Collection   under the admin session)
+  DELETE              /collections/{id}/cover/uploads/{uid}
+  POST                /collections/{id}/cover/from-frame  {contentItemId} → Collection   (slice 8a)
+  DELETE              /collections/{id}/cover                                           (slice 8a)
   GET/POST            /collections/{id}/guest-links
   PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
@@ -453,12 +478,17 @@ Safety net: R2 lifecycle rule "abort incomplete multipart uploads after 2 days".
 ```text
 collections/{collectionId}/uploads/{uploadSessionId}/original
 collections/{collectionId}/derived/{contentItemId}/{thumbnail|preview|poster}.webp
+collections/{collectionId}/cover/{coverId}/{original|thumbnail.webp|preview.webp}    (slice 8a)
 ```
 
 - No user-controlled data (filenames) in keys. Keys are immutable; nothing is renamed.
-- Per-collection prefix enables collection purge by prefix.
+- Per-collection prefix enables collection purge by prefix; a cover's own prefix lets `cover.purge` remove a replaced cover while the live one stays.
 - Downloads: presigned `GET`, TTL 1 h, expiry aligned to fixed windows so URLs are stable within a window and cacheable by the browser. `response-content-type` = verified MIME. `response-content-disposition`: `inline` for images/video, `attachment` for documents.
 - Local development uses an S3-compatible emulator; R2-specific behavior is verified against a real R2 dev bucket and staging (honestly marked as not locally reproducible).
+
+### 10.7 Admin cover upload (slice 8a, 2026-10-04)
+
+The owner's cover file travels exactly like a guest's (§10.2–§10.5, ADR 0008 addendum 2026-10-04): `POST /collections/{id}/cover/uploads` opens an `UploadSession` with `purpose = COVER` and `uploaderUserId` (photos only, `LIMIT_FILE_BYTES_PHOTO`, idempotent on `(uploaderUserId, clientUploadId)`, at most 3 open cover uploads per collection → `429`), the quota is reserved under the owner lock then the collection lock [C9], part URLs come from `…/parts`, and `…/complete` claims the upload, inspects storage with the same `UploadInspector` (parts, size, content signature), then copies the verified original server-side (`CopyObject`, ≤ 50 MB) to `collections/{cid}/cover/{coverId}/original` and, in a short transaction, replaces the cover row (`PENDING`), marks the upload `COMPLETED` (no content item) and enqueues `media.cover-derivatives`; the upload's own key is deleted best-effort afterwards. «Зробити обкладинкою» (`POST …/cover/from-frame`) copies a live photo frame's ORIGINAL the same way (the frame is untouched; `422 COVER_SOURCE_INVALID` for a text, a frame without an original or one whose processing failed), checking the quota after the old cover's bytes stop counting. Best-effort deletes (a copied object whose transaction failed, the upload key after completion) are backstopped by the collection purge, which removes the whole prefix. The routes are rate limited per IP and per user (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, `LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`).
 
 ---
 
@@ -474,7 +504,9 @@ Decision details: ADR 0009.
   - `media.video-poster` — ffprobe and ffmpeg read the original through a presigned URL with range requests (the 2 GB file never passes through Node memory) with `-threads 1` and protocol and format whitelists, take one frame at `min(1 s, duration / 2)` and record the duration; poster 1600 px and thumbnail 480 px. Implemented.
   - `content.purge`, `collection.purge` — idempotent (missing rows and objects are success); implemented. `storage.discard-upload` (bytes of rejected or cancelled uploads) — *pending*, upload slice. (Earlier drafts named these `storage.purge-content`, `storage.purge-collection`, `storage.delete-object`.)
   - `uploads.expire` — scheduled every 15 min; *pending*, upload slice (the schedule is registered once its handler exists).
-  - `maintenance.sweep` — hourly; implemented (see above).
+  - `maintenance.sweep` — hourly; implemented (see above). It does not yet cover a cover left `PENDING` by a job pg-boss expired on its last attempt (slice 8a follow-up).
+  - `media.cover-derivatives` `{collectionId, coverId}` — the cover's thumbnail (480 px) and preview (1600 px) from its copied original, the photo way (HEIC included); one conditional update sets `READY` with the dimensions and derived bytes only while the row still exists, else the two objects just written are deleted. Implemented (slice 8a).
+  - `cover.purge` `{collectionId, coverId}` — the prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
@@ -517,13 +549,15 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Collection creation | 10 per rolling 24 hours per account |
 | Per-file size | §10.1 |
 
+*Implemented in slice 8a (2026-10-04):* the admin's cover routes are rate limited per route, per client IP (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, 120) and per signed-in user (`LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`, 60, keyed by the principal), plus at most 3 cover uploads open per collection (rows, `429`).
+
 *Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, and from PR E `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` for guest deletes; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
 
 *Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 
 ### 13.2 Usage accounting
 
-"Actual storage" (F1) = sum of `MediaObject.sizeBytes` over **all roles** (originals + derivatives) of non-deleted content + `declaredSizeBytes` of `INITIATED` upload sessions (reservations).
+"Actual storage" (F1) = sum of `MediaObject.sizeBytes` over **all roles** (originals + derivatives) of non-deleted content + the cover's `originalSizeBytes + derivedSizeBytes` (slice 8a) + `declaredSizeBytes` of `INITIATED` and `COMPLETING` upload sessions (reservations, guest and cover uploads alike).
 
 [assumption] Content marked deleted stops counting immediately, even before the purge completes (purge lag is our responsibility; otherwise deleting to free space would not work for the user).
 
@@ -552,9 +586,9 @@ Decision details: ADR 0013.
 
 ## 15. Legal and privacy (D15, F6, F8)
 
-- Pages: Terms of Service, Privacy Policy (uk/en), versioned; texts provided by the owner/lawyer. Engineering does not write legal wording.
-- Admin registration records `LegalAcceptance(document, version, acceptedAt)` (Phase 4 slice 10; not in Phase 2). No IP stored by default. Document updates do not force re-acceptance without a separate decision.
-- Guest page shows a short notice with links (no checkbox).
+- Pages (slice 10, PR F1): `/legal/terms` and `/legal/privacy`, uk/en, server-rendered from Markdown files (`apps/web/content/legal/<slug>.<locale>.<version>.md`) with a registry of current versions in `@stepler/contracts` (`LEGAL_DOCUMENTS`: `version`, `effectiveDate`, `draft`, `requireReacceptance`); a draft banner while a text is a placeholder; the «Контакти» block from `LEGAL_CONTACT_EMAIL`; the web server refuses to start on drafts or without a contact unless `LEGAL_ALLOW_DRAFT=true` (CI, staging; never production). Texts are provided by the owner/lawyer per `docs/legal/README.md`; engineering does not write legal wording.
+- Admin acceptance (slice 10, PR F2, ADR 0016; owner decisions L1–L4): acceptance is recorded at the request that starts registration and applied when the account is created or the sign-in completes. The sign-in card's required checkbox sends the current versions with the magic-link request or the Google start; the API validates them against the registry, carries them on the token row or in the signed OAuth transaction and writes `LegalAcceptance(userId, document, version, acceptedAt, requestId)` in the sign-in transaction (idempotent; versions no longer current are skipped). The magic-link e-mail and the verify page carry «Продовжуючи, ви приймаєте Умови використання та Політику конфіденційності» with links, so the mailbox owner (who may not be the requester) confirms by pressing «Увійти»; the Google start refuses `Sec-Fetch-Site: cross-site`. No IP is stored (L2); the request id correlates a row with the request log. `AuthGuard` refuses every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` with `403 LEGAL_ACCEPTANCE_REQUIRED` until both documents are accepted; the `/accept-terms` page is the fallback for accounts from before the checkbox, stale links and forced re-acceptance. A new document version does not force re-acceptance unless its registry entry sets `requireReacceptance` (L3; a separate product/legal decision); then `legal.accepted` turns false and everyone goes through the fallback once. The readiness check runs at web server start (L4). The account page («Акаунт» → «Правові документи») shows the accepted and the current version of each document.
+- Guest page shows a short notice with links under the contribution actions (no checkbox): PR F1, with placeholder copy (`guest.legalNotice`) until the lawyer's sentence.
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
 - Data minimization: the guest name is optional, held on the guest session ([O4], amended 2026-10-03) and snapshotted per submission; the session holds nothing else about the guest; other guests never see a name or another guest's file name or frame number; logs and audit events exclude text bodies, names, file names, cookies, tokens and signed URLs.
 

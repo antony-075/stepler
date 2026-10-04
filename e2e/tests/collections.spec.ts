@@ -41,10 +41,10 @@ const LIMIT_ERROR = 'Досягнуто ліміту активних колек
 
 const toast = (page: Page) => page.locator('[data-slot="toast-title"]');
 
-/** The collection page's «Параметри» tab (archive, delete). */
+/** The collection page's «Параметри колекції» tab (archive, delete). */
 async function openOptions(page: Page, id: string): Promise<void> {
   await page.goto(`/app/collections/${id}?tab=settings`);
-  await expect(page.getByRole('tab', { name: 'Параметри' })).toHaveAttribute(
+  await expect(page.getByRole('tab', { name: 'Параметри колекції' })).toHaveAttribute(
     'aria-selected',
     'true',
   );
@@ -238,7 +238,7 @@ test.describe('dashboard', () => {
     await expect(card(page, 'Стара').getByText(T.archived, { exact: true })).toBeVisible();
   });
 
-  test('the «Параметри» tab deletes and returns to the collections', async ({ page }) => {
+  test('the «Параметри колекції» tab deletes and returns to the collections', async ({ page }) => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Зайва');
     await openOptions(page, id);
@@ -272,7 +272,7 @@ test.describe('dashboard', () => {
     }
 
     // A tap away from the title (on the cover) still opens the collection.
-    const cover = await row.locator('[data-slot="tint-tile"]').boundingBox();
+    const cover = await row.locator('[data-slot="collection-cover"]').boundingBox();
     await page.mouse.click(cover!.x + cover!.width / 2, cover!.y + cover!.height / 2);
     await expect(page).toHaveURL(`/app/collections/${id}`);
   });
@@ -285,7 +285,7 @@ test.describe('dashboard', () => {
     await page.reload();
     const strip = card(page, 'Ювілей бабусі');
     // The cover is decorative: the initials in the collection's tint, hidden from AT.
-    const cover = strip.locator('[data-slot="tint-tile"]');
+    const cover = strip.locator('[data-slot="collection-cover"]');
     await expect(cover).toHaveText('ЮБ');
     await expect(cover).toHaveAttribute('aria-hidden', 'true');
     // The main link's real permissions (G3: everything to add), no invented counts.
@@ -522,7 +522,7 @@ test.describe('isolation and stale screens', () => {
     await page.reload();
     await page.getByRole('link', { name: 'Зайва', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Зайва', level: 1 })).toBeVisible();
-    await page.getByRole('tab', { name: 'Параметри' }).click();
+    await page.getByRole('tab', { name: 'Параметри колекції' }).click();
     const overview = page.url();
     await page.getByRole('button', { name: T.deleteAction, exact: true }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: T.deleteConfirm }).click();

@@ -11,6 +11,8 @@ describe('job names', () => {
       'maintenance.sweep': true,
       'media.image-derivatives': true,
       'media.video-poster': true,
+      'media.cover-derivatives': true,
+      'cover.purge': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);
@@ -26,6 +28,12 @@ describe('job names', () => {
     );
     expect(singletonKeyFor('media.video-poster', { contentItemId: 'v' })).toBe(
       'media.video-poster:v',
+    );
+    expect(singletonKeyFor('cover.purge', { collectionId: 'c', coverId: 'k' })).toBe(
+      'cover.purge:k',
+    );
+    expect(singletonKeyFor('media.cover-derivatives', { collectionId: 'c', coverId: 'k' })).toBe(
+      'media.cover-derivatives:k',
     );
     expect(singletonKeyFor('maintenance.sweep', {})).toBe('maintenance.sweep');
     expect(singletonKeyFor('uploads.expire', {})).toBe('uploads.expire');

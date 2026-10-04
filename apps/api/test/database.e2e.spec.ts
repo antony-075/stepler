@@ -677,4 +677,148 @@ describe('upload session and media object schema', () => {
     });
     await expect(prisma.guestLink.delete({ where: { id: ids.linkId } })).rejects.toThrow();
   });
+
+  describe('upload purpose [A1]', () => {
+    /** A valid COVER upload of the collection's owner. */
+    async function coverUpload(
+      ids: { collectionId: string },
+      overrides: Record<string, unknown> = {},
+    ) {
+      const { ownerId } = await prisma.collection.findUniqueOrThrow({
+        where: { id: ids.collectionId },
+      });
+      const n = sequence++;
+      return prisma.uploadSession.create({
+        data: {
+          collectionId: ids.collectionId,
+          purpose: 'COVER',
+          uploaderUserId: ownerId,
+          clientUploadId: `0199a000-0000-7000-8000-${String(n).padStart(12, '0')}`,
+          kind: 'PHOTO',
+          originalFilename: 'cover.jpg',
+          declaredMime: 'image/jpeg',
+          declaredSizeBytes: 1000n,
+          storageKey: `collections/${ids.collectionId}/uploads/${n}/original`,
+          multipartUploadId: `mp-${n}`,
+          partSizeBytes: 10_485_760n,
+          partCount: 1,
+          expiresAt: new Date(Date.now() + 3600_000),
+          ...overrides,
+        },
+      });
+    }
+
+    test('a CONTENT upload has its guest session and link; a COVER upload its uploader', async () => {
+      const ids = await setup();
+      const rule = check('UploadSession_purpose_actor');
+      expect(await violation(upload(ids, { guestSessionId: null }))).toEqual(rule);
+      expect(await violation(upload(ids, { guestLinkId: null }))).toEqual(rule);
+      expect(await violation(coverUpload(ids, { uploaderUserId: null }))).toEqual(rule);
+      // A cover upload carries nothing of a guest; a content upload no uploader.
+      expect(
+        await violation(
+          coverUpload(ids, { guestSessionId: ids.sessionId, guestLinkId: ids.linkId }),
+        ),
+      ).toEqual(rule);
+      const { ownerId } = await prisma.collection.findUniqueOrThrow({
+        where: { id: ids.collectionId },
+      });
+      expect(await violation(upload(ids, { uploaderUserId: ownerId }))).toEqual(rule);
+      await coverUpload(ids);
+    });
+
+    test('a cover is always a photo', async () => {
+      const ids = await setup();
+      expect(await violation(coverUpload(ids, { kind: 'VIDEO' }))).toEqual(
+        check('UploadSession_cover_is_photo'),
+      );
+    });
+
+    test('clientUploadId is unique per uploader; deleting the user deletes their cover uploads', async () => {
+      const ids = await setup();
+      const first = await coverUpload(ids);
+      expect(await violation(coverUpload(ids, { clientUploadId: first.clientUploadId }))).toEqual({
+        kind: 'unique',
+        constraint: 'UploadSession_uploaderUserId_clientUploadId_key',
+      });
+      // The same id as a guest's upload is another key: no clash.
+      await upload(ids, { clientUploadId: first.clientUploadId });
+      await prisma.collection.delete({ where: { id: ids.collectionId } });
+      await prisma.user.delete({ where: { id: first.uploaderUserId ?? '' } });
+      expect(await prisma.uploadSession.count()).toBe(0);
+    });
+  });
+});
+
+describe('collection cover schema [A2]', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  let sequence = 0;
+  const check = (constraint: string) => ({ kind: 'check', constraint });
+
+  async function collection(): Promise<string> {
+    const ownerId = (await prisma.user.create({ data: { email: `c${sequence++}@x.io` } })).id;
+    return (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
+  }
+
+  /** A valid pending cover; tests override one field to break one rule. */
+  const cover = (collectionId: string, overrides: Record<string, unknown> = {}) =>
+    prisma.collectionCover.create({
+      data: {
+        collectionId,
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 1000n,
+        ...overrides,
+      },
+    });
+
+  test('the welcome message is 1 to 160 code points when set', async () => {
+    const id = await collection();
+    const rule = check('Collection_welcome_length');
+    await prisma.collection.update({
+      where: { id },
+      data: { welcomeMessage: '😀'.repeat(160) },
+    });
+    expect(
+      await violation(
+        prisma.collection.update({ where: { id }, data: { welcomeMessage: '😀'.repeat(161) } }),
+      ),
+    ).toEqual(rule);
+    expect(
+      await violation(prisma.collection.update({ where: { id }, data: { welcomeMessage: '' } })),
+    ).toEqual(rule);
+    await prisma.collection.update({ where: { id }, data: { welcomeMessage: null } });
+  });
+
+  test('sizes: a positive original and a non-negative derived size', async () => {
+    const id = await collection();
+    const rule = check('CollectionCover_sizes');
+    expect(await violation(cover(id, { originalSizeBytes: 0n }))).toEqual(rule);
+    expect(await violation(cover(id, { derivedSizeBytes: -1n }))).toEqual(rule);
+  });
+
+  test('READY iff both dimensions are recorded', async () => {
+    const id = await collection();
+    const rule = check('CollectionCover_ready_dimensions');
+    expect(await violation(cover(id, { status: 'READY' }))).toEqual(rule);
+    expect(await violation(cover(id, { status: 'READY', width: 100 }))).toEqual(rule);
+    expect(await violation(cover(id, { width: 100, height: 100 }))).toEqual(rule);
+    expect(await violation(cover(id, { status: 'FAILED', width: 100, height: 100 }))).toEqual(rule);
+    await cover(id, { status: 'READY', width: 100, height: 100, derivedSizeBytes: 500n });
+  });
+
+  test('one cover per collection; deleting the collection deletes it', async () => {
+    const id = await collection();
+    await cover(id);
+    expect(await violation(cover(id, { source: 'FRAME' }))).toEqual({
+      kind: 'unique',
+      constraint: 'CollectionCover_collectionId_key',
+    });
+    await cover(await collection());
+    await prisma.collection.delete({ where: { id } });
+    expect(await prisma.collectionCover.count()).toBe(1);
+  });
 });

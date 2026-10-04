@@ -9,6 +9,8 @@ import type { JobData, JobName } from '../src/jobs/job-names.js';
 import type { PgBossClient } from '../src/jobs/pg-boss-queue.js';
 import type { ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
+import { coverKey } from '../src/collections/cover-keys.js';
+import { CoverDerivativesHandler } from '../src/worker/handlers/cover-derivatives.handler.js';
 import { ImageDerivativesHandler } from '../src/worker/handlers/image-derivatives.handler.js';
 import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.js';
 import type { JobHandler } from '../src/worker/job-handler.js';
@@ -201,6 +203,128 @@ describe('media.image-derivatives', () => {
   });
 });
 
+describe('media.cover-derivatives', () => {
+  const handler = (s: ObjectStorage = storage) => new CoverDerivativesHandler(prisma, s, slots);
+
+  /** A pending cover whose copied original (`bytes`) is at its own key. */
+  async function addCover(bytes: Buffer, mimeType: string) {
+    const owner = await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } });
+    const collection = await prisma.collection.create({
+      data: { ownerId: owner.id, title: 'Весілля' },
+    });
+    const cover = await prisma.collectionCover.create({
+      data: {
+        collectionId: collection.id,
+        source: 'UPLOAD',
+        mimeType,
+        originalSizeBytes: BigInt(bytes.length),
+      },
+    });
+    const original = coverKey(collection.id, cover.id, 'original');
+    await storage.putObject(original, bytes, mimeType, bytes.length);
+    return { collectionId: collection.id, coverId: cover.id, original };
+  }
+  const coverRow = (id: string) => prisma.collectionCover.findUnique({ where: { id } });
+  const coverKeys = (collectionId: string) =>
+    allKeys(storage, `collections/${collectionId}/cover/`);
+
+  test('a JPEG cover gets a 480 px thumbnail and a 1600 px preview and is READY; a rerun changes nothing', async () => {
+    const jpeg = await sharp({
+      create: { width: 2400, height: 1800, channels: 3, background: '#a0522d' },
+    })
+      .jpeg()
+      .withExif({ IFD0: { Make: 'Stepler Test Camera' } })
+      .toBuffer();
+    const { collectionId, coverId, original } = await addCover(jpeg, 'image/jpeg');
+
+    await handler().handle({ collectionId, coverId });
+
+    const row = await coverRow(coverId);
+    expect(row).toMatchObject({ status: 'READY', width: 2400, height: 1800 });
+    const thumbnail = await objectBytes(coverKey(collectionId, coverId, 'thumbnail'));
+    const preview = await objectBytes(coverKey(collectionId, coverId, 'preview'));
+    expect(row?.derivedSizeBytes).toBe(BigInt(thumbnail.length + preview.length));
+    const thumbMeta = await sharp(thumbnail).metadata();
+    expect([thumbMeta.format, Math.max(thumbMeta.width, thumbMeta.height), thumbMeta.exif]).toEqual(
+      ['webp', 480, undefined],
+    );
+    const previewMeta = await sharp(preview).metadata();
+    expect([previewMeta.format, previewMeta.width, previewMeta.height]).toEqual([
+      'webp',
+      1600,
+      1200,
+    ]);
+    expect((await storage.head(original))?.size).toBe(jpeg.length);
+
+    await handler().handle({ collectionId, coverId });
+    expect(await coverKeys(collectionId)).toEqual(
+      [
+        original,
+        coverKey(collectionId, coverId, 'preview'),
+        coverKey(collectionId, coverId, 'thumbnail'),
+      ].sort(),
+    );
+    expect(await prisma.collectionCover.count({ where: { collectionId } })).toBe(1);
+    expect((await coverRow(coverId))?.status).toBe('READY');
+  });
+
+  test('a HEIC cover goes through the libheif CLI', async () => {
+    const { collectionId, coverId } = await addCover(fixture('photo.heic'), 'image/heic');
+    await handler().handle({ collectionId, coverId });
+    expect(await coverRow(coverId)).toMatchObject({ status: 'READY', width: 320, height: 240 });
+    const meta = await sharp(
+      await objectBytes(coverKey(collectionId, coverId, 'preview')),
+    ).metadata();
+    expect([meta.width, meta.height]).toEqual([320, 240]);
+  });
+
+  test('Review Focus 2: a cover replaced while it was processed records nothing and leaves no objects', async () => {
+    const { collectionId, coverId, original } = await addCover(fixture('photo.jpg'), 'image/jpeg');
+    let replaced = false;
+    const replacingStorage = Object.assign(Object.create(storage) as ObjectStorage, {
+      putObject: async (key: string, body: Buffer | Readable, type: string, length?: number) => {
+        if (!replaced) {
+          replaced = true;
+          // The API's replace: the row goes at once; its purge may run any time after.
+          await prisma.collectionCover.delete({ where: { id: coverId } });
+        }
+        await storage.putObject(key, body, type, length);
+      },
+    });
+    await handler(replacingStorage).handle({ collectionId, coverId });
+    expect(await coverRow(coverId)).toBeNull();
+    // Only the original is left, for `cover.purge` to remove.
+    expect(await coverKeys(collectionId)).toEqual([original]);
+  });
+
+  test('a corrupt original is FAILED at once; the original stays', async () => {
+    const broken = Buffer.concat([fixture('photo.jpg').subarray(0, 20), Buffer.alloc(500, 7)]);
+    const { collectionId, coverId, original } = await addCover(broken, 'image/jpeg');
+    await handler().handle({ collectionId, coverId });
+    expect((await coverRow(coverId))?.status).toBe('FAILED');
+    expect(await coverKeys(collectionId)).toEqual([original]);
+  });
+
+  test('a missing row, or a row of another collection, is a no-op', async () => {
+    const { collectionId, coverId } = await addCover(fixture('photo.jpg'), 'image/jpeg');
+    await handler().handle({ collectionId: '019a0000-0000-7000-8000-000000000000', coverId });
+    await handler().handle({ collectionId, coverId: '019a0000-0000-7000-8000-000000000000' });
+    expect((await coverRow(coverId))?.status).toBe('PENDING');
+  });
+
+  test('after its retries a cover job leaves the cover FAILED', async () => {
+    const { collectionId, coverId } = await addCover(fixture('photo.jpg'), 'image/jpeg');
+    const down = Object.assign(Object.create(storage) as ObjectStorage, {
+      downloadToFile: () => Promise.reject(new Error('storage unavailable')),
+    });
+    const h = handler(down);
+    await expect(h.handle({ collectionId, coverId })).rejects.toThrow('storage unavailable');
+    expect((await coverRow(coverId))?.status).toBe('PENDING');
+    await h.onFinalFailure({ collectionId, coverId });
+    expect((await coverRow(coverId))?.status).toBe('FAILED');
+  });
+});
+
 describe('media.video-poster', () => {
   const handler = (s: ObjectStorage = storage) => new VideoPosterHandler(store, s, slots);
 
@@ -302,6 +426,8 @@ describe('JobRunner', () => {
       noop('uploads.expire') as never,
       handler as never,
       noop('media.video-poster') as never,
+      noop('media.cover-derivatives') as never,
+      noop('cover.purge') as never,
     );
   }
   const job = (retryCount: number) =>

@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { apiRequest, isApiError } from '@/api/client';
 import { ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
+import { LegalDocumentLink } from '@/legal/legal-consent';
 
 /**
  * Loading this page only previews the link (read-only), so email scanners that open it do
@@ -111,6 +112,14 @@ export function VerifyPanel({ token }: { token: string | null }) {
       <h1 className={TITLE}>{t('verify.title')}</h1>
       <p>{t('verify.signInAs', { email: preview.data.email })}</p>
       <p className="text-sm text-muted-foreground">{t('verify.notYou')}</p>
+      {/* ADR 0016: the card's tick was the requester's; the mailbox owner accepts here, by
+          signing in (recorded at verify). Placeholder copy the lawyer replaces (`verify.legal`). */}
+      <p className="text-sm text-pretty text-muted-foreground">
+        {t.rich('verify.legal', {
+          terms: (chunks) => <LegalDocumentLink document="TERMS">{chunks}</LegalDocumentLink>,
+          privacy: (chunks) => <LegalDocumentLink document="PRIVACY">{chunks}</LegalDocumentLink>,
+        })}
+      </p>
       <Button size="lg" disabled={verify.isPending} onClick={() => verify.mutate()}>
         {verify.isPending ? t('verify.signingIn') : t('verify.submit')}
       </Button>

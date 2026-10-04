@@ -4,6 +4,7 @@ import { pipeline } from 'node:stream/promises';
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
+  CopyObjectCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -285,6 +286,22 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
     );
     if (res.Body === undefined) return new Uint8Array();
     return res.Body.transformToByteArray();
+  }
+
+  async copyObject(fromKey: string, toKey: string, contentType: string): Promise<void> {
+    await this.client.send(
+      new CopyObjectCommand({
+        Bucket: this.bucket,
+        Key: toKey,
+        // The SDK sends CopySource as given: the key is URL-encoded by segment (ours are ids).
+        CopySource: `${this.bucket}/${fromKey.split('/').map(encodeURIComponent).join('/')}`,
+        // The copy carries only the verified type, never the upload's metadata.
+        MetadataDirective: 'REPLACE',
+        ContentType: contentType,
+      }),
+      // A 50 MB copy is quick, but it is a whole-object operation like a write.
+      this.deadline(this.completeTimeoutMs),
+    );
   }
 
   async putObject(

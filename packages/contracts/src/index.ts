@@ -80,6 +80,19 @@ export {
   type ProcessingStatus,
 } from './content.js';
 export {
+  collectionCoverSchema,
+  collectionWelcomeMessageSchema,
+  coverStatusSchema,
+  coverUploadParamsSchema,
+  guestCoverSchema,
+  setCoverFromFrameRequestSchema,
+  WELCOME_MESSAGE_MAX_CHARS,
+  type CollectionCover,
+  type CoverStatus,
+  type GuestCover,
+  type SetCoverFromFrameRequest,
+} from './cover.js';
+export {
   ERROR_CODES,
   problemDetailsSchema,
   type ErrorCode,
@@ -124,6 +137,24 @@ export {
   type HealthLiveResponse,
   type HealthReadyResponse,
 } from './health.js';
+export {
+  currentLegalVersion,
+  currentLegalVersions,
+  isCurrentLegalVersions,
+  LEGAL_DOCUMENTS,
+  LEGAL_VERSION_PATTERN,
+  legalAcceptanceRequestSchema,
+  legalDocumentKeySchema,
+  legalStatus,
+  legalStatusSchema,
+  legalVersionsSchema,
+  type LegalAcceptanceRecord,
+  type LegalAcceptanceRequest,
+  type LegalDocumentKey,
+  type LegalDocumentVersion,
+  type LegalStatus,
+  type LegalVersions,
+} from './legal.js';
 export {
   storageUsageSchema,
   usageResponseSchema,

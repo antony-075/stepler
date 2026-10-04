@@ -6,7 +6,13 @@ import {
 } from './index.js';
 
 const context = {
-  collection: { id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9', title: 'Wedding', description: null },
+  collection: {
+    id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
+    title: 'Wedding',
+    description: null,
+    welcomeMessage: null,
+    cover: null,
+  },
   permissions: {
     canUploadPhotos: true,
     canUploadVideos: true,
@@ -28,6 +34,36 @@ describe('guestContextSchema', () => {
   test('accepts a context; counts are null without the shared gallery', () => {
     expect(guestContextSchema.parse(context)).toEqual(context);
     expect(guestContextSchema.safeParse({ ...context, counts: null }).success).toBe(true);
+  });
+
+  test('carries the welcome message and a READY cover, never the cover status or source frame', () => {
+    const cover = {
+      thumbnailUrl: 'https://storage.example.com/t.webp',
+      previewUrl: 'https://storage.example.com/p.webp',
+      width: 4000,
+      height: 3000,
+    };
+    const withCover = {
+      ...context,
+      collection: { ...context.collection, welcomeMessage: 'Дякуємо, що ви з нами!', cover },
+    };
+    expect(guestContextSchema.parse(withCover)).toEqual(withCover);
+    for (const extra of [
+      { status: 'READY' },
+      { sourceContentItemId: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9' },
+    ]) {
+      expect(
+        guestContextSchema.safeParse({
+          ...context,
+          collection: { ...context.collection, cover: { ...cover, ...extra } },
+        }).success,
+      ).toBe(false);
+    }
+    const withoutCover: Record<string, unknown> = { ...context.collection };
+    delete withoutCover.cover;
+    expect(guestContextSchema.safeParse({ ...context, collection: withoutCover }).success).toBe(
+      false,
+    );
   });
 
   test('never carries the session id', () => {

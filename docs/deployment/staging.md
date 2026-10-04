@@ -45,13 +45,27 @@ While the app is in Testing mode, only the listed test users can sign in.
    | `S3_ENDPOINT` | `https://<account-id>.eu.r2.cloudflarestorage.com` |
    | `S3_BUCKET` | `stepler-staging` |
    | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | from step 1 |
+   | `LEGAL_CONTACT_EMAIL` | the privacy/abuse contact shown on `/legal/*`; a placeholder such as `privacy@example.com` is fine on staging (owner action E1 of the slice 10 plan). `LEGAL_ALLOW_DRAFT=true` comes from `render.yaml`: staging may run on the placeholder legal texts, production never does |
 
    If Render assigns a different host than expected, update `APP_ORIGIN`, the Turnstile hostname and the Google redirect URI to the real one.
 3. Apply. The first deploy builds both images, runs the migrations (the API's pre-deploy command) and starts the services.
 
 ## 6. Deploy flow afterwards
 
-A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `stage` is green, Render deploys automatically.
+Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minutes are limited, so CI can't gate every deploy). `render.yaml` sets `autoDeployTrigger: "off"` on the three staging services.
+
+1. Before the release, run the full check locally on the release commit: `pnpm release:check` (format, lint, typecheck, unit and integration tests, builds, Storybook, the three-browser e2e, the Docker image checks; needs `pnpm infra:up`). The release PR `dev` → `stage` lists its result. If CI minutes are available, CI on the release PR runs the same full matrix.
+2. Merge the release PR into `stage`.
+3. Render → **Manual Deploy → Deploy latest commit**, in this order:
+   1. `stepler-staging-api` — its pre-deploy command applies the database migrations;
+   2. `stepler-staging-worker`;
+   3. `stepler-staging` (web).
+   Deploy them back to back; the web and API share contracts.
+4. Verify (section 7): `/healthz`, `/api/v1/health/ready`, sign-in, and the release's own checks.
+
+### Release notes
+
+- **Legal acceptance (slice 10, PR F2, ADR 0016).** From this release `GET /auth/methods` returns `legal`, `POST /auth/magic-link` requires it and `GET /auth/google/start` requires `terms`/`privacy`. Render deploys `stepler-staging` (web) and `stepler-staging-api` independently, and both sides read `/auth/methods` with a strict schema, so **in either order** the sign-in card shows «Вхід тимчасово недоступний. Спробуйте пізніше.» until both services run the new version (old web: the new `legal` field is unknown; new web: the field is missing). Nothing is written in that window. Deploy them back to back (Render → each service → Manual Deploy if needed) and check `/login` afterwards; on staging the short window is acceptable. Accounts created before this release see `/accept-terms` once after signing in.
 
 ## 7. Verify staging
 

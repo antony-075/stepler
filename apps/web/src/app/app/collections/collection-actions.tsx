@@ -23,7 +23,7 @@ import { useArchiveToggle } from './use-archive';
 
 /**
  * Archive (or bring back) and delete from a dashboard card's «⋯» (owner 2026-10-02: "too many
- * transitions"; on the collection page they are on its «Параметри» tab). A 44px ghost «⋯»
+ * transitions"; on the collection page they are on its «Параметри колекції» tab). A 44px ghost «⋯»
  * named «Дії з колекцією «{title}»»; focus returns to it after a dialog. Archive and unarchive ask once in a
  * plain ConfirmDialog (unarchive at the limit says why inside it); delete is destructive and
  * asks for the collection's title to be typed. Toasts in the colour of the new state.

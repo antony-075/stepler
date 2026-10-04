@@ -57,6 +57,8 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - PostgreSQL uses host port 5433 so it does not clash with a locally installed PostgreSQL.
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
+- `signInAs(app, prisma, email)` in API tests creates a user who has accepted the current legal documents (ADR 0016); pass `legal = false` (fifth argument) for an account the acceptance gate stops. In Playwright, `requestLink`/`signIn` tick the sign-in card's checkbox.
+- A second e2e stack can run alongside the first: `E2E_DATABASE_URL`, `E2E_SMTP_URL`, `E2E_MAILPIT_URL`, `E2E_S3_ENDPOINT` point at other services, and `E2E_WEB_PORT` / `E2E_API_PORT` (default 3100/4100) move the servers (upload journeys then need that web origin in the bucket's CORS).
 - The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
 - `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden), and photo and video frames stay «Готується прев’ю». It needs the media tools from Prerequisites (`heif-dec`/`heif-convert`, `ffmpeg`, `ffprobe` on `PATH`). It serves no page; it logs `worker started` once it polls.
 
@@ -73,6 +75,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
+| `pnpm release:check`                            | Full pre-release check before a manual staging deploy: format, lint, typecheck, tests, builds, Storybook, three-browser e2e, Docker image checks (needs `pnpm infra:up`) |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
@@ -108,7 +111,7 @@ feature branch ──PR──► dev ──PR──► stage ──PR──► m
 - Merge with **merge commits** (no squash, no rebase), so the branches share history and a promotion PR contains exactly what the source branch has.
 - Changes to `dev`, `stage` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
 - Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
-- CI runs on every PR and on pushes to `dev`, `stage` and `main`. Deployment (`stage` → staging, `main` → production) is wired up when hosting is chosen.
+- CI (GitHub Actions minutes are limited, owner decision 2026-10-05): a PR into `dev` runs the secrets scan, `quality` (format, lint, typecheck, unit/integration tests, builds, Storybook, migration drift) and e2e on desktop Chrome only; docs-only PRs (`docs/**`) skip CI. Release PRs into `stage`/`main` and pushes to `stage`/`main` run the full e2e matrix (three browsers, two shards) and the Docker image checks; Render deploys `stage` only after they pass. A merge into `dev` does not run CI again. Run the full three-browser `pnpm e2e` locally before opening a PR.
 
 ## Staging smoke checklist (owner action S1, after promoting media processing)
 
@@ -174,6 +177,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `UPLOAD_PART_SIZE_BYTES` | api | no | Part size of every upload (all uploads are multipart; a smaller file is one part), at least `5242880`; default `10485760` (10 MiB) |
 | `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` | api | no | Upload API calls (start, parts, complete, cancel) per client IP per minute, per route; default `600` (venue NAT) |
 | `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` | api | no | The same per guest session; default `240` |
+| `LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE` | api | no | Admin cover calls (cover upload start, parts, complete, cancel; cover from a frame; cover removal) per client IP per minute, per route; default `120` |
+| `LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE` | api | no | The same per signed-in user; default `60` |
 | `S3_REQUEST_TIMEOUT_MS` | api, worker | no | A storage call fails after this long (the API answers 503, retryable); default `15000` |
 | `S3_COMPLETE_TIMEOUT_MS` | api, worker | no | The same for assembling a multipart upload; default `60000` |
 | `UPLOAD_SESSION_TTL_HOURS` | api | no | An upload not completed within this many hours expires and its bytes are discarded; default `24` |
@@ -188,6 +193,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |
+| `LEGAL_CONTACT_EMAIL` | web | in production | E-mail for privacy requests and content complaints, shown in the «Контакти» block of `/legal/terms` and `/legal/privacy` (spec §15). May be unset only with `LEGAL_ALLOW_DRAFT=true` (the block is then omitted) |
+| `LEGAL_ALLOW_DRAFT` | web | no | `true` lets a built server start on placeholder legal texts (`draft: true` in the registry) and without `LEGAL_CONTACT_EMAIL`: CI, the image check and staging set it; **production never does**, so the server refuses to start until the real texts are published (`docs/legal/README.md`, [C20]). `next dev` always allows drafts; default `false` |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
 The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables and the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` rows above; it needs no SMTP, Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.

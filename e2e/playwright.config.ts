@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import { compose, E2E_DATABASE_URL, E2E_S3_ENDPOINT, E2E_SMTP_URL } from './support/env.js';
 
-// Dedicated ports so e2e never collides with `pnpm dev` (3000/4000).
-const API_PORT = 4100;
-const WEB_PORT = 3100;
+// Dedicated ports so e2e never collides with `pnpm dev` (3000/4000); overridable for a second
+// stack running at the same time (uploads then need that origin in the bucket's CORS).
+const API_PORT = Number(process.env.E2E_API_PORT ?? 4100);
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100);
 
 export default defineConfig({
   testDir: './tests',
@@ -56,6 +57,8 @@ export default defineConfig({
         LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE: '10000',
         LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE: '10000',
         LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE: '10000',
+        LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE: '10000',
+        LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE: '10000',
       },
       reuseExistingServer: false,
     },
@@ -84,6 +87,9 @@ export default defineConfig({
         PORT: String(WEB_PORT),
         HOSTNAME: '127.0.0.1',
         API_INTERNAL_URL: `http://127.0.0.1:${API_PORT}`,
+        // Placeholder legal texts are allowed everywhere but production ([C20]).
+        LEGAL_ALLOW_DRAFT: 'true',
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
       },
       reuseExistingServer: false,
     },

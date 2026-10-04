@@ -30,7 +30,10 @@
     "UPLOAD_IN_PROGRESS": "This upload is being checked; try again in a moment.",
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
     "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
-    "CONTENT_NOT_FOUND": "This frame was deleted."
+    "CONTENT_NOT_FOUND": "This frame was deleted.",
+    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "To continue, accept the Terms of Service and the Privacy Policy.",
+    "LEGAL_VERSION_OUTDATED": "The documents have changed. Review them and accept again."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -51,7 +54,9 @@
     "useAnother": "Use a different email",
     "unavailable": "Sign-in is temporarily unavailable. Try again later.",
     "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
-    "turnstileRetry": "Try again"
+    "turnstileRetry": "Try again",
+    "legalCheckbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
+    "legalHint": "Tick the box to continue."
   },
   "verify": {
     "pageTitle": "Confirm sign-in",
@@ -59,12 +64,26 @@
     "title": "Sign in to Stepler",
     "signInAs": "You're signing in as {email}",
     "notYou": "Not you? Don't press the button, just close this page.",
+    "legal": "By continuing, you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.",
     "submit": "Sign in",
     "signingIn": "Signing in…",
     "backToLogin": "Get a new link",
     "retry": "Try again",
     "invalidTitle": "This link didn't work",
     "unavailableTitle": "Couldn't check the link"
+  },
+  "acceptTerms": {
+    "pageTitle": "Accept the terms",
+    "title": "Accept the terms to continue",
+    "lead": "Your account has no acceptance of the Terms of Service and the Privacy Policy yet — or the documents have changed.",
+    "documentsLabel": "Documents",
+    "checkbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
+    "submit": "Accept and continue",
+    "submitting": "Saving…",
+    "mustCheck": "Tick the box to continue.",
+    "logout": "Sign out",
+    "documentMeta": "Version {version} · effective {date}",
+    "opensInNewTab": "(opens in a new tab)"
   },
   "app": {
     "loading": "Loading…",
@@ -78,7 +97,7 @@
       "close": "Close menu",
       "collections": "Collections",
       "section": {
-        "settings": "Options"
+        "settings": "Collection settings"
       },
       "account": "Account",
       "collapse": "Collapse the sidebar",
@@ -227,7 +246,7 @@
     "loading": "Loading the collection",
     "retry": "Try again",
     "settingsPage": {
-      "pageTitle": "Collection options",
+      "pageTitle": "Collection settings",
       "details": "Basic information",
       "detailsHint": "The title and description tell guests where they are.",
       "cancel": "Cancel",
@@ -260,7 +279,8 @@
       "label": "Collection sections",
       "content": "Content",
       "links": "Links",
-      "settings": "Options"
+      "appearance": "Guest page",
+      "settings": "Collection settings"
     },
     "inline": {
       "editTitle": "Edit title",
@@ -273,6 +293,76 @@
       "cancel": "Cancel",
       "saved": "Saved",
       "failed": "Couldn’t save"
+    }
+  },
+  "appearance": {
+    "archived": "An archived collection can’t be changed. Bring it back from the archive to change its cover or welcome message.",
+    "cover": {
+      "title": "Cover",
+      "hint": "Guests see it above the collection’s title, and you see it in your collections. Use a JPEG, PNG, WebP, HEIC or GIF photo up to 50 MB.",
+      "readyHint": "This is how guests see the cover on a phone. Other screens crop it to fit and keep the centre in view.",
+      "upload": "Upload an image",
+      "pickFrame": "Choose from frames",
+      "replace": "Replace",
+      "remove": "Remove cover",
+      "uploading": "Uploading the cover",
+      "cancel": "Cancel",
+      "uploadFailed": "Couldn’t upload the cover",
+      "retry": "Try again",
+      "chooseAnother": "Choose another file",
+      "dismiss": "Close",
+      "reason": {
+        "NETWORK": "The connection dropped. Check the internet and try again.",
+        "STORAGE_403": "Storage refused the file. Try again."
+      },
+      "processing": "Preparing the cover…",
+      "failedTitle": "Couldn’t prepare the cover",
+      "failedText": "Try another image.",
+      "uploaded": "Cover uploaded — preparing it",
+      "updated": "Cover updated",
+      "removed": "Cover removed",
+      "removeConfirmTitle": "Remove the cover?",
+      "removeConfirmText": "The collection’s initials will show in its place again. The guest’s frame it came from stays.",
+      "removeConfirm": "Remove",
+      "removePending": "Removing",
+      "leave": "The cover is still uploading. Leave the page and cancel the upload?",
+      "setFailed": "Couldn’t make it the cover",
+      "archivedRefused": "The collection is archived — its cover can’t be changed now.",
+      "frameGone": "That frame has already been deleted."
+    },
+    "welcome": {
+      "title": "Welcome message for guests",
+      "label": "Welcome text",
+      "hint": "One or two lines, no formatting. Guests see it above the add button.",
+      "placeholder": "For example: Thank you for being with us! Add your photos from tonight.",
+      "counter": "{count} of {max}",
+      "tooLong": "At most {max} characters.",
+      "lineBreaks": "One paragraph only, no line breaks.",
+      "save": "Save",
+      "saving": "Saving…",
+      "clear": "Remove",
+      "saved": "Saved",
+      "failed": "Couldn’t save",
+      "none": "No welcome message."
+    },
+    "picker": {
+      "title": "Choose a photo for the cover",
+      "description": "The photo is copied into the cover: if the guest deletes it, the cover stays.",
+      "close": "Close",
+      "listLabel": "Guests’ photos",
+      "loading": "Loading photos",
+      "loadFailed": "Couldn’t load the photos.",
+      "retry": "Try again",
+      "empty": "Guests haven’t added photos yet",
+      "emptyText": "As soon as the first photo arrives, you can make it the cover.",
+      "loadMore": "Show more",
+      "cancel": "Cancel",
+      "confirm": "Make it the cover",
+      "pending": "Saving…",
+      "notReady": "Preparing preview",
+      "unavailable": "Preview unavailable",
+      "frameName": "Frame {number}, photo",
+      "frameNotReady": "Frame {number}, photo still preparing — can’t be chosen"
     }
   },
   "content": {
@@ -347,7 +437,8 @@
       "noPreviewYet": "The preview comes later",
       "documentOpen": "Documents open after you download them.",
       "photoAlt": "Frame {number}",
-      "dimensionsValue": "{width, number} × {height, number}"
+      "dimensionsValue": "{width, number} × {height, number}",
+      "setCover": "Make it the cover"
     },
     "delete": {
       "title": "Delete frame {frame}?",
@@ -749,7 +840,8 @@
       "deleted": "Frame deleted"
     },
     "refresh": "Refresh",
-    "refreshed": "Refreshed"
+    "refreshed": "Refreshed",
+    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>."
   },
   "account": {
     "pageTitle": "Account",
@@ -772,6 +864,30 @@
       "saved": "Name saved",
       "cancel": "Cancel",
       "leave": "Your name isn’t saved. Leave the page without saving?"
+    },
+    "legal": {
+      "title": "Legal documents",
+      "hint": "The terms and policy you accepted, and their current versions.",
+      "current": "Current version {version}",
+      "acceptedAt": "Accepted {date} (version {version})",
+      "notAccepted": "Not accepted"
     }
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "description": "The terms of using Stepler."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "How Stepler handles personal data."
+    },
+    "draftBanner": "Draft — the text will be replaced",
+    "meta": "Version {version} · effective from <time>{date}</time>",
+    "contact": {
+      "title": "Contact",
+      "text": "For personal data requests and content complaints, write to <email>{address}</email>."
+    },
+    "navLabel": "Legal documents"
   }
 }

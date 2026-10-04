@@ -1,11 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Controller, Get, Inject, Logger, Query, Redirect, Req, Res } from '@nestjs/common';
 import { ApiResponse, ApiTags } from '@nestjs/swagger';
+import { isCurrentLegalVersions, legalVersionsSchema } from '@stepler/contracts';
 import { generateCodeVerifier, generateState } from 'arctic';
 import { API_ENV } from '../../config/config.module.js';
 import type { ApiEnv } from '../../config/env.js';
 import { deriveKey } from '../../crypto/keys.js';
 import { AppError } from '../../errors/app-error.js';
+import { RequestId } from '../../logging/request-id.decorator.js';
 import { Public } from '../public.decorator.js';
 import { SessionService } from '../session.service.js';
 import { readCookie, SESSION_COOKIE, setSessionCookie } from '../session-cookie.js';
@@ -40,18 +42,44 @@ export class GoogleController {
     this.cookieKey = deriveKey(env.APP_SECRET, 'st_oauth');
   }
 
-  /** Starts the OAuth flow: stores state + PKCE verifier in a signed cookie, then 302 to Google. */
+  /**
+   * Starts the OAuth flow: stores state, PKCE verifier and the accepted legal versions (the
+   * sign-in card's checkbox, ADR 0016) in a signed cookie, then 302 to Google. Without current
+   * versions it goes back to the login page with an error and sets no cookie, so Google is
+   * never contacted.
+   */
   @Get('start')
   @Redirect()
-  @ApiResponse({ status: 302, description: 'To Google; 404 when Google sign-in is off' })
+  @ApiResponse({
+    status: 302,
+    description:
+      'To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off',
+  })
   start(
+    @Req() req: IncomingMessage,
     @Query('returnTo') returnTo: unknown,
+    @Query('terms') terms: unknown,
+    @Query('privacy') privacy: unknown,
     @Res({ passthrough: true }) res: ServerResponse,
   ): RedirectTarget {
     const google = this.configured();
+    // The versions stand for a tick on our own card: a start launched from another site (a
+    // link or a form elsewhere, `Sec-Fetch-Site: cross-site`) cannot carry that acceptance.
+    // Older browsers send no header and are allowed.
+    if (req.headers['sec-fetch-site'] === 'cross-site') {
+      return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
+    }
+    const legal = legalVersionsSchema.safeParse({ terms, privacy });
+    if (!legal.success) return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
+    if (!isCurrentLegalVersions(legal.data)) return this.failure('LEGAL_VERSION_OUTDATED');
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
-    const transaction = { state, codeVerifier, returnTo: safeReturnTo(returnTo) };
+    const transaction = {
+      state,
+      codeVerifier,
+      returnTo: safeReturnTo(returnTo),
+      legal: legal.data,
+    };
     setOAuthCookie(res, encodeTransaction(this.cookieKey, transaction), this.env);
     return { url: google.authorizationUrl(state, codeVerifier).toString() };
   }
@@ -64,6 +92,7 @@ export class GoogleController {
     @Query() query: Record<string, unknown>,
     @Req() req: IncomingMessage,
     @Res({ passthrough: true }) res: ServerResponse,
+    @RequestId() requestId: string | undefined,
   ): Promise<RedirectTarget> {
     const google = this.configured();
     clearOAuthCookie(res, this.env);
@@ -76,7 +105,8 @@ export class GoogleController {
 
     let userId: string;
     try {
-      userId = await this.signIns.signIn(await google.exchange(code, transaction.codeVerifier));
+      const claims = await google.exchange(code, transaction.codeVerifier);
+      userId = await this.signIns.signIn(claims, transaction.legal, requestId);
     } catch (error) {
       if (error instanceof AppError && error.code === 'ACCOUNT_BLOCKED') {
         return this.failure('ACCOUNT_BLOCKED');
@@ -100,7 +130,10 @@ export class GoogleController {
     return this.google;
   }
 
-  private failure(code: 'OAUTH_FAILED' | 'ACCOUNT_BLOCKED'): RedirectTarget {
+  private failure(
+    code:
+      'OAUTH_FAILED' | 'ACCOUNT_BLOCKED' | 'LEGAL_ACCEPTANCE_REQUIRED' | 'LEGAL_VERSION_OUTDATED',
+  ): RedirectTarget {
     return { url: `${this.env.APP_ORIGIN}/login?error=${code}` };
   }
 }

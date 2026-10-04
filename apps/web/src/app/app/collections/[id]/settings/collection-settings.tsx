@@ -1,6 +1,6 @@
 'use client';
 
-// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри» tab of the collection
+// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри колекції» tab of the collection
 // page. Two cards: «Архівування» (asks once; bringing it back just happens) and the danger zone
 // (the only red on the page; a destructive ConfirmDialog names the collection). Guest access is
 // not here: permissions belong to each link, on «Посилання» (owner 2026-10-03). Errors stay
@@ -15,14 +15,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Archive, ArchiveRestore, Trash2, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { isApiError } from '@/api/client';
 import { collectionKey, deleteCollection, useInvalidateCollections } from '@/api/collections';
 import { errorMessageKey } from '@/errors/error-message';
 import { useArchiveToggle } from '../../use-archive';
+import { SectionCard } from '../section-card';
 
 /**
- * The collection's «Параметри» tab (owner 2026-10-02: one page, no separate settings page; the
+ * The collection's «Параметри колекції» tab (owner 2026-10-02: one page, no separate settings page; the
  * title and description are edited in place in the header): archiving and the danger zone.
  */
 export function CollectionSettingsPanel({
@@ -37,49 +38,6 @@ export function CollectionSettingsPanel({
       <ArchiveCard collection={collection} />
       <DangerCard collection={collection} onDeleted={onDeleted} />
     </div>
-  );
-}
-
-/**
- * A numbered section card: the number (the order of the page, `aria-hidden`), the h2 and a
- * muted hint on the right from `md`, then the content.
- */
-function SectionCard({
-  number,
-  id,
-  title,
-  hint,
-  children,
-}: {
-  number?: number;
-  id: string;
-  title: string;
-  hint?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section
-      aria-labelledby={id}
-      className="grid gap-5 rounded-sheet border bg-card p-4 shadow-card sm:p-6"
-    >
-      <div className="grid gap-x-6 gap-y-1 md:grid-cols-[auto_minmax(0,1fr)] md:items-baseline">
-        <h2 id={id} className="type-h3 flex items-center gap-3">
-          {number === undefined ? null : (
-            <span
-              aria-hidden="true"
-              className="type-data grid size-7 shrink-0 place-items-center rounded-full border bg-background text-foreground"
-            >
-              {number}
-            </span>
-          )}
-          {title}
-        </h2>
-        {hint ? (
-          <p className="text-sm text-pretty text-muted-foreground md:text-right">{hint}</p>
-        ) : null}
-      </div>
-      {children}
-    </section>
   );
 }
 

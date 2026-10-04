@@ -7,8 +7,13 @@ import type { AccountPrincipal, RequestWithPrincipal } from './principal.js';
 import { IS_PUBLIC } from './public.decorator.js';
 import { type ResolvedSession, SessionService } from './session.service.js';
 import { readCookie, SESSION_COOKIE } from './session-cookie.js';
+import { SKIP_LEGAL_GATE } from './skip-legal-gate.decorator.js';
 
-/** Default deny: every route needs a valid admin session unless marked `@Public()`. */
+/**
+ * Default deny: every route needs a valid admin session unless marked `@Public()`, and the
+ * session's user must have accepted the legal documents unless the route is `@SkipLegalGate()`
+ * (ADR 0016). Operators are users: the gate applies to them too.
+ */
 @Injectable()
 export class AuthGuard implements CanActivate {
   private readonly operatorEmails: ReadonlySet<string>;
@@ -33,6 +38,14 @@ export class AuthGuard implements CanActivate {
     const session = token === undefined ? null : await this.sessions.resolve(token);
     if (session === null) throw new AppError('UNAUTHENTICATED', 401);
     req.principal = this.toPrincipal(session);
+
+    const skipLegalGate = this.reflector.getAllAndOverride<boolean | undefined>(SKIP_LEGAL_GATE, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!session.legalAccepted && skipLegalGate !== true) {
+      throw new AppError('LEGAL_ACCEPTANCE_REQUIRED', 403);
+    }
     return true;
   }
 

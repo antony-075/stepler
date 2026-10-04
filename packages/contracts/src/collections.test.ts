@@ -71,6 +71,20 @@ describe('updateCollectionRequestSchema', () => {
     expect(updateCollectionRequestSchema.safeParse({ title: '' }).success).toBe(false);
     expect(updateCollectionRequestSchema.safeParse({ status: 'ARCHIVED' }).success).toBe(false);
   });
+
+  test('the welcome message: trimmed, one paragraph of up to 160 code points, null clears it', () => {
+    expect(updateCollectionRequestSchema.parse({ welcomeMessage: null })).toEqual({
+      welcomeMessage: null,
+    });
+    expect(updateCollectionRequestSchema.parse({ welcomeMessage: ' Вітаємо! ' })).toEqual({
+      welcomeMessage: 'Вітаємо!',
+    });
+    expect(
+      updateCollectionRequestSchema.safeParse({ welcomeMessage: '😀'.repeat(161) }).success,
+    ).toBe(false);
+    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: 'a\nb' }).success).toBe(false);
+    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: '' }).success).toBe(false);
+  });
 });
 
 describe('listCollectionsQuerySchema', () => {
@@ -106,10 +120,33 @@ describe('collectionSchema', () => {
     },
     contentCount: 0,
     lastContentAt: null,
+    welcomeMessage: null,
+    cover: null,
   };
 
   test('accepts a collection', () => {
     expect(collectionSchema.parse(collection)).toEqual(collection);
+  });
+
+  test('carries the welcome message and the cover, both required and nullable', () => {
+    const withCover = {
+      ...collection,
+      welcomeMessage: 'Вітаємо!',
+      cover: {
+        status: 'READY',
+        thumbnailUrl: 'https://storage.example.com/t.webp',
+        previewUrl: 'https://storage.example.com/p.webp',
+        width: 4000,
+        height: 3000,
+      },
+    };
+    expect(collectionSchema.parse(withCover)).toEqual(withCover);
+    const withoutCover: Partial<typeof collection> = { ...collection };
+    delete withoutCover.cover;
+    expect(collectionSchema.safeParse(withoutCover).success).toBe(false);
+    const withoutWelcome: Partial<typeof collection> = { ...collection };
+    delete withoutWelcome.welcomeMessage;
+    expect(collectionSchema.safeParse(withoutWelcome).success).toBe(false);
   });
 
   test('carries the frame count and the newest frame time', () => {

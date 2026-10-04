@@ -36,7 +36,10 @@
               "UPLOAD_CLOSED",
               "IDEMPOTENCY_CONFLICT",
               "CONTENT_NOT_FOUND",
-              "UPLOAD_IN_PROGRESS"
+              "UPLOAD_IN_PROGRESS",
+              "COVER_SOURCE_INVALID",
+              "LEGAL_ACCEPTANCE_REQUIRED",
+              "LEGAL_VERSION_OUTDATED"
             ],
             "type": "string"
           },
@@ -151,7 +154,7 @@
         "parameters": [],
         "responses": {
           "302": {
-            "description": "To Google; 404 when Google sign-in is off"
+            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
           },
           "default": {
             "content": {
@@ -206,6 +209,24 @@
                   "email": {
                     "type": "string"
                   },
+                  "legal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "privacy": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      },
+                      "terms": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "terms",
+                      "privacy"
+                    ],
+                    "type": "object"
+                  },
                   "locale": {
                     "enum": [
                       "uk",
@@ -221,7 +242,8 @@
                 },
                 "required": [
                   "email",
-                  "turnstileToken"
+                  "turnstileToken",
+                  "legal"
                 ],
                 "type": "object"
               }
@@ -251,6 +273,9 @@
               }
             },
             "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (also without `legal`), TURNSTILE_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /auth/methods)"
           },
           "default": {
             "content": {
@@ -405,6 +430,24 @@
                     "google": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "privacy": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        },
+                        "terms": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "terms",
+                        "privacy"
+                      ],
+                      "type": "object"
+                    },
                     "magicLink": {
                       "enum": [
                         true
@@ -418,7 +461,8 @@
                   "required": [
                     "magicLink",
                     "google",
-                    "turnstileSiteKey"
+                    "turnstileSiteKey",
+                    "legal"
                   ],
                   "type": "object"
                 }
@@ -503,6 +547,50 @@
                             "minimum": 0,
                             "type": "integer"
                           },
+                          "cover": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "height": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "previewUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": [
+                                  "PENDING",
+                                  "READY",
+                                  "FAILED"
+                                ],
+                                "type": "string"
+                              },
+                              "thumbnailUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "width": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "thumbnailUrl",
+                              "previewUrl",
+                              "width",
+                              "height"
+                            ],
+                            "type": "object"
+                          },
                           "createdAt": {
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -578,6 +666,10 @@
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
+                          },
+                          "welcomeMessage": {
+                            "nullable": true,
+                            "type": "string"
                           }
                         },
                         "required": [
@@ -591,7 +683,9 @@
                           "defaultLinkStatus",
                           "defaultLinkPermissions",
                           "contentCount",
-                          "lastContentAt"
+                          "lastContentAt",
+                          "welcomeMessage",
+                          "cover"
                         ],
                         "type": "object"
                       },
@@ -645,13 +739,13 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -681,6 +775,50 @@
                       "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
+                    },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
                     },
                     "createdAt": {
                       "format": "date-time",
@@ -757,6 +895,10 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -770,7 +912,9 @@
                     "defaultLinkStatus",
                     "defaultLinkPermissions",
                     "contentCount",
-                    "lastContentAt"
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
                   ],
                   "type": "object"
                 }
@@ -876,6 +1020,50 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -971,6 +1159,10 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -985,6 +1177,8 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "welcomeMessage",
+                    "cover",
                     "storage"
                   ],
                   "type": "object"
@@ -1037,13 +1231,18 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "welcomeMessage": {
+                    "nullable": true,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -1070,6 +1269,50 @@
                       "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
+                    },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
                     },
                     "createdAt": {
                       "format": "date-time",
@@ -1146,6 +1389,10 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -1159,7 +1406,9 @@
                     "defaultLinkStatus",
                     "defaultLinkPermissions",
                     "contentCount",
-                    "lastContentAt"
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
                   ],
                   "type": "object"
                 }
@@ -1221,6 +1470,50 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -1296,6 +1589,10 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -1309,7 +1606,9 @@
                     "defaultLinkStatus",
                     "defaultLinkPermissions",
                     "contentCount",
-                    "lastContentAt"
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
                   ],
                   "type": "object"
                 }
@@ -1765,6 +2064,846 @@
         ]
       }
     },
+    "/api/v1/collections/{id}/cover": {
+      "delete": {
+        "operationId": "CoverController_remove_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed (or there was none)"
+          },
+          "404": {
+            "description": "NOT_FOUND: not the owner’s collection"
+          },
+          "409": {
+            "description": "COLLECTION_ARCHIVED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/cover/from-frame": {
+      "post": {
+        "operationId": "CoverController_fromFrame_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "contentItemId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "contentItemId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archivedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "contentCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "description": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "lastContentAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ],
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "description",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions",
+                    "contentCount",
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the owner’s collection, or no such live frame in it"
+          },
+          "409": {
+            "description": "COLLECTION_ARCHIVED, QUOTA_EXCEEDED (the copy does not fit the collection or the account)"
+          },
+          "422": {
+            "description": "COVER_SOURCE_INVALID: not a photo, no original, or its processing failed"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: storage; retryable"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/cover/uploads": {
+      "post": {
+        "operationId": "CoverController_initiate_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "clientUploadId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "filename": {
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "maxLength": 100,
+                    "type": "string"
+                  },
+                  "sizeBytes": {
+                    "maximum": 9007199254740991,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "clientUploadId",
+                  "filename",
+                  "mimeType",
+                  "sizeBytes"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expiresAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "partCount": {
+                      "maximum": 10000,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "partSizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "uploadId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "uploadId",
+                    "partSizeBytes",
+                    "partCount",
+                    "expiresAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the owner’s collection"
+          },
+          "409": {
+            "description": "COLLECTION_ARCHIVED (no cover changes while archived), QUOTA_EXCEEDED (collection or account full), IDEMPOTENCY_CONFLICT (clientUploadId used for another file), UPLOAD_CLOSED"
+          },
+          "410": {
+            "description": "UPLOAD_EXPIRED (a retry of an expired upload)"
+          },
+          "422": {
+            "description": "FILE_TYPE_NOT_ALLOWED (a cover is a photo), FILE_TOO_LARGE"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After), or more than 3 cover uploads open in this collection"
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: storage; retryable"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/cover/uploads/{uploadId}": {
+      "delete": {
+        "operationId": "CoverController_cancel_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uploadId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancelled (or already cancelled)"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such cover upload of this owner"
+          },
+          "409": {
+            "description": "UPLOAD_CLOSED: already completed; UPLOAD_IN_PROGRESS: being completed (retryable)"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/cover/uploads/{uploadId}/complete": {
+      "post": {
+        "operationId": "CoverController_complete_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uploadId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "archivedAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "contentCount": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "defaultLinkPermissions": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "canDeleteOwn": {
+                          "type": "boolean"
+                        },
+                        "canSubmitText": {
+                          "type": "boolean"
+                        },
+                        "canUploadDocuments": {
+                          "type": "boolean"
+                        },
+                        "canUploadPhotos": {
+                          "type": "boolean"
+                        },
+                        "canUploadVideos": {
+                          "type": "boolean"
+                        },
+                        "canViewGallery": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "canUploadPhotos",
+                        "canUploadVideos",
+                        "canUploadDocuments",
+                        "canSubmitText",
+                        "canViewGallery",
+                        "canDeleteOwn"
+                      ],
+                      "type": "object"
+                    },
+                    "defaultLinkStatus": {
+                      "enum": [
+                        "ACTIVE",
+                        "INACTIVE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "description": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "lastContentAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ],
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title",
+                    "description",
+                    "status",
+                    "createdAt",
+                    "updatedAt",
+                    "archivedAt",
+                    "defaultLinkStatus",
+                    "defaultLinkPermissions",
+                    "contentCount",
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: no such cover upload of this owner"
+          },
+          "409": {
+            "description": "UPLOAD_INCOMPLETE (with missingPartNumbers; retry after sending them), UPLOAD_IN_PROGRESS (another completion is checking it; retryable), UPLOAD_CLOSED, COLLECTION_ARCHIVED (archived meanwhile; the upload is rejected)"
+          },
+          "410": {
+            "description": "UPLOAD_EXPIRED"
+          },
+          "422": {
+            "description": "UPLOAD_SIZE_MISMATCH, FILE_TYPE_NOT_ALLOWED (content)"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: storage; retryable"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/cover/uploads/{uploadId}/parts": {
+      "post": {
+        "operationId": "CoverController_parts_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "uploadId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "partNumbers": {
+                    "items": {
+                      "maximum": 10000,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "partNumbers"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "expiresAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "parts": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "partNumber": {
+                            "maximum": 10000,
+                            "minimum": 1,
+                            "type": "integer"
+                          },
+                          "url": {
+                            "format": "uri",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "partNumber",
+                          "url"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "parts",
+                    "expiresAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: parts beyond partCount"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such cover upload of this owner"
+          },
+          "409": {
+            "description": "UPLOAD_CLOSED, UPLOAD_IN_PROGRESS (retryable)"
+          },
+          "410": {
+            "description": "UPLOAD_EXPIRED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
+          },
+          "503": {
+            "description": "DEPENDENCY_UNAVAILABLE: storage; retryable"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Collections"
+        ]
+      }
+    },
     "/api/v1/collections/{id}/guest-links": {
       "get": {
         "operationId": "GuestLinksController_list_v1",
@@ -1936,7 +3075,7 @@
                   "label": {
                     "maxLength": 60,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "permissions": {
@@ -2298,6 +3437,50 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "cover": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -2373,6 +3556,10 @@
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "welcomeMessage": {
+                      "nullable": true,
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -2386,7 +3573,9 @@
                     "defaultLinkStatus",
                     "defaultLinkPermissions",
                     "contentCount",
-                    "lastContentAt"
+                    "lastContentAt",
+                    "welcomeMessage",
+                    "cover"
                   ],
                   "type": "object"
                 }
@@ -2698,7 +3887,7 @@
                   "label": {
                     "maxLength": 60,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "permissions": {
@@ -3758,6 +4947,37 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -3769,12 +4989,18 @@
                         },
                         "title": {
                           "type": "string"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description"
+                        "description",
+                        "welcomeMessage",
+                        "cover"
                       ],
                       "type": "object"
                     },
@@ -3955,7 +5181,7 @@
                 "properties": {
                   "name": {
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -3978,6 +5204,37 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -3989,12 +5246,18 @@
                         },
                         "title": {
                           "type": "string"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description"
+                        "description",
+                        "welcomeMessage",
+                        "cover"
                       ],
                       "type": "object"
                     },
@@ -4204,6 +5467,37 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -4215,12 +5509,18 @@
                         },
                         "title": {
                           "type": "string"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description"
+                        "description",
+                        "welcomeMessage",
+                        "cover"
                       ],
                       "type": "object"
                     },
@@ -4405,7 +5705,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "body": {
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -4597,7 +5897,7 @@
                   "filename": {
                     "maxLength": 255,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "mimeType": {
@@ -5395,6 +6695,54 @@
                     "isOperator": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
                     "locale": {
                       "enum": [
                         "uk",
@@ -5408,7 +6756,8 @@
                     "email",
                     "displayName",
                     "locale",
-                    "isOperator"
+                    "isOperator",
+                    "legal"
                   ],
                   "type": "object"
                 }
@@ -5449,7 +6798,7 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "locale": {
@@ -5490,6 +6839,54 @@
                     "isOperator": {
                       "type": "boolean"
                     },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
                     "locale": {
                       "enum": [
                         "uk",
@@ -5503,13 +6900,184 @@
                     "email",
                     "displayName",
                     "locale",
-                    "isOperator"
+                    "isOperator",
+                    "legal"
                   ],
                   "type": "object"
                 }
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "LEGAL_ACCEPTANCE_REQUIRED: only `locale` may change before acceptance"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/api/v1/me/legal-acceptances": {
+      "post": {
+        "operationId": "LegalAcceptancesController_accept_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "acceptances": {
+                    "items": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "document": {
+                          "enum": [
+                            "TERMS",
+                            "PRIVACY"
+                          ],
+                          "type": "string"
+                        },
+                        "version": {
+                          "pattern": "^v[1-9]\\d{0,3}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "document",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 2,
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "acceptances"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "displayName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "email": {
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "isOperator": {
+                      "type": "boolean"
+                    },
+                    "legal": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accepted": {
+                          "type": "boolean"
+                        },
+                        "documents": {
+                          "items": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "acceptedAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "acceptedVersion": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "document": {
+                                "enum": [
+                                  "TERMS",
+                                  "PRIVACY"
+                                ],
+                                "type": "string"
+                              },
+                              "requiredVersion": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "document",
+                              "requiredVersion",
+                              "acceptedVersion",
+                              "acceptedAt"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "accepted",
+                        "documents"
+                      ],
+                      "type": "object"
+                    },
+                    "locale": {
+                      "enum": [
+                        "uk",
+                        "en"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName",
+                    "locale",
+                    "isOperator",
+                    "legal"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /me and retry); nothing is written"
+          },
+          "401": {
+            "description": "UNAUTHENTICATED"
           },
           "default": {
             "content": {

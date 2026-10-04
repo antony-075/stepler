@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import { meResponseSchema } from '@stepler/contracts';
+import { legalStatus, meResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { SessionService } from '../src/auth/session.service.js';
@@ -58,7 +58,12 @@ describe('auth core', () => {
       displayName: null,
       locale: 'uk',
       isOperator: false,
+      legal: expect.objectContaining({ accepted: true }) as unknown,
     });
+    const body = meResponseSchema.parse(res.body);
+    expect(body.legal.documents.map((d) => d.acceptedVersion)).toEqual(
+      legalStatus([]).documents.map((d) => d.requiredVersion),
+    );
   });
 
   test('the database stores only the token hash', async () => {

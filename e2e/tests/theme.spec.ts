@@ -1,5 +1,5 @@
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
-import { newEmail, signIn } from '../support/auth.js';
+import { acceptLegalOnCard, newEmail, signIn } from '../support/auth.js';
 
 // Ukrainian UI (no supported browser language → default locale). The theme switch is on
 // /app/account; public pages have none, so anonymous tests set the `st_theme` cookie directly.
@@ -231,6 +231,7 @@ test.describe('sign-in card at 360px', () => {
 
   test('the form keeps the same inset on both sides, Turnstile included', async ({ page }) => {
     await page.goto('/login');
+    await acceptLegalOnCard(page);
     const submit = page.locator('form button[type="submit"]');
     // The widget is in once the always-pass test key has produced a token.
     await expect(submit).toBeEnabled({ timeout: 20_000 });

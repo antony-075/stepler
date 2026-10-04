@@ -99,6 +99,11 @@ export interface ObjectStorage {
   downloadToFile(key: string, path: string): Promise<boolean>;
   /** Bytes `start`…`endInclusive` (fewer when the object is shorter). Small reads only. */
   readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array>;
+  /**
+   * Server-side copy inside the bucket (a cover's original from an upload or a frame, ≤ 50 MB);
+   * the copy gets `contentType`. Throws when the source does not exist.
+   */
+  copyObject(fromKey: string, toKey: string, contentType: string): Promise<void>;
   /** Server-side write (derivatives); never used for guest uploads. */
   putObject(
     key: string,

@@ -148,13 +148,15 @@ export class MediaUrls {
     return { originalUrl: originalUrl ?? null, downloadUrl };
   }
 
+  /** An inline link to any stored image (a cover's derivative), window-aligned like the rest. */
+  signInline(key: string, mimeType: string, now = new Date()): Promise<string> {
+    return this.sign(key, now, { contentType: mimeType, contentDisposition: 'inline' });
+  }
+
   private async inline(item: ItemWithMedia, role: MediaRole, now: Date): Promise<string | null> {
     const media = mediaOf(item, role);
     if (media === undefined) return null;
-    return this.sign(media.storageKey, now, {
-      contentType: media.mimeType,
-      contentDisposition: 'inline',
-    });
+    return this.signInline(media.storageKey, media.mimeType, now);
   }
 
   private sign(

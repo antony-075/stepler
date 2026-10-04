@@ -7,6 +7,7 @@ import { Layers, UserCog, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { LegalLinks } from '@/legal/legal-links';
 
 type Section = { key: 'collections' | 'account'; href: string; icon: LucideIcon };
 
@@ -33,7 +34,8 @@ const currentValue = (pathname: string, href: string): 'page' | 'true' =>
  * are. 44px rows, an icon and the name; the current section sits on a sheet (`--card`, a 1px
  * edge) in the foreground colour with `aria-current` (`page` on its own page, `true` inside it),
  * the others muted until hover. `collapsed` (the desktop icon rail) keeps each name for screen
- * readers and shows it as a tooltip on hover and focus. `onNavigate` closes the menu sheet.
+ * readers and shows it as a tooltip on hover and focus. `onNavigate` closes the menu sheet. The
+ * legal links sit at the bottom of the sidebar and the menu sheet, hidden in the icon rail.
  */
 export function AdminNav({
   collapsed = false,
@@ -44,12 +46,15 @@ export function AdminNav({
 }) {
   const t = useTranslations('app.nav');
   return (
-    <nav aria-label={t('label')}>
-      <ul className="grid gap-1">
-        <NavItem section={COLLECTIONS} collapsed={collapsed} onNavigate={onNavigate} />
-        <NavItem section={ACCOUNT} collapsed={collapsed} onNavigate={onNavigate} />
-      </ul>
-    </nav>
+    <div className="flex flex-1 flex-col gap-6">
+      <nav aria-label={t('label')}>
+        <ul className="grid gap-1">
+          <NavItem section={COLLECTIONS} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem section={ACCOUNT} collapsed={collapsed} onNavigate={onNavigate} />
+        </ul>
+      </nav>
+      {collapsed ? null : <LegalLinks variant="nav" className="mt-auto" />}
+    </div>
   );
 }
 

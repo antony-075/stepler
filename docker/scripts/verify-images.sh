@@ -113,6 +113,8 @@ APP_SECRET=$(openssl rand -base64 32)
 expect_exit_on_bad_env "$API_IMAGE" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" -e NODE_ENV=staging
 expect_exit_on_bad_env "$WORKER_IMAGE" -e NODE_ENV=production -e DATABASE_URL=not-a-url
 expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
+# Production never sets LEGAL_ALLOW_DRAFT: with placeholder legal texts the web image must refuse to start ([C20]).
+expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=http://x:1
 
 docker network create "$NET" >/dev/null
 
@@ -135,7 +137,7 @@ echo "$second" | grep -q "No pending migrations" || fail "second migrate deploy 
 echo "$first" | grep -qi "failed to detect the libssl" && fail "prisma cannot detect OpenSSL in the api image"
 docker run -d --name stepler-verify-api --network "$NET" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" "$API_IMAGE" >/dev/null
 docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 \
-  -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null
+  -e API_INTERNAL_URL=http://stepler-verify-api:4000 -e LEGAL_ALLOW_DRAFT=true "$WEB_IMAGE" >/dev/null
 wait_healthy stepler-verify-api 30
 wait_healthy stepler-verify-web 30
 
@@ -158,5 +160,9 @@ docker stop stepler-verify-worker >/dev/null
 
 body=$(curl -fsS http://127.0.0.1:3199/api/v1/health/live) || fail "web → api proxy failed"
 [ "$body" = '{"status":"ok"}' ] || fail "unexpected health body: $body"
+# The legal pages are served from the standalone output (the Markdown files are traced into it).
+# Captured first: `grep -q` would close the pipe early and fail curl under pipefail.
+legal=$(curl -fsS http://127.0.0.1:3199/legal/terms) || fail "/legal/terms is not served"
+grep -q 'Чернетка' <<<"$legal" || fail "/legal/terms does not show the draft text"
 
 echo "All image checks passed."

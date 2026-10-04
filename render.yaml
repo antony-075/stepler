@@ -22,7 +22,7 @@ services:
     region: frankfurt
     plan: 0.5c-512mb
     branch: stage
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: 'off'
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
     # Runs in the new image before it starts serving (docker/scripts/verify-images.sh tests it).
@@ -79,7 +79,7 @@ services:
     region: frankfurt
     plan: 0.5c-512mb
     branch: stage
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: 'off'
     dockerfilePath: ./apps/api/worker.Dockerfile
     dockerContext: .
     # On SIGTERM the worker gives running jobs 25 s, then closes its clients (apps/api/src/worker/
@@ -115,7 +115,7 @@ services:
     region: frankfurt
     plan: 0.5c-512mb
     branch: stage
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: 'off'
     dockerfilePath: ./apps/web/Dockerfile
     dockerContext: .
     healthCheckPath: /healthz
@@ -129,3 +129,10 @@ services:
       # client-sent value. X-Forwarded-For is not used: Render keeps the client-sent value first.
       - key: CLIENT_IP_HEADER
         value: cf-connecting-ip
+      # Staging runs on the placeholder legal texts until the real ones are published; production
+      # never sets this (the server refuses to start on drafts, [C20]).
+      - key: LEGAL_ALLOW_DRAFT
+        value: 'true'
+      # The privacy/abuse contact shown on /legal/*; a placeholder address is fine on staging.
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false

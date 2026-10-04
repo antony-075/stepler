@@ -17,11 +17,15 @@ This file is a concise implementation checklist.
 - [ ] Guest visibility setting — built in slice 3 (PR A): a link shows the guest only their own frames or everyone's (`canViewGallery`); other guests' names and numbers are never shown
 - [ ] Guest own-content deletion when allowed — built in PR E: own frames only, when the link allows it («Гості можуть видаляти своє»), from the viewer after a confirm
 - [ ] Admin content deletion — built in slice 3 (one frame) and PR E (multi-select and bulk delete, up to 100 per request)
+- [ ] Collection cover — built in slice 8a (PR F API, PR G web): upload an image (JPEG/PNG/WebP/HEIC/HEIF/GIF up to 50 MB) or make a guest photo the cover, replace, remove; shown on the dashboard card, in the share dialog and as the guest page hero
+- [ ] Guest welcome message — built in slice 8a: one paragraph up to 160 characters, shown to guests above their main action
 - [ ] Responsive guest UI
 - [ ] Responsive admin UI
 - [ ] QR generation
 - [ ] R2/S3-compatible object storage
 - [ ] Signed upload/download access — built in slice 5 (PR C): presigned part URLs, window-aligned presigned GETs, downloads as attachments
+- [ ] Legal pages (Terms, Privacy, uk/en, versioned) — built in slice 10 (PR F1): `/legal/terms` and `/legal/privacy` from Markdown with a registry of versions, a draft banner on placeholder texts, the contact e-mail from configuration, footer and guest-notice links
+- [ ] Admin acceptance of Terms and Privacy — built in slice 10 (PR F2): a required checkbox on the sign-in card (magic link and Google), recorded when the account is created or the sign-in completes; the API refuses the app until both are accepted; `/accept-terms` for accounts from before it; «Правові документи» on the account page
 - [ ] PostgreSQL + Prisma
 - [ ] REST API
 - [ ] Swagger/OpenAPI

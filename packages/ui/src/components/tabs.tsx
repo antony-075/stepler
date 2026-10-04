@@ -22,8 +22,8 @@ const VariantContext = createContext<TabsVariant>('line');
 // base line; it never widens the page: it is capped at its container and scrolls horizontally
 // inside itself when the triggers do not fit (phones, long labels).
 // `segmented` (owner review 2026-10-02: tabs that obviously click): a track on the page colour
-// with a 1px edge, a 10px radius and 4px padding; full width with equal segments on phones,
-// its own width from `sm`.
+// with a 1px edge, a 10px radius and 4px padding; full width with equal segments below `md`
+// (where the collection page shows icon + count only), its own width from `md`.
 function TabsList({
   className,
   variant = 'line',
@@ -37,7 +37,7 @@ function TabsList({
         className={cn(
           variant === 'line'
             ? 'flex w-full max-w-full items-stretch gap-1 overflow-x-auto border-b text-muted-foreground [scrollbar-width:thin]'
-            : 'grid w-full auto-cols-[minmax(0,1fr)] grid-flow-col gap-1 rounded-[10px] border bg-background p-1 text-muted-foreground sm:inline-grid sm:w-auto sm:auto-cols-auto sm:self-start',
+            : 'grid w-full auto-cols-[minmax(0,1fr)] grid-flow-col gap-1 rounded-[10px] border bg-background p-1 text-muted-foreground md:inline-grid md:w-auto md:auto-cols-auto md:self-start',
           className,
         )}
         {...props}
@@ -48,9 +48,11 @@ function TabsList({
 
 // A segment: 44px, icon and label (and a count as data), muted until active; hover takes the
 // page's hover fill; active is a raised sheet (`--card`, a 1px edge, a soft shadow in light)
-// with foreground text. The violet ring is drawn inside.
+// with foreground text. The violet ring is drawn inside. Side padding is 10px from `sm` and 16px
+// from `xl`, so the collection page's four labels («Гостьова сторінка», «Параметри колекції»)
+// fit its 720px column at 768 and 1024 untruncated.
 const SEGMENT = cn(
-  'inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-2 text-[0.9375rem] sm:gap-2 sm:px-4 font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
+  'inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-2 text-[0.9375rem] sm:gap-2 sm:px-2.5 xl:px-4 font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
   focusRingInset,
   'hover:bg-hover hover:text-foreground',
   'data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgb(20_22_20/0.08)] data-[state=active]:hover:bg-card',

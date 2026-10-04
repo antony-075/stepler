@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { testEnv } from './support/env.js';
 import { allKeys, putObject } from './support/storage.js';
+import { fixture } from './support/uploads.js';
 
 const env = testEnv();
 const storage = new S3ObjectStorage(env);
@@ -120,5 +121,19 @@ describe('S3ObjectStorage (emulator)', () => {
 
   test('abortMultipart of an unknown upload succeeds', async () => {
     await storage.abortMultipart(key(), 'unknown-upload-id');
+  });
+
+  test('copyObject copies the bytes server-side with the given type; a missing source throws', async () => {
+    const photo = fixture('photo.jpg');
+    const from = key();
+    const to = key();
+    await storage.putObject(from, photo, 'application/octet-stream', photo.length);
+    await storage.copyObject(from, to, 'image/jpeg');
+    expect(await storage.head(to)).toEqual({ size: photo.length, contentType: 'image/jpeg' });
+    const copied = await fetch(await storage.presignGet(to, { expiresInSeconds: 60 }));
+    expect(Buffer.from(await copied.arrayBuffer()).equals(photo)).toBe(true);
+    // The source is untouched.
+    expect((await storage.head(from))?.size).toBe(photo.length);
+    await expect(storage.copyObject(key(), key(), 'image/jpeg')).rejects.toThrow();
   });
 });

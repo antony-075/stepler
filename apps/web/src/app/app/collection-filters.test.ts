@@ -16,6 +16,8 @@ const collection = (title: string, createdAt: string, archived = false): Collect
   defaultLinkPermissions: null,
   contentCount: 0,
   lastContentAt: null,
+  welcomeMessage: null,
+  cover: null,
 });
 
 function hash(text: string): number {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { legalStatusSchema, legalVersionsSchema } from './legal.js';
 import { NO_CONTROL_CHARACTERS } from './text.js';
 
 export const localeSchema = z.enum(['uk', 'en']);
@@ -11,6 +12,8 @@ export const meResponseSchema = z.object({
   displayName: z.string().nullable(),
   locale: localeSchema,
   isOperator: z.boolean(),
+  /** Acceptance of the legal documents; the API refuses most routes until `accepted`. */
+  legal: legalStatusSchema,
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
 
@@ -44,6 +47,8 @@ export const magicLinkRequestSchema = z
     email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
     turnstileToken: z.string().min(1).max(2048),
     locale: localeSchema.optional(),
+    /** The sign-in card's required checkbox: the versions accepted (owner decision L1). */
+    legal: legalVersionsSchema,
   })
   .strict();
 export type MagicLinkRequest = z.infer<typeof magicLinkRequestSchema>;
@@ -63,8 +68,16 @@ export type MagicLinkPreviewResponse = z.infer<typeof magicLinkPreviewResponseSc
 export const magicLinkVerifyResponseSchema = z.object({ status: z.literal('signed-in') }).strict();
 export type MagicLinkVerifyResponse = z.infer<typeof magicLinkVerifyResponseSchema>;
 
-/** `GET /api/v1/auth/methods`: sign-in options the web app renders, read at runtime. */
+/**
+ * `GET /api/v1/auth/methods`: sign-in options the web app renders, read at runtime, and the
+ * current legal versions the sign-in card sends back once its checkbox is ticked.
+ */
 export const authMethodsResponseSchema = z
-  .object({ magicLink: z.literal(true), google: z.boolean(), turnstileSiteKey: z.string() })
+  .object({
+    magicLink: z.literal(true),
+    google: z.boolean(),
+    turnstileSiteKey: z.string(),
+    legal: legalVersionsSchema,
+  })
   .strict();
 export type AuthMethodsResponse = z.infer<typeof authMethodsResponseSchema>;

@@ -83,6 +83,7 @@ import {
   lockedFilters,
   sortFromParam,
 } from './content-filters';
+import { useSetCoverFromFrame } from '../appearance/use-set-cover';
 import { ContentViewer } from './content-viewer';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
@@ -109,6 +110,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
   const { toast } = useToast();
+  const setCover = useSetCoverFromFrame(collection.id);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   // The frame toggled last: the start of a Shift+click range.
@@ -540,6 +542,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
         onClose={closeViewer}
         onDelete={removeFrame}
+        {...(collection.status === 'ARCHIVED' ? {} : { onSetCover: setCover })}
       />
     </div>
   );

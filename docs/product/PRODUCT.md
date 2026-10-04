@@ -180,7 +180,7 @@ Minimum configuration:
 
 - title/name;
 - optional description;
-- basic visual settings if required by the final UX.
+- optional cover image and welcome message (set afterwards on the collection's «Гостьова сторінка» tab; moved into MVP by owner decision 2026-10-04).
 
 Creating a collection automatically creates its default guest link.
 
@@ -191,6 +191,7 @@ Creating a collection automatically creates its default guest link.
 Admin can:
 
 - edit collection metadata;
+- set the cover (upload an image, or make any guest photo the cover; replace; remove) and the welcome message (one paragraph up to 160 characters; clear it);
 - view collected content;
 - delete content;
 - manage guest links;
@@ -215,7 +216,7 @@ Do not use an email/password account as a prerequisite for MVP guest participati
 
 After opening a guest link, the guest sees:
 
-- collection identity;
+- collection identity (the cover above the title once the admin set one; a welcome message above the main action when there is one);
 - what they can do;
 - upload/add-content action;
 - previously uploaded content if the link allows it.
@@ -648,13 +649,13 @@ QR remains compatible with ordinary scanning.
 
 Potential:
 
-- cover image;
 - themes;
 - custom colors;
 - typography;
 - guest-side branding;
-- custom welcome message;
 - custom upload instructions.
+
+The cover image and the custom welcome message moved into MVP by owner decision 2026-10-04 (§5.3, §5.4, §6.2).
 
 ---
 

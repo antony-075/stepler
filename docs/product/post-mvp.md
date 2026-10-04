@@ -20,8 +20,8 @@ Priority is intentionally not fixed here.
 
 ### Branding
 - themes;
-- cover images;
-- custom welcome screens;
+- ~~cover images~~ (moved into MVP by owner decision 2026-10-04: slice 8a);
+- ~~custom welcome screens~~ (a welcome message moved into MVP on 2026-10-04: slice 8a; full custom screens stay here);
 - branded guest experience.
 
 ### Organization

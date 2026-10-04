@@ -16,4 +16,6 @@
 .claude
 docs
 **/*.md
+# The legal texts are runtime content of the web app (docs/legal/README.md), not documentation.
+!apps/web/content/legal/*.md
 **/.DS_Store
