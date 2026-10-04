@@ -24,7 +24,8 @@
     "db:deploy": "pnpm --filter @stepler/api db:deploy",
     "db:studio": "pnpm --filter @stepler/api db:studio",
     "db:check": "pnpm --filter @stepler/api db:check",
-    "openapi:write": "pnpm --filter @stepler/api openapi:write"
+    "openapi:write": "pnpm --filter @stepler/api openapi:write",
+    "release:check": "pnpm format:check && pnpm turbo run lint typecheck test build build-storybook && pnpm e2e && bash docker/scripts/verify-images.sh"
   },
   "devDependencies": {
     "@stepler/config": "workspace:*",
