@@ -93,69 +93,17 @@
   "landing": {
     "metaTitle": "Stepler — photos and videos from every guest in one collection",
     "metaDescription": "Create a collection for your event and share a link or QR code. Guests add photos and videos from their phones — no app, no sign-up.",
-    "titleLines": {
-      "one": "Collect every",
-      "two": "photo and video",
-      "three": "from your event"
-    },
-    "lede": "Create a collection, show guests a QR code, and all their photos, videos and messages gather in one place. Guests need no app and no account.",
-    "benefits": {
-      "title": "Why it’s easy",
-      "items": {
-        "onePlace": {
-          "title": "Every memory in one place",
-          "text": "Guests’ photos, videos, documents and messages in one collection."
-        },
-        "noSignUp": {
-          "title": "No sign-up for guests",
-          "text": "They scan the QR code or open the link in their browser."
-        },
-        "control": {
-          "title": "You control access",
-          "text": "Decide whether guests see what others added, and pause the link whenever you need."
-        },
-        "anyEvent": {
-          "title": "For any occasion",
-          "text": "Weddings, birthdays, team events, trips and get-togethers."
-        }
-      }
-    },
+    "title": "Collect every photo and video from your event",
+    "subline": "Guests scan a QR code and add photos, videos and wishes. No app, no account.",
     "how": {
       "title": "How it works",
       "steps": {
-        "create": {
-          "label": "Create a collection",
-          "image": "An example collection, “Olia & Marko’s wedding”, with a Create collection button"
-        },
-        "share": {
-          "label": "Share the QR code with guests",
-          "image": "A QR code and the guest link stepler.app/c/k7Xa… with a copy button"
-        },
-        "collect": {
-          "label": "Guests add their memories",
-          "image": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
-        }
+        "create": "Create a collection for your event",
+        "share": "Show guests the QR code",
+        "collect": "Guests add photos and wishes"
       },
-      "sampleTitle": "Olia & Marko’s wedding",
-      "create": "Create collection",
-      "linkValue": "stepler.app/c/k7Xa…"
-    },
-    "facts": {
-      "title": "Stepler in short",
-      "items": {
-        "apps": {
-          "value": "0",
-          "text": "apps for guests to install"
-        },
-        "qr": {
-          "value": "1",
-          "text": "QR code for the whole event"
-        },
-        "original": {
-          "value": "No compression",
-          "text": "photos and videos in original quality"
-        }
-      }
+      "note": "What guests see",
+      "phoneAlt": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
     }
   },
   "toast": {
@@ -335,11 +283,19 @@
       "document": "Documents",
       "text": "Texts"
     },
+    "filterLocked": {
+      "photo": "No link lets guests add photos",
+      "video": "No link lets guests add videos",
+      "document": "No link lets guests add documents",
+      "text": "No link lets guests write wishes"
+    },
     "sortLabel": "Order",
     "sort": {
       "newest": "Newest first",
       "frame": "By frame number"
     },
+    "refresh": "Refresh",
+    "refreshed": "Updated",
     "newFrames": "{count, plural, one {# new frame} other {# new frames}}",
     "showNew": "Show",
     "listLabel": "Frames of the collection",

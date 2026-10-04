@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { SiteHeader } from '@/components/site-header';
-import { GuestLanguageToggle } from '@/guest/language-toggle';
 import { GuestPage } from '@/guest/guest-page';
+import { LanguageSwitch } from '@/i18n/language-switch';
 
 // Never the token or the collection's title: the tab title and history stay neutral, and the
 // page is not indexed (also `X-Robots-Tag` in next.config.ts).
@@ -17,7 +17,7 @@ export default async function GuestLinkPage({ params }: { params: Promise<{ toke
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader>
-        <GuestLanguageToggle />
+        <LanguageSwitch variant="header" />
       </SiteHeader>
       <main className="stepler-container flex-1 pt-6 pb-16 sm:pt-10 lg:pt-12">
         <GuestPage token={token} />

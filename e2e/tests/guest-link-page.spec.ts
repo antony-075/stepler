@@ -52,6 +52,34 @@ test.describe('guest link page', () => {
     await expect(page.getByRole('button', { name: 'Написати побажання' }).first()).toBeVisible();
   });
 
+  test('the header language select switches the guest page to English', async ({ page }) => {
+    const { url } = await setUp(page, 'Весілля Олі та Тараса');
+    await page.goto(url);
+    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
+    await page.getByRole('combobox', { name: 'Мова' }).click();
+    await page.getByRole('option', { name: 'English', exact: true }).click();
+    await expect(page.getByText('Only the organiser will see what you add')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Language' })).toContainText('English');
+  });
+
+  for (const width of [768, 1024, 1440, 1920]) {
+    test(`at ${width}px the action sits with the title, no dock, no sideways scroll @desktop`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const { url } = await setUp(page, 'Весілля Олі та Тараса');
+      await page.goto(url);
+      const write = page.getByRole('button', { name: 'Написати побажання' });
+      await expect(write).toHaveCount(1);
+      const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+      const action = (await write.boundingBox())!;
+      // Under the title, in the first screen, never floating at the bottom of the window.
+      expect(action.y).toBeGreaterThan(title.y);
+      expect(action.y + action.height).toBeLessThan(900);
+      expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
+
   test('pausing hides the title; rotating retires the old URL', async ({ page }) => {
     const { collection, main, url } = await setUp(page, 'Ювілей бабусі Галини');
     await post(page, `/guest-links/${main.id}/deactivate`);

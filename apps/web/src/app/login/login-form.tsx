@@ -7,8 +7,7 @@ import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
 import { useMutation } from '@tanstack/react-query';
-import { TintTile } from '@stepler/ui/components/tint-tile';
-import { CircleAlert, Mail, MailCheck, UserRound } from 'lucide-react';
+import { CircleAlert, Mail, MailCheck } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -95,9 +94,6 @@ export function LoginForm({ turnstileSiteKey, googleEnabled, initialError }: Log
   return (
     <div className="grid gap-4">
       <div className="grid justify-items-center gap-2 text-center sm:gap-3">
-        <TintTile tint="sage" className="max-sm:hidden [&_svg]:size-7">
-          <UserRound strokeWidth={1.75} />
-        </TintTile>
         <h2 className="type-h2">{t('login.title')}</h2>
         <p className="max-w-[40ch] text-pretty text-muted-foreground">{t('login.lead')}</p>
       </div>

@@ -3,8 +3,13 @@
 // The collection's «Вміст» tab (DESIGN-SYSTEM.md §6.6; [C5], [C6], [O3]).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - A tool, not a showcase: one toolbar row (type chips with counts, the order select), then the
-//   contact sheet. Frames fill the column (3 columns at 320px up to 12 on wide screens); the
-//   admin sees every number and the contributor's name.
+//   contact sheet straight on the page (no white panel around it). Frames are large enough to
+//   read (3 columns on a phone, about 170px on a desktop; 1–3 frames larger still); the admin
+//   sees every number and the contributor's name.
+// - A type no live link lets guests add, with nothing of it, is a locked chip with the reason
+//   (owner review 2026-10-03); a type with frames always stays open.
+// - «Оновити» beside the order (there is no push): counts, links and the list from its first
+//   page, in place; the icon spins meanwhile and «Оновлено» is announced when done.
 // - Newest first by default (during an event the admin wants what just arrived); «За номером
 //   кадру» for the archive view. Both, and the type, live in the URL (`?kind=text&sort=frame`),
 //   and so does the open frame (`?frame=86`, Back closes the viewer).
@@ -33,11 +38,17 @@ import {
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
-import { type InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus } from 'lucide-react';
+import {
+  type InfiniteData,
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import { ImagePlus, RefreshCw } from 'lucide-react';
+import { cn } from '@stepler/ui/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
 import {
   contentCountsKey,
   contentListKey,
@@ -46,6 +57,7 @@ import {
   listContent,
 } from '@/api/content';
 import { collectionsListKey } from '@/api/collections';
+import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { collectionTint } from '../../../collection-tint';
 import {
   filterOf,
@@ -53,6 +65,7 @@ import {
   KIND_FILTERS,
   type KindFilter,
   kindFromParam,
+  lockedFilters,
   sortFromParam,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
@@ -69,7 +82,9 @@ export function ContentTab({ collection }: { collection: Collection }) {
   const kind = kindFromParam(params.get('kind'));
   const sort = sortFromParam(params.get('sort'));
   const frameNo = frameFromParam(params.get('frame'));
-  const { counts, newCount, showNew, rebase } = useNewContent(collection.id);
+  const { counts, newCount, showNew, rebase, refresh } = useNewContent(collection.id);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
 
@@ -85,6 +100,12 @@ export function ContentTab({ collection }: { collection: Collection }) {
     getNextPageParam: (last: AdminContentPage) => last.nextCursor,
   });
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  // The same query as the «Посилання» tab: what live links let guests add locks empty chips.
+  const links = useQuery({
+    queryKey: guestLinksKey(collection.id),
+    queryFn: () => listGuestLinks(collection.id),
+  });
+  const locked = lockedFilters(links.data?.items, counts.data);
 
   /** Updates the URL; `null` removes a parameter. */
   function navigate(changes: Record<string, string | null>, mode: 'push' | 'replace') {
@@ -97,6 +118,19 @@ export function ContentTab({ collection }: { collection: Collection }) {
     const href = `/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`;
     if (mode === 'push') router.push(href, { scroll: false });
     else router.replace(href, { scroll: false });
+  }
+
+  /** «Оновити»: no push yet, so the admin asks for what arrived (the 15 s line stays too). */
+  async function refreshAll() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshed(false);
+    try {
+      await Promise.all([refresh(), links.refetch()]);
+      setRefreshed(true);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function openFrame(n: number) {
@@ -147,47 +181,82 @@ export function ContentTab({ collection }: { collection: Collection }) {
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-      <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
-          <ToggleGroup
-            aria-label={t('filterLabel')}
-            value={filter}
-            onValueChange={(value) =>
-              navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
-            }
-          >
-            {KIND_FILTERS.map((value) => (
-              <ToggleGroupItem key={value} value={value} count={countOf(value)}>
-                {t(`filter.${value}`)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-        <div className="flex min-w-0 items-center gap-3">
-          <span id={sortId} className="shrink-0 text-sm text-muted-foreground">
-            {t('sortLabel')}
-          </span>
-          <Select
-            value={sort}
-            onValueChange={(value) =>
-              navigate({ sort: value === 'frame' ? 'frame' : null, frame: null }, 'replace')
-            }
-          >
-            <SelectTrigger aria-labelledby={sortId} className="h-11 w-full min-w-44 md:w-52">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectGroup>
-                {SORTS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {t(`sort.${value}`)}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+      {/* One toolbar row once it fits (an 832px column: not beside the sidebar at 1024): chips
+          left, the order and «Оновити» right, all 36px (44px on touch) on one centre line. */}
+      <div className="@container/toolbar min-w-0">
+        <div className="flex min-w-0 flex-col gap-3 @min-[52rem]/toolbar:flex-row @min-[52rem]/toolbar:items-center @min-[52rem]/toolbar:justify-between">
+          <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
+            <ToggleGroup
+              aria-label={t('filterLabel')}
+              value={filter}
+              onValueChange={(value) =>
+                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
+              }
+            >
+              {KIND_FILTERS.map((value) => (
+                <ToggleGroupItem
+                  key={value}
+                  value={value}
+                  count={countOf(value)}
+                  disabledReason={
+                    value !== 'all' && locked.has(value) && filter !== value
+                      ? t(`filterLocked.${value}`)
+                      : undefined
+                  }
+                >
+                  {t(`filter.${value}`)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+          <div className="flex min-w-0 items-center gap-3">
+            <span id={sortId} className="shrink-0 text-sm text-muted-foreground">
+              {t('sortLabel')}
+            </span>
+            <Select
+              value={sort}
+              onValueChange={(value) =>
+                navigate({ sort: value === 'frame' ? 'frame' : null, frame: null }, 'replace')
+              }
+            >
+              <SelectTrigger
+                aria-labelledby={sortId}
+                className="h-11 w-full min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectGroup>
+                  {SORTS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {t(`sort.${value}`)}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+            <Button
+              variant="outline"
+              aria-disabled={refreshing || undefined}
+              onClick={() => void refreshAll()}
+              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(
+                  'size-4',
+                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+                )}
+              />
+              <span className="max-sm:sr-only">{t('refresh')}</span>
+            </Button>
+          </div>
         </div>
       </div>
+      <p role="status" className="sr-only">
+        {refreshed ? t('refreshed') : null}
+      </p>
 
       <div aria-live="polite" className="empty:hidden">
         {newCount > 0 ? (
@@ -208,8 +277,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
       {list.isPending ? (
         <div role="status" aria-busy="true">
           <span className="sr-only">{t('loading')}</span>
-          <div className="grid grid-cols-3 gap-px sm:grid-cols-5 lg:grid-cols-7">
-            {Array.from({ length: 14 }, (_, i) => (
+          <div className="grid grid-cols-3 gap-px sm:grid-cols-4 lg:grid-cols-6">
+            {Array.from({ length: 12 }, (_, i) => (
               <Skeleton key={i} className="aspect-square" />
             ))}
           </div>

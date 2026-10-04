@@ -1,9 +1,11 @@
 'use client';
 
+import { LockKeyhole } from 'lucide-react';
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui';
-import { type ComponentProps, type ReactNode, useState } from 'react';
+import { type ComponentProps, type MouseEvent, type ReactNode, useId, useState } from 'react';
 import { focusRing } from '../lib/focus';
 import { cn } from '../lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 /** Separates the label and the count in the accessible name; flex layout does not render it. */
 const NAME_SPACE = ' ';
@@ -51,6 +53,13 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
   icon?: ReactNode;
   /** A count after the label, in mono (`Фото 98`); part of the accessible name. */
   count?: ReactNode;
+  /**
+   * Why the chip can't be chosen («Жодне посилання не дозволяє додавати відео»). The chip then
+   * shows a lock, is `aria-disabled` (it stays focusable, so keyboard users reach the reason) with
+   * the reason as its description, ignores presses, and shows the reason in a tooltip on hover,
+   * focus and tap.
+   */
+  disabledReason?: string;
 };
 
 /**
@@ -65,20 +74,25 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
  * and `lang` tells screen readers how to say it:
  * `<ToggleGroupItem value="uk" lang="uk">Українська</ToggleGroupItem>`.
  */
-function ToggleGroupItem({ className, icon, count, children, ...props }: ToggleGroupItemProps) {
-  return (
-    <ToggleGroupPrimitive.Item
-      data-slot="toggle-group-item"
-      className={cn(
-        'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
-        focusRing,
-        'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
-        'disabled:pointer-events-none disabled:text-muted-foreground',
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className,
-      )}
-      {...props}
-    >
+const itemClassName = cn(
+  'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
+  focusRing,
+  'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
+  'disabled:pointer-events-none disabled:text-muted-foreground',
+  'aria-disabled:cursor-not-allowed aria-disabled:hover:text-muted-foreground',
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+);
+
+function ToggleGroupItem({
+  className,
+  icon,
+  count,
+  disabledReason,
+  children,
+  ...props
+}: ToggleGroupItemProps) {
+  const body = (
+    <>
       {icon ? (
         <span data-slot="toggle-group-item-icon" aria-hidden="true" className="inline-flex">
           {icon}
@@ -94,7 +108,69 @@ function ToggleGroupItem({ className, icon, count, children, ...props }: ToggleG
           {count}
         </span>
       )}
+    </>
+  );
+  if (disabledReason !== undefined) {
+    return (
+      <LockedToggleGroupItem className={className} reason={disabledReason} {...props}>
+        {body}
+      </LockedToggleGroupItem>
+    );
+  }
+  return (
+    <ToggleGroupPrimitive.Item
+      data-slot="toggle-group-item"
+      className={cn(itemClassName, className)}
+      {...props}
+    >
+      {body}
     </ToggleGroupPrimitive.Item>
+  );
+}
+
+/**
+ * A chip that can't be chosen, with its reason. Not `disabled`: Radix would take it out of the
+ * focus order and the reason with it. A press is cancelled before Radix sees it (Radix skips its
+ * own handler for a prevented event) and opens the tooltip instead, so a tap on touch shows it too.
+ */
+function LockedToggleGroupItem({
+  className,
+  reason,
+  onClick,
+  children,
+  ...props
+}: Omit<ToggleGroupItemProps, 'icon' | 'count' | 'disabledReason'> & { reason: string }) {
+  const reasonId = useId();
+  const [open, setOpen] = useState(false);
+  function handleClick(event: MouseEvent<HTMLButtonElement>) {
+    onClick?.(event);
+    event.preventDefault();
+    setOpen(true);
+  }
+  return (
+    <TooltipProvider>
+      <Tooltip open={open} onOpenChange={setOpen}>
+        <TooltipTrigger asChild>
+          <ToggleGroupPrimitive.Item
+            data-slot="toggle-group-item"
+            data-locked=""
+            aria-disabled="true"
+            aria-describedby={reasonId}
+            className={cn(itemClassName, className)}
+            onClick={handleClick}
+            {...props}
+          >
+            <LockKeyhole aria-hidden="true" className="size-3.5" />
+            {children}
+          </ToggleGroupPrimitive.Item>
+        </TooltipTrigger>
+        <TooltipContent>{reason}</TooltipContent>
+      </Tooltip>
+      {/* The description, outside the chip so it is not part of its name. */}
+      <span id={reasonId} hidden>
+        {reason}
+      </span>
+    </TooltipProvider>
   );
 }
 

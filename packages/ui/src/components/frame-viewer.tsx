@@ -1,10 +1,12 @@
 'use client';
 
-// FrameViewer: one frame full screen (DESIGN-SYSTEM.md §5.12, §8, §9).
+// FrameViewer: one frame on a dark stage (DESIGN-SYSTEM.md §5.12, §8, §9).
 // Design pass: the picture is everything, so the viewer is a dark stage (`--viewer` in both
 // themes) with thin chrome: the frame's mono title on the left, its actions and «Закрити» on the
 // right, previous/next at the sides (44px, on a dark disc so they read over any photo), details
-// below. Radix Dialog gives the focus trap, Escape and focus return to the opening frame. ←/→
+// below. Phones and tablets: full screen. From `lg` (owner review 2026-10-03) a large centred
+// dialog (up to 1100px × 85vh, 12px radius) over a dimmed page, with the details as a 288px panel
+// on the right, so a desktop keeps its context and the details never sit under page chrome. Radix Dialog gives the focus trap, Escape and focus return to the opening frame. ←/→
 // step between frames; on touch a horizontal swipe of 48px does the same (always with buttons).
 // Focus is the dark violet ring (`--viewer-ring`), secondary text `--viewer-muted`, in both themes. Opening fades (180ms); none under reduced
 // motion. Media scales to fit (`object-fit: contain`), never past the screen.
@@ -64,7 +66,7 @@ function ownsArrowKeys(target: EventTarget): boolean {
 }
 
 /**
- * A full-screen view of one frame on the dark viewer surface. Controlled (`open`); the caller
+ * One frame on the dark viewer surface: full screen below `lg`, a large centred dialog from it. Controlled (`open`); the caller
  * keeps the open frame in the URL (`?frame=86`) and passes `onPrev`/`onNext` while there is a
  * neighbour.
  */
@@ -117,7 +119,7 @@ function FrameViewer({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           data-slot="frame-viewer-overlay"
-          className="fixed inset-0 z-(--z-overlay) bg-viewer animation-duration-[var(--duration-base)] motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0"
+          className="fixed inset-0 z-(--z-overlay) bg-viewer lg:bg-[rgb(0_0_0/0.72)] animation-duration-[var(--duration-base)] motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0"
         />
         <DialogPrimitive.Content
           data-slot="frame-viewer"
@@ -132,9 +134,9 @@ function FrameViewer({
             event.preventDefault();
             (returnFocus?.() ?? opener.current)?.focus();
           }}
-          className="fixed inset-0 z-(--z-modal) flex flex-col bg-viewer text-viewer-foreground outline-none [--muted-foreground:var(--viewer-muted)] [--ring:var(--viewer-ring)] animation-duration-[var(--duration-base)] motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0"
+          className="fixed inset-0 z-(--z-modal) flex flex-col bg-viewer text-viewer-foreground outline-none lg:inset-auto lg:top-1/2 lg:left-1/2 lg:h-[85dvh] lg:w-[min(1100px,calc(100vw-4rem))] lg:-translate-x-1/2 lg:-translate-y-1/2 lg:overflow-hidden lg:rounded-dialog lg:border lg:border-[rgb(255_255_255/0.1)] lg:shadow-[0_32px_64px_-24px_rgb(0_0_0/0.6)] [--muted-foreground:var(--viewer-muted)] [--ring:var(--viewer-ring)] animation-duration-[var(--duration-base)] motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0"
         >
-          <div className="flex items-center gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 sm:px-4">
+          <div className="flex items-center gap-1 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 sm:px-4 lg:border-b lg:border-[rgb(255_255_255/0.1)] lg:py-2 lg:pr-2">
             <DialogPrimitive.Title className="min-w-0 flex-1 truncate pl-2 type-data text-[0.9375rem]">
               {title}
             </DialogPrimitive.Title>
@@ -143,47 +145,50 @@ function FrameViewer({
               <X aria-hidden="true" className="size-5" />
             </DialogPrimitive.Close>
           </div>
-          <div
-            data-slot="frame-viewer-stage"
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={() => {
-              start.current = null;
-            }}
-            className="relative flex min-h-0 flex-1 touch-pan-y items-center justify-center px-2 pb-2 sm:px-16"
-          >
-            <div className="flex size-full min-h-0 min-w-0 items-center justify-center [overflow-wrap:anywhere] *:max-h-full *:max-w-full [&>img]:object-contain [&>video]:object-contain">
-              {children}
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+            <div
+              data-slot="frame-viewer-stage"
+              onPointerDown={handlePointerDown}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={() => {
+                start.current = null;
+              }}
+              className="relative flex min-h-0 min-w-0 flex-1 touch-pan-y items-center justify-center px-2 pb-2 sm:px-16 lg:py-6"
+            >
+              {/* Pictures fit the stage; any other child (a text card) sizes itself within it. */}
+              <div className="flex size-full min-h-0 min-w-0 items-center justify-center [overflow-wrap:anywhere] [&>img]:max-h-full [&>img]:max-w-full [&>img]:object-contain [&>video]:max-h-full [&>video]:max-w-full [&>video]:object-contain">
+                {children}
+              </div>
+              {onPrev ? (
+                <button
+                  type="button"
+                  aria-label={prevLabel}
+                  onClick={onPrev}
+                  className={cn(sideButton, 'left-2')}
+                >
+                  <ChevronLeft aria-hidden="true" className="size-6" />
+                </button>
+              ) : null}
+              {onNext ? (
+                <button
+                  type="button"
+                  aria-label={nextLabel}
+                  onClick={onNext}
+                  className={cn(sideButton, 'right-2')}
+                >
+                  <ChevronRight aria-hidden="true" className="size-6" />
+                </button>
+              ) : null}
             </div>
-            {onPrev ? (
-              <button
-                type="button"
-                aria-label={prevLabel}
-                onClick={onPrev}
-                className={cn(sideButton, 'left-2')}
+            {details ? (
+              <div
+                data-slot="frame-viewer-details"
+                className="max-h-[40dvh] overflow-y-auto border-t border-[rgb(255_255_255/0.12)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[0.9375rem] lg:max-h-none lg:w-72 lg:shrink-0 lg:border-t-0 lg:border-l lg:px-5 lg:py-5"
               >
-                <ChevronLeft aria-hidden="true" className="size-6" />
-              </button>
-            ) : null}
-            {onNext ? (
-              <button
-                type="button"
-                aria-label={nextLabel}
-                onClick={onNext}
-                className={cn(sideButton, 'right-2')}
-              >
-                <ChevronRight aria-hidden="true" className="size-6" />
-              </button>
+                {details}
+              </div>
             ) : null}
           </div>
-          {details ? (
-            <div
-              data-slot="frame-viewer-details"
-              className="max-h-[40dvh] overflow-y-auto border-t border-[rgb(255_255_255/0.12)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[0.9375rem]"
-            >
-              {details}
-            </div>
-          ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>

@@ -194,3 +194,52 @@ export const OnPanelDark: Story = {
     await waitFor(() => expectReadsOnPanel(canvasElement));
   },
 };
+
+/**
+ * A chip that can't be chosen («Відео» when no link lets guests add videos): a lock, the reason
+ * as its description and in a tooltip on focus and on press; pressing it selects nothing.
+ */
+export const Locked: Story = {
+  args: { defaultValue: 'all', 'aria-label': 'Тип' },
+  render: (args) => (
+    <ToggleGroup {...args}>
+      <ToggleGroupItem value="all" count={3}>
+        Усе
+      </ToggleGroupItem>
+      <ToggleGroupItem value="text" count={3}>
+        Тексти
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="video"
+        count={0}
+        disabledReason="Жодне посилання не дозволяє додавати відео"
+      >
+        Відео
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ),
+  play: async ({ canvas, args }) => {
+    const video = canvas.getByRole('radio', { name: 'Відео 0' });
+    await expect(video).toHaveAttribute('aria-disabled', 'true');
+    await expect(video).toHaveAccessibleDescription('Жодне посилання не дозволяє додавати відео');
+    await expect(video.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    // Keyboard: arrows reach it, focus shows the reason, Space selects nothing.
+    canvas.getByRole('radio', { name: 'Тексти 3' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(video).toHaveFocus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        'Жодне посилання не дозволяє додавати відео',
+      ),
+    );
+    await userEvent.keyboard(' ');
+    await expect(video).toHaveAttribute('aria-checked', 'false');
+
+    // A press (or a tap) shows the reason and selects nothing.
+    await userEvent.click(video);
+    await expect(video).toHaveAttribute('aria-checked', 'false');
+    await expect(args.onValueChange).not.toHaveBeenCalled();
+    await expect(document.querySelector('[data-slot="tooltip-content"]')).toBeVisible();
+  },
+};

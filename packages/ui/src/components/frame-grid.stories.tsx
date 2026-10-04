@@ -18,7 +18,7 @@ function frames(count: number) {
   ));
 }
 
-/** The grid's content box is `width` (its 1px edge is outside), as DESIGN-SYSTEM.md §7.2 counts. */
+/** The grid's content box is `width` (its 1px inset is outside), as DESIGN-SYSTEM.md §7.2 counts. */
 function sheet(width: number, count = 14) {
   return (
     <div style={{ width: width + 2 }}>
@@ -52,16 +52,38 @@ export const Phone288: Story = {
   play: async ({ canvasElement }) => expectColumns(canvasElement, 3),
 };
 
-/** A 1440px desktop beside the timeline and details: eight columns. */
-export const Desktop944: Story = {
+/** A 1024px tablet column: six columns of about 157px. */
+export const Tablet944: Story = {
   render: () => sheet(944),
-  play: async ({ canvasElement }) => expectColumns(canvasElement, 8),
+  play: async ({ canvasElement }) => expectColumns(canvasElement, 6),
 };
 
-/** 1920px: twelve columns at most; frames grow no further. */
+/** 1920px: nine columns of about 186px; ten at most. */
 export const Wide1680: Story = {
   render: () => sheet(1680, 26),
-  play: async ({ canvasElement }) => expectColumns(canvasElement, 12),
+  play: async ({ canvasElement }) => expectColumns(canvasElement, 9),
+};
+
+/** One to three frames: larger (at most 240px), left-aligned, no empty sheet beside them. */
+export const Few: Story = {
+  render: () => (
+    <div className="grid gap-6">
+      <div data-width="328" style={{ width: 330 }}>
+        <FrameGrid ariaLabel="Кадри колекції">{frames(1)}</FrameGrid>
+      </div>
+      <div data-width="1040" style={{ width: 1042 }}>
+        <FrameGrid ariaLabel="Кадри колекції">{frames(3)}</FrameGrid>
+      </div>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [phone, desktop] = canvasElement.querySelectorAll<HTMLElement>('[data-width] li');
+    // Two columns on a phone: a single frame is half the width, not a third.
+    const phoneWidth = phone!.getBoundingClientRect().width;
+    await expect(phoneWidth).toBeGreaterThan(160);
+    await expect(phoneWidth).toBeLessThan(166);
+    await expect(Math.round(desktop!.getBoundingClientRect().width)).toBe(240);
+  },
 };
 
 /** Steps in between (§7.2 table). */
@@ -76,7 +98,7 @@ export const Steps: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const expected: Record<string, string> = { 343: '3', 528: '5', 704: '6', 1304: '10' };
+    const expected: Record<string, string> = { 343: '3', 528: '5', 704: '5', 1304: '7' };
     for (const box of canvasElement.querySelectorAll<HTMLElement>('[data-width]')) {
       const list = box.querySelector<HTMLElement>('ul')!;
       await expect(getComputedStyle(list).getPropertyValue('--cols').trim()).toBe(
@@ -86,7 +108,7 @@ export const Steps: Story = {
   },
 };
 
-/** Dense: 4px frame padding; a short last row stays plain sheet. */
+/** Dense: 4px frame padding; a short last row shows the page. */
 export const Dense: Story = {
   render: () => (
     <div style={{ width: 530 }}>

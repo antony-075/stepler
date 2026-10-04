@@ -1,6 +1,11 @@
 'use client';
 
-import { type QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  type InfiniteData,
+  type QueryClient,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { contentCounts, contentCountsKey, contentListsKey } from '@/api/content';
 import { newFramesCount } from './content-filters';
@@ -14,6 +19,22 @@ export function resetContentLists(queryClient: QueryClient, collectionId: string
 }
 
 /**
+ * «Оновити» (owner review 2026-10-03; there is no push yet): every list of the collection keeps
+ * only its first page, so it starts again from the top, and is refetched in place (the loaded
+ * frames stay on screen meanwhile; lists not on screen refetch when next shown).
+ */
+export function refreshContentLists(queryClient: QueryClient, collectionId: string): Promise<void> {
+  queryClient.setQueriesData<InfiniteData<unknown, unknown>>(
+    { queryKey: contentListsKey(collectionId) },
+    (data) =>
+      data === undefined
+        ? data
+        : { pages: data.pages.slice(0, 1), pageParams: data.pageParams.slice(0, 1) },
+  );
+  return queryClient.invalidateQueries({ queryKey: contentListsKey(collectionId) });
+}
+
+/**
  * [C6]: polls the collection's counts every 15 s while the tab is mounted and the page visible
  * (`refetchIntervalInBackground: false`), and reports how many frames arrived since the list was
  * shown. The grid never moves under the admin's hand: `showNew` resets the lists to their first
@@ -24,6 +45,8 @@ export function useNewContent(collectionId: string): {
   newCount: number;
   showNew: () => void;
   rebase: () => void;
+  /** «Оновити»: the counts and the lists from their first page; resolves when both are back. */
+  refresh: () => Promise<void>;
 } {
   const queryClient = useQueryClient();
   const counts = useCountsQuery(collectionId);
@@ -41,7 +64,14 @@ export function useNewContent(collectionId: string): {
 
   const rebase = useCallback(() => setShown(null), []);
 
-  return { counts, newCount: newFramesCount(shown, total), showNew, rebase };
+  const { refetch } = counts;
+  const refresh = useCallback(async () => {
+    const [next] = await Promise.all([refetch(), refreshContentLists(queryClient, collectionId)]);
+    // What the grid now shows is the new baseline: nothing is "new" right after a refresh.
+    setShown(next.data?.total ?? null);
+  }, [collectionId, queryClient, refetch]);
+
+  return { counts, newCount: newFramesCount(shown, total), showNew, rebase, refresh };
 }
 
 function useCountsQuery(collectionId: string) {
