@@ -76,8 +76,9 @@ import {
 import { ContentViewer } from './content-viewer';
 import { documentType } from './document-type';
 import { useNewContent } from './use-new-content';
-import { usePendingPreviews } from './use-pending-previews';
+import { refreshFrames, usePendingPreviews } from './use-pending-previews';
 import { formatBytes, formatDuration } from '@/format/bytes';
+import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 
 const SORTS = ['newest', 'frame'] as const;
@@ -324,7 +325,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
           <FrameGrid ariaLabel={t('listLabel')}>
             {items.map((item) => (
               <div key={item.id} data-frame={item.frameNo}>
-                <AdminFrame item={item} onOpen={() => openFrame(item.frameNo)} />
+                <AdminFrame
+                  item={item}
+                  collectionId={collection.id}
+                  onOpen={() => openFrame(item.frameNo)}
+                />
               </div>
             ))}
           </FrameGrid>
@@ -354,7 +359,15 @@ export function ContentTab({ collection }: { collection: Collection }) {
   );
 }
 
-function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => void }) {
+function AdminFrame({
+  item,
+  collectionId,
+  onOpen,
+}: {
+  item: AdminContentItem;
+  collectionId: string;
+  onOpen: () => void;
+}) {
   const t = useTranslations('content');
   const format = useFormatter();
   const time = format.dateTime(new Date(item.createdAt), { hour: '2-digit', minute: '2-digit' });
@@ -402,7 +415,7 @@ function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => vo
         kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
         // A video without a poster is ▶ on grey (D4).
         {...(picture.kind === 'thumbnail'
-          ? { media: <Thumbnail url={picture.url} item={item} /> }
+          ? { media: <Thumbnail url={picture.url} item={item} collectionId={collectionId} /> }
           : {})}
         number={item.frameNo}
         time={time}
@@ -425,12 +438,23 @@ function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => vo
   );
 }
 
-/** A grid thumbnail: lazy, decoded off the main thread, sized by the original's ratio. */
-function Thumbnail({ url, item }: { url: string; item: AdminContentItem }) {
+/**
+ * A grid thumbnail: lazy, decoded off the main thread, sized by the original's ratio. A link that
+ * expired while the grid stayed open is replaced by asking for this frame again.
+ */
+function Thumbnail({
+  url,
+  item,
+  collectionId,
+}: {
+  url: string;
+  item: AdminContentItem;
+  collectionId: string;
+}) {
+  const queryClient = useQueryClient();
   return (
-    // A presigned storage URL: nothing for next/image to optimise.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <MediaImg
+      onExpired={() => void refreshFrames(queryClient, collectionId, [item.id])}
       alt={DECORATIVE}
       src={url}
       loading="lazy"

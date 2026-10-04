@@ -38,6 +38,25 @@ export function applyProcessed(
 }
 
 /**
+ * Asks for these frames again and puts them in place (fresh presigned links, new processing
+ * state). Failures are ignored: the next round or «Оновити» tries again.
+ */
+export async function refreshFrames(
+  queryClient: QueryClient,
+  collectionId: string,
+  ids: readonly string[],
+  onlyProcessed = false,
+): Promise<void> {
+  const results = await Promise.allSettled(ids.map((id) => getContent(id)));
+  const fresh = results.flatMap((result) =>
+    result.status === 'fulfilled' && (!onlyProcessed || result.value.processingStatus !== 'PENDING')
+      ? [result.value]
+      : [],
+  );
+  if (fresh.length > 0) applyProcessed(queryClient, collectionId, fresh);
+}
+
+/**
  * While frames on screen wait for the worker (`PENDING`, under 30 minutes old), asks for those
  * frames again every 10 s, at most 12 a round, and swaps each one in place once it is processed:
  * the thumbnail appears where the placeholder was, and nothing else in the grid moves [C6]. Stops
@@ -57,15 +76,7 @@ export function usePendingPreviews(collectionId: string, items: readonly AdminCo
     let active = true;
     const timer = setInterval(() => {
       if (document.visibilityState !== 'visible') return;
-      void Promise.allSettled(ids.map((id) => getContent(id))).then((results) => {
-        if (!active) return;
-        const processed = results.flatMap((result) =>
-          result.status === 'fulfilled' && result.value.processingStatus !== 'PENDING'
-            ? [result.value]
-            : [],
-        );
-        if (processed.length > 0) applyProcessed(queryClient, collectionId, processed);
-      });
+      if (active) void refreshFrames(queryClient, collectionId, ids, true);
     }, PREVIEW_POLL_MS);
     return () => {
       active = false;

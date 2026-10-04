@@ -9,7 +9,13 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { awaitsPreview, gridPicture, PREVIEW_POLL_MS } from '@/media/previews';
+import { MediaImg } from '@/media/media-img';
+import {
+  awaitsPreview,
+  GUEST_PREVIEW_WAIT_MS,
+  gridPicture,
+  guestPollDelay,
+} from '@/media/previews';
 import { listGuestContent } from './api';
 
 export const guestContentKey = (collectionId: string, scope: 'own' | 'all') =>
@@ -21,10 +27,13 @@ export function useFrameTime(): (iso: string) => string {
   return (iso) => format.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Presigned links last at least an hour; a list this old is fetched again on focus. */
+const LIST_STALE_MS = 30 * 60_000;
+
 /** Decorative: the frame's accessible name says what the picture is. */
 const DECORATIVE = '';
 
-function GuestFrame({ item }: { item: GuestContentItem }) {
+function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: () => void }) {
   const t = useTranslations('guest.frame');
   const time = useFrameTime()(item.createdAt);
   const number = item.frameNo ?? undefined;
@@ -73,9 +82,8 @@ function GuestFrame({ item }: { item: GuestContentItem }) {
         {...(picture.kind === 'thumbnail'
           ? {
               media: (
-                // A presigned storage URL: nothing for next/image to optimise.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <MediaImg
+                  onExpired={onExpired}
                   alt={DECORATIVE}
                   src={picture.url}
                   loading="lazy"
@@ -147,12 +155,20 @@ export function GuestFrames({
     initialPageParam: null as string | null,
     getNextPageParam: (last: GuestContentPage) => last.nextCursor,
     retry: false,
-    refetchOnWindowFocus: false,
-    // While a frame waits for its preview, the list is asked again every 10 s (a guest's own
-    // list only grows with their own uploads, so nothing moves unexpectedly); then it stops.
+    // Presigned links last at least an hour: a list older than 30 minutes is fetched again when
+    // the guest comes back to the tab (phones sleep for hours at an event).
+    staleTime: LIST_STALE_MS,
+    refetchOnWindowFocus: true,
+    // Only the guest's own frames wait for previews they care about, and that list only grows
+    // with their own uploads, so nothing moves unexpectedly. Asked again every 15–20 s (jitter:
+    // a venue's guests share one IP and its read limit), for at most 10 minutes per frame; the
+    // shared gallery is never polled.
     refetchInterval: (q) =>
-      q.state.data?.pages.some((page) => page.items.some((item) => awaitsPreview(item)))
-        ? PREVIEW_POLL_MS
+      scope === 'own' &&
+      q.state.data?.pages.some((page) =>
+        page.items.some((item) => awaitsPreview(item, Date.now(), GUEST_PREVIEW_WAIT_MS)),
+      )
+        ? guestPollDelay()
         : false,
     refetchIntervalInBackground: false,
   });
@@ -167,7 +183,8 @@ export function GuestFrames({
       </div>
     );
   }
-  if (query.isError) {
+  // Only when nothing could be loaded: a failed background refresh keeps the frames on screen.
+  if (query.data === undefined) {
     return (
       <Alert
         variant="error"
@@ -190,7 +207,7 @@ export function GuestFrames({
     <div className="grid gap-3">
       <FrameGrid ariaLabel={label}>
         {items.map((item) => (
-          <GuestFrame key={item.id} item={item} />
+          <GuestFrame key={item.id} item={item} onExpired={() => void query.refetch()} />
         ))}
       </FrameGrid>
       {query.hasNextPage ? (

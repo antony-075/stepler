@@ -12,6 +12,19 @@ export const PREVIEW_POLL_MS = 10_000;
  */
 export const PREVIEW_WAIT_MS = 30 * 60_000;
 
+/**
+ * Guests stop asking sooner (processing takes seconds) and less often, with jitter: everyone at a
+ * venue may share one IP and its guest read limit (`LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, 600).
+ * At 15–20 s a waiting guest makes 3–4 reads a minute, so ~150 guests can wait at once.
+ */
+export const GUEST_PREVIEW_WAIT_MS = 10 * 60_000;
+const GUEST_POLL_MS = 15_000;
+const GUEST_POLL_JITTER_MS = 5_000;
+
+/** The next guest poll delay: 15–20 s. */
+export const guestPollDelay = (random: () => number = Math.random): number =>
+  GUEST_POLL_MS + Math.round(random() * GUEST_POLL_JITTER_MS);
+
 /** At most this many waiting frames are refreshed per round (each is one request). */
 export const PREVIEW_POLL_MAX = 12;
 
@@ -21,8 +34,11 @@ interface Waiting {
 }
 
 /** Whether a frame is still worth asking about. */
-export const awaitsPreview = (item: Waiting, now: number = Date.now()): boolean =>
-  item.processingStatus === 'PENDING' && now - Date.parse(item.createdAt) < PREVIEW_WAIT_MS;
+export const awaitsPreview = (
+  item: Waiting,
+  now: number = Date.now(),
+  waitMs: number = PREVIEW_WAIT_MS,
+): boolean => item.processingStatus === 'PENDING' && now - Date.parse(item.createdAt) < waitMs;
 
 /**
  * What a photo or video frame shows in a grid: its thumbnail (480 px, for videos too), the

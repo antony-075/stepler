@@ -15,6 +15,7 @@ import { getContent } from '@/api/content';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { documentType } from './document-type';
 import { contentDetailKey } from './use-pending-previews';
+import { MediaImg } from '@/media/media-img';
 
 /** Browsers outside Safari cannot show HEIC/HEIF: only their preview is shown. */
 const NOT_SHOWN = new Set(['image/heic', 'image/heif']);
@@ -186,6 +187,7 @@ export function ContentViewer({
             item={item}
             detail={detail.data}
             loading={detail.isPending}
+            onExpired={() => void detail.refetch()}
             failed={detail.isError}
             videoFailed={videoFailed === item.id}
             onVideoError={() => setVideoFailed(item.id)}
@@ -219,6 +221,7 @@ function FileStage({
   failed,
   videoFailed,
   onVideoError,
+  onExpired,
 }: {
   item: AdminContentItem;
   detail: AdminContentDetail | undefined;
@@ -226,6 +229,8 @@ function FileStage({
   failed: boolean;
   videoFailed: boolean;
   onVideoError: () => void;
+  /** A presigned link stopped working (the viewer stayed open past its window). */
+  onExpired: () => void;
 }) {
   const t = useTranslations('content');
   const tile = (text: string, icon: 'image' | 'doc' = 'image') => (
@@ -275,9 +280,8 @@ function FileStage({
       );
     }
     return (
-      // A presigned storage URL: nothing for next/image to optimise.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
+      <MediaImg
+        onExpired={onExpired}
         src={shown}
         alt={t('viewer.photoAlt', { number: item.frameNo })}
         className="max-h-full max-w-full object-contain"
