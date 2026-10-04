@@ -14,6 +14,8 @@ import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
+import { PurgeCoverHandler } from '../src/worker/handlers/purge-cover.handler.js';
+import { coverKey, coverPrefix } from '../src/collections/cover-keys.js';
 import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
@@ -160,6 +162,69 @@ describe('worker handlers', () => {
       await handler().handle({ contentItemId: item.id });
       expect(await prisma.contentItem.findUnique({ where: { id: item.id } })).not.toBeNull();
       expect(await storage.head(key)).not.toBeNull();
+    });
+  });
+
+  describe('cover.purge', () => {
+    const handler = () => new PurgeCoverHandler(prisma, storage, env);
+
+    /** A READY cover with its three objects; `live: false` deletes the row as a replace would. */
+    async function cover(collectionId: string, live: boolean) {
+      const row = await prisma.collectionCover.create({
+        data: {
+          collectionId,
+          status: 'READY',
+          source: 'UPLOAD',
+          mimeType: 'image/jpeg',
+          originalSizeBytes: 1000n,
+          derivedSizeBytes: 200n,
+          width: 100,
+          height: 100,
+        },
+      });
+      for (const role of ['original', 'thumbnail', 'preview'] as const) {
+        await putObject(storage, coverKey(collectionId, row.id, role));
+      }
+      if (!live) await prisma.collectionCover.delete({ where: { id: row.id } });
+      return row.id;
+    }
+
+    test('removes the prefix of a cover whose row is gone; a second run succeeds', async () => {
+      const { collectionId } = await seed();
+      const gone = await cover(collectionId, false);
+      const live = await cover(collectionId, true);
+      await handler().handle({ collectionId, coverId: gone });
+      expect(await allKeys(storage, coverPrefix(collectionId, gone))).toEqual([]);
+      expect(await allKeys(storage, coverPrefix(collectionId, live))).toHaveLength(3);
+      await handler().handle({ collectionId, coverId: gone });
+    });
+
+    test('never purges a live cover', async () => {
+      const { collectionId } = await seed();
+      const live = await cover(collectionId, true);
+      await handler().handle({ collectionId, coverId: live });
+      expect(await allKeys(storage, coverPrefix(collectionId, live))).toHaveLength(3);
+      expect(await prisma.collectionCover.count({ where: { id: live } })).toBe(1);
+    });
+
+    test('upper-case ids in the payload still delete the (lowercase) keys', async () => {
+      const { collectionId } = await seed();
+      const gone = await cover(collectionId, false);
+      await handler().handle({
+        collectionId: collectionId.toUpperCase(),
+        coverId: gone.toUpperCase(),
+      });
+      expect(await allKeys(storage, coverPrefix(collectionId, gone))).toEqual([]);
+    });
+
+    test('Review Focus 1: the collection purge removes the cover with everything else', async () => {
+      const { collectionId } = await seed({ status: 'DELETING' });
+      await cover(collectionId, true);
+      await putObject(storage, `collections/${collectionId}/uploads/u1/original`);
+      await new PurgeCollectionHandler(prisma, storage, env).handle({ collectionId });
+      expect(await allKeys(storage, `collections/${collectionId}/`)).toEqual([]);
+      expect(await prisma.collection.count({ where: { id: collectionId } })).toBe(0);
+      expect(await prisma.collectionCover.count({ where: { collectionId } })).toBe(0);
     });
   });
 
