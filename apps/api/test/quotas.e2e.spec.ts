@@ -181,6 +181,28 @@ describe('storage usage and quotas', () => {
     await expect(reserve(b, 1n)).rejects.toMatchObject({ code: 'QUOTA_EXCEEDED' });
   });
 
+  test('cover bytes (original and derivatives) count toward the collection and the account', async () => {
+    const s = await seed();
+    await prisma.collectionCover.create({
+      data: {
+        collectionId: s.collectionId,
+        status: 'READY',
+        source: 'FRAME',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 6n * MB,
+        derivedSizeBytes: 1000n,
+        width: 100,
+        height: 100,
+      },
+    });
+    expect(await usage.collectionStorageBytes(prisma, s.collectionId)).toBe(6n * MB + 1000n);
+    expect(await usage.accountStorageBytes(prisma, s.ownerId)).toBe(6n * MB + 1000n);
+    await expect(reserve(s, 6n * MB)).rejects.toMatchObject({ code: 'QUOTA_EXCEEDED' });
+    // Removing the cover (its row) frees the bytes at once, before the purge runs.
+    await prisma.collectionCover.deleteMany({ where: { collectionId: s.collectionId } });
+    await reserve(s, 6n * MB);
+  });
+
   test('a deleted item frees its space at once', async () => {
     const s = await seed();
     const item = await photo(s, [{ role: 'ORIGINAL', bytes: 6n * MB }]);
@@ -197,11 +219,19 @@ describe('storage usage and quotas', () => {
       { role: 'THUMBNAIL', bytes: 1234n },
     ]);
     await photo(s, [{ role: 'ORIGINAL', bytes: 4n * MB }], true);
+    await prisma.collectionCover.create({
+      data: {
+        collectionId: s.collectionId,
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 1_000_000n,
+      },
+    });
 
     const me = await request(server).get('/api/v1/me/usage').set('Cookie', owner.cookie);
     expect(me.status).toBe(200);
     expect(usageResponseSchema.parse(me.body).storage).toEqual({
-      usedBytes: 2_001_234,
+      usedBytes: 3_001_234,
       limitBytes: 15_000_000,
     });
 
@@ -210,7 +240,7 @@ describe('storage usage and quotas', () => {
       .set('Cookie', owner.cookie);
     expect(detail.status).toBe(200);
     expect(collectionDetailSchema.parse(detail.body).storage).toEqual({
-      usedBytes: 2_001_234,
+      usedBytes: 3_001_234,
       limitBytes: 10_000_000,
     });
 

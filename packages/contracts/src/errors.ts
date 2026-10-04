@@ -36,6 +36,7 @@ export const ERROR_CODES = [
   'IDEMPOTENCY_CONFLICT',
   'CONTENT_NOT_FOUND',
   'UPLOAD_IN_PROGRESS',
+  'COVER_SOURCE_INVALID',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

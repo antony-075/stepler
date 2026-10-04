@@ -121,6 +121,10 @@ const apiEnvSchema = z
     // session (review I2).
     LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE: positiveInt(600),
     LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE: positiveInt(240),
+    // The admin's cover routes (upload, from-frame, remove) per minute and route: per client IP
+    // and per signed-in user.
+    LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE: positiveInt(120),
+    LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE: positiveInt(60),
     // Upload protocol (spec §10.2): every file is a multipart upload of parts this size (the last
     // shorter). S3 and R2 need parts of at least 5 MiB (except the last).
     UPLOAD_PART_SIZE_BYTES: byteCount(10_485_760n).refine((value) => value >= 5_242_880n, {

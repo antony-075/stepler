@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { canContribute, type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { generateToken, hashToken, TOKEN_PATTERN } from '../auth/tokens.js';
+import { type CoverRow, CoverUrls, WITH_COVER } from '../collections/cover-urls.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { GuestSession as GuestSessionRow } from '../generated/prisma/client.js';
@@ -17,6 +18,8 @@ interface ContextCollection {
   id: string;
   title: string;
   description: string | null;
+  welcomeMessage: string | null;
+  cover: CoverRow | null;
 }
 
 /**
@@ -30,6 +33,7 @@ export class GuestSessionsService {
     private readonly prisma: PrismaService,
     private readonly resolver: GuestLinkResolver,
     private readonly limits: LimitsService,
+    private readonly covers: CoverUrls,
   ) {}
 
   /**
@@ -143,7 +147,11 @@ export class GuestSessionsService {
   async context(p: GuestPrincipal): Promise<GuestContext> {
     const session = await this.prisma.guestSession.findUniqueOrThrow({
       where: { id: p.guestSessionId },
-      include: { collection: { select: { id: true, title: true, description: true } } },
+      include: {
+        collection: {
+          select: { id: true, title: true, description: true, welcomeMessage: true, ...WITH_COVER },
+        },
+      },
     });
     return this.buildContext(p, session.collection, session);
   }
@@ -170,6 +178,9 @@ export class GuestSessionsService {
         id: collection.id,
         title: collection.title,
         description: collection.description,
+        welcomeMessage: collection.welcomeMessage,
+        // Only a READY cover, and never its source [A2].
+        cover: await this.covers.forGuest(collection.cover),
       },
       permissions: p.link.permissions,
       guest: { name: session.contributorName, nameAnswered: session.nameAnsweredAt !== null },

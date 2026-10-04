@@ -2,12 +2,14 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs
 import type { Job } from 'pg-boss';
 import { JOB_OPTIONS, type JobData, type JobName } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
+import { CoverDerivativesHandler } from './handlers/cover-derivatives.handler.js';
 import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
 import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
+import { PurgeCoverHandler } from './handlers/purge-cover.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
@@ -39,6 +41,8 @@ export class JobRunner implements OnApplicationBootstrap {
     expireUploads: ExpireUploadsHandler,
     imageDerivatives: ImageDerivativesHandler,
     videoPoster: VideoPosterHandler,
+    coverDerivatives: CoverDerivativesHandler,
+    purgeCover: PurgeCoverHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -48,6 +52,8 @@ export class JobRunner implements OnApplicationBootstrap {
       expireUploads,
       imageDerivatives,
       videoPoster,
+      coverDerivatives,
+      purgeCover,
     ] as JobHandler[];
   }
 

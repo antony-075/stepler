@@ -52,6 +52,26 @@ enum ProcessingStatus {
   FAILED
 }
 
+/// A cover is PENDING until the worker made its derivatives (CHECK "CollectionCover_ready_dimensions").
+enum CoverStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+/// Where the cover's original came from: the admin's own upload, or a copy of a guest photo frame.
+enum CoverSource {
+  UPLOAD
+  FRAME
+}
+
+/// What an upload becomes: a guest's content frame, or the admin's collection cover [A1]
+/// (CHECKs "UploadSession_purpose_actor", "UploadSession_cover_is_photo").
+enum UploadPurpose {
+  CONTENT
+  COVER
+}
+
 enum UploadStatus {
   INITIATED
   /// A completion claimed it (`claimedAt`) and is checking storage outside any transaction; a
@@ -86,21 +106,22 @@ enum AuthProvider {
 }
 
 model User {
-  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email           String        @unique @db.Citext
-  emailVerifiedAt DateTime?     @db.Timestamptz(3)
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email           String          @unique @db.Citext
+  emailVerifiedAt DateTime?       @db.Timestamptz(3)
   /// At most 80 characters (CHECK "User_displayName_length").
   displayName     String?
-  locale          Locale        @default(uk)
+  locale          Locale          @default(uk)
   /// BLOCKED if and only if blockedAt is set (CHECK "User_blocked_consistent").
-  status          UserStatus    @default(ACTIVE)
-  blockedAt       DateTime?     @db.Timestamptz(3)
+  status          UserStatus      @default(ACTIVE)
+  blockedAt       DateTime?       @db.Timestamptz(3)
   blockedReason   String?
-  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime      @updatedAt @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
   accounts        AuthAccount[]
   sessions        AuthSession[]
   collections     Collection[]
+  uploadSessions  UploadSession[]
 }
 
 model AuthAccount {
@@ -150,6 +171,9 @@ model Collection {
   title               String
   /// 1 to 1000 characters when set (CHECK "Collection_description_length").
   description         String?
+  /// Shown to guests above their main action; 1 to 160 code points when set
+  /// (CHECK "Collection_welcome_length") [A5].
+  welcomeMessage      String?
   /// ARCHIVED iff archivedAt is set, DELETING iff deletionRequestedAt is set
   /// (CHECKs "Collection_archived_consistent", "Collection_deleting_consistent").
   status              CollectionStatus @default(ACTIVE)
@@ -165,8 +189,30 @@ model Collection {
   guestSessions       GuestSession[]
   contentItems        ContentItem[]
   uploadSessions      UploadSession[]
+  cover               CollectionCover?
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+/// The collection's cover [A2]: one row per collection, replaced whole (a replaced or removed
+/// cover's row is deleted at once and its objects purged by `cover.purge`). No storage keys here:
+/// every key is `coverKey(collectionId, id, role)`. Rules live as named CHECKs:
+/// "CollectionCover_sizes", "CollectionCover_ready_dimensions".
+model CollectionCover {
+  id                String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String      @unique @db.Uuid
+  status            CoverStatus @default(PENDING)
+  source            CoverSource
+  /// The verified type of the original (content signature), never the browser's claim.
+  mimeType          String
+  originalSizeBytes BigInt
+  /// Thumbnail plus preview; 0 until READY. Both count toward usage with the original.
+  derivedSizeBytes  BigInt      @default(0)
+  /// The source's upright dimensions, set with READY.
+  width             Int?
+  height            Int?
+  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
+  collection        Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 }
 
 /// A public entry point to a collection (ADR 0007, spec §7.2). Rules live as named CHECKs:
@@ -294,48 +340,59 @@ model MediaObject {
   @@unique([contentItemId, role])
 }
 
-/// One file on its way from a guest's browser to storage (spec §7.3, §10). Rules live as named
-/// CHECKs: "UploadSession_kind_is_file", "UploadSession_size_positive",
-/// "UploadSession_parts_positive", "UploadSession_completed_consistent", "UploadSession_claim_consistent",
-/// "UploadSession_reject_reason"; open uploads per guest session use the partial index
-/// "UploadSession_active_idx". The guest session and link belong to the row's own collection
-/// (composite keys). `INITIATED` rows reserve `declaredSizeBytes` of quota (ADR 0010).
+/// One file on its way from a browser to storage (spec §7.3, §10): a guest's content frame
+/// (`purpose = CONTENT`, with its guest session and link) or the admin's collection cover
+/// (`purpose = COVER`, with `uploaderUserId`) [A1]. Rules live as named CHECKs:
+/// "UploadSession_kind_is_file", "UploadSession_size_positive", "UploadSession_parts_positive",
+/// "UploadSession_completed_consistent", "UploadSession_claim_consistent",
+/// "UploadSession_reject_reason", "UploadSession_purpose_actor", "UploadSession_cover_is_photo";
+/// open uploads per guest session use the partial index "UploadSession_active_idx". The guest
+/// session and link belong to the row's own collection (composite keys). `INITIATED` rows
+/// reserve `declaredSizeBytes` of quota (ADR 0010).
 model UploadSession {
-  id                String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId      String       @db.Uuid
-  /// Deleting the guest session deletes its uploads; the idle sweep keeps sessions with uploads.
-  guestSessionId    String       @db.Uuid
-  /// The link the upload came through. NO ACTION (links are never deleted while referenced), so
-  /// deleting the collection still cascades in one statement.
-  guestLinkId       String       @db.Uuid
-  /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId).
-  clientUploadId    String       @db.Uuid
+  id                String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String        @db.Uuid
+  purpose           UploadPurpose @default(CONTENT)
+  /// CONTENT only. Deleting the guest session deletes its uploads; the idle sweep keeps sessions
+  /// with uploads. Optional beside the required `collectionId` of its composite key (the
+  /// `ContentItem.contributorGuestSession` precedent).
+  guestSessionId    String?       @db.Uuid
+  /// CONTENT only: the link the upload came through. NO ACTION (links are never deleted while
+  /// referenced), so deleting the collection still cascades in one statement.
+  guestLinkId       String?       @db.Uuid
+  /// COVER only: the admin who uploads. Deleting the user deletes their cover uploads.
+  uploaderUserId    String?       @db.Uuid
+  /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId)
+  /// for guests and (uploaderUserId, clientUploadId) for admins.
+  clientUploadId    String        @db.Uuid
   kind              ContentKind
   originalFilename  String
   declaredMime      String
   declaredSizeBytes BigInt
   /// `collections/{collectionId}/uploads/{id}/original`.
-  storageKey        String       @unique
+  storageKey        String        @unique
   /// Every upload is multipart (ADR 0008 addendum 2026-10-03): storage's upload id.
   multipartUploadId String
   partSizeBytes     BigInt
   partCount         Int
-  status            UploadStatus @default(INITIATED)
+  status            UploadStatus  @default(INITIATED)
   /// A stable error code when REJECTED.
   rejectReason      String?
-  expiresAt         DateTime     @db.Timestamptz(3)
-  completedAt       DateTime?    @db.Timestamptz(3)
+  expiresAt         DateTime      @db.Timestamptz(3)
+  completedAt       DateTime?     @db.Timestamptz(3)
   /// Set while COMPLETING (CHECK "UploadSession_claim_consistent").
-  claimedAt         DateTime?    @db.Timestamptz(3)
-  /// The item it became; NULL once that item is purged.
-  contentItemId     String?      @unique @db.Uuid
-  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
-  collection        Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  guestSession      GuestSession @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
-  guestLink         GuestLink    @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
-  contentItem       ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  claimedAt         DateTime?     @db.Timestamptz(3)
+  /// The item it became (CONTENT); NULL once that item is purged, and always for a COVER.
+  contentItemId     String?       @unique @db.Uuid
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  collection        Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  guestSession      GuestSession? @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
+  guestLink         GuestLink?    @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
+  uploader          User?         @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+  contentItem       ContentItem?  @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
 
   @@unique([guestSessionId, clientUploadId])
+  @@unique([uploaderUserId, clientUploadId])
   @@index([status, expiresAt])
   @@index([collectionId, status])
   @@index([guestLinkId])

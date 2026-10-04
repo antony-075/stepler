@@ -303,6 +303,92 @@ describe('collections API', () => {
       });
       expect((await prisma.collection.findUniqueOrThrow({ where: { id } })).status).toBe('ACTIVE');
     });
+
+    test('the welcome message [A5]: set, limited to 160 code points, cleared with null', async () => {
+      const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
+      const { id } = await seed(userId);
+      const patch = (body: object) =>
+        request(server())
+          .patch(`/api/v1/collections/${id}`)
+          .set('Cookie', cookie)
+          .set('Origin', ORIGIN)
+          .send(body);
+
+      const set = await patch({ welcomeMessage: ' Вітаємо! ' }).expect(200);
+      expect(collectionSchema.parse(set.body).welcomeMessage).toBe('Вітаємо!');
+      const long = await patch({ welcomeMessage: '😀'.repeat(161) }).expect(400);
+      expect(long.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      await patch({ welcomeMessage: 'a\nb' }).expect(400);
+      expect((await patch({ welcomeMessage: '😀'.repeat(160) }).expect(200)).body).toMatchObject({
+        welcomeMessage: '😀'.repeat(160),
+      });
+      const cleared = await patch({ welcomeMessage: null }).expect(200);
+      expect(cleared.body).toMatchObject({ welcomeMessage: null });
+      // Editable while archived, like the title (D9).
+      await prisma.collection.update({
+        where: { id },
+        data: { status: 'ARCHIVED', archivedAt: new Date() },
+      });
+      await patch({ welcomeMessage: 'Дякуємо' }).expect(200);
+    });
+  });
+
+  describe('cover on the collection DTO [A2]', () => {
+    const cover = (collectionId: string, status: 'PENDING' | 'READY' | 'FAILED') =>
+      prisma.collectionCover.create({
+        data: {
+          collectionId,
+          status,
+          source: 'UPLOAD',
+          mimeType: 'image/jpeg',
+          originalSizeBytes: 1000n,
+          ...(status === 'READY' ? { width: 4000, height: 3000, derivedSizeBytes: 500n } : {}),
+        },
+      });
+
+    test('lists and reads carry welcomeMessage and cover; URLs only once READY', async () => {
+      const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
+      await seed(userId, 'ACTIVE', 'Plain', new Date('2026-10-01T10:00:00Z'));
+      const pending = await seed(userId, 'ACTIVE', 'Pending', new Date('2026-10-02T10:00:00Z'));
+      const ready = await seed(userId, 'ACTIVE', 'Ready', new Date('2026-10-03T10:00:00Z'));
+      await cover(pending.id, 'PENDING');
+      await cover(ready.id, 'READY');
+      await prisma.collection.update({
+        where: { id: ready.id },
+        data: { welcomeMessage: 'Вітаємо!' },
+      });
+
+      const list = await request(server()).get('/api/v1/collections').set('Cookie', cookie);
+      const items = collectionListResponseSchema.parse(list.body).items;
+      expect(items.map((item) => item.title)).toEqual(['Ready', 'Pending', 'Plain']);
+      expect(items[2]).toMatchObject({ welcomeMessage: null, cover: null });
+      expect(items[1]?.cover).toEqual({
+        status: 'PENDING',
+        thumbnailUrl: null,
+        previewUrl: null,
+        width: null,
+        height: null,
+      });
+      expect(items[0]).toMatchObject({
+        welcomeMessage: 'Вітаємо!',
+        cover: { status: 'READY', width: 4000, height: 3000 },
+      });
+      const readyCover = items[0]?.cover;
+      expect(readyCover?.thumbnailUrl).toMatch(/^https?:\/\//);
+      expect(readyCover?.previewUrl).toMatch(/^https?:\/\//);
+      expect(readyCover?.thumbnailUrl).not.toBe(readyCover?.previewUrl);
+      // No internal id or storage key leaks; the URLs name the cover's own prefix.
+      expect(JSON.stringify(items[0]?.cover)).not.toMatch(/source|collectionId/);
+
+      const detail = await request(server())
+        .get(`/api/v1/collections/${ready.id}`)
+        .set('Cookie', cookie)
+        .expect(200);
+      const parsed = collectionDetailSchema.parse(detail.body);
+      // Signed per window: the same link twice within it.
+      expect(parsed.cover).toEqual(readyCover);
+      expect(parsed.cover?.thumbnailUrl).toContain(`/cover/`);
+    });
   });
 
   describe('authorization', () => {

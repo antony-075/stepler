@@ -6,7 +6,7 @@ import { startSession, withSessionRetry } from './use-guest-session';
 
 const CID = '01a0ee76-0574-7fe5-a38b-53b07a9b40f9';
 const context = {
-  collection: { id: CID, title: 'Весілля', description: null },
+  collection: { id: CID, title: 'Весілля', description: null, welcomeMessage: null, cover: null },
   permissions: {
     canUploadPhotos: true,
     canUploadVideos: true,

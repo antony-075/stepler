@@ -75,6 +75,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slices 7–8 status (PR E, branch `feat/phase-4-content-management`, 2026-10-04): implemented, PR to `dev` pending.** Admin multi-select and bulk delete, guest own-content deletion with the «Гості можуть видаляти своє» link switch, the guest's shared gallery («Усі кадри») with the viewer and «Оновити» (never polled), and borderless photo-grid tiles for admin and guest (owner remark 62). Hide stays with slice 9 (operator) per [O3].
 
+**Slice 8a status (PR F, branch `feat/phase-4-appearance-api`, 2026-10-04): the collection cover and welcome message API implemented, PR to `dev` pending; PR G (web) follows.** Plan: `docs/superpowers/plans/2026-10-04-collection-appearance.md` (owner decisions A1–A10). `Collection.welcomeMessage` through `PATCH`; `CollectionCover` (one per collection, replaced whole) set by an admin multipart upload (`purpose = COVER` on `UploadSession`, the guest completion's inspector reused, the original copied server-side) or from any live guest photo frame (copied, so deleting the frame never touches the cover), removed whole; cover URLs on the admin DTO and, once `READY`, on the guest context; cover bytes in usage; `media.cover-derivatives` and `cover.purge` in the worker; per-IP and per-user rate limits on the cover routes. The «Вигляд» tab, the shared `CollectionCover` component, the dashboard card, share dialog and guest hero, and the Playwright journeys are PR G.
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
 
 Each slice should be fully tested before moving on.

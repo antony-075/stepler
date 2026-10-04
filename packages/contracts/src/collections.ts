@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { collectionCoverSchema, collectionWelcomeMessageSchema } from './cover.js';
 import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
@@ -49,6 +50,10 @@ export const collectionSchema = z
     contentCount: z.number().int().min(0),
     /** When the newest non-deleted frame was added; `null` while there is none. */
     lastContentAt: z.iso.datetime().nullable(),
+    /** Shown to guests above their main action; `null` = hidden [A5]. */
+    welcomeMessage: z.string().nullable(),
+    /** The cover (an upload or a guest photo frame); `null` = the initials tile [A2]. */
+    cover: collectionCoverSchema.nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;
@@ -68,11 +73,15 @@ export const createCollectionRequestSchema = z
   .strict();
 export type CreateCollectionRequest = z.infer<typeof createCollectionRequestSchema>;
 
-/** `PATCH /api/v1/collections/:id`. `description: null` clears it; omitted fields are unchanged. */
+/**
+ * `PATCH /api/v1/collections/:id`. `description: null` and `welcomeMessage: null` clear them;
+ * omitted fields are unchanged.
+ */
 export const updateCollectionRequestSchema = z
   .object({
     title: collectionTitleSchema.optional(),
     description: collectionDescriptionSchema.nullable().optional(),
+    welcomeMessage: collectionWelcomeMessageSchema.nullable().optional(),
   })
   .strict();
 export type UpdateCollectionRequest = z.infer<typeof updateCollectionRequestSchema>;

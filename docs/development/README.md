@@ -174,6 +174,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `UPLOAD_PART_SIZE_BYTES` | api | no | Part size of every upload (all uploads are multipart; a smaller file is one part), at least `5242880`; default `10485760` (10 MiB) |
 | `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` | api | no | Upload API calls (start, parts, complete, cancel) per client IP per minute, per route; default `600` (venue NAT) |
 | `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` | api | no | The same per guest session; default `240` |
+| `LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE` | api | no | Admin cover calls (cover upload start, parts, complete, cancel; cover from a frame; cover removal) per client IP per minute, per route; default `120` |
+| `LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE` | api | no | The same per signed-in user; default `60` |
 | `S3_REQUEST_TIMEOUT_MS` | api, worker | no | A storage call fails after this long (the API answers 503, retryable); default `15000` |
 | `S3_COMPLETE_TIMEOUT_MS` | api, worker | no | The same for assembling a multipart upload; default `60000` |
 | `UPLOAD_SESSION_TTL_HOURS` | api | no | An upload not completed within this many hours expires and its bytes are discarded; default `24` |

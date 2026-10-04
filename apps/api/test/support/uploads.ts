@@ -17,6 +17,7 @@ export function bigBuffer(size: number, header: Uint8Array): Buffer {
 }
 
 const base = (collectionId: string) => `/api/v1/guest/collections/${collectionId}/uploads`;
+const coverBase = (collectionId: string) => `/api/v1/collections/${collectionId}/cover/uploads`;
 
 export interface UploadCalls {
   initiate(body: {
@@ -30,28 +31,35 @@ export interface UploadCalls {
   cancel(uploadId: string): request.Test;
 }
 
-/** The guest upload routes for one collection, as one guest (its `st_gs` cookie). */
-export function uploadCalls(server: Server, collectionId: string, cookie: string): UploadCalls {
+/** The four upload routes under `root`, as the holder of `cookie` (a guest's or an admin's). */
+function callsAt(server: Server, root: string, cookie: string): UploadCalls {
   const post = (path: string) =>
     request(server).post(path).set('Cookie', cookie).set('Origin', ORIGIN);
   return {
     initiate: (body) =>
-      post(base(collectionId)).send({
+      post(root).send({
         clientUploadId: body.clientUploadId ?? randomUUID(),
         filename: body.filename,
         mimeType: body.mimeType ?? '',
         sizeBytes: body.sizeBytes,
       }),
-    parts: (uploadId, partNumbers) =>
-      post(`${base(collectionId)}/${uploadId}/parts`).send({ partNumbers }),
-    complete: (uploadId) => post(`${base(collectionId)}/${uploadId}/complete`),
+    parts: (uploadId, partNumbers) => post(`${root}/${uploadId}/parts`).send({ partNumbers }),
+    complete: (uploadId) => post(`${root}/${uploadId}/complete`),
     cancel: (uploadId) =>
-      request(server)
-        .delete(`${base(collectionId)}/${uploadId}`)
-        .set('Cookie', cookie)
-        .set('Origin', ORIGIN),
+      request(server).delete(`${root}/${uploadId}`).set('Cookie', cookie).set('Origin', ORIGIN),
   };
 }
+
+/** The guest upload routes for one collection, as one guest (its `st_gs` cookie). */
+export const uploadCalls = (server: Server, collectionId: string, cookie: string): UploadCalls =>
+  callsAt(server, base(collectionId), cookie);
+
+/** The admin's cover upload routes for one collection, as the holder of an admin session. */
+export const coverUploadCalls = (
+  server: Server,
+  collectionId: string,
+  cookie: string,
+): UploadCalls => callsAt(server, coverBase(collectionId), cookie);
 
 export const asSession = (body: unknown): UploadSessionResponse =>
   uploadSessionResponseSchema.parse(body);

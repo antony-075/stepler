@@ -80,6 +80,19 @@ export {
   type ProcessingStatus,
 } from './content.js';
 export {
+  collectionCoverSchema,
+  collectionWelcomeMessageSchema,
+  coverStatusSchema,
+  coverUploadParamsSchema,
+  guestCoverSchema,
+  setCoverFromFrameRequestSchema,
+  WELCOME_MESSAGE_MAX_CHARS,
+  type CollectionCover,
+  type CoverStatus,
+  type GuestCover,
+  type SetCoverFromFrameRequest,
+} from './cover.js';
+export {
   ERROR_CODES,
   problemDetailsSchema,
   type ErrorCode,
