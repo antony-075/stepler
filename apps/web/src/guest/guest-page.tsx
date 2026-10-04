@@ -26,6 +26,10 @@
 // - Own frames open in the viewer too, with «Видалити» when the link allows it [C15].
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.
 // - Any call that meets a link or collection state switches the whole page to that state.
+// - Appearance (slice 8a): the admin's cover, once ready, is the hero above the title
+//   (`GuestCover`: 16:10, 4:3 in the side panel); the welcome message is one paragraph after the
+//   counts line and before the actions, in body size and the foreground colour, so it reads as
+//   the organiser speaking, not as a hint. Neither shows when the admin set none.
 
 import type { GuestContext } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
@@ -44,6 +48,7 @@ import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 import type { GuestPageState } from './guest-state';
 import { NamePrompt } from './name-prompt';
+import { GuestCover } from './guest-cover';
 import { GuestFrames, guestContentKey, useFrameTime } from './own-frames';
 import { TextComposer } from './text-composer';
 import { hasUnsettled } from './upload/queue';
@@ -251,6 +256,7 @@ function GuestCollection({
       >
         {/* The collection's identity; from lg a sheet that stays in view beside the frames. */}
         <header className="grid content-start gap-3 lg:sticky lg:top-6 lg:rounded-sheet lg:border lg:bg-card lg:p-8 xl:p-10">
+          <GuestCover collection={collection} onExpired={refreshContext} />
           {/* Display size until the sheet: there it fits the 300–340px column without breaking words. */}
           <h1 className="type-display text-balance [overflow-wrap:anywhere] lg:text-[2.5rem] lg:leading-[1.1] xl:text-[2.75rem]">
             {collection.title}
@@ -266,6 +272,14 @@ function GuestCollection({
               {counts.lastAddedAt === null ? null : (
                 <span>{t('lastAt', { time: time(counts.lastAddedAt) })}</span>
               )}
+            </p>
+          )}
+          {collection.welcomeMessage === null ? null : (
+            <p
+              data-slot="guest-welcome"
+              className="mt-2 max-w-[60ch] text-[1.0625rem] leading-normal text-pretty text-foreground [overflow-wrap:anywhere]"
+            >
+              {collection.welcomeMessage}
             </p>
           )}
           {actions === null ? null : (
