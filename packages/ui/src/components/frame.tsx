@@ -235,6 +235,12 @@ function Frame({
           <span className="absolute top-1 right-1 z-(--z-frame-mark) grid size-5 place-items-center rounded-full bg-[#FFFFFF] text-pencil">
             <Check className="size-3.5" strokeWidth={3} />
           </span>
+        ) : selectable ? (
+          // In selection mode every frame shows its empty check (never hover-only, §5.13).
+          <span
+            data-slot="frame-check"
+            className="absolute top-1 right-1 z-(--z-frame-mark) size-5 rounded-full border-2 border-[#FFFFFF] bg-[rgb(0_0_0/0.25)] shadow-[0_0_0_1px_rgb(0_0_0/0.25)]"
+          />
         ) : null}
       </div>
       {/* The frame's accessible name already says all of this. */}

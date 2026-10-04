@@ -127,6 +127,24 @@ export const Selected: Story = {
   },
 };
 
+/** Selection mode, not selected: an empty check is visible on the frame (never hover-only). */
+export const SelectionMode: Story = {
+  args: {
+    selectable: true,
+    selected: false,
+    onToggleSelect: fn(),
+    accessibleName: 'Кадр 86, фото, 21:10',
+  },
+  play: async ({ canvas, canvasElement, args }) => {
+    const frame = canvas.getByRole('button', { name: 'Кадр 86, фото, 21:10' });
+    await expect(frame).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvasElement.querySelector('[data-slot="frame-check"]')).toBeVisible();
+    frame.focus();
+    await userEvent.keyboard(' ');
+    await expect(args.onToggleSelect).toHaveBeenCalledOnce();
+  },
+};
+
 /** "New" is a pencil underline under the number, and the words in the name. */
 export const New: Story = {
   args: { isNew: true, accessibleName: 'Кадр 86, фото, 21:10, нове' },
