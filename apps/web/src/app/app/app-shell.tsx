@@ -69,6 +69,12 @@ export function AppShell({
     if (unauthenticated) router.replace('/login');
   }, [unauthenticated, router]);
 
+  // A forced re-acceptance (ADR 0016) can arrive while the app is open: the next `me` says so.
+  const legalPending = me.data?.legal.accepted === false;
+  useEffect(() => {
+    if (legalPending) router.replace('/accept-terms');
+  }, [legalPending, router]);
+
   if (me.data === undefined) {
     const failed = me.error !== null && !unauthenticated;
     const failure = isApiError(me.error) ? me.error.code : 'INTERNAL';

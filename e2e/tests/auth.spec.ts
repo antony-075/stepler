@@ -96,13 +96,25 @@ test('the sign-in form works with the keyboard only', async ({ page, isMobile })
   const email = newEmail();
   await page.goto('/login');
   const field = page.getByLabel(T.email);
-  await expect(page.getByRole('button', { name: T.submit })).toBeEnabled({ timeout: 20_000 });
+  const submit = page.getByRole('button', { name: T.submit });
+  const legal = page.getByRole('checkbox', { name: T.legal });
+  const focused = (locator: typeof field) =>
+    locator.evaluate((el) => el === document.activeElement);
+  // Unticked, the submit stays disabled whatever Turnstile does (ADR 0016).
+  await expect(submit).toBeDisabled();
   // Tab from the start of the page to the email field.
-  for (let i = 0; i < 10 && !(await field.evaluate((el) => el === document.activeElement)); i++) {
-    await page.keyboard.press('Tab');
-  }
+  for (let i = 0; i < 10 && !(await focused(field)); i++) await page.keyboard.press('Tab');
   await expect(field).toBeFocused();
   await page.keyboard.type(email);
+  // Tab on to the checkbox, which comes before the submit.
+  for (let i = 0; i < 6 && !(await focused(legal)); i++) await page.keyboard.press('Tab');
+  await expect(legal).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(legal).toBeChecked();
+  await expect(submit).toBeEnabled({ timeout: 20_000 });
+  // Past the sentence's two document links to the submit.
+  for (let i = 0; i < 4 && !(await focused(submit)); i++) await page.keyboard.press('Tab');
+  await expect(submit).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: T.sent })).toBeVisible();
 });
