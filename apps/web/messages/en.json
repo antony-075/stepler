@@ -334,7 +334,21 @@
       "delete": "Delete",
       "added": "Added",
       "type": "Type",
-      "from": "From"
+      "from": "From",
+      "download": "Download",
+      "file": "File",
+      "size": "Size",
+      "dimensions": "Dimensions",
+      "duration": "Duration",
+      "numberHint": "Numbers never change after a deletion",
+      "loadingMedia": "Loading the file…",
+      "mediaFailed": "Couldn’t open the file.",
+      "videoFallback": "Your browser can’t play this video — download it.",
+      "heic": "Browsers don’t show HEIC — download the file.",
+      "noPreviewYet": "The preview comes later",
+      "documentOpen": "Documents open after you download them.",
+      "photoAlt": "Frame {number}",
+      "dimensionsValue": "{width, number} × {height, number}"
     },
     "delete": {
       "title": "Delete frame {frame}?",
@@ -574,7 +588,8 @@
     "quotaFull": {
       "title": "This collection is full",
       "text": "New frames can’t be added."
-    }
+    },
+    "addedBeforeClosed": "{count, plural, one {# frame was} other {# frames were}} added before the link closed."
   },
   "guest": {
     "counts": "{count, plural, one {# frame} other {# frames}}",
@@ -591,7 +606,6 @@
     "loadMore": "Show more",
     "listError": "Couldn’t load the frames.",
     "retry": "Try again",
-    "addFilesSoon": "You’ll be able to add photos and videos very soon.",
     "writeWish": "Write a wish",
     "you": "You: {name}",
     "noName": "You haven’t given a name",
@@ -602,7 +616,10 @@
       "textOther": "Wish, {time}",
       "fileOwn": "Frame {number}, {time}, preview on its way",
       "fileOther": "Frame, {time}, preview on its way",
-      "pendingPreview": "Preview on its way"
+      "pendingPreview": "Preview on its way",
+      "documentOwn": "Frame {number}, document {type}, {time}",
+      "documentOther": "Document, {time}",
+      "documentType": "DOC"
     },
     "textSent": "Wish added",
     "name": {
@@ -631,6 +648,56 @@
       "invalid": "Remove special characters from the text",
       "close": "Close",
       "failed": "Couldn’t send it. Try again — your wish won’t be added twice."
+    },
+    "addPhotosVideos": "Add photos and videos",
+    "addPhotos": "Add photos",
+    "addVideos": "Add videos",
+    "addDocuments": "Add documents",
+    "addMore": "Add more",
+    "upload": {
+      "keepOpen": "Keep this page open while your frames upload",
+      "queued": "Queued",
+      "processing": "Processing…",
+      "done": "Added",
+      "failed": "Failed",
+      "retry": "Retry",
+      "cancel": "Cancel: frame {index} of {total}",
+      "position": "{index} of {total}",
+      "percent": "{value}%",
+      "frameQueued": "Frame {index} of {total}, queued",
+      "frameUploading": "Frame {index} of {total}, uploading",
+      "frameProcessing": "Frame {index} of {total}, processing",
+      "frameDone": "Frame {number}, added",
+      "frameFailed": "Frame {index} of {total}, failed",
+      "added": "{added} of {total} added",
+      "failedCount": "{count} failed",
+      "cancelled": "Cancelled {count}",
+      "bytes": "{done} of {total}",
+      "eta": "About {minutes, plural, one {# min} other {# min}} left",
+      "progress": "Uploading frames",
+      "announce": "Added {added} of {total}",
+      "announceFailed": "Added {added} of {total}. Failed: {failed}",
+      "retryFailed": "Retry failed",
+      "cancelRest": "Cancel the rest",
+      "offline": "No connection. We’ll continue as soon as it’s back",
+      "retryNow": "Retry now",
+      "why": "Why?",
+      "rejected": "{count, plural, one {# file can’t be added} other {# files can’t be added}}: {reasons}",
+      "reasonType": "format {exts}",
+      "reasonSize": "too large or empty",
+      "rejectedHelp": "You can add: {types}. Photos up to {photo}, videos up to {video}, documents up to {document}.",
+      "truncated": "Up to {max, number} files at a time — the first {max, number} were added",
+      "quotaFull": "The collection is full — new frames can’t be added",
+      "doneTitle": "Done, your frames",
+      "doneCount": "{added} of {total}",
+      "stackLabel": "Your frames: {count, number}",
+      "allFailedTitle": "Couldn’t add your frames",
+      "retryAll": "Retry all",
+      "listLabel": "Frames uploading",
+      "reason": {
+        "NETWORK": "the connection dropped",
+        "STORAGE_403": "storage refused the file"
+      }
     }
   },
   "account": {

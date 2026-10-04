@@ -334,7 +334,21 @@
       "delete": "Видалити",
       "added": "Додано",
       "type": "Тип",
-      "from": "Від"
+      "from": "Від",
+      "download": "Завантажити",
+      "file": "Файл",
+      "size": "Розмір",
+      "dimensions": "Розміри",
+      "duration": "Тривалість",
+      "numberHint": "Номери не змінюються після видалення",
+      "loadingMedia": "Завантажуємо файл…",
+      "mediaFailed": "Не вдалося відкрити файл.",
+      "videoFallback": "Браузер не може відтворити це відео — завантажте його.",
+      "heic": "Браузер не показує HEIC — завантажте файл.",
+      "noPreviewYet": "Прев’ю з’явиться згодом",
+      "documentOpen": "Документ відкривається лише після завантаження.",
+      "photoAlt": "Кадр {number}",
+      "dimensionsValue": "{width, number} × {height, number}"
     },
     "delete": {
       "title": "Видалити кадр {frame}?",
@@ -574,7 +588,8 @@
     "quotaFull": {
       "title": "Колекція заповнена",
       "text": "Нові кадри не додаються."
-    }
+    },
+    "addedBeforeClosed": "{count, plural, one {# кадр додано} few {# кадри додано} many {# кадрів додано} other {# кадру додано}} до того, як посилання закрили."
   },
   "guest": {
     "counts": "{count, plural, one {# кадр} few {# кадри} many {# кадрів} other {# кадру}}",
@@ -591,7 +606,6 @@
     "loadMore": "Показати ще",
     "listError": "Не вдалося завантажити кадри.",
     "retry": "Спробувати ще",
-    "addFilesSoon": "Фото й відео можна буде додати зовсім скоро.",
     "writeWish": "Написати побажання",
     "you": "Ви: {name}",
     "noName": "Ви без імені",
@@ -602,7 +616,10 @@
       "textOther": "Побажання, {time}",
       "fileOwn": "Кадр {number}, {time}, готується прев’ю",
       "fileOther": "Кадр, {time}, готується прев’ю",
-      "pendingPreview": "Готується прев’ю"
+      "pendingPreview": "Готується прев’ю",
+      "documentOwn": "Кадр {number}, документ {type}, {time}",
+      "documentOther": "Документ, {time}",
+      "documentType": "DOC"
     },
     "textSent": "Побажання додано",
     "name": {
@@ -631,6 +648,56 @@
       "invalid": "Приберіть спецсимволи з тексту",
       "close": "Закрити",
       "failed": "Не вдалося надіслати. Спробуйте ще — побажання не задвоїться."
+    },
+    "addPhotosVideos": "Додати фото й відео",
+    "addPhotos": "Додати фото",
+    "addVideos": "Додати відео",
+    "addDocuments": "Додати документи",
+    "addMore": "Додати ще",
+    "upload": {
+      "keepOpen": "Не закривайте сторінку, доки кадри завантажуються",
+      "queued": "У черзі",
+      "processing": "Обробка…",
+      "done": "Додано",
+      "failed": "Не вдалося",
+      "retry": "Повторити",
+      "cancel": "Скасувати: кадр {index} з {total}",
+      "position": "{index} з {total}",
+      "percent": "{value}%",
+      "frameQueued": "Кадр {index} з {total}, у черзі",
+      "frameUploading": "Кадр {index} з {total}, завантажується",
+      "frameProcessing": "Кадр {index} з {total}, обробка",
+      "frameDone": "Кадр {number}, додано",
+      "frameFailed": "Кадр {index} з {total}, не вдалося",
+      "added": "{added} з {total} додано",
+      "failedCount": "{count} не вдалося",
+      "cancelled": "Скасовано {count}",
+      "bytes": "{done} з {total}",
+      "eta": "Залишилось ~{minutes, plural, one {# хв} few {# хв} many {# хв} other {# хв}}",
+      "progress": "Завантаження кадрів",
+      "announce": "Додано {added} з {total}",
+      "announceFailed": "Додано {added} з {total}. Не вдалося: {failed}",
+      "retryFailed": "Повторити невдалі",
+      "cancelRest": "Скасувати решту",
+      "offline": "Немає з’єднання. Продовжимо, щойно воно з’явиться",
+      "retryNow": "Повторити зараз",
+      "why": "Чому?",
+      "rejected": "{count, plural, one {# файл не підходить} few {# файли не підходять} many {# файлів не підходять} other {# файлу не підходить}}: {reasons}",
+      "reasonType": "формат {exts}",
+      "reasonSize": "завеликий або порожній файл",
+      "rejectedHelp": "Можна додати: {types}. Фото до {photo}, відео до {video}, документи до {document}.",
+      "truncated": "Можна до {max, number} файлів за раз — додано перші {max, number}",
+      "quotaFull": "Колекція заповнена — нові кадри не додаються",
+      "doneTitle": "Готово, ваші кадри",
+      "doneCount": "{added} з {total}",
+      "stackLabel": "Ваші кадри: {count, number}",
+      "allFailedTitle": "Не вдалося додати кадри",
+      "retryAll": "Повторити всі",
+      "listLabel": "Кадри, що завантажуються",
+      "reason": {
+        "NETWORK": "зв’язок перервався",
+        "STORAGE_403": "сховище відхилило файл"
+      }
     }
   },
   "account": {

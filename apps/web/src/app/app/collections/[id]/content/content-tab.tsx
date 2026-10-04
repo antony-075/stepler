@@ -17,6 +17,8 @@
 //   15 s while this tab is shown) and announced in one quiet line with «Показати».
 // - «Показати ще» is a button (keyboard and screen readers reach it; no scroll trap). Loading is
 //   a still grid of placeholders; a failure is an inline alert with «Спробувати ще».
+// - Files (PR C): documents are a type tile with the file name and size; photos and videos show
+//   «Готується прев’ю» until the worker makes a thumbnail or poster (PR D), never the original.
 // - An empty collection keeps the calm tinted panel; an empty filter says what is missing and
 //   offers «Показати все». Archived collections look the same: their frames are kept.
 
@@ -69,7 +71,9 @@ import {
   sortFromParam,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
+import { documentType } from './document-type';
 import { useNewContent } from './use-new-content';
+import { formatBytes, formatDuration } from '@/format/bytes';
 
 const SORTS = ['newest', 'frame'] as const;
 
@@ -368,17 +372,54 @@ function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => vo
       />
     );
   }
+  if (item.kind === 'DOCUMENT') {
+    return (
+      <Frame
+        kind="document"
+        number={item.frameNo}
+        time={time}
+        {...(item.sizeBytes === null ? {} : { meta: formatBytes(format.number, item.sizeBytes) })}
+        docType={documentType(item)}
+        {...(item.originalFilename === null ? {} : { docTitle: item.originalFilename })}
+        accessibleName={accessibleName}
+        onOpen={onOpen}
+      />
+    );
+  }
+  // A thumbnail (photo) or poster (video) once the worker made one (PR D); never the original in
+  // the grid: it can be 50 MB, or 2 GB for a video. Until then, the placeholder.
+  const thumb = item.kind === 'VIDEO' ? (item.posterUrl ?? item.thumbnailUrl) : item.thumbnailUrl;
+  const duration = item.durationMs === null ? {} : { meta: formatDuration(item.durationMs) };
+  if (thumb !== null) {
+    return (
+      <Frame
+        kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
+        // A presigned storage URL: nothing for next/image to optimise.
+        // eslint-disable-next-line @next/next/no-img-element
+        media={<img alt={DECORATIVE} src={thumb} loading="lazy" />}
+        number={item.frameNo}
+        time={time}
+        {...duration}
+        accessibleName={accessibleName}
+        onOpen={onOpen}
+      />
+    );
+  }
   return (
     <Frame
       kind="pending-preview"
       number={item.frameNo}
       time={time}
+      {...duration}
       placeholderLabel={t('pendingPreview')}
       accessibleName={accessibleName}
       onOpen={onOpen}
     />
   );
 }
+
+/** Decorative: the frame's accessible name says what the picture is. */
+const DECORATIVE = '';
 
 /**
  * Nothing added yet: one quiet centred panel, a tile in the collection's tint, what will appear
