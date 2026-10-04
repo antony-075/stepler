@@ -33,6 +33,14 @@ describe('run', () => {
     expect(error).not.toBeInstanceOf(PermanentMediaError);
   });
 
+  test('a tool killed by the system (OOM) is a permanent failure, not a timeout', async () => {
+    const error = await run('node', ['-e', 'process.kill(process.pid, "SIGKILL")'], {
+      timeoutMs: 5000,
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PermanentMediaError);
+    expect((error as Error).message).toMatch(/killed by the system/);
+  });
+
   test('kills a tool that runs past its timeout (retryable)', async () => {
     const error = await run('node', ['-e', 'setTimeout(() => {}, 10000)'], {
       timeoutMs: 200,

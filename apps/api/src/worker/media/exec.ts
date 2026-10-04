@@ -27,7 +27,8 @@ export function cleanStderr(stderr: string, secrets: readonly string[] = []): st
 /**
  * Runs a media tool without a shell (arguments are never parsed), with a hard timeout
  * (`SIGKILL`). Resolves with stdout; rejects with the cleaned stderr. A non-zero exit whose
- * stderr matches `permanentIf` is a `PermanentMediaError`.
+ * stderr matches `permanentIf`, or a kill by the system, is a `PermanentMediaError`; a timeout
+ * and anything else (missing tool, full disk) is retried.
  */
 export function run(
   command: string,
@@ -51,15 +52,21 @@ export function run(
           return;
         }
         const detail = cleanStderr(stderr.toString('utf8'), options.secrets);
-        const timedOut = error.killed === true || error.signal === 'SIGKILL';
-        const message = timedOut
-          ? `${command} timed out after ${options.timeoutMs} ms`
-          : `${command} failed (${String(error.code ?? error.signal)}): ${detail}`;
-        reject(
-          !timedOut && options.permanentIf?.test(detail) === true
-            ? new PermanentMediaError(message)
-            : new Error(message),
-        );
+        // Our timeout kills with `killed` set; a SIGKILL we did not send is the kernel's OOM
+        // killer (or the container limit): the input needs more memory than a worker has, and
+        // retrying would only be killed again.
+        if (error.killed === true) {
+          reject(new Error(`${command} timed out after ${options.timeoutMs} ms`));
+        } else if (error.signal === 'SIGKILL') {
+          reject(new PermanentMediaError(`${command} was killed by the system (out of memory?)`));
+        } else {
+          const message = `${command} failed (${String(error.code ?? error.signal)}): ${detail}`;
+          reject(
+            options.permanentIf?.test(detail) === true
+              ? new PermanentMediaError(message)
+              : new Error(message),
+          );
+        }
       },
     );
   });

@@ -5,7 +5,7 @@ import { crc32, deflateSync } from 'node:zlib';
 import sharp from 'sharp';
 import { describe, expect, test } from 'vitest';
 import { decodeHeic } from './decode.js';
-import { MAX_INPUT_PIXELS, renderDerivatives } from './images.js';
+import { MAX_DECODED_PIXELS, MAX_INPUT_PIXELS, renderDerivatives } from './images.js';
 import { PermanentMediaError } from './media-error.js';
 import { withWorkDir } from './work-dir.js';
 
@@ -113,6 +113,13 @@ describe('renderDerivatives', () => {
       PermanentMediaError,
     );
     await expect(renderDerivatives(bomb, { autoOrient: true })).rejects.toThrow(/pixel limit/);
+  });
+
+  test('a PNG (decoded whole) stops at 40 MP, below the JPEG limit', async () => {
+    const png = pngClaiming(7000, 7000);
+    expect(7000 * 7000).toBeGreaterThan(MAX_DECODED_PIXELS);
+    expect(7000 * 7000).toBeLessThan(MAX_INPUT_PIXELS);
+    await expect(renderDerivatives(png, { autoOrient: true })).rejects.toThrow(/pixel limit/);
   });
 
   test('a file that is not an image is a permanent failure', async () => {

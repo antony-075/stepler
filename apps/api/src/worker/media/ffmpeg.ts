@@ -11,6 +11,10 @@ import { PermanentMediaError } from './media-error.js';
 // - `-format_whitelist`: only the demuxers of the allowed video types. An HLS or concat playlist
 //   uploaded as a "video" would otherwise make ffmpeg fetch any URL it names, internal hosts
 //   included (SSRF); the protocol whitelist alone does not stop http → http;
+// - `-codec_whitelist`: only the decoders phone and camera videos use;
+// - `-max_pixels`: a 750 KB MP4 can declare 16000×16000 frames and get ffprobe OOM-killed; above
+//   40 MP (8K is 33 MP) the decoder refuses the stream instead, and a probe above it fails the
+//   item before any frame is decoded;
 // - `-rw_timeout` per read and a hard timeout per run (SIGKILL).
 // The URL is a credential: it is passed as an argument (no shell) and removed from any error.
 
@@ -20,11 +24,41 @@ const FRAME_TIMEOUT_MS = 60_000;
 const RW_TIMEOUT_US = '30000000';
 /** Demuxers for MP4/MOV (one demuxer) and WebM (Matroska), the D3 video types. */
 const FORMAT_WHITELIST = 'mov,mp4,m4a,3gp,3g2,mj2,matroska,webm';
-/** The frame is never larger than the 1600 px poster needs, and never upscaled. */
-const FRAME_FILTER = "scale='min(1600,iw)':-2";
+/**
+ * Video decoders for MP4/MOV/WebM recordings, and the audio decoders stream probing may open
+ * (the frame itself never decodes audio).
+ */
+const CODEC_WHITELIST = [
+  'h264',
+  'hevc',
+  'vp8',
+  'vp9',
+  'av1',
+  'mpeg4',
+  'prores',
+  'mjpeg',
+  'aac',
+  'mp3',
+  'opus',
+  'vorbis',
+  'alac',
+  'flac',
+  'ac3',
+  'eac3',
+  'pcm_s16le',
+  'pcm_s16be',
+  'pcm_s24le',
+  'pcm_s24be',
+  'pcm_f32le',
+].join(',');
+/** Largest frame a decoder may allocate: 8K (33 MP) fits. */
+export const MAX_VIDEO_PIXELS = 40_000_000;
+/** The frame fits in 1600×1600 (portrait and landscape), never upscaled, even dimensions. */
+const FRAME_FILTER =
+  "scale=w='min(1600,iw)':h='min(1600,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2";
 /** stderr of a run that failed because of the file, not the network. */
 const BAD_INPUT =
-  /Invalid data found|moov atom not found|does not contain any stream|no video stream|Format not on whitelist|could not find codec parameters|Output file is empty/i;
+  /Invalid data found|moov atom not found|does not contain any stream|no video stream|Format not on whitelist|Codec .* not on whitelist|could not find codec parameters|Output file is empty|exceeds specified max pixel count|Could not allocate memory|Error while opening decoder/i;
 
 /** `https,tls,tcp` for R2; `http,tcp` for the local emulator. Anything else is refused. */
 export function protocolWhitelist(url: string): string {
@@ -41,6 +75,10 @@ const inputOptions = (url: string): string[] => [
   protocolWhitelist(url),
   '-format_whitelist',
   FORMAT_WHITELIST,
+  '-codec_whitelist',
+  CODEC_WHITELIST,
+  '-max_pixels',
+  String(MAX_VIDEO_PIXELS),
 ];
 
 export interface VideoProbe {
@@ -86,12 +124,22 @@ export async function probeVideo(url: string): Promise<VideoProbe> {
     throw new PermanentMediaError('ffprobe printed no JSON');
   }
   const stream = parsed.streams?.[0];
-  if (stream?.width === undefined || stream.height === undefined) {
-    throw new PermanentMediaError('no video stream');
+  // A size of 0 is what ffprobe 5.1 reports over HTTP when the decoder refused the stream
+  // (`-max_pixels`) yet the probe exited 0.
+  if (
+    stream?.width === undefined ||
+    stream.height === undefined ||
+    stream.width <= 0 ||
+    stream.height <= 0
+  ) {
+    throw new PermanentMediaError('no video stream of a known size');
   }
   const rotation =
     stream.side_data_list?.find((side) => side.rotation !== undefined)?.rotation ??
     Number(stream.tags?.rotate ?? 0);
+  if (stream.width * stream.height > MAX_VIDEO_PIXELS) {
+    throw new PermanentMediaError(`video frame of ${stream.width}×${stream.height} is too large`);
+  }
   const quarterTurn = Math.abs(rotation) % 180 === 90;
   const seconds = Number(parsed.format?.duration);
   return {

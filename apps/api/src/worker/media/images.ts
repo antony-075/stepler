@@ -6,8 +6,15 @@ import { PermanentMediaError } from './media-error.js';
 sharp.cache(false);
 sharp.concurrency(1);
 
-/** Larger inputs are refused before decoding (decompression bombs); 100 MP covers phones. */
+/**
+ * Larger inputs are refused before decoding (decompression bombs). JPEG (and so a decoded HEIC)
+ * is shrunk while it loads, so 100 MP stays cheap; PNG, WebP and GIF are decoded whole, where a
+ * 16-bit RGBA image costs 8 bytes a pixel, so they stop at 40 MP (phones shoot up to 48 MP, but
+ * as HEIC or JPEG). Measured in ADR 0009.
+ */
 export const MAX_INPUT_PIXELS = 100_000_000;
+export const MAX_DECODED_PIXELS = 40_000_000;
+const SHRINK_ON_LOAD = new Set(['jpeg']);
 
 /** Longest side of the grid thumbnail and of the viewer's preview (or a video's poster). */
 export const THUMBNAIL_PX = 480;
@@ -55,10 +62,12 @@ export async function renderDerivatives(
   options: RenderOptions,
 ): Promise<Derivatives> {
   try {
+    // The header first: the pixel limit depends on how the format decodes.
+    const metadata = await sharp(input).metadata();
+    const limit = SHRINK_ON_LOAD.has(metadata.format) ? MAX_INPUT_PIXELS : MAX_DECODED_PIXELS;
     // The first frame of an animated GIF/WebP (sharp's default `pages: 1`).
-    const base = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' });
+    const base = sharp(input, { limitInputPixels: limit, failOn: 'error' });
     const oriented = options.autoOrient ? base.autoOrient() : base;
-    const metadata = await base.metadata();
     const source = options.autoOrient
       ? { width: metadata.autoOrient.width, height: metadata.autoOrient.height }
       : { width: metadata.width, height: metadata.height };

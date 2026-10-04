@@ -16,6 +16,9 @@ const ENQUEUE_CHUNK = 50;
  * - re-enqueues `content.purge` / `collection.purge` for items and collections deleted more than
  *   an hour ago (lost or failed jobs, and collections deleted before the worker existed); a job
  *   still queued or running for the same entity makes this a no-op (`exclusive` queues);
+ * - marks `FAILED` the photos and videos still `PENDING` an hour after upload with no media job
+ *   queued, retrying or running for them (a job pg-boss expired on its last attempt never runs
+ *   `onFinalFailure`); they keep their original and show the type tile;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
  *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
@@ -62,14 +65,30 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     } catch (error) {
       enqueueError = error instanceof Error ? error : new Error('enqueue failed');
     }
+    const stalledMedia = await this.failStalledMedia(staleBefore);
     const idleSessions = await this.deleteIdleGuestSessions();
     this.logger.log({
       msg: 'maintenance.sweep done',
       contentPurges: items.length,
       collectionPurges: collections.length,
+      stalledMediaFailed: stalledMedia,
       idleSessionsDeleted: idleSessions,
     });
     if (enqueueError !== undefined) throw enqueueError;
+  }
+
+  /** Media jobs use the singleton key `{name}:{contentItemId}` (`singletonKeyFor`). */
+  private failStalledMedia(createdBefore: Date): Promise<number> {
+    return this.prisma.$executeRaw`
+      UPDATE "ContentItem" AS item SET "processingStatus" = 'FAILED'
+      WHERE item."processingStatus" = 'PENDING'
+        AND item."deletedAt" IS NULL
+        AND item."createdAt" < ${createdBefore}
+        AND NOT EXISTS (
+          SELECT 1 FROM pgboss.job AS job
+          WHERE job.name IN ('media.image-derivatives', 'media.video-poster')
+            AND job.singleton_key = job.name || ':' || item.id::text
+            AND job.state IN ('created', 'retry', 'active'))`;
   }
 
   private async enqueueInChunks<N extends 'content.purge' | 'collection.purge'>(

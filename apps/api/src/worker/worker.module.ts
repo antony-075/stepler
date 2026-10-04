@@ -22,6 +22,7 @@ import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
+import { MediaSlots } from './media/media-slots.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -64,6 +65,7 @@ export class WorkerModule {
         DiscardUploadHandler,
         ExpireUploadsHandler,
         DerivativeStore,
+        MediaSlots,
         ImageDerivativesHandler,
         VideoPosterHandler,
         JobRunner,

@@ -14,6 +14,7 @@ import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.
 import type { JobHandler } from '../src/worker/job-handler.js';
 import { JobRunner } from '../src/worker/job-runner.js';
 import { DerivativeStore, derivedKey } from '../src/worker/media/derivative-store.js';
+import { MediaSlots } from '../src/worker/media/media-slots.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
 import { resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
@@ -35,6 +36,7 @@ const env = loadWorkerEnv({
 const prisma = new PrismaService(env);
 const storage = new S3ObjectStorage(env);
 const store = new DerivativeStore(prisma, storage);
+const slots = new MediaSlots({ WORKER_MEDIA_CONCURRENCY: 1 });
 
 let sequence = 0;
 
@@ -85,7 +87,7 @@ beforeEach(async () => {
 });
 
 describe('media.image-derivatives', () => {
-  const handler = (s: ObjectStorage = storage) => new ImageDerivativesHandler(store, s);
+  const handler = (s: ObjectStorage = storage) => new ImageDerivativesHandler(store, s, slots);
 
   test('a JPEG gets a 480 px thumbnail and a 1600 px preview; a rerun changes nothing', async () => {
     const jpeg = await sharp({
@@ -146,6 +148,14 @@ describe('media.image-derivatives', () => {
     expect(sizes.every((size) => size > 0n)).toBe(true);
   });
 
+  test('a tiny HEIC that declares 121 MP is FAILED at once, without retries', async () => {
+    const { itemId } = await addMedia('PHOTO', fixture('huge.heic'), 'image/heic');
+    const startedAt = Date.now();
+    await handler().handle({ contentItemId: itemId });
+    expect(await statusOf(itemId)).toBe('FAILED');
+    expect(Date.now() - startedAt).toBeLessThan(20_000);
+  });
+
   test('a corrupt photo is FAILED at once; the original stays', async () => {
     const broken = Buffer.concat([fixture('photo.jpg').subarray(0, 20), Buffer.alloc(500, 7)]);
     const { itemId, storageKey } = await addMedia('PHOTO', broken, 'image/jpeg');
@@ -170,11 +180,13 @@ describe('media.image-derivatives', () => {
         await storage.putObject(key, body, type, length);
       },
     });
-    await new ImageDerivativesHandler(new DerivativeStore(prisma, deletingStorage), storage).handle(
-      {
-        contentItemId: itemId,
-      },
-    );
+    await new ImageDerivativesHandler(
+      new DerivativeStore(prisma, deletingStorage),
+      storage,
+      slots,
+    ).handle({
+      contentItemId: itemId,
+    });
     expect((await mediaRows(itemId)).map((row) => row.role)).toEqual(['ORIGINAL']);
     expect(await statusOf(itemId)).toBe('PENDING');
     expect(await allKeys(storage, `collections/${collectionId}/derived/`)).toEqual([]);
@@ -190,7 +202,7 @@ describe('media.image-derivatives', () => {
 });
 
 describe('media.video-poster', () => {
-  const handler = (s: ObjectStorage = storage) => new VideoPosterHandler(store, s);
+  const handler = (s: ObjectStorage = storage) => new VideoPosterHandler(store, s, slots);
 
   test.each([
     ['clip.mp4', 'video/mp4'],
@@ -215,6 +227,14 @@ describe('media.video-poster', () => {
     expect(poster?.storageKey).toBe(derivedKey(collectionId, itemId, 'POSTER'));
     const meta = await sharp(await objectBytes(poster?.storageKey ?? '')).metadata();
     expect([meta.format, meta.width]).toEqual(['webp', size[0]]);
+  });
+
+  test('a tiny MP4 with 49 MP frames is FAILED at once, before any frame is decoded', async () => {
+    const { itemId } = await addMedia('VIDEO', fixture('huge.mp4'), 'video/mp4');
+    const startedAt = Date.now();
+    await handler().handle({ contentItemId: itemId });
+    expect(await statusOf(itemId)).toBe('FAILED');
+    expect(Date.now() - startedAt).toBeLessThan(20_000);
   });
 
   test('a truncated MP4 is FAILED at once; the original stays', async () => {
@@ -314,7 +334,7 @@ describe('JobRunner', () => {
     const down = Object.assign(Object.create(storage) as ObjectStorage, {
       downloadToFile: () => Promise.reject(new Error('storage unavailable')),
     });
-    const handler = new ImageDerivativesHandler(store, down) as JobHandler;
+    const handler = new ImageDerivativesHandler(store, down, slots) as JobHandler;
     const runner = runnerWith(handler);
     const attempt = (retryCount: number) =>
       runner.run(handler, {

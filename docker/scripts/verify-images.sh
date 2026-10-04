@@ -72,13 +72,17 @@ for tool in ffmpeg ffprobe heif-convert; do
 done
 # The worker's own media code against those tools and the image's sharp: a generated HEIC
 # decoded to WebP previews, and a poster from an MP4 that ffmpeg reads over HTTP (as from a
-# presigned URL), with its duration.
+# presigned URL), with its duration; tiny files declaring huge images fail cleanly (prlimit,
+# -max_pixels) instead of being OOM-killed.
 media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
   set -e
   cd /tmp
   ffmpeg -v error -f lavfi -i "testsrc2=size=320x240:rate=1" -frames:v 1 src.png
   heif-enc -q 50 src.png -o photo.heic >/dev/null
   ffmpeg -v error -f lavfi -i "testsrc=size=320x240:rate=25" -t 1 -c:v libx264 -pix_fmt yuv420p clip.mp4
+  ffmpeg -v error -f lavfi -i "color=gray:s=11000x11000" -frames:v 1 huge.png
+  heif-enc -q 10 huge.png -o huge.heic >/dev/null
+  ffmpeg -v error -f lavfi -i "color=gray:s=7000x7000" -frames:v 1 -c:v libx264 -preset ultrafast -crf 51 -pix_fmt yuv420p huge.mp4
   node --input-type=module -e "
     import { createServer } from \"node:http\";
     import { readFileSync } from \"node:fs\";
@@ -87,13 +91,18 @@ media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
     const { probeVideo, extractFrame } = await import(\"file:///app/dist/worker/media/ffmpeg.js\");
     const photo = await renderDerivatives(await decodeHeic(\"/tmp/photo.heic\", \"/tmp\"), { autoOrient: false });
     if (photo.large.width !== 320 || photo.large.height !== 240) throw new Error(\"HEIC preview size\");
-    const server = createServer((req, res) => res.end(readFileSync(\"/tmp/clip.mp4\")));
+    const permanent = (p) => p.then(() => { throw new Error(\"oversized input accepted\"); }, (e) => { if (e.name !== \"PermanentMediaError\") throw e; });
+    await permanent(decodeHeic(\"/tmp/huge.heic\", \"/tmp\"));
+    const server = createServer((req, res) => res.end(readFileSync(\"/tmp\" + req.url)));
     await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));
     const url = \"http://127.0.0.1:\" + server.address().port + \"/clip.mp4\";
     const probe = await probeVideo(url);
     if (Math.abs(probe.durationMs - 1000) > 100 || probe.width !== 320) throw new Error(\"probe \" + JSON.stringify(probe));
     const poster = await renderDerivatives(await extractFrame(url, 0.5), { autoOrient: false });
     if (poster.large.width !== 320) throw new Error(\"poster size\");
+    const huge = \"http://127.0.0.1:\" + server.address().port + \"/huge.mp4\";
+    await permanent(probeVideo(huge));
+    await permanent(extractFrame(huge, 0));
     server.close();
     console.log(\"media ok\");
   "
