@@ -1,0 +1,48 @@
+import { minVeil } from '../../core/contrast.js';
+import type { TemplateDefinition } from '../../core/definition.js';
+
+const TEXT = '#141614';
+const VEIL = '#F0F1EE';
+
+/**
+ * T1 «Класика» (plan Appendix A). Until PR K its layout is today's guest page, which still
+ * follows the visitor's light/dark setting [D5]; `scheme` is what the designed T1 will be.
+ */
+export const classic: TemplateDefinition = {
+  id: 'classic',
+  version: 1,
+  scheme: 'light',
+  bodyFont: 'geologica',
+  defaults: {
+    background: { kind: 'solid', color: '#F0F1EE' },
+    accent: '#B83E26',
+    headingFont: 'geologica',
+    coverPlacement: 'top',
+    align: 'start',
+    corners: 'soft',
+  },
+  options: {
+    backgroundKinds: ['solid', 'gradient', 'image'],
+    swatches: ['#F0F1EE', '#FFFFFF', '#EFE8DD', '#E4EAEE', '#ECE6F0'],
+    gradients: [
+      { id: 'mist', stops: ['#F0F1EE', '#E4EAEE'], angle: 180 },
+      { id: 'sand', stops: ['#F0F1EE', '#EFE8DD'], angle: 180 },
+      { id: 'lilac', stops: ['#FFFFFF', '#ECE6F0'], angle: 180 },
+    ],
+    // The least dimming that keeps the heading colour readable over any picture.
+    imageDim: { min: Math.ceil(minVeil(TEXT, VEIL) * 100), max: 90 },
+    backgroundImageSource: 'own',
+    coverPlacements: ['top', 'none'],
+    aligns: ['start', 'center'],
+    corners: ['sharp', 'soft', 'round'],
+  },
+  palette: {
+    text: TEXT,
+    body: '#3B3E39',
+    muted: '#5A5D58',
+    surfaces: ['#FFFFFF'],
+    veil: VEIL,
+    onImageText: '#FFFFFF',
+  },
+  migrate: (_fromVersion, settings) => settings,
+};
