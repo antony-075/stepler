@@ -29,11 +29,14 @@ export interface XhrLike {
   onabort: (() => void) | null;
 }
 
-/** The upload calls for one collection, already wrapped in the guest session. */
-export interface UploadApi {
+/**
+ * The upload calls for one target: a guest's frame (wrapped in the guest session; the default
+ * result) or the admin's collection cover (`TResult = Collection`). Same multipart protocol.
+ */
+export interface UploadApi<TResult = GuestContentItem> {
   initiate(body: CreateUploadRequest): Promise<UploadSessionResponse>;
   parts(uploadId: string, partNumbers: number[], signal: AbortSignal): Promise<UploadPartsResponse>;
-  complete(uploadId: string, signal: AbortSignal): Promise<GuestContentItem>;
+  complete(uploadId: string, signal: AbortSignal): Promise<TResult>;
   cancel(uploadId: string): Promise<void>;
 }
 
@@ -65,21 +68,21 @@ export interface UploadEvents {
 
 export interface UploadTransport {
   /**
-   * Sends one file and returns the recorded frame. `onProgress` gets bytes sent and never goes
+   * Sends one file and returns what completion recorded (the frame, or the collection). `onProgress` gets bytes sent and never goes
    * back. Aborting `signal` stops every request at once and cancels the upload on the server.
    * Throws `TransferError`, `ApiError` (from the API calls) or the abort reason.
    */
-  upload(
+  upload<TResult>(
     /**
      * `uploadId`: the server's id from an earlier attempt with the same `clientUploadId`, so a
      * retry after a lost answer can still collect the frame that attempt completed.
      */
     item: { file: File; clientUploadId: string; uploadId?: string },
-    api: UploadApi,
+    api: UploadApi<TResult>,
     signal: AbortSignal,
     onProgress: (loaded: number) => void,
     events?: UploadEvents,
-  ): Promise<GuestContentItem>;
+  ): Promise<TResult>;
 }
 
 /** A completion already checking storage takes seconds; wait this long between asks, 15 times. */
@@ -198,10 +201,16 @@ export function createUploadTransport(options: TransportOptions = {}): UploadTra
   }
 
   return {
-    async upload(item, api, signal, onProgress, events = {}) {
+    async upload<TResult>(
+      item: { file: File; clientUploadId: string; uploadId?: string },
+      api: UploadApi<TResult>,
+      signal: AbortSignal,
+      onProgress: (loaded: number) => void,
+      events: UploadEvents = {},
+    ): Promise<TResult> {
       const { file } = item;
       /** Completes; while another completion of it is checking storage, waits and asks again. */
-      const completeWhenFree = async (uploadId: string): Promise<GuestContentItem> => {
+      const completeWhenFree = async (uploadId: string): Promise<TResult> => {
         for (let round = 0; ; round += 1) {
           try {
             return await api.complete(uploadId, signal);
