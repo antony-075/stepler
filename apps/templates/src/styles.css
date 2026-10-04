@@ -3,6 +3,7 @@
  * Each template's stylesheet is imported here; every rule in one is scoped under
  * [data-template='<id>'] (src/styles.test.ts), so templates never style each other or the app.
  */
+@import './templates/classic/styles.css';
 
 /* Geologica is the interface font (apps/web/src/app/fonts.ts sets --font-geologica on <html>),
    so templates that use it need no font of their own. */

@@ -5,5 +5,5 @@
     // The lint boundary (eslint.boundaries.js) is imported by a test.
     "allowJs": true
   },
-  "include": ["src", "*.ts", "eslint.boundaries.js"]
+  "include": ["src", ".storybook/*.ts", ".storybook/*.tsx", "*.ts", "eslint.boundaries.js"]
 }

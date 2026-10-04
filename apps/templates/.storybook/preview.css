@@ -1,0 +1,5 @@
+/* The app's design system and the templates' own sheets, with the templates' sources scanned for
+   Tailwind classes (apps/web does the same in globals.css). */
+@import '@stepler/ui/styles.css';
+@import '../src/styles.css';
+@source '../src';

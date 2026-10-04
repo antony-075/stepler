@@ -1,0 +1,5 @@
+/*
+ * «Класика» (classic). In PR H the layout is today's guest page in Tailwind classes and the
+ * Stepler tokens, so it needs no rules of its own yet. Every rule added here starts with
+ * [data-template='classic'] (src/styles.test.ts).
+ */
