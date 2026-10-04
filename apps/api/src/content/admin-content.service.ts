@@ -3,6 +3,7 @@ import type {
   AdminContentDetail,
   AdminContentListQuery,
   AdminContentPage,
+  BulkDeleteContentResponse,
   ContentCounts,
 } from '@stepler/contracts';
 import type { AccountPrincipal } from '../auth/principal.js';
@@ -82,6 +83,44 @@ export class AdminContentService {
         bulk: false,
         ...(requestId === undefined ? {} : { requestId }),
       });
+    });
+  }
+
+  /**
+   * Deletes up to 100 frames of one collection in one transaction [C7]: one audit event (with
+   * `bulk: true`) and one purge job per frame actually deleted. Idempotent: a retry reports the
+   * same frames as `alreadyDeleted` and audits nothing again. Ids that are not frames of this
+   * collection (another collection's included) are `notFound` and untouched. The ids in the
+   * answer, the audit and the jobs come from the rows, never from the request.
+   */
+  async bulkDelete(
+    a: AccountPrincipal,
+    collectionId: string,
+    ids: readonly string[],
+    requestId?: string,
+  ): Promise<BulkDeleteContentResponse> {
+    await this.jobs.ready();
+    return this.prisma.$transaction(async (tx) => {
+      const collection = await tx.collection.findFirst({
+        where: { id: collectionId, ...ownedBy(a) },
+        select: { id: true },
+      });
+      if (collection === null) throw new AppError('NOT_FOUND', 404);
+      const deleted = await this.deletion.softDelete(tx, collection.id, ids, a, {
+        bulk: true,
+        ...(requestId === undefined ? {} : { requestId }),
+      });
+      const justDeleted = new Set(deleted);
+      const rows = await tx.contentItem.findMany({
+        where: { collectionId: collection.id, id: { in: [...ids] }, deletedAt: { not: null } },
+        select: { id: true },
+        orderBy: { id: 'asc' },
+      });
+      const alreadyDeleted = rows.map((row) => row.id).filter((id) => !justDeleted.has(id));
+      // UUIDs compare case-insensitively in PostgreSQL; the rows hold the canonical form.
+      const found = new Set([...deleted, ...alreadyDeleted]);
+      const notFound = ids.map((id) => id.toLowerCase()).filter((id) => !found.has(id));
+      return { deleted: [...deleted].sort(), alreadyDeleted, notFound };
     });
   }
 

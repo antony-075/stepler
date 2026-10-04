@@ -358,7 +358,21 @@
       "failed": "Couldn’t delete the frame. Try again.",
       "done": "Frame deleted"
     },
-    "previewUnavailable": "No preview"
+    "previewUnavailable": "No preview",
+    "select": {
+      "start": "Select",
+      "all": "Select all loaded",
+      "count": "{count, number} selected",
+      "barLabel": "Actions on the selected frames",
+      "clear": "Clear selection",
+      "delete": "Delete",
+      "selectedName": "{name}, selected",
+      "confirmTitle": "Delete {count, plural, one {# frame} other {# frames}}?",
+      "confirmText": "Guests won’t see them any more. Their numbers won’t be used again.",
+      "confirm": "Delete",
+      "failed": "Couldn’t delete every frame. Try again — the ones already deleted stay deleted.",
+      "done": "{count, plural, one {# frame deleted} other {# frames deleted}}"
+    }
   },
   "guestLinks": {
     "summary": {

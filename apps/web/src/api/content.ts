@@ -2,6 +2,8 @@ import {
   adminContentDetailSchema,
   adminContentPageSchema,
   type AdminContentSort,
+  bulkDeleteContentResponseSchema,
+  type BulkDeleteContentResponse,
   contentCountsSchema,
   type ContentKind,
 } from '@stepler/contracts';
@@ -50,3 +52,14 @@ export const getContent = (id: string) =>
 /** Idempotent: an already deleted frame is a success too. */
 export const deleteContent = (id: string): Promise<void> =>
   apiRequest(`/content/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+/** Up to 100 frames of one collection; safe to retry (deleted ones come back `alreadyDeleted`). */
+export const bulkDeleteContent = (
+  collectionId: string,
+  ids: readonly string[],
+): Promise<BulkDeleteContentResponse> =>
+  apiRequest(`/collections/${encodeURIComponent(collectionId)}/content/bulk-delete`, {
+    method: 'POST',
+    body: { ids },
+    schema: bulkDeleteContentResponseSchema,
+  });

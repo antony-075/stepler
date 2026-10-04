@@ -21,7 +21,7 @@
 //   not under reduced motion.
 // - Long content never widens the tile: text clamps, titles break anywhere.
 import { Check, FileText, ImageIcon, Play, Quote } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { focusRing } from '../lib/focus';
 import { formatFrameNumber } from '../lib/frame-number';
 import { cn } from '../lib/utils';
@@ -53,7 +53,8 @@ type FrameProps = {
   /** "Кадр 86, фото, 21:10, Ірина[, нове][, вибрано]": everything the tile says, in words. */
   accessibleName: string;
   onOpen?: () => void;
-  onToggleSelect?: () => void;
+  /** Gets the click, so the caller can read Shift for a range. */
+  onToggleSelect?: (event: MouseEvent<HTMLButtonElement>) => void;
   /** Below the frame's button, e.g. «Повторити» (a full-width 44px button). */
   actions?: ReactNode;
   className?: string;
