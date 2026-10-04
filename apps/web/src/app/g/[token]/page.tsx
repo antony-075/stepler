@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { GuestPage } from '@/guest/guest-page';
 import { LanguageSwitch } from '@/i18n/language-switch';
@@ -15,13 +16,16 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GuestLinkPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    // With a dock on phones (<640px, fixed) the footer needs room under it to be reached by
+    // scrolling; a view-only link has no dock and no extra room.
+    <div className="flex min-h-dvh flex-col bg-background max-sm:[&:has([data-slot=upload-dock])_footer]:pb-[13rem]">
       <SiteHeader>
         <LanguageSwitch variant="header" />
       </SiteHeader>
       <main className="stepler-container flex-1 pt-6 pb-16 sm:pt-10 lg:pt-12">
         <GuestPage token={token} />
       </main>
+      <SiteFooter />
     </div>
   );
 }

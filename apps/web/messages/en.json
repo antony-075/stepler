@@ -822,7 +822,8 @@
       "deleted": "Frame deleted"
     },
     "refresh": "Refresh",
-    "refreshed": "Refreshed"
+    "refreshed": "Refreshed",
+    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>."
   },
   "account": {
     "pageTitle": "Account",
