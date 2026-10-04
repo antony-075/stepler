@@ -1,5 +1,5 @@
 import { expect, type Page, type Request, test } from '@playwright/test';
-import { newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
+import { acceptLegalOnCard, newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
 import { mailSubjects } from '../support/mailpit.js';
 
 // Ukrainian UI to start with (no supported browser language → default locale).
@@ -56,6 +56,7 @@ test('a signed-in admin switches to English: it persists and emails follow', asy
   await context.clearCookies();
   await page.goto('/login');
   await page.getByLabel(SIGN_IN_UK.email).fill(email);
+  await acceptLegalOnCard(page);
   const submit = page.getByRole('button', { name: SIGN_IN_UK.submit });
   await expect(submit).toBeEnabled({ timeout: 20_000 });
   await submit.click();

@@ -1,11 +1,12 @@
 import { Panel } from '@stepler/ui/components/panel';
-import { Globe, Sun, UserRound, type LucideIcon } from 'lucide-react';
+import { Globe, Scale, Sun, UserRound, type LucideIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { AdminPage } from '@/components/admin-page';
 import { LanguageSwitch } from '@/i18n/language-switch';
 import { ThemeSwitch } from '@/theme/theme-switch';
+import { LegalStatusBlock } from './legal-status';
 import { ProfileForm } from './profile-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,6 +54,14 @@ export default async function AccountPage() {
           hint={t('account.languageHint')}
         >
           <LanguageSwitch labelledBy="account-language" describedBy="account-language-hint" />
+        </SettingBlock>
+        <SettingBlock
+          id="account-legal"
+          icon={Scale}
+          title={t('account.legal.title')}
+          hint={t('account.legal.hint')}
+        >
+          <LegalStatusBlock />
         </SettingBlock>
       </Panel>
     </AdminPage>

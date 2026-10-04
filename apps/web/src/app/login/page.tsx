@@ -21,7 +21,9 @@ export default async function LoginPage({
 }) {
   // Signed in → the admin area; signed out or API unavailable → the form as usual.
   const user = await getSessionUser();
-  if (user !== null && user !== 'unavailable') redirect('/app');
+  if (user !== null && user !== 'unavailable') {
+    redirect(user.legal.accepted ? '/app' : '/accept-terms');
+  }
   const { error } = await searchParams;
   return <SignInLanding error={error} />;
 }

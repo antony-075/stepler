@@ -81,6 +81,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 10 status (PR F1, branch `feat/phase-4-legal-pages`, 2026-10-04): legal pages implemented, PR to `dev` pending; acceptance recording follows in PR F2.** Plan: `docs/superpowers/plans/2026-10-04-legal-and-acceptance.md` (owner decisions L1–L4). A registry of document versions in `@stepler/contracts`, placeholder Markdown texts (uk/en) marked as drafts, `/legal/terms` and `/legal/privacy` with the draft banner, version/date and the contact block from `LEGAL_CONTACT_EMAIL`, a start-up readiness check (`LEGAL_ALLOW_DRAFT`), footer and admin sidebar links, the guest notice, and the publishing runbook `docs/legal/README.md`. Owner action E1 (the contact e-mail on staging) before promoting.
 
+**Slice 10 status (PR F2, branch `feat/phase-4-legal-acceptance`, 2026-10-04): acceptance recording implemented, PR to `dev` pending.** ADR 0016. The sign-in card's required checkbox (magic link and Google) carries the current versions to the API, which records `LegalAcceptance` rows (no IP) in the sign-in transaction; `AuthGuard` answers `403 LEGAL_ACCEPTANCE_REQUIRED` until both documents are accepted; `/accept-terms` is the fallback (staging accounts from before F2 see it once); the account page shows «Правові документи». [C20] stays until owner action E2 (real texts).
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10) with the **real texts published** (`draft: false` in the registry) and `LEGAL_CONTACT_EMAIL` set; the web server refuses to start otherwise, and `LEGAL_ALLOW_DRAFT` is never set in production. Staging only until then.
 
 Each slice should be fully tested before moving on.

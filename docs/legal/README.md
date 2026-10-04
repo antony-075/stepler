@@ -38,8 +38,9 @@ Replacing a text **without** a new version (a typo) is an edit of the current fi
 ## What the app does with it
 
 - **Web:** `/legal/<slug>` renders the current version for the request's locale with the meta line «Версія vN · діє з <date>»; the draft banner shows exactly while `draft: true`; the «Контакти» block shows `LEGAL_CONTACT_EMAIL` (omitted only when the variable is unset, which is possible only with drafts allowed). The footer links and the guest notice point at the pages.
-- **API (PR F2, acceptance recording):** sign-in records the versions current at that moment; `GET /me` reports `legal.accepted`; with `requireReacceptance: true` on the new entry, accounts that accepted an older version are sent to the interstitial once; without it they are not. Until F2 lands the pages exist without recording.
-- **Telling users about a bump:** while `requireReacceptance` is `false` nothing interrupts anyone; a plain-language note on the account page («Правові документи», F2) is enough. A forced re-acceptance interrupts the next sign-in; announce it in advance.
+- **Acceptance (PR F2, ADR 0016):** the sign-in card's checkbox sends the versions from the registry; the sign-in records them when it completes. A link requested (or a Google sign-in started) before a bump records nothing when used after it; the person lands on `/accept-terms` and accepts the new version there. `GET /me` reports `legal.accepted` and, per document, the accepted and the required version; the account page shows both under «Правові документи».
+- **A bump without `requireReacceptance`** (the default): earlier acceptances keep satisfying the document; nobody is interrupted; new sign-ins record the new version. The account page shows «Чинна версія v2» next to the accepted v1.
+- **A bump with `requireReacceptance: true`:** `legal.accepted` turns false for everyone who has not accepted that exact version; the API refuses the app (`403 LEGAL_ACCEPTANCE_REQUIRED`) and the web sends them to `/accept-terms` once, including a tab that is already open. Announce it in advance.
 
 ## Environment
 
@@ -54,4 +55,5 @@ Replacing a text **without** a new version (a typo) is an edit of the current fi
 - `packages/contracts/src/legal.test.ts`: one entry per document, well-formed versions and dates, the status rules.
 - Readiness check at server start (`assertLegalReady`): a built server exits with a message naming each problem (`TERMS v1 is a draft`, `LEGAL_CONTACT_EMAIL is not set`) unless `LEGAL_ALLOW_DRAFT=true`. On Render a failed start fails the health check and the previous version keeps serving.
 - `docker/scripts/verify-images.sh`: proves the web image refuses to start without the flag and serves `/legal/terms` with it.
-- `e2e/tests/legal.spec.ts`: both pages in uk/en, banner, 404, no-JavaScript reading at 320px, footer links, the guest notice's new tab without a referrer.
+- `e2e/tests/legal.spec.ts`: both pages in uk/en, banner, 404, no-JavaScript reading at 320px, footer links, the guest notice's new tab without a referrer; the sign-in card's checkbox and the `/accept-terms` fallback.
+- `apps/api/test/legal-acceptances.e2e.spec.ts`, `magic-link.e2e.spec.ts`, `google.e2e.spec.ts`: the gate on every route, the checkbox enforced server-side on both sign-in paths, stale versions, idempotency.

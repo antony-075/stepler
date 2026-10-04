@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import type { LegalVersions } from '@stepler/contracts';
 import { constraintViolation } from '../../database/constraint-violation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AppError } from '../../errors/app-error.js';
+import { LegalService } from '../../legal/legal.service.js';
 import type { GoogleClaims } from './google-identity.js';
 
 const MAX_DISPLAY_NAME = 80;
@@ -21,18 +23,30 @@ export function displayNameFromGoogle(name: string | undefined): string | undefi
 /**
  * Maps a Google identity to a user (ADR 0006). An unverified Google email never creates or
  * links an account: otherwise someone could pre-register a victim's address through Google.
+ * The legal versions from the signed OAuth transaction are recorded in the transaction that
+ * completes the sign-in (ADR 0016); stale ones record nothing and the gate takes over.
  */
 @Injectable()
 export class GoogleSignInService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly legal: LegalService,
+  ) {}
 
-  async signIn(claims: GoogleClaims): Promise<string> {
+  async signIn(
+    claims: GoogleClaims,
+    legal: LegalVersions,
+    requestId: string | undefined,
+  ): Promise<string> {
     const linked = await this.prisma.authAccount.findUnique({
       where: { provider_providerAccountId: { provider: 'GOOGLE', providerAccountId: claims.sub } },
       select: { user: { select: { id: true, status: true } } },
     });
     if (linked !== null) {
       const userId = this.active(linked.user);
+      await this.prisma.$transaction((tx) =>
+        this.legal.recordAcceptance(tx, userId, legal, requestId),
+      );
       await this.fillDisplayName(userId, claims.name);
       return userId;
     }
@@ -45,19 +59,20 @@ export class GoogleSignInService {
         select: { id: true, status: true },
       })) ?? (await this.createUser(email, claims.name));
     const userId = this.active(user);
-    await this.prisma.$transaction([
-      this.prisma.user.updateMany({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({
         where: { id: userId, emailVerifiedAt: null },
         data: { emailVerifiedAt: new Date() },
-      }),
-      this.prisma.authAccount.upsert({
+      });
+      await tx.authAccount.upsert({
         where: {
           provider_providerAccountId: { provider: 'GOOGLE', providerAccountId: claims.sub },
         },
         create: { userId, provider: 'GOOGLE', providerAccountId: claims.sub },
         update: {},
-      }),
-    ]);
+      });
+      await this.legal.recordAcceptance(tx, userId, legal, requestId);
+    });
     await this.fillDisplayName(userId, claims.name);
     return userId;
   }

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { LegalModule } from '../legal/legal.module.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { AuthController } from './auth.controller.js';
 import { AuthGuard } from './auth.guard.js';
@@ -15,6 +16,7 @@ import { SessionService } from './session.service.js';
 
 @Module({
   imports: [
+    LegalModule,
     ThrottlerModule.forRootAsync({ inject: [LimitsService], useFactory: throttlerOptions }),
   ],
   controllers: [AuthController, MagicLinkController, GoogleController],

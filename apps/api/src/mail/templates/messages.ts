@@ -12,6 +12,12 @@ interface MagicLinkCopy {
   minutes: PluralForms;
   ignore: string;
   fallback: string;
+  /**
+   * The acceptance line (ADR 0016): the mailbox owner confirms by signing in. Placeholder copy
+   * the lawyer replaces, like `login.legalCheckbox` in the web catalogs. The sentence is
+   * `${before}<terms>${and}<privacy>${after}`.
+   */
+  legal: { before: string; terms: string; and: string; privacy: string; after: string };
 }
 
 /** Email copy (uk default, en). Final wording may change in Phase 3. */
@@ -25,6 +31,13 @@ export const MAGIC_LINK_COPY: Readonly<Record<MailLocale, MagicLinkCopy>> = {
     minutes: { one: 'хвилину', few: 'хвилини', many: 'хвилин', other: 'хвилини' },
     ignore: 'Якщо ви не надсилали цей запит, просто проігноруйте цей лист.',
     fallback: 'Якщо кнопка не працює, відкрийте це посилання:',
+    legal: {
+      before: 'Продовжуючи, ви приймаєте ',
+      terms: 'Умови використання',
+      and: ' та ',
+      privacy: 'Політику конфіденційності',
+      after: '.',
+    },
   },
   en: {
     subject: 'Sign in to Stepler',
@@ -35,6 +48,13 @@ export const MAGIC_LINK_COPY: Readonly<Record<MailLocale, MagicLinkCopy>> = {
     minutes: { one: 'minute', other: 'minutes' },
     ignore: "If you didn't request this, ignore this email.",
     fallback: "If the button doesn't work, open this link:",
+    legal: {
+      before: 'By continuing, you accept the ',
+      terms: 'Terms of Service',
+      and: ' and the ',
+      privacy: 'Privacy Policy',
+      after: '.',
+    },
   },
 };
 

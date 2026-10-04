@@ -5,10 +5,14 @@ import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { LanguageSwitch } from '@/i18n/language-switch';
 import { GuestPhone, HowItWorks } from './how-it-works';
-import { LoginForm } from './login-form';
+import { type CallbackError, LoginForm } from './login-form';
 
-const CALLBACK_ERRORS = ['OAUTH_FAILED', 'ACCOUNT_BLOCKED'] as const;
-type CallbackError = (typeof CALLBACK_ERRORS)[number];
+const CALLBACK_ERRORS: readonly CallbackError[] = [
+  'OAUTH_FAILED',
+  'ACCOUNT_BLOCKED',
+  'LEGAL_ACCEPTANCE_REQUIRED',
+  'LEGAL_VERSION_OUTDATED',
+];
 
 function callbackError(value: unknown): CallbackError | null {
   return CALLBACK_ERRORS.find((code) => code === value) ?? null;
@@ -53,6 +57,7 @@ export async function SignInLanding({ error }: { error?: unknown }) {
                   <LoginForm
                     turnstileSiteKey={methods.turnstileSiteKey}
                     googleEnabled={methods.google}
+                    legal={methods.legal}
                     initialError={callbackError(error)}
                   />
                 )}

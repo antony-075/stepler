@@ -54,6 +54,10 @@ While the app is in Testing mode, only the listed test users can sign in.
 
 A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `stage` is green, Render deploys automatically.
 
+### Release notes
+
+- **Legal acceptance (slice 10, PR F2, ADR 0016).** From this release `GET /auth/methods` returns `legal`, `POST /auth/magic-link` requires it and `GET /auth/google/start` requires `terms`/`privacy`. Render deploys `stepler-staging` (web) and `stepler-staging-api` independently, and both sides read `/auth/methods` with a strict schema, so **in either order** the sign-in card shows «Вхід тимчасово недоступний. Спробуйте пізніше.» until both services run the new version (old web: the new `legal` field is unknown; new web: the field is missing). Nothing is written in that window. Deploy them back to back (Render → each service → Manual Deploy if needed) and check `/login` afterwards; on staging the short window is acceptable. Accounts created before this release see `/accept-terms` once after signing in.
+
 ## 7. Verify staging
 
 - `https://<staging-host>/healthz` returns `{"status":"ok"}`, and `/api/v1/health/ready` returns `ok` for both database and storage.

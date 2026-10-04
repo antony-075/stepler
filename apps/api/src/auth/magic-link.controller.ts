@@ -25,6 +25,7 @@ import {
 } from '@stepler/contracts';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
+import { RequestId } from '../logging/request-id.decorator.js';
 import { MagicLinkService } from './magic-link.service.js';
 import { Public } from './public.decorator.js';
 import { RateLimit, RateLimitGuard } from './rate-limit.js';
@@ -44,10 +45,18 @@ export class MagicLinkController {
     @Inject(API_ENV) private readonly env: ApiEnv,
   ) {}
 
-  /** Emails a sign-in link. Always 202 with the same body after a valid Turnstile token. */
+  /**
+   * Emails a sign-in link. Always 202 with the same body after a valid Turnstile token and the
+   * current legal versions (the sign-in card's required checkbox, ADR 0016).
+   */
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiResponse({ status: 202, standardSchema: magicLinkRequestResponseSchema })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED (also without `legal`), TURNSTILE_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /auth/methods)',
+  })
   async request(
     @Body({ schema: magicLinkRequestSchema }) body: MagicLinkRequest,
     @Req() req: RequestWithIp,
@@ -76,8 +85,9 @@ export class MagicLinkController {
     @Body({ schema: magicLinkVerifyRequestSchema }) body: MagicLinkVerifyRequest,
     @Req() req: IncomingMessage,
     @Res({ passthrough: true }) res: ServerResponse,
+    @RequestId() requestId: string | undefined,
   ): Promise<MagicLinkVerifyResponse> {
-    const userId = await this.magicLinks.verify(body.token);
+    const userId = await this.magicLinks.verify(body.token, requestId);
     const previous = readCookie(req, SESSION_COOKIE);
     if (previous !== undefined) await this.sessions.revoke(previous);
     const session = await this.sessions.create(userId);

@@ -99,7 +99,9 @@
         "E2E_DATABASE_URL",
         "E2E_MAILPIT_URL",
         "E2E_SMTP_URL",
-        "E2E_S3_ENDPOINT"
+        "E2E_S3_ENDPOINT",
+        "E2E_API_PORT",
+        "E2E_WEB_PORT"
       ]
     },
     "dev": {

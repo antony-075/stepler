@@ -31,7 +31,9 @@
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
     "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
     "CONTENT_NOT_FOUND": "This frame was deleted.",
-    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover."
+    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "To continue, accept the Terms of Service and the Privacy Policy.",
+    "LEGAL_VERSION_OUTDATED": "The documents have changed. Review them and accept again."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -52,7 +54,9 @@
     "useAnother": "Use a different email",
     "unavailable": "Sign-in is temporarily unavailable. Try again later.",
     "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
-    "turnstileRetry": "Try again"
+    "turnstileRetry": "Try again",
+    "legalCheckbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
+    "legalHint": "Tick the box to continue."
   },
   "verify": {
     "pageTitle": "Confirm sign-in",
@@ -60,12 +64,26 @@
     "title": "Sign in to Stepler",
     "signInAs": "You're signing in as {email}",
     "notYou": "Not you? Don't press the button, just close this page.",
+    "legal": "By continuing, you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.",
     "submit": "Sign in",
     "signingIn": "Signing in…",
     "backToLogin": "Get a new link",
     "retry": "Try again",
     "invalidTitle": "This link didn't work",
     "unavailableTitle": "Couldn't check the link"
+  },
+  "acceptTerms": {
+    "pageTitle": "Accept the terms",
+    "title": "Accept the terms to continue",
+    "lead": "Your account has no acceptance of the Terms of Service and the Privacy Policy yet — or the documents have changed.",
+    "documentsLabel": "Documents",
+    "checkbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
+    "submit": "Accept and continue",
+    "submitting": "Saving…",
+    "mustCheck": "Tick the box to continue.",
+    "logout": "Sign out",
+    "documentMeta": "Version {version} · effective {date}",
+    "opensInNewTab": "(opens in a new tab)"
   },
   "app": {
     "loading": "Loading…",
@@ -846,6 +864,13 @@
       "saved": "Name saved",
       "cancel": "Cancel",
       "leave": "Your name isn’t saved. Leave the page without saving?"
+    },
+    "legal": {
+      "title": "Legal documents",
+      "hint": "The terms and policy you accepted, and their current versions.",
+      "current": "Current version {version}",
+      "acceptedAt": "Accepted {date} (version {version})",
+      "notAccepted": "Not accepted"
     }
   },
   "legal": {

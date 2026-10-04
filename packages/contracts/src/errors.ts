@@ -37,6 +37,8 @@ export const ERROR_CODES = [
   'CONTENT_NOT_FOUND',
   'UPLOAD_IN_PROGRESS',
   'COVER_SOURCE_INVALID',
+  'LEGAL_ACCEPTANCE_REQUIRED',
+  'LEGAL_VERSION_OUTDATED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

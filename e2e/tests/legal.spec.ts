@@ -1,7 +1,15 @@
 import { currentLegalVersion } from '@stepler/contracts';
 import { expect, type Page, test } from '@playwright/test';
-import { newEmail, signIn } from '../support/auth.js';
+import {
+  ACCEPT_TERMS_UK,
+  acceptLegalOnCard,
+  newEmail,
+  SIGN_IN_UK,
+  signIn,
+} from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
+import { dropLegalAcceptances } from '../support/database.js';
+import { latestMagicLink } from '../support/mailpit.js';
 
 // Ukrainian UI (no supported browser language → default locale).
 test.use({ locale: 'de-DE' });
@@ -107,5 +115,122 @@ test.describe('legal pages', () => {
     // The guest page kept its state.
     await expect(addFiles).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
+  });
+});
+
+test.describe('acceptance at sign-in (ADR 0016)', () => {
+  test('the card: buttons wait for the box, the documents open in new tabs, the first sign-in lands on /app', async ({
+    page,
+    context,
+  }) => {
+    const visited: string[] = [];
+    page.on('framenavigated', (frame) => {
+      if (frame === page.mainFrame()) visited.push(new URL(frame.url()).pathname);
+    });
+    const email = newEmail();
+    await page.goto('/login');
+    await page.getByLabel(SIGN_IN_UK.email).fill(email);
+    const submit = page.getByRole('button', { name: SIGN_IN_UK.submit });
+    await expect(submit).toBeDisabled();
+    await expect(submit).toHaveAccessibleDescription('Поставте позначку, щоб продовжити.');
+
+    // Review Focus 5: reading a document does not cost the typed address.
+    const card = page.locator('form');
+    const [terms] = await Promise.all([
+      context.waitForEvent('page'),
+      card.getByRole('link', { name: TITLES.terms }).click(),
+    ]);
+    await terms.waitForLoadState();
+    expect(terms.url()).toMatch(/\/legal\/terms$/);
+    expect(await terms.evaluate(() => window.opener === null)).toBe(true);
+    await terms.close();
+    await expect(page.getByLabel(SIGN_IN_UK.email)).toHaveValue(email);
+    await expect(page.getByRole('checkbox', { name: SIGN_IN_UK.legal })).not.toBeChecked();
+
+    await acceptLegalOnCard(page);
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+    await expect(page.getByRole('heading', { name: SIGN_IN_UK.sent })).toBeVisible();
+    await page.goto(await latestMagicLink(email));
+    // The mailbox owner accepts here, by signing in (ADR 0016): the line names both documents.
+    const line = page.getByText(/^Продовжуючи, ви приймаєте/);
+    await expect(line).toBeVisible();
+    for (const [name, path] of [
+      [TITLES.terms, '/legal/terms'],
+      ['Політику конфіденційності', '/legal/privacy'],
+    ] as const) {
+      const docLink = line.getByRole('link', { name });
+      await expect(docLink).toHaveAttribute('href', path);
+      await expect(docLink).toHaveAttribute('target', '_blank');
+    }
+    const [privacy] = await Promise.all([
+      context.waitForEvent('page'),
+      line.getByRole('link', { name: 'Політику конфіденційності' }).click(),
+    ]);
+    await privacy.waitForLoadState();
+    await expect(privacy.getByRole('heading', { level: 1 })).toHaveText(TITLES.privacy);
+    await privacy.close();
+    await page.getByRole('button', { name: SIGN_IN_UK.signIn }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    expect(visited).not.toContain('/accept-terms');
+    const me = (await (await page.request.get('/api/v1/me')).json()) as {
+      legal: { accepted: boolean };
+    };
+    expect(me.legal.accepted).toBe(true);
+
+    // «Акаунт» → «Правові документи» shows both acceptances.
+    await page.goto('/app/account');
+    const block = page.getByRole('region', { name: 'Правові документи' });
+    await expect(block.getByText(/^Прийнято .+ \(версія v\d+\)$/)).toHaveCount(2);
+    await expect(block.getByRole('link', { name: /Умови використання/ })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+  });
+
+  test('an error carried back to /login is explained', async ({ page }) => {
+    await page.goto('/login?error=LEGAL_ACCEPTANCE_REQUIRED');
+    await expect(
+      page.getByText('Щоб продовжити, прийміть Умови використання та Політику конфіденційності.'),
+    ).toBeVisible();
+  });
+
+  test('/accept-terms: signed out → /login; accepted → /app', async ({ page }) => {
+    await page.goto('/accept-terms');
+    await expect(page).toHaveURL(/\/login$/);
+    await signIn(page, newEmail());
+    await page.goto('/accept-terms');
+    await expect(page).toHaveURL(/\/app$/);
+  });
+
+  test('an account without an acceptance lands on /accept-terms once, then uses the app', async ({
+    page,
+  }) => {
+    const email = newEmail();
+    await signIn(page, email);
+    dropLegalAcceptances(email);
+
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/accept-terms$/);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(ACCEPT_TERMS_UK.title);
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    const gated = await page.request.get('/api/v1/collections');
+    expect(gated.status()).toBe(403);
+
+    // The submit is not disabled; without the box it explains and moves focus to the box.
+    const box = page.getByRole('checkbox', { name: ACCEPT_TERMS_UK.checkbox });
+    await page.getByRole('button', { name: ACCEPT_TERMS_UK.submit }).click();
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Поставте позначку, щоб продовжити.' }),
+    ).toBeVisible();
+    await expect(box).toBeFocused();
+
+    await box.check();
+    await page.getByRole('button', { name: ACCEPT_TERMS_UK.submit }).click();
+    await expect(page).toHaveURL(/\/app$/);
+    await expect(page.locator('[data-slot="account-block"]')).toContainText(email);
+    await page.goto('/app');
+    await expect(page).toHaveURL(/\/app$/);
+    expect((await page.request.get('/api/v1/collections')).status()).toBe(200);
   });
 });

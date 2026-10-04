@@ -78,7 +78,7 @@ Trade-offs:
 ## 4. Frontend architecture (`apps/web`)
 
 - **Routes:** `/g/[token]` guest entry; `/app/...` admin (protected); `/login`; `/legal/terms`, `/legal/privacy`. A collection's sections are tabs of `/app/collections/[id]` in the query (`?tab=links|appearance|settings`, none = the content); «Гостьова сторінка» (`appearance`, slice 8a) holds the cover and the welcome message, and the admin's cover file goes browser → storage through the same upload transport as a guest's (§10.7).
-- **Rendering:** mostly client components with TanStack Query. Authorization and data are owned by the API; SSR data fetching would require forwarding cookies on every server fetch and offers little for authenticated/guest app screens. RSC is used for shells, metadata and static legal pages.
+- **Rendering:** mostly client components with TanStack Query. Authorization and data are owned by the API; SSR data fetching would require forwarding cookies on every server fetch and offers little for authenticated/guest app screens. RSC is used for shells, metadata and the server-rendered legal pages (dynamic per locale, ADR 0011; no client JavaScript).
 - **API client:** a thin typed `fetch` wrapper (`apps/web/src/api/client.ts`) that validates responses with the Zod schemas from `contracts`, the same schemas the API validates with; errors surface as `ApiError(code)`. No OpenAPI code generation: `openapi-typescript` 7.13 does not support TypeScript 6 (owner decision 2026-09-29, ADR 0005). Forms use the same schemas with React Hook Form. *Implemented in Phase 2.*
 - **State:** server state in TanStack Query only. Upload queue state is local to the uploader feature (a store is introduced only if the queue must survive route changes — then Zustand, per rules).
 - **Guest pages:** `Referrer-Policy: no-referrer`; **no third-party scripts** (token is in the URL). Mobile-first.
@@ -131,7 +131,7 @@ Decision details: ADR 0006.
 - **Magic link verification:** the email links to the web page `/auth/verify?token=…`. The page first calls a read-only `POST /auth/magic-link/preview` and shows "Sign in as <email>"; only the Sign in button calls `POST /auth/magic-link/verify`, which consumes the token. Email scanners that open links therefore cannot use them up, and a victim who opens an attacker's link sees a foreign address (owner decisions 2026-09-29). *Implemented in Phase 2.*
 - **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified.
 - **Operator:** users whose verified email is in `OPERATOR_EMAILS` config (ADR 0013).
-- **Legal acceptance:** recorded at registration (§15). *Deferred to Phase 4 slice 10 (legal pages), with a gate that also covers users created before it (owner decision 2026-09-29).*
+- **Legal acceptance (ADR 0016, owner decision L1):** given at the request that starts registration and recorded when the account is created or the sign-in completes. The sign-in card has a required checkbox; it sends the current versions with `POST /auth/magic-link` (stored on the `MagicLinkToken` row) or with `GET /auth/google/start?terms=&privacy=` (stored in the signed `st_oauth` transaction); magic-link verify and the Google callback write the `LegalAcceptance` rows in the sign-in transaction, idempotently, only for versions current at that moment. The API enforces the checkbox: a request without versions → `400 VALIDATION_FAILED` / a redirect to `/login?error=LEGAL_ACCEPTANCE_REQUIRED` without the OAuth cookie; stale versions → `400 LEGAL_VERSION_OUTDATED` / `…?error=LEGAL_VERSION_OUTDATED`. `AuthGuard` answers `403 LEGAL_ACCEPTANCE_REQUIRED` on every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` until both documents are accepted; the web sends such users to the `/accept-terms` fallback (accounts from before slice 10, a link whose versions went stale, a forced `requireReacceptance`). *Implemented in slice 10 (PR F2).*
 - **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verifies magic links only by GET).
 
 ---
@@ -158,12 +158,15 @@ AuthSession
   INDEX (userId)
 
 MagicLinkToken
-  id, email, tokenHash (unique), expiresAt, consumedAt?, requestIpHash?, createdAt
+  id, email, tokenHash (unique), expiresAt, consumedAt?, locale, requestIpHash?,
+  legalTermsVersion?, legalPrivacyVersion?, createdAt   -- versions accepted on the card (slice 10)
   INDEX (email, createdAt)          -- per-email rate limit derived from rows
+  SQL CHECK versions match ^v[1-9][0-9]{0,3}$ when set
 
-LegalAcceptance            -- Phase 4 slice 10 (legal pages); not created in Phase 2
-  id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt
+LegalAcceptance            -- slice 10 (ADR 0016)
+  id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt, requestId?
   UNIQUE (userId, document, version)
+  SQL CHECK version ~ ^v[1-9][0-9]{0,3}$    -- no IP address (owner decision L2)
 ```
 
 (Auth is implemented in-house: spike S1 rejected Better Auth because it stores session tokens in plain text and verifies magic links only by GET, see ADR 0006.)
@@ -334,14 +337,14 @@ Resource map (MVP):
 
 ```text
 Auth / me
-  GET    /auth/methods                         {magicLink, google, turnstileSiteKey}
-  POST   /auth/magic-link                      (Turnstile token required) → 202, same body for every email
+  GET    /auth/methods                         {magicLink, google, turnstileSiteKey, legal: {terms, privacy}}
+  POST   /auth/magic-link                      (Turnstile token and legal {terms, privacy} required) → 202, same body for every email
   POST   /auth/magic-link/preview              {token} → {email}; read-only
   POST   /auth/magic-link/verify               {token} → sets session cookie
-  GET    /auth/google/start | /auth/google/callback
+  GET    /auth/google/start?terms=&privacy=[&returnTo=] | /auth/google/callback
   POST   /auth/logout                          → 204, idempotent
-  GET    /me          PATCH /me (displayName, locale)
-  POST   /me/legal-acceptances                 (Phase 4 slice 10)
+  GET    /me          PATCH /me (displayName, locale)     (both return legal: {accepted, documents})
+  POST   /me/legal-acceptances                 {acceptances: [{document, version}]} → MeResponse; fallback path
 
 Admin
   GET/POST            /collections
@@ -584,7 +587,7 @@ Decision details: ADR 0013.
 ## 15. Legal and privacy (D15, F6, F8)
 
 - Pages (slice 10, PR F1): `/legal/terms` and `/legal/privacy`, uk/en, server-rendered from Markdown files (`apps/web/content/legal/<slug>.<locale>.<version>.md`) with a registry of current versions in `@stepler/contracts` (`LEGAL_DOCUMENTS`: `version`, `effectiveDate`, `draft`, `requireReacceptance`); a draft banner while a text is a placeholder; the «Контакти» block from `LEGAL_CONTACT_EMAIL`; the web server refuses to start on drafts or without a contact unless `LEGAL_ALLOW_DRAFT=true` (CI, staging; never production). Texts are provided by the owner/lawyer per `docs/legal/README.md`; engineering does not write legal wording.
-- Admin acceptance records `LegalAcceptance(document, version, acceptedAt, requestId)` (slice 10, PR F2: in progress). No IP stored by default. A new document version does not force re-acceptance unless its registry entry sets `requireReacceptance` (a separate product/legal decision).
+- Admin acceptance (slice 10, PR F2, ADR 0016; owner decisions L1–L4): acceptance is recorded at the request that starts registration and applied when the account is created or the sign-in completes. The sign-in card's required checkbox sends the current versions with the magic-link request or the Google start; the API validates them against the registry, carries them on the token row or in the signed OAuth transaction and writes `LegalAcceptance(userId, document, version, acceptedAt, requestId)` in the sign-in transaction (idempotent; versions no longer current are skipped). The magic-link e-mail and the verify page carry «Продовжуючи, ви приймаєте Умови використання та Політику конфіденційності» with links, so the mailbox owner (who may not be the requester) confirms by pressing «Увійти»; the Google start refuses `Sec-Fetch-Site: cross-site`. No IP is stored (L2); the request id correlates a row with the request log. `AuthGuard` refuses every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` with `403 LEGAL_ACCEPTANCE_REQUIRED` until both documents are accepted; the `/accept-terms` page is the fallback for accounts from before the checkbox, stale links and forced re-acceptance. A new document version does not force re-acceptance unless its registry entry sets `requireReacceptance` (L3; a separate product/legal decision); then `legal.accepted` turns false and everyone goes through the fallback once. The readiness check runs at web server start (L4). The account page («Акаунт» → «Правові документи») shows the accepted and the current version of each document.
 - Guest page shows a short notice with links under the contribution actions (no checkbox): PR F1, with placeholder copy (`guest.legalNotice`) until the lawyer's sentence.
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
 - Data minimization: the guest name is optional, held on the guest session ([O4], amended 2026-10-03) and snapshotted per submission; the session holds nothing else about the guest; other guests never see a name or another guest's file name or frame number; logs and audit events exclude text bodies, names, file names, cookies, tokens and signed URLs.

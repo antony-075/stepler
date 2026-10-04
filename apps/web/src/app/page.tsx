@@ -19,6 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function HomePage() {
   const user = await getSessionUser();
-  if (user !== null && user !== 'unavailable') redirect('/app');
+  if (user !== null && user !== 'unavailable') {
+    redirect(user.legal.accepted ? '/app' : '/accept-terms');
+  }
   return <SignInLanding />;
 }

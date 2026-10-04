@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import type { MeResponse, UpdateMeRequest } from '@stepler/contracts';
+import type { LegalAcceptanceRequest, MeResponse, UpdateMeRequest } from '@stepler/contracts';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
+import { LegalService } from '../legal/legal.service.js';
 
 const ME_FIELDS = { id: true, email: true, displayName: true, locale: true } as const;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly legal: LegalService,
+  ) {}
 
   async me(principal: AccountPrincipal): Promise<MeResponse> {
     const user = await this.prisma.user.findUnique({
@@ -16,10 +20,18 @@ export class UsersService {
       select: ME_FIELDS,
     });
     if (user === null) throw new AppError('UNAUTHENTICATED', 401);
-    return { ...user, isOperator: principal.kind === 'operator' };
+    return this.toMe(principal, user);
   }
 
+  /**
+   * Before the legal documents are accepted only `locale` may change (the fallback page's
+   * language switch, ADR 0016); a name change waits for the acceptance.
+   */
   async updateMe(principal: AccountPrincipal, changes: UpdateMeRequest): Promise<MeResponse> {
+    if (changes.displayName !== undefined) {
+      const { accepted } = await this.legal.statusFor(principal.userId);
+      if (!accepted) throw new AppError('LEGAL_ACCEPTANCE_REQUIRED', 403);
+    }
     const user = await this.prisma.user.update({
       where: { id: principal.userId },
       data: {
@@ -28,6 +40,27 @@ export class UsersService {
       },
       select: ME_FIELDS,
     });
-    return { ...user, isOperator: principal.kind === 'operator' };
+    return this.toMe(principal, user);
+  }
+
+  /** Records the fallback page's acceptance and returns the updated profile. */
+  async acceptLegal(
+    principal: AccountPrincipal,
+    body: LegalAcceptanceRequest,
+    requestId: string | undefined,
+  ): Promise<MeResponse> {
+    await this.legal.accept(principal.userId, body, requestId);
+    return this.me(principal);
+  }
+
+  private async toMe(
+    principal: AccountPrincipal,
+    user: Omit<MeResponse, 'isOperator' | 'legal'>,
+  ): Promise<MeResponse> {
+    return {
+      ...user,
+      isOperator: principal.kind === 'operator',
+      legal: await this.legal.statusFor(principal.userId),
+    };
   }
 }
