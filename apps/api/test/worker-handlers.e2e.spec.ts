@@ -230,6 +230,34 @@ describe('worker handlers', () => {
     const sweep = (overrides: Record<string, string> = {}) =>
       new MaintenanceSweepHandler(prisma, queue, workerEnv(overrides));
 
+    test('fails photos and videos stuck PENDING for an hour with no media job left', async () => {
+      const { collectionId } = await seed();
+      const media = (frameNo: number, kind: 'PHOTO' | 'VIDEO', hoursAgo: number) =>
+        prisma.contentItem.create({
+          data: {
+            collectionId,
+            frameNo,
+            kind,
+            processingStatus: 'PENDING',
+            createdAt: new Date(Date.now() - hoursAgo * HOUR_MS),
+          },
+        });
+      const stuck = await media(1, 'PHOTO', 2);
+      const queued = await media(2, 'VIDEO', 2);
+      const recent = await media(3, 'PHOTO', 0);
+      await prisma.$transaction((tx) =>
+        queue.enqueue(tx, 'media.video-poster', { contentItemId: queued.id }),
+      );
+
+      await sweep().handle();
+
+      const status = async (id: string) =>
+        (await prisma.contentItem.findUniqueOrThrow({ where: { id } })).processingStatus;
+      expect(await status(stuck.id)).toBe('FAILED');
+      expect(await status(queued.id)).toBe('PENDING');
+      expect(await status(recent.id)).toBe('PENDING');
+    });
+
     test('re-enqueues purges for old DELETING collections and old deleted items only', async () => {
       const stale = await seed({ status: 'DELETING', deletedHoursAgo: 2 });
       const recent = await seed({ status: 'DELETING', deletedHoursAgo: 0.1 });

@@ -28,9 +28,9 @@ test.describe('collection files', () => {
     const id = await withFiles(page, browser);
     const grid = page.getByRole('list', { name: 'Кадри колекції' });
     await expect(grid.getByRole('button')).toHaveCount(3);
-    // No original in the grid: photos and videos wait for their previews; the document is a tile.
-    await expect(grid.locator('img')).toHaveCount(0);
-    await expect(grid.getByText('Готується прев’ю')).toHaveCount(2);
+    // No original in the grid: photos and videos show the worker's thumbnails (or wait for
+    // them); the document is a tile.
+    await expect(grid.locator('img[src*="/uploads/"]')).toHaveCount(0);
     await expect(grid.getByText('doc.pdf')).toBeVisible();
 
     // The photo: its original in the viewer, with the details.

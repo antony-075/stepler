@@ -40,3 +40,23 @@ export async function submitTextViaApi(
   expect(res.status()).toBe(201);
   return (await res.json()) as { id: string; frameNo: number };
 }
+
+/** The pencil action; the first time the name prompt comes first («Пропустити» opens the picker). */
+export async function pickFiles(guest: Page, files: Parameters<Page['setInputFiles']>[1]) {
+  const chooser = guest.waitForEvent('filechooser');
+  await guest
+    .getByRole('button', { name: /^Додати (фото й відео|ще)$/ })
+    .first()
+    .click();
+  // Before the first contribution the name prompt comes first; «Пропустити» opens the picker.
+  const prompt = guest.getByRole('dialog', { name: 'Як вас звати?' });
+  const first = await Promise.race([
+    chooser.then(() => 'chooser' as const),
+    prompt.waitFor({ state: 'visible' }).then(
+      () => 'prompt' as const,
+      () => 'chooser' as const,
+    ),
+  ]);
+  if (first === 'prompt') await prompt.getByRole('button', { name: 'Пропустити' }).click();
+  await (await chooser).setFiles(files);
+}

@@ -1,4 +1,6 @@
-import type { Readable } from 'node:stream';
+import { createWriteStream } from 'node:fs';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import {
   AbortMultipartUploadCommand,
   CompleteMultipartUploadCommand,
@@ -10,6 +12,7 @@ import {
   HeadObjectCommand,
   ListObjectsV2Command,
   ListPartsCommand,
+  NoSuchKey,
   NoSuchUpload,
   NotFound,
   PutObjectCommand,
@@ -251,6 +254,24 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
       // Assembling a 2 GB upload can take a while.
       this.deadline(this.completeTimeoutMs),
     );
+  }
+
+  async downloadToFile(key: string, path: string): Promise<boolean> {
+    let body: unknown;
+    try {
+      const res = await this.client.send(
+        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+        // Covers the whole transfer, not only the response headers.
+        this.deadline(this.completeTimeoutMs),
+      );
+      body = res.Body;
+    } catch (error) {
+      if (error instanceof NoSuchKey) return false;
+      throw error;
+    }
+    if (!(body instanceof Readable)) throw new Error('GetObject returned no stream');
+    await pipeline(body, createWriteStream(path));
+    return true;
   }
 
   async readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array> {

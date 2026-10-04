@@ -17,8 +17,11 @@
 //   15 s while this tab is shown) and announced in one quiet line with «Показати».
 // - «Показати ще» is a button (keyboard and screen readers reach it; no scroll trap). Loading is
 //   a still grid of placeholders; a failure is an inline alert with «Спробувати ще».
-// - Files (PR C): documents are a type tile with the file name and size; photos and videos show
-//   «Готується прев’ю» until the worker makes a thumbnail or poster (PR D), never the original.
+// - Files: documents are a type tile with the file name and size; photos and videos show their
+//   480px thumbnail (videos with ▶ and the duration), never the original. Until the worker has
+//   made it, «Готується прев’ю», swapped in place within about 10 s of it being ready (only the
+//   waiting frames are asked for again, so nothing else moves); if it cannot be made, the type
+//   tile (a photo: «Прев’ю недоступне»; a video: ▶ on grey), and the viewer still downloads it.
 // - An empty collection keeps the calm tinted panel; an empty filter says what is missing and
 //   offers «Показати все». Archived collections look the same: their frames are kept.
 
@@ -73,7 +76,10 @@ import {
 import { ContentViewer } from './content-viewer';
 import { documentType } from './document-type';
 import { useNewContent } from './use-new-content';
+import { refreshFrames, usePendingPreviews } from './use-pending-previews';
 import { formatBytes, formatDuration } from '@/format/bytes';
+import { MediaImg } from '@/media/media-img';
+import { gridPicture } from '@/media/previews';
 
 const SORTS = ['newest', 'frame'] as const;
 
@@ -104,6 +110,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
     getNextPageParam: (last: AdminContentPage) => last.nextCursor,
   });
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  usePendingPreviews(collection.id, items);
   // The same query as the «Посилання» tab: what live links let guests add locks empty chips.
   const links = useQuery({
     queryKey: guestLinksKey(collection.id),
@@ -318,7 +325,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
           <FrameGrid ariaLabel={t('listLabel')}>
             {items.map((item) => (
               <div key={item.id} data-frame={item.frameNo}>
-                <AdminFrame item={item} onOpen={() => openFrame(item.frameNo)} />
+                <AdminFrame
+                  item={item}
+                  collectionId={collection.id}
+                  onOpen={() => openFrame(item.frameNo)}
+                />
               </div>
             ))}
           </FrameGrid>
@@ -348,7 +359,15 @@ export function ContentTab({ collection }: { collection: Collection }) {
   );
 }
 
-function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => void }) {
+function AdminFrame({
+  item,
+  collectionId,
+  onOpen,
+}: {
+  item: AdminContentItem;
+  collectionId: string;
+  onOpen: () => void;
+}) {
   const t = useTranslations('content');
   const format = useFormatter();
   const time = format.dateTime(new Date(item.createdAt), { hour: '2-digit', minute: '2-digit' });
@@ -386,17 +405,18 @@ function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => vo
       />
     );
   }
-  // A thumbnail (photo) or poster (video) once the worker made one (PR D); never the original in
-  // the grid: it can be 50 MB, or 2 GB for a video. Until then, the placeholder.
-  const thumb = item.kind === 'VIDEO' ? (item.posterUrl ?? item.thumbnailUrl) : item.thumbnailUrl;
+  // The 480px thumbnail, for videos too (the 1600px poster is for the viewer); never the
+  // original in the grid: it can be 50 MB, or 2 GB for a video.
+  const picture = gridPicture(item);
   const duration = item.durationMs === null ? {} : { meta: formatDuration(item.durationMs) };
-  if (thumb !== null) {
+  if (picture.kind === 'thumbnail' || (picture.kind === 'failed' && item.kind === 'VIDEO')) {
     return (
       <Frame
         kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
-        // A presigned storage URL: nothing for next/image to optimise.
-        // eslint-disable-next-line @next/next/no-img-element
-        media={<img alt={DECORATIVE} src={thumb} loading="lazy" />}
+        // A video without a poster is ▶ on grey (D4).
+        {...(picture.kind === 'thumbnail'
+          ? { media: <Thumbnail url={picture.url} item={item} collectionId={collectionId} /> }
+          : {})}
         number={item.frameNo}
         time={time}
         {...duration}
@@ -411,9 +431,37 @@ function AdminFrame({ item, onOpen }: { item: AdminContentItem; onOpen: () => vo
       number={item.frameNo}
       time={time}
       {...duration}
-      placeholderLabel={t('pendingPreview')}
+      placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={accessibleName}
       onOpen={onOpen}
+    />
+  );
+}
+
+/**
+ * A grid thumbnail: lazy, decoded off the main thread, sized by the original's ratio. A link that
+ * expired while the grid stayed open is replaced by asking for this frame again.
+ */
+function Thumbnail({
+  url,
+  item,
+  collectionId,
+}: {
+  url: string;
+  item: AdminContentItem;
+  collectionId: string;
+}) {
+  const queryClient = useQueryClient();
+  return (
+    <MediaImg
+      onExpired={() => void refreshFrames(queryClient, collectionId, [item.id])}
+      alt={DECORATIVE}
+      src={url}
+      loading="lazy"
+      decoding="async"
+      {...(item.width === null || item.height === null
+        ? {}
+        : { width: item.width, height: item.height })}
     />
   );
 }

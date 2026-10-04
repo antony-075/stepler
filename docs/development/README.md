@@ -5,6 +5,7 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
+- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos) and ffmpeg/ffprobe (video posters). macOS: `brew install libheif ffmpeg` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg`. Check with `heif-dec --list-decoders` (lists `libde265`). The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1).
 - Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace
@@ -57,7 +58,7 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
-- `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden) and, from the processing slice on, previews stay pending. It serves no page; it logs `worker started` once it polls.
+- `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden), and photo and video frames stay «Готується прев’ю». It needs the media tools from Prerequisites (`heif-dec`/`heif-convert`, `ffmpeg`, `ffprobe` on `PATH`). It serves no page; it logs `worker started` once it polls.
 
 ## Commands
 
@@ -108,6 +109,20 @@ feature branch ──PR──► dev ──PR──► stage ──PR──► m
 - Changes to `dev`, `stage` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
 - Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
 - CI runs on every PR and on pushes to `dev`, `stage` and `main`. Deployment (`stage` → staging, `main` → production) is wired up when hosting is chosen.
+
+## Staging smoke checklist (owner action S1, after promoting media processing)
+
+Run on staging once PR D is on `stage` and the owner actions R1 (R2 bucket CORS), R2 (abort incomplete multipart uploads after 2 days) and W4 (worker size) are done. An agent can drive the browser; no secrets are needed. Record the results in ADR 0008 ("R2 behaviour verified on staging").
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | From a phone, upload a video larger than 100 MB through a guest link | It completes (multipart on real R2, equal part sizes accepted); within a minute the admin grid shows its thumbnail and duration, and the viewer plays it over its poster |
+| 2 | From an iPhone, upload a HEIC photo (portrait and landscape) | The admin grid shows the thumbnail and the viewer the preview, both upright (first real check of orientation and tiled HEICs; not covered by the generated fixtures) |
+| 3 | Upload a PDF | The admin's «Завантажити» downloads it as an attachment with its name |
+| 4 | Start a large upload and cancel it midway | The upload's object disappears within 15 minutes (expiry/discard); check in the R2 dashboard |
+| 5 | Revoke the link while a guest is uploading | The completion is refused, no frame appears, the guest sees «Посилання більше не діє» |
+| 6 | In the browser's network panel during an upload | The PUT response exposes `ETag`; no request carries `x-amz-checksum-crc32` |
+| 7 | Render logs of `stepler-staging-worker` while steps 1–2 run | `job done` for `media.video-poster` / `media.image-derivatives`, no OOM restart, no presigned URL in any line |
 
 ## Environment variables
 

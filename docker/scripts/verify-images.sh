@@ -59,6 +59,56 @@ for image in "$API_IMAGE" "$WORKER_IMAGE"; do
   fi
 done
 
+# Media tools (spike S5), as the runtime user: the HEVC decoder for HEIC and ffmpeg's video
+# decoders in the worker image; neither in the API image.
+docker run --rm --entrypoint sh "$WORKER_IMAGE" -c 'heif-convert --list-decoders | grep -q libde265' \
+  || fail "$WORKER_IMAGE: heif-convert has no libde265 (HEIC) decoder"
+for codec in hevc h264; do
+  docker run --rm --entrypoint sh "$WORKER_IMAGE" -c "ffmpeg -hide_banner -decoders | grep -qE ' $codec '" \
+    || fail "$WORKER_IMAGE: ffmpeg has no $codec decoder"
+done
+for tool in ffmpeg ffprobe heif-convert; do
+  docker run --rm --entrypoint sh "$API_IMAGE" -c "command -v $tool" >/dev/null && fail "$API_IMAGE contains $tool"
+done
+# The worker's own media code against those tools and the image's sharp: a generated HEIC
+# decoded to WebP previews, and a poster from an MP4 that ffmpeg reads over HTTP (as from a
+# presigned URL), with its duration; tiny files declaring huge images fail cleanly (prlimit,
+# -max_pixels) instead of being OOM-killed.
+media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
+  set -e
+  cd /tmp
+  ffmpeg -v error -f lavfi -i "testsrc2=size=320x240:rate=1" -frames:v 1 src.png
+  heif-enc -q 50 src.png -o photo.heic >/dev/null
+  ffmpeg -v error -f lavfi -i "testsrc=size=320x240:rate=25" -t 1 -c:v libx264 -pix_fmt yuv420p clip.mp4
+  ffmpeg -v error -f lavfi -i "color=gray:s=11000x11000" -frames:v 1 huge.png
+  heif-enc -q 10 huge.png -o huge.heic >/dev/null
+  ffmpeg -v error -f lavfi -i "color=gray:s=7000x7000" -frames:v 1 -c:v libx264 -preset ultrafast -crf 51 -pix_fmt yuv420p huge.mp4
+  node --input-type=module -e "
+    import { createServer } from \"node:http\";
+    import { readFileSync } from \"node:fs\";
+    const { decodeHeic } = await import(\"file:///app/dist/worker/media/decode.js\");
+    const { renderDerivatives } = await import(\"file:///app/dist/worker/media/images.js\");
+    const { probeVideo, extractFrame } = await import(\"file:///app/dist/worker/media/ffmpeg.js\");
+    const photo = await renderDerivatives(await decodeHeic(\"/tmp/photo.heic\", \"/tmp\"), { autoOrient: false });
+    if (photo.large.width !== 320 || photo.large.height !== 240) throw new Error(\"HEIC preview size\");
+    const permanent = (p) => p.then(() => { throw new Error(\"oversized input accepted\"); }, (e) => { if (e.name !== \"PermanentMediaError\") throw e; });
+    await permanent(decodeHeic(\"/tmp/huge.heic\", \"/tmp\"));
+    const server = createServer((req, res) => res.end(readFileSync(\"/tmp\" + req.url)));
+    await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));
+    const url = \"http://127.0.0.1:\" + server.address().port + \"/clip.mp4\";
+    const probe = await probeVideo(url);
+    if (Math.abs(probe.durationMs - 1000) > 100 || probe.width !== 320) throw new Error(\"probe \" + JSON.stringify(probe));
+    const poster = await renderDerivatives(await extractFrame(url, 0.5), { autoOrient: false });
+    if (poster.large.width !== 320) throw new Error(\"poster size\");
+    const huge = \"http://127.0.0.1:\" + server.address().port + \"/huge.mp4\";
+    await permanent(probeVideo(huge));
+    await permanent(extractFrame(huge, 0));
+    server.close();
+    console.log(\"media ok\");
+  "
+' 2>&1) || true
+echo "$media" | grep -q '^media ok$' || fail "$WORKER_IMAGE: media smoke test failed: $media"
+
 APP_SECRET=$(openssl rand -base64 32)
 expect_exit_on_bad_env "$API_IMAGE" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" -e NODE_ENV=staging
 expect_exit_on_bad_env "$WORKER_IMAGE" -e NODE_ENV=production -e DATABASE_URL=not-a-url

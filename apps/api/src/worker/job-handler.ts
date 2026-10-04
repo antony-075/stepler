@@ -10,4 +10,6 @@ export const WORKER_ENV = Symbol('WORKER_ENV');
 export interface JobHandler<N extends JobName = JobName> {
   readonly name: N;
   handle(data: JobData[N]): Promise<void>;
+  /** Called once the last retry has failed (media jobs: the item becomes `FAILED`). */
+  onFinalFailure?(data: JobData[N]): Promise<void>;
 }

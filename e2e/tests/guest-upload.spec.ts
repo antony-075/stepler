@@ -1,7 +1,7 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
-import { guestLinks, mainLinkPath, openGuestLink } from '../support/guest.js';
+import { guestLinks, mainLinkPath, openGuestLink, pickFiles } from '../support/guest.js';
 import { bigBuffer, pickedFile } from '../support/media.js';
 
 // Guest upload journeys (PR C, Review Focus 2 and 5). They run on all three projects: phones
@@ -20,26 +20,6 @@ async function asGuest(browser: Browser, path: string): Promise<Page> {
   const guest = await openGuestLink(browser, path);
   await expect(guest.getByRole('heading', { level: 1 })).toBeVisible();
   return guest;
-}
-
-/** The pencil action; the first time the name prompt comes first («Пропустити» opens the picker). */
-async function pickFiles(guest: Page, files: Parameters<Page['setInputFiles']>[1]) {
-  const chooser = guest.waitForEvent('filechooser');
-  await guest
-    .getByRole('button', { name: /^Додати (фото й відео|ще)$/ })
-    .first()
-    .click();
-  // Before the first contribution the name prompt comes first; «Пропустити» opens the picker.
-  const prompt = guest.getByRole('dialog', { name: 'Як вас звати?' });
-  const first = await Promise.race([
-    chooser.then(() => 'chooser' as const),
-    prompt.waitFor({ state: 'visible' }).then(
-      () => 'prompt' as const,
-      () => 'chooser' as const,
-    ),
-  ]);
-  if (first === 'prompt') await prompt.getByRole('button', { name: 'Пропустити' }).click();
-  await (await chooser).setFiles(files);
 }
 
 const ownFrames = (guest: Page) => guest.getByRole('list', { name: 'Ваші кадри' });
@@ -77,11 +57,14 @@ test.describe('guest uploads', () => {
     expect(await horizontalOverflow(guest)).toBeLessThanOrEqual(0);
 
     // After a reload the frames are the saved ones: the document with its name, the photo and
-    // video waiting for their previews (PR D).
+    // video with the worker's thumbnails (never the originals) once they are made.
     await guest.reload();
     await expect(ownFrames(guest).getByRole('listitem')).toHaveCount(3);
     await expect(ownFrames(guest).getByText('doc.pdf')).toBeVisible();
-    await expect(ownFrames(guest).getByText('Готується прев’ю')).toHaveCount(2);
+    await expect(ownFrames(guest).locator('img[src*="/derived/"]')).toHaveCount(2, {
+      timeout: 30_000,
+    });
+    await expect(ownFrames(guest).locator('img[src*="/uploads/"]')).toHaveCount(0);
     await guest.context().close();
   });
 

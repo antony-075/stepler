@@ -35,6 +35,12 @@ ff -f lavfi -i 'testsrc=size=320x240:rate=25' -t 1 -c:v libx264 -pix_fmt yuv420p
 ff -f lavfi -i 'testsrc=size=320x240:rate=25' -t 1 -c:v libx264 -pix_fmt yuv420p -f mov clip.mov
 ff -f lavfi -i 'testsrc=size=160x120:rate=10' -t 1 -c:v libvpx-vp9 -b:v 100k clip.webm
 
+# Oversized inputs that are tiny on disk (review I1): a flat 11000×11000 HEIC (121 MP) and a
+# flat 7000×7000 H.264 frame (49 MP). Decoding either whole would exhaust a 512 MB worker.
+ff -f lavfi -i 'color=gray:s=11000x11000' -frames:v 1 "$tmp/huge.png"
+heif-enc -q 10 "$tmp/huge.png" -o huge.heic
+ff -f lavfi -i 'color=gray:s=7000x7000' -frames:v 1 -c:v libx264 -preset ultrafast -crf 51 -pix_fmt yuv420p huge.mp4
+
 # A minimal one-page PDF.
 printf '%s\n' '%PDF-1.4' \
   '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj' \
