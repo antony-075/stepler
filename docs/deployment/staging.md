@@ -52,7 +52,16 @@ While the app is in Testing mode, only the listed test users can sign in.
 
 ## 6. Deploy flow afterwards
 
-A PR from `dev` to `stage` is a staging deploy. Once it is merged and CI on `stage` is green, Render deploys automatically.
+Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minutes are limited, so CI can't gate every deploy). `render.yaml` sets `autoDeployTrigger: "off"` on the three staging services.
+
+1. Before the release, run the full check locally on the release commit: `pnpm release:check` (format, lint, typecheck, unit and integration tests, builds, Storybook, the three-browser e2e, the Docker image checks; needs `pnpm infra:up`). The release PR `dev` → `stage` lists its result. If CI minutes are available, CI on the release PR runs the same full matrix.
+2. Merge the release PR into `stage`.
+3. Render → **Manual Deploy → Deploy latest commit**, in this order:
+   1. `stepler-staging-api` — its pre-deploy command applies the database migrations;
+   2. `stepler-staging-worker`;
+   3. `stepler-staging` (web).
+   Deploy them back to back; the web and API share contracts.
+4. Verify (section 7): `/healthz`, `/api/v1/health/ready`, sign-in, and the release's own checks.
 
 ### Release notes
 
