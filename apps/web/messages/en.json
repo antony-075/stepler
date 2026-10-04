@@ -888,6 +888,7 @@
       "title": "Contact",
       "text": "For personal data requests and content complaints, write to <email>{address}</email>."
     },
-    "navLabel": "Legal documents"
+    "navLabel": "Legal documents",
+    "opensInNewTab": "(opens in a new tab)"
   }
 }

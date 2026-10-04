@@ -62,7 +62,10 @@ export function LegalConsent({
   );
 }
 
-/** A document title linking to its page in a new tab, in the link style of running text. */
+/**
+ * A document title linking to its page in a new tab, in the link style of running text; screen
+ * readers also hear «(відкриється в новій вкладці)».
+ */
 export function LegalDocumentLink({
   document,
   children,
@@ -70,6 +73,7 @@ export function LegalDocumentLink({
   document: LegalDocumentKey;
   children: ReactNode;
 }) {
+  const t = useTranslations('legal');
   return (
     <a
       href={legalPath(document)}
@@ -81,6 +85,7 @@ export function LegalDocumentLink({
       )}
     >
       {children}
+      <span className="sr-only"> {t('opensInNewTab')}</span>
     </a>
   );
 }
