@@ -69,6 +69,8 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slices 3–4 status (PR A, branch `feat/phase-4-guest-session`, 2026-10-03): implemented, PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-03-phase-4-guest-content.md` (owner decisions O1–O4, C1–C20). Guest session exchange and per-collection cookie, the guest page (name prompt, wishes, own frames, the shared gallery for texts), frame numbers, the admin «Вміст» tab for texts (viewer, delete) and content counts on the dashboard. Uploads, the worker and processing follow in PRs B–D; guest own-delete and bulk delete in PR E.
 
+**Slice 6 status (partial; PR B, branch `feat/phase-4-worker`, 2026-10-03): worker and purges implemented, PR to `dev` pending.** pg-boss job queue with transactional enqueue (spike S7), the worker entrypoint and image, a Render background worker for staging (owner actions in `docs/deployment/staging.md` step 8), purge of deleted content and of `DELETING` collections, and an hourly sweep that also removes long-idle guest sessions. Thumbnails, previews and posters follow in PR D.
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
 
 Each slice should be fully tested before moving on.

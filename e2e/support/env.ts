@@ -19,3 +19,7 @@ const pgHost = `127.0.0.1:${compose.POSTGRES_PORT ?? '5433'}`;
 
 export const E2E_DATABASE_URL =
   process.env.E2E_DATABASE_URL ?? `postgresql://${pgAuth}@${pgHost}/stepler_e2e`;
+
+/** Overridable like the database, for a second local stack on other ports. */
+export const E2E_SMTP_URL = process.env.E2E_SMTP_URL ?? 'smtp://127.0.0.1:1025';
+export const E2E_S3_ENDPOINT = process.env.E2E_S3_ENDPOINT ?? 'http://127.0.0.1:8333';

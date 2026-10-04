@@ -56,7 +56,7 @@ Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, 
 apps/
   web/        Next.js App Router — guest (/g/[token]) and admin (/app/...) UI
   api/        NestJS REST API
-  worker/     background jobs (processing, purge, expiry) — added in the processing slice
+  (worker)    background jobs (processing, purge, expiry): apps/api/src/worker, a second entrypoint of api (Phase 4 [C2])
 packages/
   contracts/  Zod schemas for API requests/responses, error codes, shared enums
   ui/         shared React components (shadcn/Radix/Tailwind) + Storybook
@@ -70,7 +70,7 @@ Tooling: pnpm workspaces, Turborepo, Node 24 LTS, TypeScript strict.
 Trade-offs:
 - `contracts` merges the previously planned `types` + `validation`: schemas and types always change together; splitting them creates a false boundary.
 - Storybook lives in `packages/ui` next to the components. If page-level stories are needed later, move it to `apps/storybook`.
-- `apps/worker` shares the Prisma client and domain modules with `api` through workspace code, not through HTTP. It is a second entrypoint of the same modular monolith, not a microservice.
+- The worker (`apps/api/src/worker/main.ts`, image `apps/api/worker.Dockerfile`) shares the Prisma client and domain modules with `api` by plain imports, not through HTTP. It is a second entrypoint of the same modular monolith, not a microservice. (Earlier drafts placed it in `apps/worker`; keeping it inside `apps/api` avoids moving the Prisma schema and client into a shared package, Phase 4 plan [C2].)
 - Module format (spike S2, see ADR 0005): NestJS 12 is ESM-only, so `api`, `worker` and `contracts` are ESM. `contracts` is built with plain `tsc`. Prisma client uses the `prisma-client` generator with ESM output.
 
 ---
@@ -462,12 +462,14 @@ collections/{collectionId}/derived/{contentItemId}/{thumbnail|preview|poster}.we
 
 Decision details: ADR 0009.
 
-- `apps/worker` process, same codebase, queue in PostgreSQL via pg-boss (no new infrastructure).
+- Worker process, same codebase (`apps/api/src/worker`), queue in PostgreSQL via pg-boss (no new infrastructure). Jobs are enqueued in the same transaction as the state change that needs them (spike S7); queues use the `exclusive` policy with one job per entity.
+- *Implemented (Phase 4 PR B):* the queue port and pg-boss adapter, the worker entrypoint and image, `content.purge`, `collection.purge` and the hourly `maintenance.sweep` (re-enqueues lost purges; deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS`, default 400, that never contributed). The jobs below marked *pending* arrive with the upload and processing slices.
 - Jobs:
   - `media.image-derivatives` — thumbnail (~480 px) and preview (~1600 px) WebP via sharp, with pixel limits. The original is always kept unchanged. The preview is required so HEIC/HEIF can be viewed in browsers that do not support the original format. **[verify S5]** HEVC-HEIC decoding (prebuilt sharp likely lacks it; options: libheif in the worker image, WASM decoder).
   - `media.video-poster` — ffmpeg reads the original through a presigned URL with range requests (the 2 GB file never passes through Node memory), extracts one frame.
-  - `storage.purge-content`, `storage.purge-collection`, `storage.delete-object` — idempotent (missing objects are success).
-  - `uploads.expire` — scheduled every 15 min.
+  - `content.purge`, `collection.purge` — idempotent (missing rows and objects are success); implemented. `storage.discard-upload` (bytes of rejected or cancelled uploads) — *pending*, upload slice. (Earlier drafts named these `storage.purge-content`, `storage.purge-collection`, `storage.delete-object`.)
+  - `uploads.expire` — scheduled every 15 min; *pending*, upload slice (the schedule is registered once its handler exists).
+  - `maintenance.sweep` — hourly; implemented (see above).
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED`. Content stays available; the UI shows a type icon instead of a preview.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
@@ -480,7 +482,8 @@ Decision details: ADR 0009.
 - **Delete content:** transaction sets `deletedAt` + audit → immediately invisible and excluded from quota → job purges all storage objects (original and derivatives) → only after successful purge, the `ContentItem`/`MediaObject` rows are permanently deleted. Reports and audit events keep the original content ID (no FK).
 - **Archive collection:** `ARCHIVED`; guest access denied (`403 COLLECTION_UNAVAILABLE`); admin sees content; reversible.
 - **Delete collection:** confirmation in UI; `DELETING` + audit → guest API returns `410`; job aborts active uploads, deletes the collection prefix in resumable batches, then hard-deletes the collection (cascade).
-  - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3, the purge job that hard-deletes `DELETING` collections with slice 5.
+  - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3.
+  - *Implemented in Phase 4 PR B:* the purge. Deleting content or a collection enqueues `content.purge` / `collection.purge` in the same transaction; the worker deletes the objects, then the rows (content: derived objects now, the original with the upload slice; collection: its whole prefix in resumable batches, then the cascade). Audit events stay. The hourly sweep re-enqueues anything older than an hour, which also purges collections left `DELETING` since slice 1. Aborting active uploads joins with the upload slice.
 - **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
 - **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
 - No automatic retention in MVP.

@@ -49,6 +49,7 @@ node_modules/
 # ---------------------------------------------------------------------------
 dist/
 dist-e2e/
+dist-worker/
 .next/
 out/
 storybook-static/

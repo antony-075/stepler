@@ -35,7 +35,7 @@ interface SerializedRequest {
   [key: string]: unknown;
 }
 
-function httpOptions(env: ApiEnv, pretty: boolean): Options {
+function httpOptions(env: Pick<ApiEnv, 'LOG_LEVEL'>, pretty: boolean): Options {
   return {
     level: env.LOG_LEVEL,
     genReqId: assignRequestId,
@@ -77,7 +77,7 @@ export class LoggingModule {
       imports: [
         LoggerModule.forRootAsync({
           inject: [API_ENV],
-          useFactory: (env: ApiEnv) => {
+          useFactory: (env: Pick<ApiEnv, 'LOG_LEVEL' | 'NODE_ENV'>) => {
             const pretty = env.NODE_ENV === 'development' && destination === undefined;
             const options = httpOptions(env, pretty);
             return { pinoHttp: destination === undefined ? options : [options, destination] };

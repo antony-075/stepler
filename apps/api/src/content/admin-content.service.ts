@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import type {
   AdminContentDetail,
   AdminContentListQuery,
@@ -10,6 +10,7 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { toAdminContentDetail, toAdminContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
 
@@ -24,6 +25,7 @@ export class AdminContentService {
     private readonly prisma: PrismaService,
     private readonly queries: ContentQueries,
     private readonly audit: AuditService,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   async list(
@@ -55,19 +57,23 @@ export class AdminContentService {
   }
 
   /**
-   * Soft-deletes the item: gone from every view at once; the worker purges it later. Idempotent:
+   * Soft-deletes the item: gone from every view at once; the `content.purge` job, enqueued in the
+   * same transaction, removes its objects and row later. Idempotent:
    * an already deleted item is a no-op, and concurrent deletes audit once (the conditional
    * update changes the row once).
    */
   async delete(a: AccountPrincipal, id: string, requestId?: string): Promise<void> {
+    // Started outside the transaction, so a first start never runs while it holds a connection.
+    await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
+      // The canonical id comes from the row: the route accepts a UUID in any case.
       const row = await tx.contentItem.findFirst({
         where: { id, collection: ownedBy(a) },
-        select: { collectionId: true, kind: true, frameNo: true },
+        select: { id: true, collectionId: true, kind: true, frameNo: true },
       });
       if (row === null) throw new AppError('NOT_FOUND', 404);
       const { count } = await tx.contentItem.updateMany({
-        where: { id, deletedAt: null },
+        where: { id: row.id, deletedAt: null },
         data: { deletedAt: new Date() },
       });
       if (count === 0) return;
@@ -76,8 +82,12 @@ export class AdminContentService {
         actor: a,
         action: 'content.delete',
         targetType: 'content',
-        targetId: id,
+        targetId: row.id,
         metadata: { kind: row.kind, frameNo: row.frameNo, bulk: false },
+        ...(requestId === undefined ? {} : { requestId }),
+      });
+      await this.jobs.enqueue(tx, 'content.purge', {
+        contentItemId: row.id,
         ...(requestId === undefined ? {} : { requestId }),
       });
     });

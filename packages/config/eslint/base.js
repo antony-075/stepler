@@ -13,6 +13,7 @@ export default function base({ tsconfigRootDir }) {
       ignores: [
         '**/dist/**',
         '**/dist-e2e/**',
+        '**/dist-worker/**',
         '**/.next/**',
         '**/coverage/**',
         '**/storybook-static/**',

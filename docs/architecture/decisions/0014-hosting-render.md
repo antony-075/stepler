@@ -61,3 +61,11 @@ On `https://stepler-staging.onrender.com`, after the `CF-Connecting-IP` fix (#14
   - requests from one machine with different forged `X-Forwarded-For` values shared one bucket and got 429 after the limit;
   - a client-sent `CF-Connecting-IP` is rejected by Cloudflare itself (403, error 1000);
   - a phone on a mobile network, a different client, still got 400 while this machine was limited, so clients do not share a bucket.
+
+## Addendum: staging worker (2026-10-03, Phase 4 PR B)
+
+- **Worker** is a Render background worker (`type: worker`, `stepler-staging-worker`, Frankfurt, `0.5c-512mb` like the API, branch `stage`, `autoDeployTrigger: checksPass`). It runs `apps/api/worker.Dockerfile` (`node dist/worker/main.js`), has no port and no public or private network endpoint, and talks only to PostgreSQL and R2 (ADR 0009).
+- **Env:** `DATABASE_URL` from the Blueprint; `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` are `sync: false` and entered by the owner (the same staging bucket as the API; Render cannot copy values between services). No SMTP, Turnstile or `APP_SECRET`.
+- **Migrations:** the worker has the same `preDeployCommand` as the API. Prisma's advisory lock makes concurrent runs safe, and whichever service deploys first finds the schema it needs. pg-boss keeps its own `pgboss` schema, which it installs and migrates itself.
+- **Connections:** about 23 at peak (API Prisma 10 + pg-boss 2, worker Prisma 5 + pg-boss 5, one migration). The `0.1c-256mb` database's connection limit is not verified; check it in the Render dashboard.
+- **Cost:** background workers have no free tier; one more `0.5c-512mb` instance (owner confirms, W1). Media processing (PR D) may need a larger plan (W4).
