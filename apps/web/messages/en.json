@@ -863,6 +863,13 @@
       "saved": "Name saved",
       "cancel": "Cancel",
       "leave": "Your name isn’t saved. Leave the page without saving?"
+    },
+    "legal": {
+      "title": "Legal documents",
+      "hint": "The terms and policy you accepted, and their current versions.",
+      "current": "Current version {version}",
+      "acceptedAt": "Accepted {date} (version {version})",
+      "notAccepted": "Not accepted"
     }
   },
   "legal": {

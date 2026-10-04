@@ -159,6 +159,15 @@ test.describe('acceptance at sign-in (ADR 0016)', () => {
       legal: { accepted: boolean };
     };
     expect(me.legal.accepted).toBe(true);
+
+    // «Акаунт» → «Правові документи» shows both acceptances.
+    await page.goto('/app/account');
+    const block = page.getByRole('region', { name: 'Правові документи' });
+    await expect(block.getByText(/^Прийнято .+ \(версія v\d+\)$/)).toHaveCount(2);
+    await expect(block.getByRole('link', { name: /Умови використання/ })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
   });
 
   test('an error carried back to /login is explained', async ({ page }) => {
