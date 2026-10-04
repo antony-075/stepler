@@ -47,6 +47,17 @@ describe('package boundary (lint)', () => {
     ['src/core/a.ts', "import { useState } from 'react';"],
     ['src/core/a.ts', "import { Button } from '@stepler/ui/components/button';"],
     ['src/templates/classic/definition.ts', "import { useState } from 'react';"],
+    // Any depth: a deep file, and core subfolders.
+    ['src/templates/classic/parts/deep/x/y.tsx', "import x from '../../../../../../../web/src/a';"],
+    ['src/templates/classic/parts/deep/x/y.tsx', "import x from '../../../../../../web/a';"],
+    [
+      'src/templates/classic/parts/deep/x/y.tsx',
+      "import x from '../../../../../../../../packages/ui/src/a';",
+    ],
+    ['src/a/b/c/d/e.ts', "import x from '../../../../../../../apps/web/src/guest/api';"],
+    ['src/core/math/deep/a.ts', "import { useState } from 'react';"],
+    ['src/react/a.ts', "import x from 'apps/web/src/guest/api';"],
+    ['src/core/math/deep/a.ts', "import x from '../../../../../web/src/a';"],
   ])('%s: %s is an error', async (filePath, code) => {
     expect(await errors(filePath, code)).toEqual(['no-restricted-imports']);
   });
@@ -58,6 +69,11 @@ describe('package boundary (lint)', () => {
     ['src/templates/classic/layout.ts', "import x from '../../../fonts/fonts.css';"],
     ['src/core/a.ts', "import { z } from 'zod';"],
     ['src/core/a.ts', "import { themeSettingsSchema } from '@stepler/contracts';"],
+    ['src/templates/classic/parts/deep/x/y.tsx', "import { classic } from '../../../../index.ts';"],
+    [
+      'src/templates/classic/parts/deep/x/y.tsx',
+      "import x from '../../../../../../../fonts/a.css';",
+    ],
   ])('%s: %s is allowed', async (filePath, code) => {
     expect(await errors(filePath, code)).toEqual([]);
   });

@@ -17,6 +17,13 @@ describe('contrastRatio', () => {
     expect(contrastRatio('#777777', '#777777')).toBe(1);
   });
 
+  test('matches published WCAG reference pairs: #777 fails 4.5:1 on white, #767676 passes', () => {
+    expect(contrastRatio('#777777', '#FFFFFF')).toBeCloseTo(4.48, 2);
+    expect(contrastRatio('#767676', '#FFFFFF')).toBeCloseTo(4.54, 2);
+    expect(contrastRatio('#777777', '#FFFFFF')).toBeLessThan(MIN_RATIO);
+    expect(contrastRatio('#767676', '#FFFFFF')).toBeGreaterThanOrEqual(MIN_RATIO);
+  });
+
   test('matches the editor artboard: pencil ≈ 4.9 and lime ≈ 1.2 on #F0F1EE', () => {
     expect(contrastRatio('#B83E26', '#F0F1EE')).toBeCloseTo(4.9, 1);
     expect(Math.abs(contrastRatio('#B83E26', '#F0F1EE') - 4.9)).toBeLessThanOrEqual(0.05);

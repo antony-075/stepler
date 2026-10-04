@@ -21,13 +21,13 @@ import { ImagePlus } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { TemplateActions, TemplateImage, TemplateLayoutProps } from '../../react/model.ts';
 
+/** Decorative: the h1 under the cover names the collection. */
+const DECORATIVE = '';
+
 /**
  * The hero's rendered width: the phone column (16px gutters), the 720px tablet column (24px
  * gutters), then the 380/420px side sheet less its 32/40px padding.
  */
-/** Decorative: the h1 under the cover names the collection. */
-const DECORATIVE = '';
-
 const COVER_SIZES =
   '(min-width: 1280px) 340px, (min-width: 1024px) 316px, (min-width: 640px) min(720px, calc(100vw - 48px)), calc(100vw - 32px)';
 

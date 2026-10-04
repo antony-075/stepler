@@ -83,7 +83,7 @@
 ## Settled by this plan (low risk; override if you disagree)
 
 - **Package boundary.**
-  - `apps/templates` may import only `@stepler/contracts`, `@stepler/ui`, `react` and `zod`. `src/core` may not import `react` or `@stepler/ui`. Lint enforces both (`no-restricted-imports`).
+  - `apps/templates` may import only `@stepler/contracts`, `@stepler/ui`, `react`, `lucide-react` (the icon set `@stepler/ui` already uses; added in PR H for the templates' own buttons) and `zod`. `src/core` may not import `react` or `@stepler/ui`. Lint enforces both (`no-restricted-imports`).
   - Templates contain no literal UI strings: names, lock reasons and copy come from `apps/web/messages` or the model (ADR 0011). Fixtures carry their own strings.
   - Template ids are stable slugs: `classic`, `fullscreen`, `journal`, `postcard`, `party`, `minimal`.
 - **Theme vocabulary lives in contracts.** `themeSettingsSchema`, `FONT_IDS` and `ACCENT_PRESETS` are API contract, so they sit in `@stepler/contracts`. The per-template refinement (allowed values, locks) lives in `@stepler/templates/core`.

@@ -3,10 +3,10 @@
  *
  * Templates are presentation only: they get a typed model, actions and slots from the app and
  * never reach into it. So no source file may import Next, next-intl, TanStack Query, the web
- * app's `@/*` alias, or a relative path that leaves this package. The core (`src/core`, and each
+ * app's `@/*` alias, or a path into another app or package. The core (`src/core`, and each
  * template's `definition.ts`, which the API also loads) is plain TypeScript: no React, no UI kit.
  *
- * A separate module so `src/core/boundaries.test.ts` can lint fixtures with exactly these rules.
+ * A separate module so `src/core/registry.test.ts` can lint fixtures with exactly these rules.
  */
 
 const APP_ONLY = [
@@ -29,54 +29,42 @@ const CORE_ONLY = [
 ];
 
 /**
- * A relative import that climbs above the package root. Flat config cannot say "outside this
- * directory", so the limit is the file's depth below the package root (src/x.ts is depth 1).
- * @param {number} depth
+ * Paths out of this package, at any depth: a relative climb into a sibling app (`../../web/…`,
+ * `../../../apps/api/…`) or into `packages/` (import those by their package name), and any
+ * specifier that names apps/web or its sources.
  */
-function leavingPackage(depth) {
-  return {
-    regex: `^(\\.\\./){${depth + 1},}`,
-    message: 'A template never imports from outside apps/templates.',
-  };
-}
+const OUTSIDE = [
+  {
+    regex: '^(\\.\\./)+(apps/)?(web|api)(/|$)',
+    message: 'A template never imports from another app.',
+  },
+  {
+    regex: '^(\\.\\./)+packages/',
+    message: 'Import workspace packages by name, never by a relative path.',
+  },
+  {
+    // Non-relative specifiers only; relative climbs are the two patterns above.
+    regex: '^(?!\\.)(.*/)?(apps/web|web/src)(/|$)',
+    message: 'apps/web is not reachable from a template.',
+  },
+];
 
 const SOURCE = '{ts,tsx}';
 
 /** @returns {import('eslint').Linter.Config[]} */
 export function boundaries() {
-  /** @type {import('eslint').Linter.Config[]} */
-  const configs = [];
-  for (const depth of [1, 2, 3, 4]) {
-    const dirs = Array.from({ length: depth - 1 }, () => '*').join('/');
-    const glob = `src/${dirs === '' ? '' : `${dirs}/`}*.${SOURCE}`;
-    configs.push({
-      files: [glob],
-      rules: {
-        'no-restricted-imports': ['error', { patterns: [...APP_ONLY, leavingPackage(depth)] }],
-      },
-    });
-  }
-  // The core and the definitions: everything above plus no React. Later configs override the
-  // rule for the files they match, so the full list is repeated.
-  configs.push(
+  return [
     {
-      files: [`src/core/*.${SOURCE}`],
+      files: [`src/**/*.${SOURCE}`],
+      rules: { 'no-restricted-imports': ['error', { patterns: [...APP_ONLY, ...OUTSIDE] }] },
+    },
+    // The core (any depth) and the definitions: everything above plus no React. A later config
+    // overrides the rule for the files it matches, so the full list is repeated.
+    {
+      files: [`src/core/**/*.${SOURCE}`, `src/templates/*/definition.${SOURCE}`],
       rules: {
-        'no-restricted-imports': [
-          'error',
-          { patterns: [...APP_ONLY, ...CORE_ONLY, leavingPackage(2)] },
-        ],
+        'no-restricted-imports': ['error', { patterns: [...APP_ONLY, ...OUTSIDE, ...CORE_ONLY] }],
       },
     },
-    {
-      files: [`src/templates/*/definition.${SOURCE}`],
-      rules: {
-        'no-restricted-imports': [
-          'error',
-          { patterns: [...APP_ONLY, ...CORE_ONLY, leavingPackage(3)] },
-        ],
-      },
-    },
-  );
-  return configs;
+  ];
 }

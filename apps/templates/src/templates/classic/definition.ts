@@ -29,8 +29,9 @@ export const classic: TemplateDefinition = {
       { id: 'sand', stops: ['#F0F1EE', '#EFE8DD'], angle: 180 },
       { id: 'lilac', stops: ['#FFFFFF', '#ECE6F0'], angle: 180 },
     ],
-    // The least dimming that keeps the heading colour readable over any picture.
-    imageDim: { min: Math.ceil(minVeil(TEXT, VEIL) * 100), max: 90 },
+    // The least dimming that keeps the heading colour readable over any picture. `minVeil` is a
+    // whole percent already; rounding only drops float noise (0.53 * 100 = 53.000000000000004).
+    imageDim: { min: Math.round(minVeil(TEXT, VEIL) * 100), max: 90 },
     backgroundImageSource: 'own',
     coverPlacements: ['top', 'none'],
     aligns: ['start', 'center'],

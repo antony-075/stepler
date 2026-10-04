@@ -76,22 +76,28 @@ print(' '.join(f'{a.axisTag}={a.defaultValue:g}' for a in f['fvar'].axes if a.ax
 import sys
 from fontTools.ttLib import TTFont
 path, reserved, renamed = sys.argv[1:4]
-# Family, full, unique, PostScript, typographic and variations names; not copyright (0) or
-# trademark (7), which must stay as published.
-NAMING = {1, 3, 4, 6, 16, 18, 21, 25}
+# Every naming record: family, full, unique, PostScript, typographic, variations prefix, and
+# every record from 256 up (fvar instance and STAT names). Attribution records keep the original
+# names as published: copyright (0), trademark (7), manufacturer (8), designer (9), description
+# (10), vendor and designer URLs (11, 12), licence and licence URL (13, 14).
+ATTRIBUTION = {0, 7, 8, 9, 10, 11, 12, 13, 14}
 font = TTFont(path)
+# PostScript-style names: ID 6, ID 25, and fvar instances' postscriptNameID.
+postscript = {6, 25} | {
+    instance.postscriptNameID for instance in (font['fvar'].instances if 'fvar' in font else [])
+}
 forms = [(reserved, renamed), (reserved.replace(' ', ''), renamed.replace(' ', '')),
          (reserved.replace(' ', '_'), renamed.replace(' ', '')), ('ParaType', 'Stepler')]
 for record in font['name'].names:
-    if record.nameID not in NAMING:
+    if record.nameID in ATTRIBUTION:
         continue
     text = record.toUnicode()
     for old, new in forms:
-        # PostScript names (6, 25) never contain spaces.
-        text = text.replace(old, new.replace(' ', '') if record.nameID in (6, 25) else new)
+        # PostScript names never contain spaces.
+        text = text.replace(old, new.replace(' ', '') if record.nameID in postscript else new)
     record.string = text
 for record in font['name'].names:
-    if record.nameID in NAMING and any(old in record.toUnicode() for old, _ in forms):
+    if record.nameID not in ATTRIBUTION and any(old in record.toUnicode() for old, _ in forms):
         sys.exit(f'{path}: name {record.nameID} still has a reserved name')
 font.save(path)
 " "$OUT/$name.woff2" "$reserved" "$renamed"

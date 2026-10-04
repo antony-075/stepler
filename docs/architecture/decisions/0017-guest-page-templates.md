@@ -38,7 +38,8 @@ Three things make this more than styling:
   settings (never throwing: an unknown template or invalid settings fall back to defaults) and
   scopes the theme's CSS variables under `[data-template=<id>]`.
 - **Boundary, enforced by lint** (`apps/templates/eslint.boundaries.js`, tested): templates import
-  only `@stepler/contracts`, `@stepler/ui`, `react`, `lucide-react` and `zod`; never Next,
+  only `@stepler/contracts`, `@stepler/ui`, `react`, `lucide-react` (the icon set the UI kit
+  already uses, for the templates' own buttons) and `zod`; never Next,
   next-intl, TanStack Query, the web app's `@/*` or a relative path out of the package. The core
   and every `definition.ts` import no React or UI kit. Templates contain no literal UI strings
   (ADR 0011): copy arrives in the model.
