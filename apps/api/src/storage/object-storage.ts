@@ -92,6 +92,11 @@ export interface ObjectStorage {
     uploadId: string,
     parts: readonly Pick<StoredPart, 'partNumber' | 'etag'>[],
   ): Promise<void>;
+  /**
+   * Streams the object into the file at `path` (the worker's derivative inputs; never into
+   * memory). Returns `false` when the object does not exist.
+   */
+  downloadToFile(key: string, path: string): Promise<boolean>;
   /** Bytes `start`…`endInclusive` (fewer when the object is shorter). Small reads only. */
   readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array>;
   /** Server-side write (derivatives); never used for guest uploads. */

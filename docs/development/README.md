@@ -5,6 +5,7 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
+- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos) and ffmpeg/ffprobe (video posters). macOS: `brew install libheif ffmpeg` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg`. Check with `heif-dec --list-decoders` (lists `libde265`). The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1).
 - Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace

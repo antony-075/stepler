@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import type { Job } from 'pg-boss';
-import type { JobData, JobName } from '../jobs/job-names.js';
+import { JOB_OPTIONS, type JobData, type JobName } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
 import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
+import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
@@ -35,14 +36,15 @@ export class JobRunner implements OnApplicationBootstrap {
     sweep: MaintenanceSweepHandler,
     discardUpload: DiscardUploadHandler,
     expireUploads: ExpireUploadsHandler,
+    imageDerivatives: ImageDerivativesHandler,
   ) {
-    // Media handlers join with media processing (PR D).
     this.handlers = [
       purgeContent,
       purgeCollection,
       sweep,
       discardUpload,
       expireUploads,
+      imageDerivatives,
     ] as JobHandler[];
   }
 
@@ -70,15 +72,29 @@ export class JobRunner implements OnApplicationBootstrap {
     this.logger.log({ msg: 'worker started', jobs: this.handlers.map((handler) => handler.name) });
   }
 
-  /** Logs ids only: payloads are ids too, but never text, names or file names. */
-  private async run(handler: JobHandler, job: Job<JobData[JobName]>): Promise<void> {
+  /**
+   * Logs ids only: payloads are ids too, but never text, names or file names. A failure of the
+   * last attempt (`retryCount` has reached the queue's `retryLimit`) also runs the handler's
+   * `onFinalFailure`.
+   */
+  async run(handler: JobHandler, job: Job<JobData[JobName]>): Promise<void> {
     const context = { jobId: job.id, name: job.name, requestId: job.data.requestId };
     const startedAt = Date.now();
     try {
       await handler.handle(job.data);
       this.logger.log({ msg: 'job done', ...context, durationMs: Date.now() - startedAt });
     } catch (error) {
-      this.logger.error({ msg: 'job failed', ...context, reason: describeError(error) });
+      const final = job.retryCount >= JOB_OPTIONS[handler.name].retryLimit;
+      this.logger.error({ msg: 'job failed', ...context, final, reason: describeError(error) });
+      if (final && handler.onFinalFailure !== undefined) {
+        await handler.onFinalFailure(job.data).catch((hookError: unknown) => {
+          this.logger.error({
+            msg: 'job final-failure hook failed',
+            ...context,
+            reason: describeError(hookError),
+          });
+        });
+      }
       throw error;
     }
   }

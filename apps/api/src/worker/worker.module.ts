@@ -14,11 +14,13 @@ import { OBJECT_STORAGE } from '../storage/object-storage.js';
 import { S3ObjectStorage } from '../storage/s3-object-storage.js';
 import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
+import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
+import { DerivativeStore } from './media/derivative-store.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -60,6 +62,8 @@ export class WorkerModule {
         MaintenanceSweepHandler,
         DiscardUploadHandler,
         ExpireUploadsHandler,
+        DerivativeStore,
+        ImageDerivativesHandler,
         JobRunner,
       ],
     };
