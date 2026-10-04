@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import { compose, E2E_DATABASE_URL, E2E_S3_ENDPOINT, E2E_SMTP_URL } from './support/env.js';
 
-// Dedicated ports so e2e never collides with `pnpm dev` (3000/4000).
-const API_PORT = 4100;
-const WEB_PORT = 3100;
+// Dedicated ports so e2e never collides with `pnpm dev` (3000/4000); overridable for a second
+// stack running at the same time (uploads then need that origin in the bucket's CORS).
+const API_PORT = Number(process.env.E2E_API_PORT ?? 4100);
+const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100);
 
 export default defineConfig({
   testDir: './tests',
