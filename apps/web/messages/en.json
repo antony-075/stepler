@@ -846,5 +846,22 @@
       "cancel": "Cancel",
       "leave": "Your name isn’t saved. Leave the page without saving?"
     }
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "description": "The terms of using Stepler."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "How Stepler handles personal data."
+    },
+    "draftBanner": "Draft — the text will be replaced",
+    "meta": "Version {version} · effective from <time>{date}</time>",
+    "contact": {
+      "title": "Contact",
+      "text": "For personal data requests and content complaints, write to <email>{address}</email>."
+    },
+    "navLabel": "Legal documents"
   }
 }

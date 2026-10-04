@@ -38,17 +38,19 @@ type AlertProps = {
   children?: ReactNode;
   /** A follow-up control (e.g. a Retry button), shown under the text. */
   action?: ReactNode;
+  /** Overrides the live-region role: `note` for a static notice that is part of the page. */
+  role?: 'alert' | 'status' | 'note';
   className?: string;
 };
 
-function Alert({ variant = 'info', title, children, action, className }: AlertProps) {
+function Alert({ variant = 'info', title, children, action, className, role }: AlertProps) {
   const { icon: Icon, className: iconClassName } = ICONS[variant];
 
   return (
     <div
       data-slot="alert"
       data-variant={variant}
-      role={variant === 'error' ? 'alert' : 'status'}
+      role={role ?? (variant === 'error' ? 'alert' : 'status')}
       className={cn(alertVariants({ variant }), className)}
     >
       <Icon aria-hidden="true" className={cn('size-5 shrink-0', iconClassName)} />

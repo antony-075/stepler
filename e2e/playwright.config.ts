@@ -86,6 +86,9 @@ export default defineConfig({
         PORT: String(WEB_PORT),
         HOSTNAME: '127.0.0.1',
         API_INTERNAL_URL: `http://127.0.0.1:${API_PORT}`,
+        // Placeholder legal texts are allowed everywhere but production ([C20]).
+        LEGAL_ALLOW_DRAFT: 'true',
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
       },
       reuseExistingServer: false,
     },

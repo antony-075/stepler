@@ -8,6 +8,8 @@ const config: NextConfig = {
   output: 'standalone',
   // Monorepo root, so the standalone output traces workspace packages.
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
+  // The legal texts are read at request time; standalone output traces only imported files.
+  outputFileTracingIncludes: { '/legal/[document]': ['./content/legal/**/*'] },
   poweredByHeader: false,
   // packages/ui ships TypeScript sources.
   transpilePackages: ['@stepler/ui'],
