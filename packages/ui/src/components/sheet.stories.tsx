@@ -92,6 +92,59 @@ export const RightOnPhone: Story = {
   },
 };
 
+function BottomSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline">Write a wish</Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" aria-describedby={undefined}>
+        <SheetHeader closeLabel="Close">
+          <SheetTitle>Your wish</SheetTitle>
+        </SheetHeader>
+        <SheetBody className="p-4">
+          <p>A short task over the guest page.</p>
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** A short guest task: from the bottom edge on a phone, full width. */
+export const BottomOnPhone: Story = {
+  render: () => <BottomSheet />,
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('button', { name: 'Write a wish' });
+    await userEvent.click(trigger);
+    const sheet = await screen.findByRole('dialog', { name: 'Your wish' });
+    await expect(sheet).toHaveAttribute('data-side', 'bottom');
+    await waitFor(() =>
+      expect(Math.round(sheet.getBoundingClientRect().bottom)).toBe(window.innerHeight),
+    );
+    await expect(Math.round(sheet.getBoundingClientRect().width)).toBe(window.innerWidth);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await expect(trigger).toHaveFocus();
+  },
+};
+
+/** From `sm` it is a centred dialog of at most 560px. */
+export const BottomOnTablet: Story = {
+  globals: { viewport: { value: 'tablet' } },
+  render: () => <BottomSheet />,
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Write a wish' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Your wish' });
+    await waitFor(async () => {
+      const box = sheet.getBoundingClientRect();
+      await expect(Math.round(box.width)).toBe(560);
+      await expect(Math.abs(box.top + box.height / 2 - window.innerHeight / 2)).toBeLessThanOrEqual(
+        1,
+      );
+    });
+  },
+};
+
 export const NavigationDark: Story = {
   ...Navigation,
   globals: { theme: 'dark' },

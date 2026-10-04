@@ -144,11 +144,12 @@ describe('guest link resolution', () => {
     );
   });
 
-  test('a live link → its title, description and permissions only, not cached', async () => {
+  test('a live link → its collection id, title, description and permissions only, not cached', async () => {
     const { token, linkId, collectionId } = await seed(tokens);
     const res = await resolve(token).expect(200);
     expect(res.headers['cache-control']).toContain('no-store');
     expect(resolveGuestLinkResponseSchema.parse(res.body)).toEqual({
+      collectionId,
       collection: { title: 'Весілля', description: 'Опис' },
       permissions: {
         canUploadPhotos: true,
@@ -159,8 +160,8 @@ describe('guest link resolution', () => {
         canDeleteOwn: true,
       },
     });
-    const text = JSON.stringify(res.body);
-    for (const id of [linkId, collectionId]) expect(text).not.toContain(id);
+    // The collection id is needed for the session exchange [C3]; the link id stays private.
+    expect(JSON.stringify(res.body)).not.toContain(linkId);
   });
 
   test('malformed and unknown tokens → the same 404; a rotated-out token → 410', async () => {

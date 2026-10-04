@@ -19,7 +19,18 @@
     "LINK_INACTIVE": "This link is paused.",
     "DEFAULT_LINK_NOT_REVOCABLE": "The main link can’t be revoked or deleted. Replace it instead.",
     "COLLECTION_ARCHIVED": "This collection is closed.",
-    "COLLECTION_UNAVAILABLE": "This collection is unavailable."
+    "COLLECTION_UNAVAILABLE": "This collection is unavailable.",
+    "GUEST_SESSION_REQUIRED": "Your guest session was lost. Open the link again.",
+    "QUOTA_EXCEEDED": "This collection is full — new frames can’t be added.",
+    "FILE_TYPE_NOT_ALLOWED": "This file type isn’t supported.",
+    "FILE_TOO_LARGE": "This file is too large.",
+    "UPLOAD_SIZE_MISMATCH": "The file didn’t upload completely.",
+    "UPLOAD_INCOMPLETE": "The upload didn’t finish. Try again.",
+    "UPLOAD_EXPIRED": "The upload took too long. Add the file again.",
+    "UPLOAD_IN_PROGRESS": "This upload is being checked; try again in a moment.",
+    "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
+    "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
+    "CONTENT_NOT_FOUND": "This frame was deleted."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -83,69 +94,17 @@
   "landing": {
     "metaTitle": "Stepler — photos and videos from every guest in one collection",
     "metaDescription": "Create a collection for your event and share a link or QR code. Guests add photos and videos from their phones — no app, no sign-up.",
-    "titleLines": {
-      "one": "Collect every",
-      "two": "photo and video",
-      "three": "from your event"
-    },
-    "lede": "Create a collection, show guests a QR code, and all their photos, videos and messages gather in one place. Guests need no app and no account.",
-    "benefits": {
-      "title": "Why it’s easy",
-      "items": {
-        "onePlace": {
-          "title": "Every memory in one place",
-          "text": "Guests’ photos, videos, documents and messages in one collection."
-        },
-        "noSignUp": {
-          "title": "No sign-up for guests",
-          "text": "They scan the QR code or open the link in their browser."
-        },
-        "control": {
-          "title": "You control access",
-          "text": "Decide whether guests see what others added, and pause the link whenever you need."
-        },
-        "anyEvent": {
-          "title": "For any occasion",
-          "text": "Weddings, birthdays, team events, trips and get-togethers."
-        }
-      }
-    },
+    "title": "Collect every photo and video from your event",
+    "subline": "Guests scan a QR code and add photos, videos and wishes. No app, no account.",
     "how": {
       "title": "How it works",
       "steps": {
-        "create": {
-          "label": "Create a collection",
-          "image": "An example collection, “Olia & Marko’s wedding”, with a Create collection button"
-        },
-        "share": {
-          "label": "Share the QR code with guests",
-          "image": "A QR code and the guest link stepler.app/c/k7Xa… with a copy button"
-        },
-        "collect": {
-          "label": "Guests add their memories",
-          "image": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
-        }
+        "create": "Create a collection for your event",
+        "share": "Show guests the QR code",
+        "collect": "Guests add photos and wishes"
       },
-      "sampleTitle": "Olia & Marko’s wedding",
-      "create": "Create collection",
-      "linkValue": "stepler.app/c/k7Xa…"
-    },
-    "facts": {
-      "title": "Stepler in short",
-      "items": {
-        "apps": {
-          "value": "0",
-          "text": "apps for guests to install"
-        },
-        "qr": {
-          "value": "1",
-          "text": "QR code for the whole event"
-        },
-        "original": {
-          "value": "No compression",
-          "text": "photos and videos in original quality"
-        }
-      }
+      "note": "What guests see",
+      "phoneAlt": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
     }
   },
   "toast": {
@@ -239,7 +198,9 @@
     "showAll": "Show all",
     "showMoreArchived": "Show more from the archive",
     "card": {
-      "share": "Share"
+      "share": "Share",
+      "frames": "{count, plural, one {# frame} other {# frames}}",
+      "lastAt": "latest at {time}"
     },
     "actions": {
       "unarchiveConfirmTitle": "Unarchive “{title}”?",
@@ -273,7 +234,6 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Saved",
-      "access": "Guest access",
       "archive": "Archive",
       "archiveHint": "Guests lose access, everything is kept. You can bring it back at any time.",
       "unarchiveHint": "Guests can open the collection again.",
@@ -291,10 +251,6 @@
       "deleted": "Collection deleted",
       "leave": "The collection details aren’t saved. Leave the page without saving?",
       "subtitle": "Title and description, guest access, archive and deletion.",
-      "accessHint": "What the main link allows. Each link has its own permissions.",
-      "accessNoLink": "The main link appears once you open Links.",
-      "accessChange": "Change",
-      "accessChangeName": "Change guest access",
       "archiving": "Archiving",
       "archiveTitle": "Archive the collection"
     },
@@ -319,19 +275,115 @@
       "failed": "Couldn’t save"
     }
   },
+  "content": {
+    "filterLabel": "Content type",
+    "filter": {
+      "all": "All",
+      "photo": "Photos",
+      "video": "Videos",
+      "document": "Documents",
+      "text": "Texts"
+    },
+    "filterLocked": {
+      "photo": "No link lets guests add photos",
+      "video": "No link lets guests add videos",
+      "document": "No link lets guests add documents",
+      "text": "No link lets guests write wishes"
+    },
+    "sortLabel": "Order",
+    "sort": {
+      "newest": "Newest first",
+      "frame": "By frame number"
+    },
+    "refresh": "Refresh",
+    "refreshed": "Updated",
+    "newFrames": "{count, plural, one {# new frame} other {# new frames}}",
+    "showNew": "Show",
+    "listLabel": "Frames of the collection",
+    "loading": "Loading frames…",
+    "loadMore": "Show more",
+    "loadFailed": "Couldn’t load the frames.",
+    "retry": "Try again",
+    "emptyFilter": {
+      "photo": "No photos yet",
+      "video": "No videos yet",
+      "document": "No documents yet",
+      "text": "No texts yet"
+    },
+    "emptyFilterText": "They’ll appear here as soon as guests add them.",
+    "showAll": "Show all",
+    "kind": {
+      "PHOTO": "photo",
+      "VIDEO": "video",
+      "DOCUMENT": "document",
+      "TEXT": "wish"
+    },
+    "kindTitle": {
+      "PHOTO": "Photo",
+      "VIDEO": "Video",
+      "DOCUMENT": "Document",
+      "TEXT": "Wish"
+    },
+    "frameName": "Frame {number}, {kind}, {time}, {name}",
+    "noName": "No name",
+    "pendingPreview": "Preview on its way",
+    "viewer": {
+      "close": "Close",
+      "prev": "Previous frame",
+      "next": "Next frame",
+      "delete": "Delete",
+      "added": "Added",
+      "type": "Type",
+      "from": "From",
+      "download": "Download",
+      "file": "File",
+      "size": "Size",
+      "dimensions": "Dimensions",
+      "duration": "Duration",
+      "numberHint": "Numbers never change after a deletion",
+      "loadingMedia": "Loading the file…",
+      "mediaFailed": "Couldn’t open the file.",
+      "videoFallback": "Your browser can’t play this video — download it.",
+      "noPreviewYet": "The preview comes later",
+      "documentOpen": "Documents open after you download them.",
+      "photoAlt": "Frame {number}",
+      "dimensionsValue": "{width, number} × {height, number}"
+    },
+    "delete": {
+      "title": "Delete frame {frame}?",
+      "text": "Guests won’t see it any more. Its number won’t be used again.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "pending": "Deleting",
+      "failed": "Couldn’t delete the frame. Try again.",
+      "done": "Frame deleted"
+    },
+    "previewUnavailable": "No preview",
+    "select": {
+      "start": "Select",
+      "all": "Select all loaded",
+      "count": "{count, number} selected",
+      "barLabel": "Actions on the selected frames",
+      "clear": "Clear selection",
+      "delete": "Delete",
+      "selectedName": "{name}, selected",
+      "confirmTitle": "Delete {count, plural, one {# frame} other {# frames}}?",
+      "confirmText": "Guests won’t see them any more. Their numbers won’t be used again.",
+      "confirm": "Delete",
+      "failed": "Couldn’t delete every frame. Try again — the ones already deleted stay deleted.",
+      "done": "{count, plural, one {# frame deleted} other {# frames deleted}}"
+    }
+  },
   "guestLinks": {
-    "permissions": {
-      "photos": "photos",
-      "videos": "videos",
-      "documents": "documents",
-      "texts": "wishes",
-      "add": "add {items}",
-      "seeAll": "see what every guest added",
-      "ownOnly": "see only their own",
-      "both": "{add}, and {see}",
+    "summary": {
+      "photos": "Photos",
+      "videos": "Videos",
+      "documents": "Documents",
+      "texts": "Wishes",
       "viewOnly": "View only",
-      "guestsCan": "Guests can {what}",
-      "allowed": "The organiser allows you to {what}"
+      "seeOwn": "See only their own",
+      "seeAll": "See everything",
+      "deleteOwn": "Can delete their own"
     }
   },
   "share": {
@@ -420,7 +472,12 @@
       "addTitle": "What guests can add",
       "addDescription": "Choose what guests can add through this link.",
       "seeTitle": "What guests see",
-      "seeDescription": "Whose content guests see when they open the link."
+      "seeDescription": "Whose content guests see when they open the link.",
+      "deleteOwn": {
+        "title": "Guests can delete their own",
+        "hint": "Each guest can delete only what they added themselves.",
+        "disabled": "First let guests add something."
+      }
     },
     "state": {
       "title": "Link status",
@@ -514,9 +571,6 @@
       "settings": "Manage",
       "settingsName": "Manage “{name}”",
       "showQr": "Show the QR code and share “{name}”",
-      "pause": "Pause",
-      "resume": "Turn on",
-      "menu": "Actions for “{name}”",
       "copyLink": "Copy link"
     },
     "sheet": {
@@ -527,8 +581,6 @@
   "guestLink": {
     "loading": "Opening the collection",
     "retry": "Try again",
-    "soonAdd": "You’ll be able to add them here soon.",
-    "soonView": "Soon you’ll be able to see what guests added here.",
     "paused": {
       "title": "This link is paused",
       "text": "The organiser has paused adding for now."
@@ -552,7 +604,152 @@
     "rateLimited": {
       "title": "Too many tries: try again in a minute"
     },
-    "failed": "Couldn’t open the collection. Check your connection and try again."
+    "failed": "Couldn’t open the collection. Check your connection and try again.",
+    "quotaFull": {
+      "title": "This collection is full",
+      "text": "New frames can’t be added."
+    },
+    "addedBeforeClosed": "{count, plural, one {# frame was} other {# frames were}} added before the link closed."
+  },
+  "guest": {
+    "counts": "{count, plural, one {# frame} other {# frames}}",
+    "lastAt": "latest at {time}",
+    "onlyOrganizer": "Only the organiser will see what you add",
+    "ownTitle": "Your frames from this device",
+    "ownEmpty": "Frames you add will appear here.",
+    "allTitle": "All frames",
+    "allEmpty": "You’ll be the first",
+    "allEmptyText": "Guests’ photos, videos and wishes will appear here.",
+    "listLabelOwn": "Your frames",
+    "listLabelAll": "All frames of the collection",
+    "loadingFrames": "Loading frames…",
+    "loadMore": "Show more",
+    "listError": "Couldn’t load the frames.",
+    "retry": "Try again",
+    "writeWish": "Write a wish",
+    "you": "You: {name}",
+    "noName": "You haven’t given a name",
+    "changeName": "Change",
+    "setName": "Add your name",
+    "frame": {
+      "textOwn": "Frame {number}, wish, {time}",
+      "textOther": "Wish, {time}",
+      "fileOwn": "Frame {number}, {time}, preview on its way",
+      "fileOther": "Frame, {time}, preview on its way",
+      "pendingPreview": "Preview on its way",
+      "documentOwn": "Frame {number}, document {type}, {time}",
+      "documentOther": "Document, {time}",
+      "documentType": "DOC",
+      "mediaOwn": "Frame {number}, {kind}, {time}",
+      "mediaOther": "{kind}, {time}",
+      "failedOwn": "Frame {number}, {kind}, {time}, no preview",
+      "failedOther": "{kind}, {time}, no preview",
+      "previewUnavailable": "No preview",
+      "kind": {
+        "PHOTO": "photo",
+        "VIDEO": "video"
+      }
+    },
+    "textSent": "Wish added",
+    "name": {
+      "title": "What’s your name?",
+      "editTitle": "Your name",
+      "hint": "The organiser sees it next to your frames. Other guests don’t.",
+      "label": "Name",
+      "continue": "Continue",
+      "skip": "Skip",
+      "save": "Save",
+      "clear": "No name",
+      "required": "Enter a name or choose Skip",
+      "tooLong": "At most {max, number} characters",
+      "invalid": "Use one line without special characters",
+      "close": "Close",
+      "failed": "Couldn’t save your name. Try again."
+    },
+    "composer": {
+      "title": "Your wish",
+      "label": "Wish",
+      "counter": "{count, number} / {max, number}",
+      "send": "Send",
+      "sending": "Sending…",
+      "empty": "Write a few words",
+      "tooLong": "At most {max, number} characters",
+      "invalid": "Remove special characters from the text",
+      "close": "Close",
+      "failed": "Couldn’t send it. Try again — your wish won’t be added twice."
+    },
+    "addPhotosVideos": "Add photos and videos",
+    "addPhotos": "Add photos",
+    "addVideos": "Add videos",
+    "addDocuments": "Add documents",
+    "addMore": "Add more",
+    "upload": {
+      "keepOpen": "Keep this page open while your frames upload",
+      "queued": "Queued",
+      "processing": "Processing…",
+      "done": "Added",
+      "failed": "Failed",
+      "retry": "Retry",
+      "cancel": "Cancel: frame {index} of {total}",
+      "position": "{index} of {total}",
+      "percent": "{value}%",
+      "frameQueued": "Frame {index} of {total}, queued",
+      "frameUploading": "Frame {index} of {total}, uploading",
+      "frameProcessing": "Frame {index} of {total}, processing",
+      "frameDone": "Frame {number}, added",
+      "frameFailed": "Frame {index} of {total}, failed",
+      "added": "{added} of {total} added",
+      "failedCount": "{count} failed",
+      "cancelled": "Cancelled {count}",
+      "bytes": "{done} of {total}",
+      "eta": "About {minutes, plural, one {# min} other {# min}} left",
+      "progress": "Uploading frames",
+      "announce": "Added {added} of {total}",
+      "announceFailed": "Added {added} of {total}. Failed: {failed}",
+      "retryFailed": "Retry failed",
+      "cancelRest": "Cancel the rest",
+      "offline": "No connection. We’ll continue as soon as it’s back",
+      "retryNow": "Retry now",
+      "why": "Why?",
+      "rejected": "{count, plural, one {# file can’t be added} other {# files can’t be added}}: {reasons}",
+      "reasonType": "format {exts}",
+      "reasonSize": "too large or empty",
+      "rejectedHelp": "You can add: {types}. Photos up to {photo}, videos up to {video}, documents up to {document}.",
+      "truncated": "Up to {max, number} files at a time — the first {max, number} were added",
+      "quotaFull": "The collection is full — new frames can’t be added",
+      "doneTitle": "Done, your frames",
+      "doneCount": "{added} of {total}",
+      "stackLabel": "Your frames: {count, number}",
+      "allFailedTitle": "Couldn’t add your frames",
+      "retryAll": "Retry all",
+      "listLabel": "Frames uploading",
+      "reason": {
+        "NETWORK": "the connection dropped",
+        "STORAGE_403": "storage refused the file"
+      }
+    },
+    "viewer": {
+      "close": "Close",
+      "prev": "Previous frame",
+      "next": "Next frame",
+      "download": "Download",
+      "delete": "Delete",
+      "added": "Added",
+      "type": "Type",
+      "file": "File",
+      "size": "Size",
+      "otherHint": "Only the organiser sees who added this frame.",
+      "photoAlt": "Frame {number}",
+      "deleteTitle": "Delete frame {frame}?",
+      "deleteText": "The organiser won’t see it any more either.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deletePending": "Deleting",
+      "deleteFailed": "Couldn’t delete the frame. Try again.",
+      "deleted": "Frame deleted"
+    },
+    "refresh": "Refresh",
+    "refreshed": "Refreshed"
   },
   "account": {
     "pageTitle": "Account",

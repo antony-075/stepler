@@ -67,6 +67,16 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 1 status: implemented on branch `feat/phase-4-collections-c` (2026-10-02, web in direction C), PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-01-phase-4-slice-1-collections.md` (owner decisions D1–D9). Open acceptance criterion: "A default guest link is created" with a new collection (D3) is delivered by slice 2, which adds the link to the create transaction and backfills existing collections.
 
+**Slices 3–4 status (PR A, branch `feat/phase-4-guest-session`, 2026-10-03): implemented, PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-03-phase-4-guest-content.md` (owner decisions O1–O4, C1–C20). Guest session exchange and per-collection cookie, the guest page (name prompt, wishes, own frames, the shared gallery for texts), frame numbers, the admin «Вміст» tab for texts (viewer, delete) and content counts on the dashboard. Uploads, the worker and processing follow in PRs B–D; guest own-delete and bulk delete in PR E.
+
+**Slice 6 status (PR B + PR D, branches `feat/phase-4-worker` and `feat/phase-4-media-processing`, 2026-10-04): worker, purges and media processing implemented, PRs to `dev` pending.** pg-boss job queue with transactional enqueue (spike S7), the worker entrypoint and image, a Render background worker for staging (owner actions in `docs/deployment/staging.md` step 8), purge of deleted content and of `DELETING` collections, and an hourly sweep that also removes long-idle guest sessions. PR D adds photo thumbnails and previews (HEIC included) and video posters with durations (spike S5 tools in the worker image), shown in the admin grid and viewer and in the guest's own frames; staging promotion waits for owner actions R1, R2 and W4, then the smoke checklist S1 (`docs/development/README.md`).
+
+**Slice 5 status (PR C, branch `feat/phase-4-uploads`, 2026-10-04): uploads implemented, PR to `dev` pending; not promoted to staging before PR D [C13].** Upload sessions with quota reservations, direct multipart upload to storage for every file, verified completion (parts, size, content signature) with a claim instead of a long transaction, cancel, expiry and discard jobs, rate limits, the guest uploader with every state, file frames and the viewer for the admin, downloads as attachments. Photo and video previews follow in PR D (until then «Готується прев’ю»).
+
+**Slices 7–8 status (PR E, branch `feat/phase-4-content-management`, 2026-10-04): implemented, PR to `dev` pending.** Admin multi-select and bulk delete, guest own-content deletion with the «Гості можуть видаляти своє» link switch, the guest's shared gallery («Усі кадри») with the viewer and «Оновити» (never polled), and borderless photo-grid tiles for admin and guest (owner remark 62). Hide stays with slice 9 (operator) per [O3].
+
+**Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10). Staging only until then.
+
 Each slice should be fully tested before moving on.
 
 Not in MVP (post-MVP per `PRODUCT.md`): folders, billing, retention policies, analytics, downloads/ZIP, custom form builder.

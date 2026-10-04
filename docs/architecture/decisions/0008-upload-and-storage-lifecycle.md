@@ -88,4 +88,51 @@ With these variables set, anonymous requests are rejected (403) and a wrong secr
 - R2's handling of the checksum and signed-header settings above;
 - R2 lifecycle rules (abort incomplete multipart uploads).
 
-Not tested in the spike (Task 8 decides and tests): signing `Content-Length` on each part URL so a part cannot exceed the fixed part size.
+Not tested in the spike (Task 8 decides and tests): signing `Content-Length` on each part URL so a part cannot exceed the fixed part size. **Closed (PR C, 2026-10-03):** every part URL signs its exact `Content-Length`; a part of another length is refused with 403 on SeaweedFS (`test/storage-multipart.e2e.spec.ts`), and from Chromium and WebKit in spike S9. Still to verify on real R2 in staging (owner smoke test S1).
+
+## Addendum (2026-10-03): every upload is multipart; the single PUT is dropped
+
+**Status:** accepted (owner/coordinator decision after the independent review of PR C, finding I1).
+
+**Context.** The first implementation used one presigned `PUT` for files up to 100 MB (spec §10.2). On SeaweedFS the review proved that such a URL stays writable for its whole TTL (15 min) whatever happens to the upload:
+- after cancel, rejection, expiry or an admin delete, the same URL recreates the object: an orphan that no quota counts and no job deletes;
+- after a successful completion, a second `PUT` of the same length and type replaces the verified original with arbitrary bytes (HTML instead of a JPEG, or input crafted for the media worker).
+
+Signing `Content-Length` and `Content-Type` does not help: the attacker re-sends a body of the same length and type.
+
+**Decision.** Every upload is a multipart upload, whatever its size; a file up to `UPLOAD_PART_SIZE_BYTES` is one part. Each part URL signs its exact `Content-Length`. The server creates the multipart upload at initiation and is the only party that completes it (`ListParts` → `CompleteMultipartUpload`) or aborts it (cancel, rejection, expiry, collection purge). Either ends the upload, and with it every part URL: a later part `PUT` fails (`NoSuchUpload`), so nothing is writable after the upload closes. The `SINGLE` strategy is removed from the contract, the code and the schema (migration `uploads_multipart_only`).
+
+**Cost.** Two extra API round trips per small file (`POST …/parts`, and the server's `CompleteMultipartUpload` inside `complete`), plus the `CreateMultipartUpload` at initiation. For a phone uploading photos over venue Wi-Fi this is tens of milliseconds per file next to seconds of transfer; accepted.
+
+**Consequences.**
+- Discards need no delay: they abort the multipart upload (killing its URLs) and then delete the key.
+- The delayed collection purge (`UPLOAD_URL_TTL_SECONDS` + 1 h) stays, as a margin: S3 lets a part `PUT` that is already running finish after an abort.
+- The R2 lifecycle rule (abort incomplete multipart uploads after 2 days) now covers every upload a crashed API never recorded.
+- Derivative bytes (thumbnails, previews, posters, PR D) are not reserved at initiation; they count once stored. They are small next to originals; accepted.
+
+## Addendum (2026-10-03): completion claims the upload; storage calls have deadlines
+
+**Status:** accepted (review finding I2).
+
+**Context.** The first completion held the upload row lock, and with it a database connection, across `ListParts`, `CompleteMultipartUpload`, `HEAD` and the signature read. With no deadline on storage calls and no rate limit on the route, about 20 parallel completions could exhaust the API's 10-connection pool.
+
+**Decision.**
+- **Claim, then check, then record.** A short transaction checks state and permission and sets `COMPLETING` + `claimedAt`. The storage calls run outside any transaction. A second short transaction re-checks the claim, the link and collection state and the per-kind permission, then creates the frame (`COMPLETED`) or records the refusal (`REJECTED`, discard queued). A frame-number failure (collection archived or deleted meanwhile) is a refusal too.
+- **Concurrent completions.** A second completion during a claim gets `409 UPLOAD_IN_PROGRESS` (`retryable: true`, `Retry-After: 2`); the web transport waits and asks again. A finished one gets the same item.
+- **Crashed claims.** A claim older than `COMPLETION_CLAIM_TTL_SECONDS` (300 s, well above the storage deadlines) is stale: a later completion may claim it again, and the expiry job expires it once the session's TTL has passed. Missing parts or storage trouble give the claim back at once.
+- **Quota.** `COMPLETING` uploads keep their reservation and count as open.
+- **Storage deadlines** (`S3_REQUEST_TIMEOUT_MS`, default 15 s; `S3_COMPLETE_TIMEOUT_MS`, default 60 s for assembling a multipart upload and for server-side writes; connect timeout 3 s). A timeout is `503 DEPENDENCY_UNAVAILABLE`, retryable.
+- **Rate limits** on initiate, parts, complete and cancel, per route: `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` (600, generous for venue NAT) and `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` (240, keyed by a hash of the session cookie).
+
+**Consequences.** A new status (`COMPLETING`) and column (`claimedAt`, CHECK `UploadSession_claim_consistent`). Completion is no longer one atomic transaction: a crash between the steps leaves a stale claim, which the rules above recover.
+
+## Spike S9 result (2026-10-03): the client transport is in-house
+
+Headless Uppy (`@uppy/core` 6.2 + `@uppy/aws-s3` 6.2, 21.9 KB gzip) was measured against an in-house transport (1.3 KB gzip). Uppy 6 dropped the hook API: it signs S3 requests for the browser, which then creates, completes and aborts the multipart upload itself. That contradicts this ADR (the server lists the parts and completes the upload, never trusting client ETags), and it uploads a file's parts one at a time. **Decision: in-house** (`apps/web/src/guest/upload/transport.ts`): XHR `PUT` with `upload.onprogress`; ≤ 3 parts in flight per file; part URLs on demand in batches of ≤ 20; per-part retry with 1+2+4+8+16 s of backoff (a 10 s outage needed four retries; a broken path does not flip `navigator.onLine`); a 403 signs the part again; progress never goes back; cancel aborts every request and cancels on the server. Measured with Playwright on SeaweedFS: 300 MB from Chromium, 120 MB from WebKit (iPhone profile), 3 files at once throttled to 8 Mbit/s with smooth progress, recovery from a 10 s connection drop without user action. Not done: a real iOS Safari device. Full numbers: the spike notes of 2026-10-03 in the plan.
+
+## Implementation notes (uploads, PR C, 2026-10-04)
+
+- Every upload is multipart (addendum above); the API creates it at initiation, the browser sends parts to presigned URLs, the API completes it from `ListParts` and verifies size and content signature (4 KB range read), then records the frame and its `MediaObject(ORIGINAL)`.
+- Cleanup: `storage.discard-upload` (rejected, cancelled, expired uploads: abort, then delete the key), `uploads.expire` every 15 minutes (also stale completion claims past their TTL), `content.purge` deletes the original's key and the derivatives, `collection.purge` aborts open uploads and runs only after the upload URL TTL + 1 h.
+- Media links (`content/media-urls.ts`): presigned `GET`, signed as of the start of a `MEDIA_URL_WINDOW_SECONDS` window and valid for two, so a URL is stable (cacheable) within a window. Photos and videos open inline; documents only download; every download is an attachment with an RFC 5987 file name.
+- Bucket CORS (dev/CI script `storage:bootstrap`, staging owner action R1): `PUT`, `GET`, `HEAD` from the app origins, `ETag` exposed.

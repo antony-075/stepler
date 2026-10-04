@@ -37,7 +37,8 @@ jobs:
           ./gitleaks git --no-banner --redact .
 
   quality:
-    runs-on: ubuntu-latest
+    # Pinned: the media packages below are Ubuntu 24.04's (ubuntu-latest moves on).
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,6 +54,8 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - run: pnpm format:check
+      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap
@@ -69,7 +72,8 @@ jobs:
 
   e2e:
     needs: quality
-    runs-on: ubuntu-latest
+    # Pinned: the media packages below are Ubuntu 24.04's (ubuntu-latest moves on).
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     # Two Playwright shards in parallel keep each run well under the timeout. If a shard passes
     # 25 minutes, add a third (shard: [1, 2, 3] and --shard=N/3).
@@ -90,6 +94,8 @@ jobs:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-
+      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video.
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap

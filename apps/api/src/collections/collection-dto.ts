@@ -39,8 +39,19 @@ type DefaultLinkFields = Pick<
 
 export type CollectionWithDefaultLink = CollectionRow & { guestLinks: DefaultLinkFields[] };
 
+/** Non-deleted frames of a collection; read for a whole page in one grouped query. */
+export interface ContentStats {
+  count: number;
+  lastAt: Date | null;
+}
+
+export const NO_CONTENT: ContentStats = { count: 0, lastAt: null };
+
 /** Explicit mapping: `ownerId` and `deletionRequestedAt` never reach the API. */
-export function toCollectionDto(row: CollectionWithDefaultLink): Collection {
+export function toCollectionDto(
+  row: CollectionWithDefaultLink,
+  content: ContentStats = NO_CONTENT,
+): Collection {
   // Owner-scoped queries exclude DELETING rows; reaching here with one is a bug.
   if (row.status === 'DELETING') throw new AppError('NOT_FOUND', 404);
   return {
@@ -52,6 +63,8 @@ export function toCollectionDto(row: CollectionWithDefaultLink): Collection {
     updatedAt: row.updatedAt.toISOString(),
     archivedAt: row.archivedAt?.toISOString() ?? null,
     ...defaultLink(row.guestLinks[0]),
+    contentCount: content.count,
+    lastContentAt: content.lastAt?.toISOString() ?? null,
   };
 }
 

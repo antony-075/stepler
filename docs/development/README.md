@@ -5,6 +5,7 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
+- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos) and ffmpeg/ffprobe (video posters). macOS: `brew install libheif ffmpeg` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg`. Check with `heif-dec --list-decoders` (lists `libde265`). The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1).
 - Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace
@@ -57,7 +58,7 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
-- The worker process arrives with the processing slice.
+- `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden), and photo and video frames stay «Готується прев’ю». It needs the media tools from Prerequisites (`heif-dec`/`heif-convert`, `ffmpeg`, `ffprobe` on `PATH`). It serves no page; it logs `worker started` once it polls.
 
 ## Commands
 
@@ -71,14 +72,15 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm infra:up` / `pnpm infra:down`             | Start (and wait for healthy) / stop Postgres, Mailpit and the S3 emulator |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
+| `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
-| `pnpm e2e`                                      | Build, start production servers on 3100/4100, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
+| `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm e2e -- --shard=1/2`                       | Run one half of the Playwright tests (CI runs shards `1/2` and `2/2` in parallel); any Playwright flag works after `--`, e.g. `-- --grep @desktop` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
-| `bash docker/scripts/verify-images.sh`          | Build production images and check non-root, no `.env`, no dev deps, health, proxy |
+| `bash docker/scripts/verify-images.sh`          | Build the api, worker and web images and check non-root, no `.env`, no dev deps, health, proxy, and that the worker starts and stops on SIGTERM |
 | `pnpm db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
 | `pnpm db:deploy`          | Apply pending migrations (`prisma migrate deploy`)            |
 | `pnpm db:studio`          | Prisma Studio on 5555 against `DATABASE_URL` (the API's `.env`) |
@@ -107,6 +109,20 @@ feature branch ──PR──► dev ──PR──► stage ──PR──► m
 - Changes to `dev`, `stage` and `main` land only through PRs with green CI (`secrets`, `quality`, `e2e`, `images`); no direct pushes, force-pushes or deletions. **Not enforced by GitHub yet:** branch protection for a private repository needs GitHub Pro (the API returns 403 on the free plan), so for now this is a team rule. The intended settings: required checks above, required PR (0 approvals), include administrators, no force-push, no deletion.
 - Name branches by type: `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`.
 - CI runs on every PR and on pushes to `dev`, `stage` and `main`. Deployment (`stage` → staging, `main` → production) is wired up when hosting is chosen.
+
+## Staging smoke checklist (owner action S1, after promoting media processing)
+
+Run on staging once PR D is on `stage` and the owner actions R1 (R2 bucket CORS), R2 (abort incomplete multipart uploads after 2 days) and W4 (worker size) are done. An agent can drive the browser; no secrets are needed. Record the results in ADR 0008 ("R2 behaviour verified on staging").
+
+| # | Step | Expected |
+|---|---|---|
+| 1 | From a phone, upload a video larger than 100 MB through a guest link | It completes (multipart on real R2, equal part sizes accepted); within a minute the admin grid shows its thumbnail and duration, and the viewer plays it over its poster |
+| 2 | From an iPhone, upload a HEIC photo (portrait and landscape) | The admin grid shows the thumbnail and the viewer the preview, both upright (first real check of orientation and tiled HEICs; not covered by the generated fixtures) |
+| 3 | Upload a PDF | The admin's «Завантажити» downloads it as an attachment with its name |
+| 4 | Start a large upload and cancel it midway | The upload's object disappears within 15 minutes (expiry/discard); check in the R2 dashboard |
+| 5 | Revoke the link while a guest is uploading | The completion is refused, no frame appears, the guest sees «Посилання більше не діє» |
+| 6 | In the browser's network panel during an upload | The PUT response exposes `ETag`; no request carries `x-amz-checksum-crc32` |
+| 7 | Render logs of `stepler-staging-worker` while steps 1–2 run | `job done` for `media.video-poster` / `media.image-derivatives`, no OOM restart, no presigned URL in any line |
 
 ## Environment variables
 
@@ -147,12 +163,34 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
 | `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
 | `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |
+| `LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE` | api | no | Guest session exchanges (opening a guest link) per client IP per minute; default `120` (venue NAT, as above) |
+| `LIMIT_FILE_BYTES_PHOTO` | api | no | Largest photo in bytes (decimal); default `50000000` (50 MB) |
+| `LIMIT_FILE_BYTES_VIDEO` | api | no | Largest video in bytes; default `2000000000` (2 GB) |
+| `LIMIT_FILE_BYTES_DOCUMENT` | api | no | Largest document in bytes; default `50000000` (50 MB) |
+| `LIMIT_FILES_PER_BATCH` | api | no | Files a guest may pick at once (enforced by the guest page); default `100` |
+| `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Texts one guest session may send per rolling hour; default `60` |
+| `LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR` | api | no | Upload starts one guest session may make per rolling hour; default `300` |
+| `LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION` | api | no | Uploads one guest session may have in progress at once; default `10` |
+| `UPLOAD_PART_SIZE_BYTES` | api | no | Part size of every upload (all uploads are multipart; a smaller file is one part), at least `5242880`; default `10485760` (10 MiB) |
+| `LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE` | api | no | Upload API calls (start, parts, complete, cancel) per client IP per minute, per route; default `600` (venue NAT) |
+| `LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE` | api | no | The same per guest session; default `240` |
+| `S3_REQUEST_TIMEOUT_MS` | api, worker | no | A storage call fails after this long (the API answers 503, retryable); default `15000` |
+| `S3_COMPLETE_TIMEOUT_MS` | api, worker | no | The same for assembling a multipart upload; default `60000` |
+| `UPLOAD_SESSION_TTL_HOURS` | api | no | An upload not completed within this many hours expires and its bytes are discarded; default `24` |
+| `UPLOAD_URL_TTL_SECONDS` | api, worker | no | Lifetime of presigned upload URLs; a deleted collection's purge waits this long plus an hour; default `900` |
+| `MEDIA_URL_WINDOW_SECONDS` | api | no | Media download URLs are signed per window of this length and stay valid for two; default `3600` |
+| `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
+| `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
+| `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames per client IP per minute; default `120` |
+| `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
+| `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
+| `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
-Both apps validate their env at startup and exit when it is invalid. Error messages name the variables but never print their values.
+The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables and the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` rows above; it needs no SMTP, Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
 
 ## Dependency policy
 

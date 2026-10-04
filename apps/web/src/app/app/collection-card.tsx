@@ -4,7 +4,7 @@ import type { Collection } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { cn } from '@stepler/ui/lib/utils';
-import { CalendarDays, Link2 } from 'lucide-react';
+import { CalendarDays, Images, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
@@ -32,7 +32,7 @@ const ABOVE_LINK = 'relative z-1';
  * state. On the right: the status and one everyday action, «Поділитися» (the share dialog: the
  * main link's QR with its download, the link with Copy and Open, its state; owner 2026-10-02:
  * two buttons looked like one thing; hidden for archived collections); «⋯» right of the status
- * holds archive (or bring back) and delete. No counts until content exists: nothing is invented.
+ * holds archive (or bring back) and delete. The meta line counts frames once there are any.
  *
  * Phones: the cover (80px) beside the title and status, everything else under them at full
  * width, «Поділитися» last at full width. From `md`: cover | content | status and the action.
@@ -105,6 +105,24 @@ export function CollectionCard({ collection }: { collection: Collection }) {
             <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
             {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
           </span>
+          {collection.contentCount === 0 ? null : (
+            <span data-slot="collection-content" className="inline-flex items-center gap-1.5">
+              <Images aria-hidden="true" className="size-4 shrink-0" />
+              <span className="tabular-nums">
+                {tCard('frames', { count: collection.contentCount })}
+              </span>
+              {collection.lastContentAt === null ? null : (
+                <span>
+                  {tCard('lastAt', {
+                    time: format.dateTime(new Date(collection.lastContentAt), {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                  })}
+                </span>
+              )}
+            </span>
+          )}
           {archived || collection.defaultLinkStatus === null ? null : (
             <span
               data-slot="collection-link-status"

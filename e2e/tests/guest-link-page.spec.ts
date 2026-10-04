@@ -43,14 +43,43 @@ test.describe('guest link page', () => {
     expect(res?.headers()['x-robots-tag']).toBe('noindex');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
     await expect(page.getByText('Субота, 14 червня.')).toBeVisible();
-    await expect(
-      page.getByText('Організатор дозволив додавати фото, відео, документи і побажання'),
-    ).toBeVisible();
+    // The main link is contribution-only: the guest learns who sees what they add.
+    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     // Never the token or the title in the tab title.
     await expect(page).toHaveTitle('Stepler');
-    // A placeholder, not a fake upload (rule 18).
-    await expect(page.getByRole('button')).toHaveCount(0);
+    // Files are the main action (PR C); the wish is the second one.
+    await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Написати побажання' }).first()).toBeVisible();
   });
+
+  test('the header language select switches the guest page to English', async ({ page }) => {
+    const { url } = await setUp(page, 'Весілля Олі та Тараса');
+    await page.goto(url);
+    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
+    await page.getByRole('combobox', { name: 'Мова' }).click();
+    await page.getByRole('option', { name: 'English', exact: true }).click();
+    await expect(page.getByText('Only the organiser will see what you add')).toBeVisible();
+    await expect(page.getByRole('combobox', { name: 'Language' })).toContainText('English');
+  });
+
+  for (const width of [768, 1024, 1440, 1920]) {
+    test(`at ${width}px the action sits with the title, no dock, no sideways scroll @desktop`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const { url } = await setUp(page, 'Весілля Олі та Тараса');
+      await page.goto(url);
+      const write = page.getByRole('button', { name: 'Написати побажання' });
+      await expect(write).toHaveCount(1);
+      const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+      const action = (await write.boundingBox())!;
+      // Under the title, in the first screen, never floating at the bottom of the window.
+      expect(action.y).toBeGreaterThan(title.y);
+      expect(action.y + action.height).toBeLessThan(900);
+      expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    });
+  }
 
   test('pausing hides the title; rotating retires the old URL', async ({ page }) => {
     const { collection, main, url } = await setUp(page, 'Ювілей бабусі Галини');

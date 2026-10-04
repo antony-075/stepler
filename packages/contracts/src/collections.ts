@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
   NO_CONTROL_CHARACTERS,
@@ -44,9 +45,19 @@ export const collectionSchema = z
      * it); `null` with `defaultLinkStatus`. Permissions stay per link: this is a read-only copy.
      */
     defaultLinkPermissions: guestLinkPermissionsSchema.nullable(),
+    /** Non-deleted frames of every kind. */
+    contentCount: z.number().int().min(0),
+    /** When the newest non-deleted frame was added; `null` while there is none. */
+    lastContentAt: z.iso.datetime().nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;
+
+/** `GET /api/v1/collections/:id`: the collection plus its storage use (not in lists). */
+export const collectionDetailSchema = collectionSchema
+  .extend({ storage: storageUsageSchema })
+  .strict();
+export type CollectionDetail = z.infer<typeof collectionDetailSchema>;
 
 /** `POST /api/v1/collections`. */
 export const createCollectionRequestSchema = z

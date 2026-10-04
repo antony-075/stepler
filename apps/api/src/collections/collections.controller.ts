@@ -14,18 +14,20 @@ import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
   collectionListResponseSchema,
+  collectionDetailSchema,
   collectionSchema,
   createCollectionRequestSchema,
   listCollectionsQuerySchema,
   updateCollectionRequestSchema,
   type Collection,
+  type CollectionDetail,
   type CollectionListResponse,
   type CreateCollectionRequest,
   type ListCollectionsQuery,
   type UpdateCollectionRequest,
 } from '@stepler/contracts';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import type { Principal } from '../auth/principal.js';
+import type { AccountPrincipal } from '../auth/principal.js';
 import { RequestId } from '../logging/request-id.decorator.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { CollectionsService } from './collections.service.js';
@@ -44,7 +46,7 @@ export class CollectionsController {
   @Get()
   @ApiResponse({ status: 200, standardSchema: collectionListResponseSchema })
   list(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Query({ schema: listCollectionsQuerySchema }) query: ListCollectionsQuery,
   ): Promise<CollectionListResponse> {
     return this.collections.list(principal, query);
@@ -58,7 +60,7 @@ export class CollectionsController {
   })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED: daily creation cap; see Retry-After' })
   create(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Body({ schema: createCollectionRequestSchema }) body: CreateCollectionRequest,
     @RequestId() requestId: string | undefined,
   ): Promise<Collection> {
@@ -66,18 +68,18 @@ export class CollectionsController {
   }
 
   @Get(':id')
-  @ApiResponse({ status: 200, standardSchema: collectionSchema })
+  @ApiResponse({ status: 200, standardSchema: collectionDetailSchema })
   get(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
-  ): Promise<Collection> {
+  ): Promise<CollectionDetail> {
     return this.collections.get(principal, params.id);
   }
 
   @Patch(':id')
   @ApiResponse({ status: 200, standardSchema: collectionSchema })
   update(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @Body({ schema: updateCollectionRequestSchema }) body: UpdateCollectionRequest,
   ): Promise<Collection> {
@@ -88,7 +90,7 @@ export class CollectionsController {
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: collectionSchema })
   archive(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<Collection> {
@@ -103,7 +105,7 @@ export class CollectionsController {
     description: 'COLLECTION_LIMIT_REACHED: the active limit is reached',
   })
   unarchive(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<Collection> {
@@ -117,7 +119,7 @@ export class CollectionsController {
     description: 'Deletion requested; the collection is gone for everyone',
   })
   delete(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<void> {

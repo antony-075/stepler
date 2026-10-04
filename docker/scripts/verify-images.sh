@@ -4,9 +4,10 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 API_IMAGE=stepler-api:verify
+WORKER_IMAGE=stepler-worker:verify
 WEB_IMAGE=stepler-web:verify
 NET=stepler-verify
-CONTAINERS=(stepler-verify-api stepler-verify-web stepler-verify-badenv stepler-verify-db)
+CONTAINERS=(stepler-verify-api stepler-verify-worker stepler-verify-web stepler-verify-badenv stepler-verify-db)
 cleanup() {
   docker rm -f "${CONTAINERS[@]}" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
@@ -39,9 +40,10 @@ expect_exit_on_bad_env() {
 }
 
 docker build -f apps/api/Dockerfile -t "$API_IMAGE" .
+docker build -f apps/api/worker.Dockerfile -t "$WORKER_IMAGE" .
 docker build -f apps/web/Dockerfile -t "$WEB_IMAGE" .
 
-for image in "$API_IMAGE" "$WEB_IMAGE"; do
+for image in "$API_IMAGE" "$WORKER_IMAGE" "$WEB_IMAGE"; do
   [ "$(docker run --rm --entrypoint id "$image" -u)" != "0" ] || fail "$image runs as root"
   # Scan as root so unreadable directories cannot hide files.
   envs=$(docker run --rm -u 0 --entrypoint sh "$image" -c \
@@ -50,13 +52,66 @@ for image in "$API_IMAGE" "$WEB_IMAGE"; do
   docker run --rm --entrypoint sh "$image" -c 'touch /app/probe 2>/dev/null' && fail "$image app directory is writable by the runtime user"
 done
 
-docker run --rm --entrypoint sh "$API_IMAGE" -c 'test -d /app/node_modules/.pnpm' || fail "api image has no node_modules/.pnpm (layout changed?)"
-if docker run --rm --entrypoint sh "$API_IMAGE" -c 'ls /app/node_modules/.pnpm | grep -qE "^(vitest|typescript|@nestjs\+cli)@"'; then
-  fail "api image contains dev dependencies"
-fi
+for image in "$API_IMAGE" "$WORKER_IMAGE"; do
+  docker run --rm --entrypoint sh "$image" -c 'test -d /app/node_modules/.pnpm' || fail "$image has no node_modules/.pnpm (layout changed?)"
+  if docker run --rm --entrypoint sh "$image" -c 'ls /app/node_modules/.pnpm | grep -qE "^(vitest|typescript|@nestjs\+cli)@"'; then
+    fail "$image contains dev dependencies"
+  fi
+done
+
+# Media tools (spike S5), as the runtime user: the HEVC decoder for HEIC and ffmpeg's video
+# decoders in the worker image; neither in the API image.
+docker run --rm --entrypoint sh "$WORKER_IMAGE" -c 'heif-convert --list-decoders | grep -q libde265' \
+  || fail "$WORKER_IMAGE: heif-convert has no libde265 (HEIC) decoder"
+for codec in hevc h264; do
+  docker run --rm --entrypoint sh "$WORKER_IMAGE" -c "ffmpeg -hide_banner -decoders | grep -qE ' $codec '" \
+    || fail "$WORKER_IMAGE: ffmpeg has no $codec decoder"
+done
+for tool in ffmpeg ffprobe heif-convert; do
+  docker run --rm --entrypoint sh "$API_IMAGE" -c "command -v $tool" >/dev/null && fail "$API_IMAGE contains $tool"
+done
+# The worker's own media code against those tools and the image's sharp: a generated HEIC
+# decoded to WebP previews, and a poster from an MP4 that ffmpeg reads over HTTP (as from a
+# presigned URL), with its duration; tiny files declaring huge images fail cleanly (prlimit,
+# -max_pixels) instead of being OOM-killed.
+media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
+  set -e
+  cd /tmp
+  ffmpeg -v error -f lavfi -i "testsrc2=size=320x240:rate=1" -frames:v 1 src.png
+  heif-enc -q 50 src.png -o photo.heic >/dev/null
+  ffmpeg -v error -f lavfi -i "testsrc=size=320x240:rate=25" -t 1 -c:v libx264 -pix_fmt yuv420p clip.mp4
+  ffmpeg -v error -f lavfi -i "color=gray:s=11000x11000" -frames:v 1 huge.png
+  heif-enc -q 10 huge.png -o huge.heic >/dev/null
+  ffmpeg -v error -f lavfi -i "color=gray:s=7000x7000" -frames:v 1 -c:v libx264 -preset ultrafast -crf 51 -pix_fmt yuv420p huge.mp4
+  node --input-type=module -e "
+    import { createServer } from \"node:http\";
+    import { readFileSync } from \"node:fs\";
+    const { decodeHeic } = await import(\"file:///app/dist/worker/media/decode.js\");
+    const { renderDerivatives } = await import(\"file:///app/dist/worker/media/images.js\");
+    const { probeVideo, extractFrame } = await import(\"file:///app/dist/worker/media/ffmpeg.js\");
+    const photo = await renderDerivatives(await decodeHeic(\"/tmp/photo.heic\", \"/tmp\"), { autoOrient: false });
+    if (photo.large.width !== 320 || photo.large.height !== 240) throw new Error(\"HEIC preview size\");
+    const permanent = (p) => p.then(() => { throw new Error(\"oversized input accepted\"); }, (e) => { if (e.name !== \"PermanentMediaError\") throw e; });
+    await permanent(decodeHeic(\"/tmp/huge.heic\", \"/tmp\"));
+    const server = createServer((req, res) => res.end(readFileSync(\"/tmp\" + req.url)));
+    await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));
+    const url = \"http://127.0.0.1:\" + server.address().port + \"/clip.mp4\";
+    const probe = await probeVideo(url);
+    if (Math.abs(probe.durationMs - 1000) > 100 || probe.width !== 320) throw new Error(\"probe \" + JSON.stringify(probe));
+    const poster = await renderDerivatives(await extractFrame(url, 0.5), { autoOrient: false });
+    if (poster.large.width !== 320) throw new Error(\"poster size\");
+    const huge = \"http://127.0.0.1:\" + server.address().port + \"/huge.mp4\";
+    await permanent(probeVideo(huge));
+    await permanent(extractFrame(huge, 0));
+    server.close();
+    console.log(\"media ok\");
+  "
+' 2>&1) || true
+echo "$media" | grep -q '^media ok$' || fail "$WORKER_IMAGE: media smoke test failed: $media"
 
 APP_SECRET=$(openssl rand -base64 32)
 expect_exit_on_bad_env "$API_IMAGE" --env-file docker/scripts/verify-api.env -e APP_SECRET="$APP_SECRET" -e NODE_ENV=staging
+expect_exit_on_bad_env "$WORKER_IMAGE" -e NODE_ENV=production -e DATABASE_URL=not-a-url
 expect_exit_on_bad_env "$WEB_IMAGE" -e API_INTERNAL_URL=not-a-url
 
 docker network create "$NET" >/dev/null
@@ -83,6 +138,23 @@ docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 
   -e API_INTERNAL_URL=http://stepler-verify-api:4000 "$WEB_IMAGE" >/dev/null
 wait_healthy stepler-verify-api 30
 wait_healthy stepler-verify-web 30
+
+# The worker needs only the database to start (pg-boss installs its schema); S3 is not contacted
+# until a job runs, so placeholder storage values are enough here.
+docker run -d --name stepler-verify-worker --network "$NET" \
+  -e DATABASE_URL=postgresql://verify:verify@stepler-verify-db:5432/verify \
+  -e S3_REGION=auto -e S3_BUCKET=placeholder -e S3_ACCESS_KEY_ID=placeholder \
+  -e S3_SECRET_ACCESS_KEY=placeholder "$WORKER_IMAGE" >/dev/null
+started=""
+for _ in $(seq 1 30); do
+  if docker logs stepler-verify-worker 2>&1 | grep -q '"msg":"worker started"'; then started=yes; break; fi
+  [ "$(docker inspect -f '{{.State.Running}}' stepler-verify-worker)" = "true" ] || break
+  sleep 1
+done
+[ -n "$started" ] || fail "worker did not log 'worker started' within 30 s: $(docker logs --tail 20 stepler-verify-worker 2>&1)"
+# SIGTERM stops it gracefully, well before Docker's 10 s SIGKILL.
+docker stop stepler-verify-worker >/dev/null
+[ "$(docker inspect -f '{{.State.ExitCode}}' stepler-verify-worker)" != "137" ] || fail "worker ignored SIGTERM and was killed"
 
 body=$(curl -fsS http://127.0.0.1:3199/api/v1/health/live) || fail "web → api proxy failed"
 [ "$body" = '{"status":"ok"}' ] || fail "unexpected health body: $body"

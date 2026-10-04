@@ -157,26 +157,30 @@ const onPanel: Story['render'] = (args) => (
         Show
       </span>
       <ToggleGroup {...args} aria-label={undefined} aria-labelledby="theme-label">
-        <ToggleGroupItem value="system">
-          All <span className="type-data">126</span>
+        <ToggleGroupItem value="system" count={126}>
+          All
         </ToggleGroupItem>
-        <ToggleGroupItem value="light">
-          Photos <span className="type-data">98</span>
+        <ToggleGroupItem value="light" count={98}>
+          Photos
         </ToggleGroupItem>
-        <ToggleGroupItem value="dark">
-          Videos <span className="type-data">21</span>
+        <ToggleGroupItem value="dark" count={21}>
+          Videos
         </ToggleGroupItem>
       </ToggleGroup>
     </PanelContent>
   </Panel>
 );
 
-/** Filter chips on a sheet, with counts as data. */
+/** Filter chips on a sheet, with counts as data (mono, read with the label). */
 export const OnPanel: Story = {
   render: onPanel,
   play: async ({ canvas, canvasElement }) => {
     await expect(canvas.getByRole('radiogroup', { name: 'Show' })).toBeVisible();
+    const photos = canvas.getByRole('radio', { name: 'Photos 98' });
+    const count = photos.querySelector('[data-slot="toggle-group-item-count"]')!;
+    await expect(getComputedStyle(count).fontFamily).toMatch(/Geist Mono/);
     await waitFor(() => expectReadsOnPanel(canvasElement));
+    await expectItemsAreTouchTargets(canvas.getAllByRole('radio'));
   },
 };
 
@@ -188,5 +192,54 @@ export const OnPanelDark: Story = {
     await userEvent.click(canvas.getByRole('radio', { name: 'Videos 21' }));
     // The edge and text colour fade between chips (120ms): check once settled.
     await waitFor(() => expectReadsOnPanel(canvasElement));
+  },
+};
+
+/**
+ * A chip that can't be chosen («Відео» when no link lets guests add videos): a lock, the reason
+ * as its description and in a tooltip on focus and on press; pressing it selects nothing.
+ */
+export const Locked: Story = {
+  args: { defaultValue: 'all', 'aria-label': 'Тип' },
+  render: (args) => (
+    <ToggleGroup {...args}>
+      <ToggleGroupItem value="all" count={3}>
+        Усе
+      </ToggleGroupItem>
+      <ToggleGroupItem value="text" count={3}>
+        Тексти
+      </ToggleGroupItem>
+      <ToggleGroupItem
+        value="video"
+        count={0}
+        disabledReason="Жодне посилання не дозволяє додавати відео"
+      >
+        Відео
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ),
+  play: async ({ canvas, args }) => {
+    const video = canvas.getByRole('radio', { name: 'Відео 0' });
+    await expect(video).toHaveAttribute('aria-disabled', 'true');
+    await expect(video).toHaveAccessibleDescription('Жодне посилання не дозволяє додавати відео');
+    await expect(video.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    // Keyboard: arrows reach it, focus shows the reason, Space selects nothing.
+    canvas.getByRole('radio', { name: 'Тексти 3' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(video).toHaveFocus());
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="tooltip-content"]')).toHaveTextContent(
+        'Жодне посилання не дозволяє додавати відео',
+      ),
+    );
+    await userEvent.keyboard(' ');
+    await expect(video).toHaveAttribute('aria-checked', 'false');
+
+    // A press (or a tap) shows the reason and selects nothing.
+    await userEvent.click(video);
+    await expect(video).toHaveAttribute('aria-checked', 'false');
+    await expect(args.onValueChange).not.toHaveBeenCalled();
+    await expect(document.querySelector('[data-slot="tooltip-content"]')).toBeVisible();
   },
 };

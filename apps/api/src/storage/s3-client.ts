@@ -6,7 +6,12 @@ export interface S3ClientSettings {
   accessKeyId: string;
   secretAccessKey: string;
   forcePathStyle: boolean;
+  /** Socket idle limit; per-call deadlines are set by the caller (`abortSignal`). */
+  requestTimeoutMs?: number;
 }
+
+/** A storage host that does not accept the connection fails fast. */
+const CONNECT_TIMEOUT_MS = 3_000;
 
 /**
  * Required settings (ADR 0008, spike S4): with SDK default checksums, presigned PUT URLs embed
@@ -20,5 +25,11 @@ export function createS3Client(settings: S3ClientSettings): S3Client {
     credentials: { accessKeyId: settings.accessKeyId, secretAccessKey: settings.secretAccessKey },
     requestChecksumCalculation: 'WHEN_REQUIRED',
     responseChecksumValidation: 'WHEN_REQUIRED',
+    requestHandler: {
+      connectionTimeout: CONNECT_TIMEOUT_MS,
+      ...(settings.requestTimeoutMs === undefined
+        ? {}
+        : { requestTimeout: settings.requestTimeoutMs }),
+    },
   });
 }

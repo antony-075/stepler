@@ -82,6 +82,10 @@
   --veil: rgb(255 255 255 / 0.68);
   --viewer: #0f110f;
   --viewer-foreground: #e9ebe6;
+  /* Focus in the viewer: the dark theme's violet, on `--viewer` in both themes (8.81:1). */
+  --viewer-ring: #b6a8e8;
+  /* Secondary text in the viewer (7.14:1 on `--viewer`). */
+  --viewer-muted: #9ca099;
 
   /* Elevation: flat by default; only layers above the content get depth. */
   --shadow-popover: 0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06);

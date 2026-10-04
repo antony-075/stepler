@@ -2,6 +2,7 @@
 
 import {
   type Collection,
+  type CollectionDetail,
   collectionDescriptionSchema,
   collectionTitleSchema,
   type UpdateCollectionRequest,
@@ -48,7 +49,10 @@ function useSaveField(collection: Collection) {
       });
     },
     onSuccess: async (saved) => {
-      queryClient.setQueryData(collectionKey(saved.id), saved);
+      // The detail also holds the storage line, which a mutation's answer leaves out.
+      queryClient.setQueryData<CollectionDetail>(collectionKey(saved.id), (previous) =>
+        previous === undefined ? undefined : { ...previous, ...saved },
+      );
       toast({ variant: 'success', title: t('saved') });
       await invalidate();
     },

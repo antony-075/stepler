@@ -52,6 +52,36 @@ describe('apiRequest', () => {
     expect(error).toMatchObject({ code: 'RATE_LIMITED', status: 429, requestId: 'req-12345678' });
   });
 
+  test('keeps problem extension members on the error', async () => {
+    stubFetch(
+      Response.json(
+        {
+          type: 'about:blank',
+          title: 'Conflict',
+          status: 409,
+          code: 'UPLOAD_INCOMPLETE',
+          retryable: true,
+          missingPartNumbers: [3],
+        },
+        { status: 409 },
+      ),
+    );
+    const error = await apiRequest('/x', { method: 'POST' }).catch((e: unknown) => e);
+    expect(error).toMatchObject({
+      code: 'UPLOAD_INCOMPLETE',
+      problem: { missingPartNumbers: [3] },
+    });
+  });
+
+  test('an aborted call rethrows the abort, not a network failure', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    stubFetch(new DOMException('Aborted', 'AbortError'));
+    const error = await apiRequest('/x', { signal: controller.signal }).catch((e: unknown) => e);
+    expect(error).not.toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ name: 'AbortError' });
+  });
+
   test('a non-JSON 502 becomes UPSTREAM_UNAVAILABLE', async () => {
     stubFetch(new Response('<html>Bad gateway</html>', { status: 502 }));
     await expect(apiRequest('/me', {})).rejects.toMatchObject({

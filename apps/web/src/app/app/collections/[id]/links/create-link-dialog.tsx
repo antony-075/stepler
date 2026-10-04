@@ -37,6 +37,7 @@ const formSchema = z.object({
       videos: z.boolean(),
       documents: z.boolean(),
       texts: z.boolean(),
+      deleteOwn: z.boolean(),
       seeAll: z.boolean(),
     })
     .refine(isValidForm),
@@ -46,7 +47,14 @@ type CreateValues = z.infer<typeof formSchema>;
 // A new link starts like the default one (G3): everything to add, only their own to see.
 const DEFAULTS: CreateValues = {
   label: '',
-  permissions: { photos: true, videos: true, documents: true, texts: true, seeAll: false },
+  permissions: {
+    photos: true,
+    videos: true,
+    documents: true,
+    texts: true,
+    deleteOwn: true,
+    seeAll: false,
+  },
 };
 
 /**

@@ -56,7 +56,7 @@ Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, 
 apps/
   web/        Next.js App Router — guest (/g/[token]) and admin (/app/...) UI
   api/        NestJS REST API
-  worker/     background jobs (processing, purge, expiry) — added in the processing slice
+  (worker)    background jobs (processing, purge, expiry): apps/api/src/worker, a second entrypoint of api (Phase 4 [C2])
 packages/
   contracts/  Zod schemas for API requests/responses, error codes, shared enums
   ui/         shared React components (shadcn/Radix/Tailwind) + Storybook
@@ -70,7 +70,7 @@ Tooling: pnpm workspaces, Turborepo, Node 24 LTS, TypeScript strict.
 Trade-offs:
 - `contracts` merges the previously planned `types` + `validation`: schemas and types always change together; splitting them creates a false boundary.
 - Storybook lives in `packages/ui` next to the components. If page-level stories are needed later, move it to `apps/storybook`.
-- `apps/worker` shares the Prisma client and domain modules with `api` through workspace code, not through HTTP. It is a second entrypoint of the same modular monolith, not a microservice.
+- The worker (`apps/api/src/worker/main.ts`, image `apps/api/worker.Dockerfile`) shares the Prisma client and domain modules with `api` by plain imports, not through HTTP. It is a second entrypoint of the same modular monolith, not a microservice. (Earlier drafts placed it in `apps/worker`; keeping it inside `apps/api` avoids moving the Prisma schema and client into a shared package, Phase 4 plan [C2].)
 - Module format (spike S2, see ADR 0005): NestJS 12 is ESM-only, so `api`, `worker` and `contracts` are ESM. `contracts` is built with plain `tsc`. Prisma client uses the `prisma-client` generator with ESM output.
 
 ---
@@ -192,30 +192,40 @@ GuestLink
   SQL UNIQUE (collectionId) WHERE isDefault AND status <> 'REVOKED'   -- exactly one live default
 
 GuestSession
-  id, collectionId → Collection (cascade), currentLinkId → GuestLink,
-  tokenHash (unique), createdAt, lastSeenAt
-  INDEX (collectionId)
+  id, collectionId → Collection (cascade), currentLinkId → GuestLink (no action),
+  tokenHash (unique), contributorName? (1–80), nameAnsweredAt?, createdAt, lastSeenAt
+  FOREIGN KEY (currentLinkId, collectionId) → GuestLink (id, collectionId)   -- same collection
+  UNIQUE (id, collectionId)
+  INDEX (collectionId), INDEX (currentLinkId)
 ```
 
-*`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` and the rest of this section are not implemented yet.
+*`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` is implemented in slice 2. *`GuestSession` implemented in slice 3* (PR A, 2026-10-03), as above: the link key is composite with the collection, so PostgreSQL itself refuses a session bound to another collection's link; `NO ACTION` (not `RESTRICT`) lets deleting a collection cascade to its links and sessions in one statement while refusing to delete a link a session points at.
 
 - **Token:** 32 random bytes, base64url (43 chars). Lookup by SHA-256 hash (high-entropy token, no slow hash needed). The owner must be able to re-display the link/QR, so the token is also stored encrypted (AES-256-GCM, key from config, `tokenKeyId` for key rotation). Rejected alternatives: plaintext (DB leak exposes every gallery); HMAC-derived tokens (rotating the secret kills every printed QR).
-- **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time. The guest name is **not** stored on the session (privacy: the session must not become a hidden profile).
+- **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time; every guest request re-checks that link, the collection and its owner ([G5] order) and writes `lastSeenAt` at most once an hour.
+- **The guest's name lives on the session** ([O4], [C4], amended 2026-10-03; it was "not stored on the session"): `contributorName` is optional, asked once before the first contribution («Пропустити» is an answer: `nameAnsweredAt` is set either way), editable, and copied to each new item. Renaming also updates this session's non-deleted items in the same transaction, so the admin never sees two names for one guest. It is never shown to other guests. The session holds nothing else about the guest.
 - Future `expiresAt` / scheduled activation are nullable columns added later (D9).
 
 ### 7.3 Content
 
 ```text
-ContentItem
-  id, collectionId → Collection (cascade), kind (PHOTO|VIDEO|DOCUMENT|TEXT),
-  contributorGuestSessionId? → GuestSession (set null), contributorUserId? → User (set null),
-  contributorName? (≤ 80), originalFilename?, textBody? (≤ 5000),
-  processingStatus (NOT_REQUIRED|PENDING|READY|FAILED),
-  hiddenAt?, hiddenBy?, deletedAt?, createdAt
+ContentItem                                         (as built in slice 3, 2026-10-03)
+  id, collectionId → Collection (cascade), frameNo, kind (PHOTO|VIDEO|DOCUMENT|TEXT),
+  contributorGuestSessionId? → GuestSession, contributorName? (1–80),
+  originalFilename?, textBody? (1–5000 code points), idempotencyKey? (uuid),
+  processingStatus (NOT_REQUIRED|PENDING|READY|FAILED), deletedAt?, createdAt
+  FOREIGN KEY (contributorGuestSessionId, collectionId) → GuestSession (id, collectionId)
+    ON DELETE SET NULL (contributorGuestSessionId)                   -- same collection, item stays
+  UNIQUE (collectionId, frameNo)
+  UNIQUE (contributorGuestSessionId, idempotencyKey)
   SQL CHECK ((kind = 'TEXT') = (textBody IS NOT NULL))
-  SQL CHECK (num_nonnulls(contributorGuestSessionId, contributorUserId) <= 1)
-  INDEX (collectionId, createdAt DESC, id) WHERE deletedAt IS NULL AND hiddenAt IS NULL
-  INDEX (contributorGuestSessionId)
+  SQL CHECK (frameNo > 0); char_length checks on textBody and contributorName
+  SQL CHECK ((kind IN ('TEXT','DOCUMENT')) = (processingStatus = 'NOT_REQUIRED'))
+  INDEX (collectionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL         -- feed
+  INDEX (collectionId, kind, createdAt DESC, id DESC) WHERE deletedAt IS NULL   -- feed by kind
+  INDEX (contributorGuestSessionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL -- own
+  INDEX (deletedAt) WHERE deletedAt IS NOT NULL                                 -- purge
+  Collection.nextFrameNo (≥ 1)
 
 MediaObject
   id, contentItemId → ContentItem (cascade), role (ORIGINAL|THUMBNAIL|PREVIEW|POSTER),
@@ -225,7 +235,7 @@ MediaObject
 UploadSession
   id, collectionId → Collection (cascade), guestSessionId? → GuestSession, userId? → User,
   guestLinkId → GuestLink, clientUploadId, kind, originalFilename, declaredMime,
-  declaredSizeBytes (bigint), storageKey (unique), strategy (SINGLE|MULTIPART),
+  declaredSizeBytes (bigint), storageKey (unique), (always multipart since 2026-10-03)
   multipartUploadId?, partSizeBytes?,
   status (INITIATED|COMPLETED|ABORTED|EXPIRED|REJECTED), rejectReason?,
   expiresAt, completedAt?, contentItemId? (unique) → ContentItem, createdAt
@@ -240,7 +250,8 @@ UploadSession
 - `hiddenAt` is the first moderation state (operator/admin "hide"). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
-- **Planned, not implemented (ADR 0015, upload slice):** stable frame numbers — `Collection.nextFrameNo` and `ContentItem.frameNo` with `SQL UNIQUE (collectionId, frameNo)`, assigned in the completion transaction, never reused after deletion; shown to the owner for every item and to a guest only for their own. Optional `ContentItem.capturedAt?` (EXIF / video metadata) if the processing pipeline reads it cheaply; the MVP timeline uses `createdAt`.
+- **Frame numbers (ADR 0015), implemented in slice 3 [C8]:** `UPDATE "Collection" SET "nextFrameNo" = "nextFrameNo" + 1 WHERE id = $1 AND status = 'ACTIVE' RETURNING "nextFrameNo" - 1` inside the transaction that creates the item; that statement row-locks the collection (so concurrent creations get consecutive numbers, and a rolled-back one gives its number back) and is the "still active" re-check. Texts and files share the sequence; gaps after deletion are never filled. The owner sees every number; a guest only their own. Lock order [C9]: a transaction that locks both takes the owner's `User` row first, then the `Collection`.
+- **Not in slice 3 [C19]:** `contributorUserId`, `hiddenAt`/`hiddenBy` (hide belongs to slice 9) and `capturedAt`; each is an additive column later. `MediaObject` and `UploadSession` below arrive with uploads (PR C).
 
 ### 7.4 Reports and audit
 
@@ -289,6 +300,7 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 - `contributorName` and other guests' metadata are excluded from guest DTOs.
 - Signed URLs are issued only after the same policy check as the item itself.
 - A view-only link (`canViewGallery` only) is a full capability (F3).
+- *Implemented in PR E (2026-10-04):* guest delete. An item that is not this session's own (another guest's, another collection's, or none) is `404` before the permission is looked at; an own item through a link without `canDeleteOwn` (the link the session is bound to now) is `403 FORBIDDEN`; an already deleted own item is `204`. The audit actor is `GUEST` with the session id. Admin bulk delete takes 1–100 ids of one owned collection in one transaction: ids of other collections are reported `notFound` and untouched, a retry reports the frames `alreadyDeleted`, and audit events (`bulk: true`) and purge jobs take their ids from the updated rows. Presigned links are readable by whoever holds them, so another guest's download link is signed with a neutral `attachment; filename="stepler.<ext>"`: no original name and no frame number (only the admin and the contributor get `stepler-087.pdf` / the original name). Guest deletes have their own per-IP bucket, `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` (120).
 
 ---
 
@@ -323,9 +335,11 @@ Admin
   PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
   POST                /collections/{id}/guest-links/default/rotate
-  GET                 /collections/{id}/content?kind=&cursor=
-  GET/DELETE          /content/{id}
-  POST                /content/{id}/hide | /unhide
+  GET                 /collections/{id}/content?kind=&sort=newest|frame&cursor=&limit=   (slice 3)
+  GET                 /collections/{id}/content/counts                                   (slice 3)
+  GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
+  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
+  POST                /content/{id}/hide | /unhide            (slice 9)
   GET                 /collections/{id}/reports
   PATCH               /reports/{id}
 
@@ -337,12 +351,14 @@ Operator
   POST                /operator/users/{id}/block | /unblock
 
 Guest (cookie scoped per collection, see §9.1)
-  POST   /guest/sessions                         {linkToken} → {collectionId, collection, permissions}
-  GET    /guest/collections/{cid}
-  GET    /guest/collections/{cid}/content?cursor=
-  GET    /guest/collections/{cid}/content/{id}
-  DELETE /guest/collections/{cid}/content/{id}
-  POST   /guest/collections/{cid}/texts
+  POST   /guest/links/resolve                    {linkToken} → {collectionId, collection, permissions}
+  POST   /guest/collections/{cid}/session        {linkToken} → GuestContext + Set-Cookie   (slice 3)
+  PATCH  /guest/collections/{cid}/session        {name | null} → GuestContext            (slice 3)
+  GET    /guest/collections/{cid}/context        → GuestContext                           (slice 3)
+  GET    /guest/collections/{cid}/content?scope=own|all&cursor=                          (slice 3)
+  GET    /guest/collections/{cid}/content/{id}                                           (slice 3)
+  DELETE /guest/collections/{cid}/content/{id}         own item + canDeleteOwn; else 404 / 403 (PR E)
+  POST   /guest/collections/{cid}/texts      Idempotency-Key header (uuid), 201 / replay 200   (slice 3)
   POST   /guest/collections/{cid}/uploads
   POST   /guest/collections/{cid}/uploads/{uid}/parts
   POST   /guest/collections/{cid}/uploads/{uid}/complete
@@ -357,11 +373,14 @@ Why a separate guest namespace: different principal, different DTOs (admin field
 
 ### 9.1 Guest session exchange
 
-1. Guest opens `/g/{token}`; web calls `POST /api/v1/guest/sessions {linkToken}`.
-2. API looks up the link by token hash; requires link `ACTIVE` and a valid collection.
-3. If the request carries a valid session cookie for the same collection → **re-bind** `currentLinkId` to this link (ownership preserved, permissions from the new link). Otherwise create a new `GuestSession`.
-4. Cookie: `st_gs` with `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
-5. Reloading `/g/{token}` repeats the exchange idempotently.
+Amended and implemented in slice 3 ([C3], 2026-10-03): **two calls, not one.** The cookie is path-scoped to `/api/v1/guest/collections/{collectionId}`, so the browser would never send it to a `POST /guest/sessions` outside that path: the API could not re-bind, and every reload would create a new session and lose "my frames".
+
+1. Guest opens `/g/{token}`; web calls `POST /api/v1/guest/links/resolve {linkToken}`. The answer carries the link's state ([G5] codes) and the `collectionId` (not a secret, CLAUDE.md §8; the guest needs it for every later call).
+2. Web calls `POST /api/v1/guest/collections/{collectionId}/session {linkToken}` — under the cookie's path. The API resolves the token again; a link of another collection than the path's is `404` (nobody can plant a cookie for another collection).
+3. If the request carries a valid session cookie of this collection → **re-bind** `currentLinkId` to this link (ownership preserved, permissions from the new link, F5) and set the same cookie again to renew it. Otherwise create a new `GuestSession`; the raw token goes only into the cookie, its SHA-256 into the row.
+4. Cookie: `st_gs` with `HttpOnly; SameSite=Lax; Path=/api/v1/guest/collections/{collectionId}; Max-Age=34560000` (400 days, the browsers' cap; no server-side expiry, D12) and `Secure` per `COOKIE_SECURE` — one cookie per collection, so sessions for different collections are never linked by a shared device identifier.
+5. Every guest collection route (`GuestSessionGuard`) needs that cookie (`401 GUEST_SESSION_REQUIRED` without it, or with another collection's), then re-checks the session's link and collection in [G5] order on each request. The web re-runs the exchange once on `GUEST_SESSION_REQUIRED` (it has the token in the address bar) and retries the call; a link or collection state from any call switches the page to that state.
+6. Reloading `/g/{token}` repeats the exchange idempotently.
 
 Known limitation: QR scanners and messenger in-app browsers often use a separate cookie jar; a guest who uploads in one browser cannot delete from another. Accepted for MVP (D12).
 
@@ -384,11 +403,12 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 
 ### 10.2 Strategy
 
-- `size ≤ 100 MB` → single presigned `PUT` (signed `Content-Type` and `Content-Length`), URL TTL 15 min.
-- `size > 100 MB` → S3 multipart: `CreateMultipartUpload`, fixed part size (10 MiB [assumption]), part URLs issued on demand in batches, each URL TTL 15 min; parts retried individually.
+- **Every file is an S3 multipart upload** (addendum 2026-10-03, ADR 0008; replaces "`size ≤ 100 MB` → single presigned `PUT`"): `CreateMultipartUpload` at initiation, fixed part size (10 MiB), a file up to the part size being one part; part URLs issued on demand in batches, each signing its exact `Content-Length`, URL TTL 15 min; parts retried individually. Why: a presigned single `PUT` stayed writable after the upload closed (an orphan after cancel/reject/expiry/delete, or an overwrite of the verified original after completion); `CompleteMultipartUpload` and `AbortMultipartUpload` end the upload and every part URL with it. Cost: two extra API round trips per small file.
 - Upload session TTL: 24 h [assumption] (2 GB over a poor mobile link can take hours); part URLs are re-issuable while the session lives.
 - R2 specifics (S4, ADR 0008; the emulator cannot reproduce these, so they are verified in staging): no presigned POST policies (size is enforced at completion); all multipart parts except the last must be equal size; EU-jurisdiction buckets use a distinct endpoint. Bucket CORS must expose `ETag`; the emulator reproduces this, so it is tested locally too.
-- Client: headless Uppy (`@uppy/aws-s3`) vs in-house uploader — decided in the upload slice after bundle-size check (S9). Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
+- Client transport is in-house (spike S9, ADR 0008; Uppy 6 completes multipart uploads from the browser, which the server must own): XHR `PUT` for progress; ≤ 3 parts in flight per file; part URLs requested on demand in batches of ≤ 20; per-part retry with 31 s of backoff in all (a broken path does not flip `navigator.onLine`); per-file retries after 2, 8 and 30 s, then «Повторити»; progress never goes back. Client concurrency 3 files; the "100 files per operation" limit is enforced in the UI and bounded server-side by the concurrency and hourly limits (§13).
+
+**Implemented (PR C, 2026-10-04).** Routes under `/api/v1/guest/collections/{collectionId}/uploads`: `POST` (initiate, 201: `{ uploadId, partSizeBytes, partCount, expiresAt }`), `POST /{uploadId}/parts` (`{ partNumbers }` → part URLs, each signing its exact `Content-Length`), `POST /{uploadId}/complete` (200: the guest's frame; `409 UPLOAD_INCOMPLETE` carries `missingPartNumbers`; `409 UPLOAD_IN_PROGRESS` while another completion holds the claim), `DELETE /{uploadId}` (204, idempotent). Rate limits per IP and per guest session on all four. Signature detection (`uploads/file-signature.ts`): photos and videos match their declared kind (stored with the detected MIME), documents their declared format; SVG, HTML, archives, executables and AVIF are refused. Admin and guest item details carry presigned `originalUrl` (photos and videos only) and `downloadUrl` (an attachment named from the original file, fallback `stepler-087.pdf`).
 
 ### 10.3 Initiate — `POST .../uploads`
 
@@ -400,6 +420,8 @@ Forbidden: SVG, HTML, executables, archives. Validation layers: extension + decl
 6. Return presigned URL(s) or multipart descriptor.
 
 ### 10.4 Complete — `POST .../uploads/{uid}/complete`
+
+As built (addendum 2026-10-03, ADR 0008): a short transaction **claims** the upload (`COMPLETING`), the storage checks below run outside any transaction with deadlines, and a second short transaction re-checks the claim, link, collection and permission before recording the frame or the refusal. A concurrent completion gets `409 UPLOAD_IN_PROGRESS` (retryable); a claim older than 5 minutes can be claimed again or expired. Upload routes are rate-limited per IP and per guest session.
 
 1. If already `COMPLETED` → return the existing content item (duplicate completion is safe).
 2. Re-check the guest context **now** (link active, the upload permission for the file's type, collection active). If not authorized → `REJECTED` and enqueue object deletion (D8: bytes may exist in storage; completion is refused; cleanup removes them).
@@ -444,13 +466,16 @@ collections/{collectionId}/derived/{contentItemId}/{thumbnail|preview|poster}.we
 
 Decision details: ADR 0009.
 
-- `apps/worker` process, same codebase, queue in PostgreSQL via pg-boss (no new infrastructure).
+- Worker process, same codebase (`apps/api/src/worker`), queue in PostgreSQL via pg-boss (no new infrastructure). Jobs are enqueued in the same transaction as the state change that needs them (spike S7); queues use the `exclusive` policy with one job per entity.
+- *Implemented (Phase 4 PR B):* the queue port and pg-boss adapter, the worker entrypoint and image, `content.purge`, `collection.purge` and the hourly `maintenance.sweep` (re-enqueues lost purges; deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS`, default 400, that never contributed).
+- *Implemented (Phase 4 PR D, 2026-10-04):* `media.image-derivatives` and `media.video-poster`, with the HEIC and video tools chosen by spike S5; details and measurements in ADR 0009 "Implementation notes (processing)".
 - Jobs:
-  - `media.image-derivatives` — thumbnail (~480 px) and preview (~1600 px) WebP via sharp, with pixel limits. The original is always kept unchanged. The preview is required so HEIC/HEIF can be viewed in browsers that do not support the original format. **[verify S5]** HEVC-HEIC decoding (prebuilt sharp likely lacks it; options: libheif in the worker image, WASM decoder).
-  - `media.video-poster` — ffmpeg reads the original through a presigned URL with range requests (the 2 GB file never passes through Node memory), extracts one frame.
-  - `storage.purge-content`, `storage.purge-collection`, `storage.delete-object` — idempotent (missing objects are success).
-  - `uploads.expire` — scheduled every 15 min.
-- Retries with exponential backoff; terminal failure → `processingStatus = FAILED`. Content stays available; the UI shows a type icon instead of a preview.
+  - `media.image-derivatives` — thumbnail (480 px) and preview (1600 px) WebP via sharp, without metadata, with a 100 MP input limit. The original is always kept unchanged. The preview is what makes HEIC/HEIF viewable in every browser. HEVC-HEIC is decoded by the libheif CLI (`heif-dec`/`heif-convert` with libde265) to a temporary JPEG, then sharp (spike S5); a decoded HEIC is not auto-oriented again, every other format is. Implemented.
+  - `media.video-poster` — ffprobe and ffmpeg read the original through a presigned URL with range requests (the 2 GB file never passes through Node memory) with `-threads 1` and protocol and format whitelists, take one frame at `min(1 s, duration / 2)` and record the duration; poster 1600 px and thumbnail 480 px. Implemented.
+  - `content.purge`, `collection.purge` — idempotent (missing rows and objects are success); implemented. `storage.discard-upload` (bytes of rejected or cancelled uploads) — *pending*, upload slice. (Earlier drafts named these `storage.purge-content`, `storage.purge-collection`, `storage.delete-object`.)
+  - `uploads.expire` — scheduled every 15 min; *pending*, upload slice (the schedule is registered once its handler exists).
+  - `maintenance.sweep` — hourly; implemented (see above).
+- Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
 - Worker Docker target includes ffmpeg/libheif; the API image does not.
@@ -462,7 +487,9 @@ Decision details: ADR 0009.
 - **Delete content:** transaction sets `deletedAt` + audit → immediately invisible and excluded from quota → job purges all storage objects (original and derivatives) → only after successful purge, the `ContentItem`/`MediaObject` rows are permanently deleted. Reports and audit events keep the original content ID (no FK).
 - **Archive collection:** `ARCHIVED`; guest access denied (`403 COLLECTION_UNAVAILABLE`); admin sees content; reversible.
 - **Delete collection:** confirmation in UI; `DELETING` + audit → guest API returns `410`; job aborts active uploads, deletes the collection prefix in resumable batches, then hard-deletes the collection (cascade).
-  - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3, the purge job that hard-deletes `DELETING` collections with slice 5.
+  - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3.
+  - *Implemented in Phase 4 PR B:* the purge. Deleting content or a collection enqueues `content.purge` / `collection.purge` in the same transaction; the worker deletes the objects, then the rows (content: derived objects now, the original with the upload slice; collection: its whole prefix in resumable batches, then the cascade). Audit events stay. The hourly sweep re-enqueues anything older than an hour, which also purges collections left `DELETING` since slice 1. Aborting active uploads joins with the upload slice.
+  - *Implemented in PR E:* every content deletion (admin single, admin bulk, guest own) goes through one `ContentDeletion.softDelete`: a conditional `UPDATE … WHERE deletedAt IS NULL RETURNING`, then one audit event and one `content.purge` job per returned row, in the caller's transaction, so a retry or a concurrent delete audits once.
 - **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
 - **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
 - No automatic retention in MVP.
@@ -484,9 +511,13 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Concurrent `INITIATED` uploads per guest session | 10 [assumption] |
 | Upload initiations per guest session | 300 / hour |
 | Magic link requests | 5 / hour per email, 20 / hour per IP |
-| Guest session creation | 30 / minute per IP |
+| Guest session creation | 120 / minute per IP (raised from 30 like [G10]: venue NAT) |
+| Guest texts | 60 / hour per guest session and 60 / minute per IP |
+| Guest reads (context, content list, one item) | 600 / minute per IP and route |
 | Collection creation | 10 per rolling 24 hours per account |
 | Per-file size | §10.1 |
+
+*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, and from PR E `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` for guest deletes; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
 
 *Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 
@@ -525,7 +556,7 @@ Decision details: ADR 0013.
 - Admin registration records `LegalAcceptance(document, version, acceptedAt)` (Phase 4 slice 10; not in Phase 2). No IP stored by default. Document updates do not force re-acceptance without a separate decision.
 - Guest page shows a short notice with links (no checkbox).
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
-- Data minimization: guest name optional and per-submission; guest session holds no profile data; logs exclude personal content.
+- Data minimization: the guest name is optional, held on the guest session ([O4], amended 2026-10-03) and snapshotted per submission; the session holds nothing else about the guest; other guests never see a name or another guest's file name or frame number; logs and audit events exclude text bodies, names, file names, cookies, tokens and signed URLs.
 
 ---
 
@@ -592,7 +623,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 | S6 | Prisma migrations with raw SQL CHECK / partial unique without drift | Foundation (first migration) |
 | S7 | pg-boss transactional enqueue with Prisma | Upload slice |
 | S8 | next-intl without locale prefix in App Router | Bootstrap (web) |
-| S9 | Headless Uppy vs in-house uploader | Upload slice |
+| S9 | Headless Uppy vs in-house uploader — **decided: in-house** (ADR 0008) | Upload slice |
 
 ---
 

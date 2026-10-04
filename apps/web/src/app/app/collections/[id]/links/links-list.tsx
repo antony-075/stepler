@@ -20,7 +20,7 @@ import { isApiError } from '@/api/client';
 import { useInvalidateCollections } from '@/api/collections';
 import { deleteGuestLink } from '@/api/guest-links';
 import { errorMessageKey } from '@/errors/error-message';
-import { permissionWords } from '@/guest-links/link-permissions';
+import { PermissionSummary } from '@/guest-links/permission-summary';
 import { CreateLinkDialog } from './create-link-dialog';
 import { LinkListRow } from './link-list-row';
 
@@ -159,7 +159,6 @@ function ExtraLinks({
  */
 function RevokedLinks({ links }: { links: GuestLink[] }) {
   const t = useTranslations('links');
-  const tWords = useTranslations('guestLinks.permissions');
   const format = useFormatter();
   return (
     <section aria-labelledby="revoked-links" className="grid gap-3">
@@ -174,9 +173,7 @@ function RevokedLinks({ links }: { links: GuestLink[] }) {
           <li key={link.id}>
             <LinkRow
               label={link.label ?? t('defaultTitle')}
-              permissionsSummary={permissionWords(link.permissions, tWords, (words) =>
-                format.list(words),
-              )}
+              permissionsSummary={<PermissionSummary permissions={link.permissions} />}
               status="revoked"
               statusLabel={t('revoked.on', {
                 date: format.dateTime(new Date(link.revokedAt ?? link.updatedAt), SHORT_DATE),

@@ -25,7 +25,7 @@ import {
   type UpdateGuestLinkRequest,
 } from '@stepler/contracts';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
-import type { Principal } from '../auth/principal.js';
+import type { AccountPrincipal } from '../auth/principal.js';
 import { RequestId } from '../logging/request-id.decorator.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { GuestLinksService } from './guest-links.service.js';
@@ -51,7 +51,7 @@ export class GuestLinksController {
   @ApiResponse({ status: 200, standardSchema: guestLinkListResponseSchema })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: not one of your collections' })
   list(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: IdParams,
   ): Promise<GuestLinkListResponse> {
     return this.links.list(principal, params.id);
@@ -65,7 +65,7 @@ export class GuestLinksController {
     description: 'GUEST_LINK_LIMIT_REACHED: the collection has its maximum of additional links',
   })
   create(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: IdParams,
     @Body({ schema: createGuestLinkRequestSchema }) body: CreateGuestLinkRequest,
     @RequestId() requestId: string | undefined,
@@ -82,7 +82,7 @@ export class GuestLinksController {
   })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: not one of your collections' })
   rotateDefault(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: IdParams,
     @Body({ schema: rotateDefaultLinkRequestSchema }) body: RotateDefaultLinkRequest,
     @RequestId() requestId: string | undefined,
@@ -99,7 +99,7 @@ export class GuestLinksController {
   @ApiResponse(NOT_FOUND)
   @ApiResponse(REVOKED)
   update(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
     @Body({ schema: updateGuestLinkRequestSchema }) body: UpdateGuestLinkRequest,
     @RequestId() requestId: string | undefined,
@@ -113,7 +113,7 @@ export class GuestLinksController {
   @ApiResponse(NOT_FOUND)
   @ApiResponse(REVOKED)
   deactivate(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<GuestLink> {
@@ -126,7 +126,7 @@ export class GuestLinksController {
   @ApiResponse(NOT_FOUND)
   @ApiResponse(REVOKED)
   activate(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<GuestLink> {
@@ -146,7 +146,7 @@ export class GuestLinksController {
     description: 'DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not revoked',
   })
   revoke(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<GuestLink> {
@@ -166,7 +166,7 @@ export class GuestLinksController {
     description: 'DEFAULT_LINK_NOT_REVOCABLE: the default link is rotated, not deleted',
   })
   remove(
-    @CurrentPrincipal() principal: Principal,
+    @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestLinkIdParamsSchema }) params: IdParams,
     @RequestId() requestId: string | undefined,
   ): Promise<void> {
