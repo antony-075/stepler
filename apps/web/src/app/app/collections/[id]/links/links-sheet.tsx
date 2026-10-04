@@ -57,6 +57,7 @@ import {
 } from '@/guest-links/link-permissions';
 import {
   AddPermissionTiles,
+  DeleteOwnToggle,
   PermissionNotice,
   SeePermissionCards,
 } from '@/guest-links/permission-fields';
@@ -338,6 +339,7 @@ function PermissionsForm({
                   legend={t('addTitle')}
                   legendClassName="sr-only"
                 />
+                <DeleteOwnToggle value={field.value} onChange={field.onChange} className="mt-3" />
               </Panel>
               <Panel data-slot="link-see" className="p-4 sm:p-6">
                 <CardHeading title={t('seeTitle')} description={t('seeDescription')} />

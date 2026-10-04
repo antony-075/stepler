@@ -186,6 +186,9 @@ describe('bulkDeleteContentRequestSchema', () => {
 
   test('rejects duplicates', () => {
     expect(bulkDeleteContentRequestSchema.safeParse({ ids: [id, id] }).success).toBe(false);
+    expect(bulkDeleteContentRequestSchema.safeParse({ ids: [id, id.toUpperCase()] }).success).toBe(
+      false,
+    );
   });
 });
 

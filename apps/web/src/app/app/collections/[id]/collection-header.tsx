@@ -22,16 +22,16 @@ export function CollectionHeader({ collection }: { collection: Collection }) {
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
-      <header data-slot="page-header" className="grid grid-cols-[minmax(0,1fr)] gap-2">
+      <header data-slot="page-header" className="grid grid-cols-[minmax(0,1fr)] gap-1">
         <CollectionBreadcrumbs collection={collection} />
         <EditableTitle collection={collection} />
+        <EditableDescription collection={collection} />
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
           <Badge variant={archived ? 'neutral' : 'success'} title={status}>
             {status}
           </Badge>
           <span className="text-sm tabular-nums">{dated}</span>
         </p>
-        <EditableDescription collection={collection} />
       </header>
     </div>
   );

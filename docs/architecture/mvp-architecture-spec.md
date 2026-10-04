@@ -300,6 +300,7 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 - `contributorName` and other guests' metadata are excluded from guest DTOs.
 - Signed URLs are issued only after the same policy check as the item itself.
 - A view-only link (`canViewGallery` only) is a full capability (F3).
+- *Implemented in PR E (2026-10-04):* guest delete. An item that is not this session's own (another guest's, another collection's, or none) is `404` before the permission is looked at; an own item through a link without `canDeleteOwn` (the link the session is bound to now) is `403 FORBIDDEN`; an already deleted own item is `204`. The audit actor is `GUEST` with the session id. Admin bulk delete takes 1–100 ids of one owned collection in one transaction: ids of other collections are reported `notFound` and untouched, a retry reports the frames `alreadyDeleted`, and audit events (`bulk: true`) and purge jobs take their ids from the updated rows. Presigned links are readable by whoever holds them, so another guest's download link is signed with a neutral `attachment; filename="stepler.<ext>"`: no original name and no frame number (only the admin and the contributor get `stepler-087.pdf` / the original name). Guest deletes have their own per-IP bucket, `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` (120).
 
 ---
 
@@ -337,7 +338,7 @@ Admin
   GET                 /collections/{id}/content?kind=&sort=newest|frame&cursor=&limit=   (slice 3)
   GET                 /collections/{id}/content/counts                                   (slice 3)
   GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
-  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) [C7]
+  POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
   POST                /content/{id}/hide | /unhide            (slice 9)
   GET                 /collections/{id}/reports
   PATCH               /reports/{id}
@@ -356,7 +357,7 @@ Guest (cookie scoped per collection, see §9.1)
   GET    /guest/collections/{cid}/context        → GuestContext                           (slice 3)
   GET    /guest/collections/{cid}/content?scope=own|all&cursor=                          (slice 3)
   GET    /guest/collections/{cid}/content/{id}                                           (slice 3)
-  DELETE /guest/collections/{cid}/content/{id}
+  DELETE /guest/collections/{cid}/content/{id}         own item + canDeleteOwn; else 404 / 403 (PR E)
   POST   /guest/collections/{cid}/texts      Idempotency-Key header (uuid), 201 / replay 200   (slice 3)
   POST   /guest/collections/{cid}/uploads
   POST   /guest/collections/{cid}/uploads/{uid}/parts
@@ -488,6 +489,7 @@ Decision details: ADR 0009.
 - **Delete collection:** confirmation in UI; `DELETING` + audit → guest API returns `410`; job aborts active uploads, deletes the collection prefix in resumable batches, then hard-deletes the collection (cascade).
   - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3.
   - *Implemented in Phase 4 PR B:* the purge. Deleting content or a collection enqueues `content.purge` / `collection.purge` in the same transaction; the worker deletes the objects, then the rows (content: derived objects now, the original with the upload slice; collection: its whole prefix in resumable batches, then the cascade). Audit events stay. The hourly sweep re-enqueues anything older than an hour, which also purges collections left `DELETING` since slice 1. Aborting active uploads joins with the upload slice.
+  - *Implemented in PR E:* every content deletion (admin single, admin bulk, guest own) goes through one `ContentDeletion.softDelete`: a conditional `UPDATE … WHERE deletedAt IS NULL RETURNING`, then one audit event and one `content.purge` job per returned row, in the caller's transaction, so a retry or a concurrent delete audits once.
 - **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
 - **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
 - No automatic retention in MVP.
@@ -515,7 +517,7 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Collection creation | 10 per rolling 24 hours per account |
 | Per-file size | §10.1 |
 
-*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
+*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, and from PR E `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` for guest deletes; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
 
 *Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 

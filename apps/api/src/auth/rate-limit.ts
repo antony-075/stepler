@@ -22,6 +22,7 @@ export type RateLimitName =
   | 'guest-session-create'
   | 'guest-text-create'
   | 'guest-read'
+  | 'guest-write'
   | 'guest-upload'
   | 'guest-upload-session';
 
@@ -70,6 +71,8 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       named('guest-text-create', limits.guestTextCreatePerIpPerMinute(), MINUTE_MS),
       // Counted per route (the throttler keys by handler): context, content list, one item.
       named('guest-read', limits.guestReadsPerIpPerMinute(), MINUTE_MS),
+      // Guest deletes of their own frames, per route [C15].
+      named('guest-write', limits.guestWritesPerIpPerMinute(), MINUTE_MS),
       // Upload calls (review I2), per route: per IP, and per guest session.
       named('guest-upload', limits.uploadCallsPerIpPerMinute(), MINUTE_MS),
       {

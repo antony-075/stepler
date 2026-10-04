@@ -1,9 +1,11 @@
 import {
   type CreateUploadRequest,
+  type GuestContentDetail,
   type GuestContentItem,
   type GuestContentListQuery,
   type GuestContentPage,
   type GuestContext,
+  guestContentDetailSchema,
   guestContentItemSchema,
   guestContentPageSchema,
   guestContextSchema,
@@ -72,6 +74,16 @@ export const listGuestContent = (
     schema: guestContentPageSchema,
   });
 };
+
+/** One visible frame with links to its media and original; another guest's never says whose. */
+export const getGuestContent = (collectionId: string, id: string): Promise<GuestContentDetail> =>
+  apiRequest(`${base(collectionId)}/content/${encodeURIComponent(id)}`, {
+    schema: guestContentDetailSchema,
+  });
+
+/** The guest's own frame, when the link allows it [C15]. Idempotent. */
+export const deleteGuestContent = (collectionId: string, id: string): Promise<void> =>
+  apiRequest(`${base(collectionId)}/content/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
 // Direct uploads (spec §10, ADR 0008). The API only authorizes and verifies; bytes go from the
 // browser straight to storage with the presigned URLs these calls return. `signal` cancels the

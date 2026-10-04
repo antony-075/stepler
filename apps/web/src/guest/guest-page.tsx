@@ -15,9 +15,15 @@
 //   quieter second action, or the pencil one on a text-only link. A view-only link has no dock.
 // - Uploads (PR C) show at the top of «Ваші кадри» (`UploadBatch`); the dock on phones is
 //   `UploadDock` with «Не закривайте сторінку…» while files are on their way.
-// - Frames are the contact sheet (`FrameGrid`): times only, numbers only on the guest's own frames,
+// - Frames are borderless tiles (`FrameGrid`, remark 62): numbers only on the guest's own frames,
 //   never other guests' names. The count line («86 кадрів», «останній о 21:10») only with the
 //   shared gallery (§11.3). Contribution-only links say who will see the frames instead.
+// - With the shared gallery, «Усі кадри» lists everyone's frames newest first, 48 at a time
+//   («Показати ще»), and opens each in the same viewer as the admin's: other guests' frames show
+//   no number, name, file name or size. It is never polled (a venue's guests share one IP and its
+//   read limit, and the grid must not move under a finger): «Оновити» beside the title asks for
+//   what is new, and a list older than 30 minutes is fetched again when the tab comes back.
+// - Own frames open in the viewer too, with «Видалити» when the link allows it [C15].
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.
 // - Any call that meets a link or collection state switches the whole page to that state.
 
@@ -29,12 +35,12 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
 import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ImagePlus, UserRound } from 'lucide-react';
+import { ImagePlus, RefreshCw, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { UploadDock } from '@stepler/ui/components/upload-dock';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkStatePage } from '@/app/g/[token]/link-state-page';
-import { submitText, updateName } from './api';
+import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 import type { GuestPageState } from './guest-state';
 import { NamePrompt } from './name-prompt';
@@ -177,6 +183,11 @@ function GuestCollection({
     }
   }, [addedCount, collectionId, onAdded, queryClient]);
 
+  /** The header's counts after the guest deleted a frame; a failure keeps the old line. */
+  function refreshContext() {
+    call((id) => getContext(id)).then(setContext, () => {});
+  }
+
   const saveName = useMutation({
     mutationFn: (name: string | null) => call((id) => updateName(id, name)),
     onSuccess: setContext,
@@ -291,6 +302,7 @@ function GuestCollection({
                 call={call}
                 label={t('listLabelOwn')}
                 hide={doneIds}
+                onDeleted={refreshContext}
                 empty={
                   <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
                     {t('ownEmpty')}
@@ -302,14 +314,18 @@ function GuestCollection({
 
           {permissions.canViewGallery ? (
             <section aria-labelledby="all-title" className="grid gap-4">
-              <h2 id="all-title" className="type-h2">
-                {t('allTitle')}
-              </h2>
+              <div className="flex items-center justify-between gap-4">
+                <h2 id="all-title" className="type-h2">
+                  {t('allTitle')}
+                </h2>
+                <RefreshGallery collectionId={collectionId} onRefresh={refreshContext} />
+              </div>
               <GuestFrames
                 collectionId={collectionId}
                 scope="all"
                 call={call}
                 label={t('listLabelAll')}
+                onDeleted={refreshContext}
                 empty={
                   <EmptyState
                     frameNumber={1}
@@ -360,6 +376,55 @@ function GuestCollection({
         onDone={nameDone}
       />
       <TextComposer open={composerOpen} onOpenChange={setComposerOpen} onSend={sendText} />
+    </>
+  );
+}
+
+/**
+ * «Оновити» for the shared gallery (owner, PR E: never polled): everyone's frames from the first
+ * page, and the header's counts. The icon spins meanwhile; «Оновлено» is announced when done.
+ */
+function RefreshGallery({
+  collectionId,
+  onRefresh,
+}: {
+  collectionId: string;
+  onRefresh: () => void;
+}) {
+  const t = useTranslations('guest');
+  const queryClient = useQueryClient();
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle');
+  async function refresh() {
+    if (state === 'busy') return;
+    setState('busy');
+    onRefresh();
+    try {
+      await queryClient.refetchQueries({ queryKey: guestContentKey(collectionId, 'all') });
+    } finally {
+      setState('done');
+    }
+  }
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-disabled={state === 'busy' || undefined}
+        onClick={() => void refresh()}
+        className="shrink-0 pointer-coarse:h-11"
+      >
+        <RefreshCw
+          aria-hidden="true"
+          className={cn(
+            'size-4',
+            state === 'busy' && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+          )}
+        />
+        {t('refresh')}
+      </Button>
+      <p role="status" className="sr-only">
+        {state === 'done' ? t('refreshed') : null}
+      </p>
     </>
   );
 }

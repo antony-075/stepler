@@ -6,7 +6,7 @@
 //   desktop right column beside the sticky side panel), so the frames being uploaded sit exactly
 //   where the saved ones will be. The pick action stays in the dock / side panel.
 // - While files move: `UploadSummary` (words, mono bytes, the 2px pencil line, partial and
-//   offline follow-ups, one polite live region) above a contact sheet of `UploadFrame`s with
+//   offline follow-ups, one polite live region) above a grid of `UploadFrame` tiles with
 //   local previews (`URL.createObjectURL`, revoked when the frame goes; HEIC, video and documents
 //   get a type tile: never a decoded original in the grid).
 // - When the batch settles with everything added: the B success moment, `PrintStack` of the last

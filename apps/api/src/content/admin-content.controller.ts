@@ -1,15 +1,29 @@
-import { Controller, Delete, Get, HttpCode, HttpStatus, Param, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   adminContentDetailSchema,
   adminContentListQuerySchema,
   adminContentPageSchema,
+  bulkDeleteContentRequestSchema,
+  bulkDeleteContentResponseSchema,
   collectionIdParamsSchema,
   contentCountsSchema,
   contentIdParamsSchema,
   type AdminContentDetail,
   type AdminContentListQuery,
   type AdminContentPage,
+  type BulkDeleteContentRequest,
+  type BulkDeleteContentResponse,
   type ContentCounts,
 } from '@stepler/contracts';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
@@ -53,6 +67,24 @@ export class AdminContentController {
     @Param({ schema: collectionIdParamsSchema }) params: IdParams,
   ): Promise<ContentCounts> {
     return this.content.counts(principal, params.id);
+  }
+
+  /** Deletes several frames at once (the admin's multi-select) [C7]; safe to retry. */
+  @Post('collections/:id/content/bulk-delete')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: bulkDeleteContentResponseSchema })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_FAILED: 1 to 100 unique UUIDs are required',
+  })
+  @ApiResponse(NOT_FOUND)
+  bulkDelete(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: collectionIdParamsSchema }) params: IdParams,
+    @Body({ schema: bulkDeleteContentRequestSchema }) body: BulkDeleteContentRequest,
+    @RequestId() requestId: string | undefined,
+  ): Promise<BulkDeleteContentResponse> {
+    return this.content.bulkDelete(principal, params.id, body.ids, requestId);
   }
 
   @Get('content/:id')

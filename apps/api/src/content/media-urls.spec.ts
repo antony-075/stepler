@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { contentDispositionFor, fallbackFilename, windowStart } from './media-urls.js';
+import {
+  contentDispositionFor,
+  fallbackFilename,
+  neutralFilename,
+  windowStart,
+} from './media-urls.js';
 
 describe('contentDispositionFor', () => {
   test('strips path separators, quotes and control characters; RFC 5987 name + ASCII fallback', () => {
@@ -43,6 +48,14 @@ describe('fallbackFilename', () => {
     expect(fallbackFilename({ ...item, frameNo: 1234, originalFilename: null }, 'x/y')).toBe(
       'stepler-1234.bin',
     );
+  });
+});
+
+describe('neutralFilename', () => {
+  test('another guest’s file: only the verified type’s extension, no number, no name', () => {
+    expect(neutralFilename('application/pdf')).toBe('stepler.pdf');
+    expect(neutralFilename('image/jpeg')).toBe('stepler.jpg');
+    expect(neutralFilename('x/unknown')).toBe('stepler.bin');
   });
 });
 

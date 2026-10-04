@@ -2,6 +2,7 @@ import type { ServerResponse } from 'node:http';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -33,6 +34,7 @@ import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { AppError } from '../errors/app-error.js';
 import { CurrentGuest } from '../guest-access/current-guest.decorator.js';
 import { GuestSessionGuard } from '../guest-access/guest-session.guard.js';
+import { RequestId } from '../logging/request-id.decorator.js';
 import { GUEST_SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { GuestContentService } from './guest-content.service.js';
 import { TextsService } from './texts.service.js';
@@ -100,6 +102,34 @@ export class GuestContentController {
     @Param({ schema: guestContentParamsSchema }) params: GuestContentParams,
   ): Promise<GuestContentDetail> {
     return this.content.get(guest, params.id);
+  }
+
+  /** The guest's own item, when the link allows it [C15]; idempotent. */
+  @Delete('content/:id')
+  @RateLimit('guest-write')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({
+    status: 204,
+    description: 'Deleted, or already deleted (idempotent); gone for the admin too at once',
+  })
+  @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
+  @ApiResponse({
+    status: 403,
+    description:
+      'FORBIDDEN (an own item, but the link does not let guests delete), COLLECTION_ARCHIVED or LINK_INACTIVE',
+  })
+  @ApiResponse({
+    status: 404,
+    description: "NOT_FOUND: no such item in this collection, or another guest's",
+  })
+  @ApiResponse({ status: 410, description: 'COLLECTION_UNAVAILABLE, or LINK_REVOKED' })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
+  delete(
+    @CurrentGuest() guest: GuestPrincipal,
+    @Param({ schema: guestContentParamsSchema }) params: GuestContentParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<void> {
+    return this.content.delete(guest, params.id, requestId);
   }
 
   @Post('texts')

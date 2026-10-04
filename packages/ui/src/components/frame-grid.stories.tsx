@@ -10,7 +10,6 @@ function frames(count: number) {
       key={i}
       kind="photo"
       number={i + 1}
-      time={`20:${String(i % 60).padStart(2, '0')}`}
       media={<img alt="" src={samplePhoto((i * 37) % 360)} />}
       accessibleName={`Кадр ${i + 1}, фото`}
       onOpen={() => {}}
@@ -18,10 +17,10 @@ function frames(count: number) {
   ));
 }
 
-/** The grid's content box is `width` (its 1px inset is outside), as DESIGN-SYSTEM.md §7.2 counts. */
+/** The grid's container is `width`, as DESIGN-SYSTEM.md §7.2 counts. */
 function sheet(width: number, count = 14) {
   return (
-    <div style={{ width: width + 2 }}>
+    <div style={{ width }}>
       <FrameGrid ariaLabel="Кадри колекції">{frames(count)}</FrameGrid>
     </div>
   );
@@ -46,19 +45,19 @@ async function expectColumns(canvasElement: HTMLElement, expected: number) {
   await expect(row).toHaveLength(expected);
 }
 
-/** A 320px phone: three columns of about 95px. */
+/** A 320px phone: three columns of about 92px. */
 export const Phone288: Story = {
   render: () => sheet(288),
   play: async ({ canvasElement }) => expectColumns(canvasElement, 3),
 };
 
-/** A 1024px tablet column: six columns of about 157px. */
+/** A 1024px tablet column: six columns of about 150px. */
 export const Tablet944: Story = {
   render: () => sheet(944),
   play: async ({ canvasElement }) => expectColumns(canvasElement, 6),
 };
 
-/** 1920px: nine columns of about 186px; ten at most. */
+/** 1920px: nine columns of about 179px; ten at most. */
 export const Wide1680: Story = {
   render: () => sheet(1680, 26),
   play: async ({ canvasElement }) => expectColumns(canvasElement, 9),
@@ -98,7 +97,7 @@ export const Steps: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const expected: Record<string, string> = { 343: '3', 528: '5', 704: '5', 1304: '7' };
+    const expected: Record<string, string> = { 343: '3', 528: '4', 704: '4', 1304: '7' };
     for (const box of canvasElement.querySelectorAll<HTMLElement>('[data-width]')) {
       const list = box.querySelector<HTMLElement>('ul')!;
       await expect(getComputedStyle(list).getPropertyValue('--cols').trim()).toBe(
@@ -108,7 +107,7 @@ export const Steps: Story = {
   },
 };
 
-/** Dense: 4px frame padding; a short last row shows the page. */
+/** Dense: 4px gaps; a short last row shows the page. */
 export const Dense: Story = {
   render: () => (
     <div style={{ width: 530 }}>
@@ -118,13 +117,13 @@ export const Dense: Story = {
     </div>
   ),
   play: async ({ canvasElement }) => {
-    const frame = canvasElement.querySelector<HTMLElement>('[data-slot="frame"]')!;
-    await expect(getComputedStyle(frame).paddingTop).toBe('4px');
+    const list = canvasElement.querySelector<HTMLElement>('[data-slot="frame-grid"] ul')!;
+    await expect(getComputedStyle(list).columnGap).toBe('4px');
   },
 };
 
 export const Dark: Story = {
   globals: { theme: 'dark' },
   render: () => sheet(528, 7),
-  play: async ({ canvasElement }) => expectColumns(canvasElement, 5),
+  play: async ({ canvasElement }) => expectColumns(canvasElement, 4),
 };

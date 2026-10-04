@@ -183,15 +183,24 @@ export type ContentCounts = z.infer<typeof contentCountsSchema>;
 export const bulkDeleteContentRequestSchema = z
   .object({ ids: z.array(z.uuid()).min(1).max(100) })
   .strict()
-  .refine((body) => new Set(body.ids).size === body.ids.length, {
+  // UUIDs are case-insensitive: `A…` and `a…` are one frame.
+  .refine((body) => new Set(body.ids.map((id) => id.toLowerCase())).size === body.ids.length, {
     message: 'Ids must be unique',
     path: ['ids'],
   });
 export type BulkDeleteContentRequest = z.infer<typeof bulkDeleteContentRequestSchema>;
 
-/** Already-deleted ids count as deleted, so a retry gets the same answer. */
+/**
+ * What happened to each id: `deleted` by this request, `alreadyDeleted` before it (a retry moves
+ * ids here, the frames are gone either way), `notFound` (no such frame in this collection; a
+ * frame of another collection is reported the same way). Every requested id is in exactly one.
+ */
 export const bulkDeleteContentResponseSchema = z
-  .object({ deletedIds: z.array(z.uuid()), notFoundIds: z.array(z.uuid()) })
+  .object({
+    deleted: z.array(z.uuid()),
+    alreadyDeleted: z.array(z.uuid()),
+    notFound: z.array(z.uuid()),
+  })
   .strict();
 export type BulkDeleteContentResponse = z.infer<typeof bulkDeleteContentResponseSchema>;
 

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { GuestAccessModule } from '../guest-access/guest-access.module.js';
 import { AdminContentController } from './admin-content.controller.js';
 import { AdminContentService } from './admin-content.service.js';
+import { ContentDeletion } from './content-deletion.js';
 import { ContentQueries } from './content-queries.js';
 import { FrameNumbers } from './frame-numbers.js';
 import { GuestContentController } from './guest-content.controller.js';
@@ -16,6 +17,7 @@ import { TextsService } from './texts.service.js';
   providers: [
     FrameNumbers,
     ContentQueries,
+    ContentDeletion,
     MediaUrls,
     TextsService,
     AdminContentService,
