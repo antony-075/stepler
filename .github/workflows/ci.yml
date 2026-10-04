@@ -37,7 +37,8 @@ jobs:
           ./gitleaks git --no-banner --redact .
 
   quality:
-    runs-on: ubuntu-latest
+    # Pinned: the media packages below are Ubuntu 24.04's (ubuntu-latest moves on).
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -71,7 +72,8 @@ jobs:
 
   e2e:
     needs: quality
-    runs-on: ubuntu-latest
+    # Pinned: the media packages below are Ubuntu 24.04's (ubuntu-latest moves on).
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     # Two Playwright shards in parallel keep each run well under the timeout. If a shard passes
     # 25 minutes, add a third (shard: [1, 2, 3] and --shard=N/3).
