@@ -53,6 +53,54 @@ export function currentLegalVersion(document: LegalDocumentKey): LegalDocumentVe
   return entry;
 }
 
+/**
+ * The versions a person accepted on the sign-in card (owner decision L1): sent with the
+ * magic-link request and with the Google start, recorded when the sign-in completes. The API
+ * only ever stores the registry's current versions; the pattern keeps arbitrary strings out.
+ */
+export const legalVersionsSchema = z
+  .object({
+    terms: z.string().regex(LEGAL_VERSION_PATTERN),
+    privacy: z.string().regex(LEGAL_VERSION_PATTERN),
+  })
+  .strict();
+export type LegalVersions = z.infer<typeof legalVersionsSchema>;
+
+/** The current version of every document, in the shape the sign-in card sends back. */
+export function currentLegalVersions(): LegalVersions {
+  return {
+    terms: currentLegalVersion('TERMS').version,
+    privacy: currentLegalVersion('PRIVACY').version,
+  };
+}
+
+/** Whether both versions are the current ones (a stale card or link fails this). */
+export function isCurrentLegalVersions(versions: LegalVersions): boolean {
+  const current = currentLegalVersions();
+  return versions.terms === current.terms && versions.privacy === current.privacy;
+}
+
+/**
+ * `POST /api/v1/me/legal-acceptances`: the fallback page's acceptance (accounts from before the
+ * sign-in checkbox, stale links, forced re-acceptance). One or both documents.
+ */
+export const legalAcceptanceRequestSchema = z
+  .object({
+    acceptances: z
+      .array(
+        z
+          .object({
+            document: legalDocumentKeySchema,
+            version: z.string().regex(LEGAL_VERSION_PATTERN),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(2),
+  })
+  .strict();
+export type LegalAcceptanceRequest = z.infer<typeof legalAcceptanceRequestSchema>;
+
 /** One acceptance as stored for a user. */
 export interface LegalAcceptanceRecord {
   document: LegalDocumentKey;

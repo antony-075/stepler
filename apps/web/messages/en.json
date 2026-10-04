@@ -31,7 +31,9 @@
     "UPLOAD_CLOSED": "This upload is already finished or cancelled.",
     "IDEMPOTENCY_CONFLICT": "The repeated request doesn’t match the first one.",
     "CONTENT_NOT_FOUND": "This frame was deleted.",
-    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover."
+    "COVER_SOURCE_INVALID": "Only a processed photo can become the cover.",
+    "LEGAL_ACCEPTANCE_REQUIRED": "To continue, accept the Terms of Service and the Privacy Policy.",
+    "LEGAL_VERSION_OUTDATED": "The documents have changed. Review them and accept again."
   },
   "login": {
     "pageTitle": "Sign in",

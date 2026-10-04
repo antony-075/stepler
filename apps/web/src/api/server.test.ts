@@ -1,3 +1,4 @@
+import { legalStatus } from '@stepler/contracts';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { getSessionUser } from './server';
 
@@ -10,6 +11,7 @@ const USER = {
   displayName: null,
   locale: 'uk',
   isOperator: false,
+  legal: legalStatus([]),
 };
 
 function stubFetch(response: Response | Error) {

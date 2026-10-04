@@ -1,12 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import {
   currentLegalVersion,
+  currentLegalVersions,
+  isCurrentLegalVersions,
   LEGAL_DOCUMENTS,
   LEGAL_VERSION_PATTERN,
+  legalAcceptanceRequestSchema,
   type LegalDocumentVersion,
   legalDocumentKeySchema,
   legalStatus,
   legalStatusSchema,
+  legalVersionsSchema,
 } from './index.js';
 
 describe('LEGAL_DOCUMENTS', () => {
@@ -127,5 +131,69 @@ describe('legalStatus', () => {
     const status = legalStatus([{ document: 'PRIVACY', version: 'v1', acceptedAt: at }]);
     expect(legalStatusSchema.parse(status)).toEqual(status);
     expect(legalStatusSchema.safeParse({ ...status, accepted: 'yes' }).success).toBe(false);
+  });
+});
+
+describe('legalVersionsSchema', () => {
+  test('accepts both versions', () => {
+    expect(legalVersionsSchema.parse({ terms: 'v1', privacy: 'v1' })).toEqual({
+      terms: 'v1',
+      privacy: 'v1',
+    });
+  });
+
+  test('rejects a missing key, a malformed version and extra keys', () => {
+    for (const bad of [
+      { terms: 'v1' },
+      { terms: '1', privacy: 'v1' },
+      { terms: '<script>', privacy: 'v1' },
+      { terms: 'v1', privacy: 'v1', cookies: 'v1' },
+    ]) {
+      expect(legalVersionsSchema.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe('currentLegalVersions', () => {
+  test('mirrors the registry', () => {
+    expect(currentLegalVersions()).toEqual({
+      terms: currentLegalVersion('TERMS').version,
+      privacy: currentLegalVersion('PRIVACY').version,
+    });
+  });
+
+  test('isCurrentLegalVersions is true only for the current pair', () => {
+    expect(isCurrentLegalVersions(currentLegalVersions())).toBe(true);
+    expect(isCurrentLegalVersions({ ...currentLegalVersions(), terms: 'v9' })).toBe(false);
+    expect(isCurrentLegalVersions({ ...currentLegalVersions(), privacy: 'v9' })).toBe(false);
+  });
+});
+
+describe('legalAcceptanceRequestSchema', () => {
+  test('accepts one or two acceptances', () => {
+    const one = { acceptances: [{ document: 'TERMS', version: 'v1' }] };
+    expect(legalAcceptanceRequestSchema.parse(one)).toEqual(one);
+    expect(
+      legalAcceptanceRequestSchema.safeParse({
+        acceptances: [
+          { document: 'TERMS', version: 'v1' },
+          { document: 'PRIVACY', version: 'v1' },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  test('rejects empty, too many, malformed versions, unknown documents and extra keys', () => {
+    const item = { document: 'TERMS', version: 'v1' };
+    for (const bad of [
+      { acceptances: [] },
+      { acceptances: [item, item, item] },
+      { acceptances: [{ document: 'TERMS', version: '1' }] },
+      { acceptances: [{ document: 'COOKIES', version: 'v1' }] },
+      { acceptances: [{ ...item, extra: true }] },
+      { acceptances: [item], extra: true },
+    ]) {
+      expect(legalAcceptanceRequestSchema.safeParse(bad).success).toBe(false);
+    }
   });
 });

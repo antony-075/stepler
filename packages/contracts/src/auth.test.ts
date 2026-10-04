@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
+  authMethodsResponseSchema,
+  currentLegalVersions,
   displayNameSchema,
+  legalStatus,
   magicLinkRequestSchema,
   magicLinkVerifyRequestSchema,
   meResponseSchema,
@@ -31,24 +34,63 @@ describe('meResponseSchema', () => {
       displayName: null,
       locale: 'uk',
       isOperator: false,
+      legal: legalStatus([]),
     };
     expect(meResponseSchema.parse(me)).toEqual(me);
+  });
+
+  test('requires the legal status', () => {
+    const withoutLegal = {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
+      email: 'a@example.com',
+      displayName: null,
+      locale: 'uk',
+      isOperator: false,
+    };
+    expect(meResponseSchema.safeParse(withoutLegal).success).toBe(false);
+  });
+});
+
+describe('authMethodsResponseSchema', () => {
+  const methods = { magicLink: true, google: false, turnstileSiteKey: 'k' };
+
+  test('carries the current legal versions', () => {
+    const body = { ...methods, legal: currentLegalVersions() };
+    expect(authMethodsResponseSchema.parse(body)).toEqual(body);
+    expect(authMethodsResponseSchema.safeParse(methods).success).toBe(false);
   });
 });
 
 describe('magicLinkRequestSchema', () => {
+  const legal = { terms: 'v1', privacy: 'v1' };
+
   test('normalizes the email', () => {
     expect(
-      magicLinkRequestSchema.parse({ email: ' Anton@Example.COM ', turnstileToken: 't' }).email,
+      magicLinkRequestSchema.parse({ email: ' Anton@Example.COM ', turnstileToken: 't', legal })
+        .email,
     ).toBe('anton@example.com');
   });
 
   test('requires a Turnstile token and rejects extra keys', () => {
-    expect(magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: '' }).success).toBe(
+    expect(
+      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: '', legal }).success,
+    ).toBe(false);
+    expect(
+      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't', legal, x: 1 })
+        .success,
+    ).toBe(false);
+  });
+
+  test('requires well-formed legal versions (the sign-in checkbox, server side)', () => {
+    expect(magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't' }).success).toBe(
       false,
     );
     expect(
-      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't', x: 1 }).success,
+      magicLinkRequestSchema.safeParse({
+        email: 'a@b.io',
+        turnstileToken: 't',
+        legal: { terms: '<script>', privacy: 'v1' },
+      }).success,
     ).toBe(false);
   });
 });

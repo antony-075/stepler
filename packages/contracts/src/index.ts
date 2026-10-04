@@ -139,15 +139,21 @@ export {
 } from './health.js';
 export {
   currentLegalVersion,
+  currentLegalVersions,
+  isCurrentLegalVersions,
   LEGAL_DOCUMENTS,
   LEGAL_VERSION_PATTERN,
+  legalAcceptanceRequestSchema,
   legalDocumentKeySchema,
   legalStatus,
   legalStatusSchema,
+  legalVersionsSchema,
   type LegalAcceptanceRecord,
+  type LegalAcceptanceRequest,
   type LegalDocumentKey,
   type LegalDocumentVersion,
   type LegalStatus,
+  type LegalVersions,
 } from './legal.js';
 export {
   storageUsageSchema,
