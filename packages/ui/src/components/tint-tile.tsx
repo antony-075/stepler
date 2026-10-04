@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import { FRAME_TINT_CLASSES, type FrameTint } from '../lib/frame-tints';
 import { cn } from '../lib/utils';
 
@@ -15,7 +15,7 @@ const SIZES = {
   fill: 'aspect-square w-full text-5xl',
 } as const;
 
-type TintTileProps = {
+type TintTileProps = Omit<HTMLAttributes<HTMLSpanElement>, 'children' | 'className'> & {
   /** One of the curated tints (`FRAME_TINTS`); a collection's comes from its id. */
   tint: FrameTint;
   size?: keyof typeof SIZES;
@@ -26,18 +26,19 @@ type TintTileProps = {
 
 /**
  * A calm square in one tint with a mark in its ink (DESIGN-SYSTEM.md §5.10, §5.16): a
- * collection's identity before it has content (its initials; the newest photo replaces the fill
- * in slice 7, an admin cover photo later: the tile is the slot either takes, at the same size)
- * and the mark of an empty state (an icon). Flat like a frame: 2px radius, a 1px
+ * collection's identity while it has no cover (its initials; `CollectionCover` is the slot that
+ * shows the admin's cover picture instead, at the same size) and the mark of an empty state (an
+ * icon). Other attributes (`data-*`) pass through to the tile. Flat like a frame: 2px radius, a 1px
  * tint edge, no shadow. Decorative, so hidden from assistive technology; the caller names the
  * collection or the state in words. The ink passes 4.5:1 on its fill in both themes.
  */
-function TintTile({ tint, size = 'md', className, children }: TintTileProps) {
+function TintTile({ tint, size = 'md', className, children, ...props }: TintTileProps) {
   return (
     <span
       data-slot="tint-tile"
       data-tint={tint}
       aria-hidden="true"
+      {...props}
       className={cn(
         "grid shrink-0 place-items-center rounded-frame border leading-none font-semibold select-none [font-variation-settings:'SHRP'_60]",
         FRAME_TINT_CLASSES[tint],
