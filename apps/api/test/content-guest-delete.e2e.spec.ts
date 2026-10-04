@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, queuedJobs, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import {
@@ -29,7 +30,7 @@ describe('guest own-content deletion', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv());
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 

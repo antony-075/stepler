@@ -5,6 +5,7 @@ import {
   horizontalOverflow,
   setCoverFromFrameViaApi,
   updateCollectionViaApi,
+  waitForContentProcessed,
   waitForCoverReady,
 } from '../support/collections.js';
 import { guestLinks, mainLinkPath, openGuestLink } from '../support/guest.js';
@@ -110,6 +111,7 @@ test.describe('collection appearance', () => {
     const guest = await asGuest(browser, path);
     await uploadViaApi(guest, id, 'photo.jpg');
     await guest.context().close();
+    await waitForContentProcessed(page, id, 1);
 
     await page.goto(`/app/collections/${id}`);
     const grid = page.getByRole('list', { name: 'Кадри колекції' });
@@ -173,6 +175,7 @@ test.describe('collection appearance', () => {
     const guest = await asGuest(browser, path);
     await uploadViaApi(guest, id, 'photo.jpg');
     await guest.context().close();
+    await waitForContentProcessed(page, id, 1);
 
     await page.goto(`/app/collections/${id}?tab=appearance`);
     await expect(page.locator('[data-slot="cover-card"]')).toBeVisible();

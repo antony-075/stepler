@@ -1,6 +1,10 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
-import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
+import {
+  createCollectionViaApi,
+  horizontalOverflow,
+  waitForContentProcessed,
+} from '../support/collections.js';
 import { guestLinks, mainLinkPath, openGuestLink, pickFiles } from '../support/guest.js';
 import { bigBuffer, pickedFile } from '../support/media.js';
 
@@ -30,7 +34,7 @@ test.describe('guest uploads', () => {
     page,
     browser,
   }) => {
-    const { path } = await setUp(page);
+    const { id, path } = await setUp(page);
     const guest = await asGuest(browser, path);
     await pickFiles(guest, [
       pickedFile('photo.jpg'),
@@ -57,7 +61,9 @@ test.describe('guest uploads', () => {
     expect(await horizontalOverflow(guest)).toBeLessThanOrEqual(0);
 
     // After a reload the frames are the saved ones: the document with its name, the photo and
-    // video with the worker's thumbnails (never the originals) once they are made.
+    // video with the worker's thumbnails (never the originals). Reload once the worker is done,
+    // or the page waits for its next 15–20 s poll.
+    await waitForContentProcessed(page, id, 3);
     await guest.reload();
     await expect(ownFrames(guest).getByRole('listitem')).toHaveCount(3);
     await expect(ownFrames(guest).getByText('doc.pdf')).toBeVisible();

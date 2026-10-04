@@ -1,6 +1,10 @@
 import { expect, type Locator, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
-import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
+import {
+  createCollectionViaApi,
+  horizontalOverflow,
+  waitForContentProcessed,
+} from '../support/collections.js';
 import { mainLinkPath, openGuestLink, pickFiles } from '../support/guest.js';
 import { pickedFile, uploadViaApi } from '../support/media.js';
 
@@ -60,6 +64,8 @@ test.describe('media processing', () => {
     await uploadViaApi(guest, id, 'photo.heic');
     await uploadViaApi(guest, id, 'clip.mov');
     await guest.context().close();
+    // This test is about the viewer; the in-place swap is the test above.
+    await waitForContentProcessed(page, id, 2);
 
     await page.goto(`/app/collections/${id}`);
     const grid = page.getByRole('list', { name: 'Кадри колекції' });

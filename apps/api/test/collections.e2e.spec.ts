@@ -10,6 +10,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
 import type { CollectionStatus } from '../src/generated/prisma/client.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -43,7 +44,7 @@ describe('collections API', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ OPERATOR_EMAILS: OPERATOR }));
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {
@@ -474,7 +475,7 @@ describe('collection creation rate limit', () => {
         LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '5',
       }),
     );
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

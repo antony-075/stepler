@@ -19,6 +19,7 @@ import { coverKey, coverPrefix } from '../src/collections/cover-keys.js';
 import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
@@ -100,7 +101,7 @@ async function addSession(collectionId: string, linkId: string, lastSeenAt = new
 describe('worker handlers', () => {
   beforeAll(async () => {
     app = await createApp(apiEnv);
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
     await boss.start();
   });

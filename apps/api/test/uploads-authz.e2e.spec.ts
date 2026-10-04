@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { createApp } from '../src/create-app.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { joinAsGuest, seedCollection } from './support/guests.js';
@@ -44,7 +45,7 @@ async function expectRefused(uploadId: string, reason: string) {
 describe('uploads authorization', () => {
   beforeAll(async () => {
     app = await createApp(env);
-    await app.init();
+    await listenOnLoopback(app);
     server = app.getHttpServer() as Server;
     tokens = app.get(GuestLinkTokens);
   });

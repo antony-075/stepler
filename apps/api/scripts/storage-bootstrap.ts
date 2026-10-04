@@ -13,7 +13,24 @@ import { createS3Client } from '../src/storage/s3-client.ts';
 
 const BUCKETS = ['stepler-dev', 'stepler-test'];
 // Web dev server, and the e2e production server on 3100.
-const ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:3100'];
+const DEFAULT_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:3100'];
+
+/**
+ * Browser origins allowed to upload: `STORAGE_CORS_ORIGINS` (comma-separated) or the defaults,
+ * plus the e2e web origin when `E2E_WEB_PORT` moves it, so a second stack needs no manual rule.
+ */
+function corsOrigins(): string[] {
+  const configured = (process.env.STORAGE_CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin !== '');
+  const origins = configured.length > 0 ? configured : DEFAULT_ORIGINS;
+  const e2ePort = process.env.E2E_WEB_PORT;
+  if (e2ePort !== undefined && e2ePort !== '') origins.push(`http://127.0.0.1:${e2ePort}`);
+  return [...new Set(origins)];
+}
+
+const ORIGINS = corsOrigins();
 
 function required(name: string): string {
   const value = process.env[name];
@@ -72,6 +89,6 @@ for (const Bucket of BUCKETS) {
     }),
   );
   await warmUp(Bucket);
-  process.stdout.write(`bucket ${Bucket}: ready\n`);
+  process.stdout.write(`bucket ${Bucket}: ready (CORS: ${ORIGINS.join(', ')})\n`);
 }
 client.destroy();

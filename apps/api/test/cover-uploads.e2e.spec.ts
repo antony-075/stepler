@@ -14,6 +14,7 @@ import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-bos
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { ExpireUploadsHandler } from '../src/worker/handlers/expire-uploads.handler.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
@@ -47,7 +48,7 @@ class CaptureStream extends Writable {
 
 async function startApp(apiEnv: ApiEnv, logs?: CaptureStream) {
   const app = await createApp(apiEnv, logs === undefined ? {} : { logDestination: logs });
-  await app.init();
+  await listenOnLoopback(app);
   return { app, server: app.getHttpServer() as Server, tokens: app.get(GuestLinkTokens) };
 }
 

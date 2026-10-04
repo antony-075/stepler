@@ -10,6 +10,7 @@ import { Public } from '../src/auth/public.decorator.js';
 import { configureApp } from '../src/create-app.js';
 import { AppError } from '../src/errors/app-error.js';
 import { ERROR_REPORTER, type ErrorReporter } from '../src/errors/error-reporter.js';
+import { listenOnLoopback } from './support/app.js';
 import { testEnv } from './support/env.js';
 
 const createThingSchema = z.object({
@@ -63,7 +64,7 @@ describe('problem+json errors', () => {
       .compile();
     app = moduleRef.createNestApplication({ bufferLogs: true });
     configureApp(app, testEnv());
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {
