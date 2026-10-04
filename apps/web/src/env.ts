@@ -16,6 +16,16 @@ const webEnvSchema = z.object({
     .pipe(z.string().regex(/^[a-z0-9-]+$/))
     .refine((value) => !UNTRUSTED_IP_HEADERS.has(value))
     .optional(),
+  /** The privacy/abuse contact shown on the legal pages (spec §15, ADR 0013); may be unset only with drafts allowed. */
+  LEGAL_CONTACT_EMAIL: z.email().optional(),
+  /**
+   * Allows placeholder legal texts and a missing contact (development, CI, staging). Never set in
+   * production: the server refuses to start on drafts ([C20], `src/legal/readiness.ts`).
+   */
+  LEGAL_ALLOW_DRAFT: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type WebEnv = z.infer<typeof webEnvSchema>;

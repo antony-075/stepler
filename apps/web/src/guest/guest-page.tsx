@@ -47,6 +47,7 @@ import { LinkStatePage } from '@/app/g/[token]/link-state-page';
 import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 import type { GuestPageState } from './guest-state';
+import { GuestLegalNotice } from './legal-notice';
 import { NamePrompt } from './name-prompt';
 import { GuestCover } from './guest-cover';
 import { GuestFrames, guestContentKey, useFrameTime } from './own-frames';
@@ -469,7 +470,8 @@ function GuestNameLine({ name, onChange }: { name: string | null; onChange: () =
 
 /**
  * The actions: in the dock on phones, under the title from 640px, in the side panel from 1024px.
- * Files take the pencil when the link takes any; the wish is then the quiet second action.
+ * Files take the pencil when the link takes any; the wish is then the quiet second action. The
+ * terms notice (F8) closes the block in both cases.
  */
 function ContributeActions({
   primary,
@@ -487,9 +489,12 @@ function ContributeActions({
   const t = useTranslations('guest');
   if (primary === 'text') {
     return (
-      <Button variant="pencil" size="guest" className="w-full" onClick={onWrite}>
-        {t('writeWish')}
-      </Button>
+      <div className="grid gap-2">
+        <Button variant="pencil" size="guest" className="w-full" onClick={onWrite}>
+          {t('writeWish')}
+        </Button>
+        <GuestLegalNotice className="pt-1" />
+      </div>
     );
   }
   return (
@@ -503,6 +508,7 @@ function ContributeActions({
           {t('writeWish')}
         </Button>
       ) : null}
+      <GuestLegalNotice className="pt-1" />
     </div>
   );
 }

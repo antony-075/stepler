@@ -129,3 +129,10 @@ services:
       # client-sent value. X-Forwarded-For is not used: Render keeps the client-sent value first.
       - key: CLIENT_IP_HEADER
         value: cf-connecting-ip
+      # Staging runs on the placeholder legal texts until the real ones are published; production
+      # never sets this (the server refuses to start on drafts, [C20]).
+      - key: LEGAL_ALLOW_DRAFT
+        value: 'true'
+      # The privacy/abuse contact shown on /legal/*; a placeholder address is fine on staging.
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false

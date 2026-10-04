@@ -24,6 +24,7 @@ This file is a concise implementation checklist.
 - [ ] QR generation
 - [ ] R2/S3-compatible object storage
 - [ ] Signed upload/download access — built in slice 5 (PR C): presigned part URLs, window-aligned presigned GETs, downloads as attachments
+- [ ] Legal pages (Terms, Privacy, uk/en, versioned) — built in slice 10 (PR F1): `/legal/terms` and `/legal/privacy` from Markdown with a registry of versions, a draft banner on placeholder texts, the contact e-mail from configuration, footer and guest-notice links; acceptance recording follows in PR F2
 - [ ] PostgreSQL + Prisma
 - [ ] REST API
 - [ ] Swagger/OpenAPI
