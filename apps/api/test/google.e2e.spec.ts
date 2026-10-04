@@ -151,6 +151,23 @@ describe('Google sign-in', () => {
       expect(setCookies(res).some((c) => c.startsWith('st_oauth='))).toBe(false);
     });
 
+    test('a start launched from another site is refused; same-site, none and no header pass', async () => {
+      const crossSite = await request(server())
+        .get('/api/v1/auth/google/start')
+        .query(LEGAL_QUERY)
+        .set('Sec-Fetch-Site', 'cross-site')
+        .expect(302);
+      expect(crossSite.headers.location).toBe(`${ORIGIN}/login?error=LEGAL_ACCEPTANCE_REQUIRED`);
+      expect(setCookies(crossSite).some((c) => c.startsWith('st_oauth='))).toBe(false);
+
+      for (const site of ['same-origin', 'same-site', 'none', undefined]) {
+        const req = request(server()).get('/api/v1/auth/google/start').query(LEGAL_QUERY);
+        if (site !== undefined) req.set('Sec-Fetch-Site', site);
+        const res = await req.expect(302);
+        expect(res.headers.location).toMatch(/^https:\/\/accounts\.example\/auth\?state=/);
+      }
+    });
+
     test('the signed transaction carries the versions', async () => {
       const res = await request(server())
         .get('/api/v1/auth/google/start')

@@ -23,7 +23,15 @@ export class UsersService {
     return this.toMe(principal, user);
   }
 
+  /**
+   * Before the legal documents are accepted only `locale` may change (the fallback page's
+   * language switch, ADR 0016); a name change waits for the acceptance.
+   */
   async updateMe(principal: AccountPrincipal, changes: UpdateMeRequest): Promise<MeResponse> {
+    if (changes.displayName !== undefined) {
+      const { accepted } = await this.legal.statusFor(principal.userId);
+      if (!accepted) throw new AppError('LEGAL_ACCEPTANCE_REQUIRED', 403);
+    }
     const user = await this.prisma.user.update({
       where: { id: principal.userId },
       data: {

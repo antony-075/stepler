@@ -32,10 +32,17 @@ export class MeController {
     return this.users.me(principal);
   }
 
-  /** Open before acceptance: the fallback page's language switch saves the locale. */
+  /**
+   * Passes the acceptance gate for the fallback page's language switch; before acceptance the
+   * service allows only `locale` (`displayName` → 403 LEGAL_ACCEPTANCE_REQUIRED).
+   */
   @Patch()
   @SkipLegalGate()
   @ApiResponse({ status: 200, standardSchema: meResponseSchema })
+  @ApiResponse({
+    status: 403,
+    description: 'LEGAL_ACCEPTANCE_REQUIRED: only `locale` may change before acceptance',
+  })
   update(
     @CurrentPrincipal() principal: AccountPrincipal,
     @Body({ schema: updateMeRequestSchema }) body: UpdateMeRequest,

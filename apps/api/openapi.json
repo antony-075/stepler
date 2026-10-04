@@ -154,7 +154,7 @@
         "parameters": [],
         "responses": {
           "302": {
-            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy`, or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
+            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
           },
           "default": {
             "content": {
@@ -6908,6 +6908,9 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "LEGAL_ACCEPTANCE_REQUIRED: only `locale` may change before acceptance"
           },
           "default": {
             "content": {

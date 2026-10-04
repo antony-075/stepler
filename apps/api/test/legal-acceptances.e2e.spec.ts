@@ -117,6 +117,15 @@ describe('legal acceptance (ADR 0016)', () => {
         .send({ locale: 'en' })
         .expect(200);
       expect(patched.body).toMatchObject({ locale: 'en', legal: { accepted: false } });
+      // Only the locale: a name waits for the acceptance.
+      const named = await request(server())
+        .patch('/api/v1/me')
+        .set('Origin', ORIGIN)
+        .set('Cookie', cookie)
+        .send({ displayName: 'Оля' })
+        .expect(403);
+      expect(named.body).toMatchObject({ code: 'LEGAL_ACCEPTANCE_REQUIRED' });
+      expect((await prisma.user.findFirstOrThrow()).displayName).toBeNull();
 
       const guest = await request(server())
         .post('/api/v1/guest/links/resolve')
@@ -203,6 +212,13 @@ describe('legal acceptance (ADR 0016)', () => {
     }).expect(200);
     expect(meResponseSchema.parse(second.body).legal.accepted).toBe(true);
     await request(server()).get('/api/v1/collections').set('Cookie', cookie).expect(200);
+    // Accepted: the name can change now.
+    await request(server())
+      .patch('/api/v1/me')
+      .set('Origin', ORIGIN)
+      .set('Cookie', cookie)
+      .send({ displayName: 'Оля' })
+      .expect(200);
   });
 
   test('malformed bodies → 400 VALIDATION_FAILED', async () => {

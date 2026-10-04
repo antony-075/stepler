@@ -53,15 +53,22 @@ export class GoogleController {
   @ApiResponse({
     status: 302,
     description:
-      'To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy`, or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off',
+      'To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off',
   })
   start(
+    @Req() req: IncomingMessage,
     @Query('returnTo') returnTo: unknown,
     @Query('terms') terms: unknown,
     @Query('privacy') privacy: unknown,
     @Res({ passthrough: true }) res: ServerResponse,
   ): RedirectTarget {
     const google = this.configured();
+    // The versions stand for a tick on our own card: a start launched from another site (a
+    // link or a form elsewhere, `Sec-Fetch-Site: cross-site`) cannot carry that acceptance.
+    // Older browsers send no header and are allowed.
+    if (req.headers['sec-fetch-site'] === 'cross-site') {
+      return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
+    }
     const legal = legalVersionsSchema.safeParse({ terms, privacy });
     if (!legal.success) return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
     if (!isCurrentLegalVersions(legal.data)) return this.failure('LEGAL_VERSION_OUTDATED');
