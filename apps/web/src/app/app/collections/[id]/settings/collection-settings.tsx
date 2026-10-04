@@ -1,6 +1,6 @@
 'use client';
 
-// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри» tab of the collection
+// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри колекції» tab of the collection
 // page. Two cards: «Архівування» (asks once; bringing it back just happens) and the danger zone
 // (the only red on the page; a destructive ConfirmDialog names the collection). Guest access is
 // not here: permissions belong to each link, on «Посилання» (owner 2026-10-03). Errors stay
@@ -23,7 +23,7 @@ import { useArchiveToggle } from '../../use-archive';
 import { SectionCard } from '../section-card';
 
 /**
- * The collection's «Параметри» tab (owner 2026-10-02: one page, no separate settings page; the
+ * The collection's «Параметри колекції» tab (owner 2026-10-02: one page, no separate settings page; the
  * title and description are edited in place in the header): archiving and the danger zone.
  */
 export function CollectionSettingsPanel({

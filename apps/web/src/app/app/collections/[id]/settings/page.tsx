@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** The collection's options are its «Параметри» tab now (owner review 2026-10-02). */
+/** The collection's options are its «Параметри колекції» tab now (owner review 2026-10-02). */
 export default async function OldCollectionSettingsPage({
   params,
 }: {

@@ -79,7 +79,7 @@
       "close": "Close menu",
       "collections": "Collections",
       "section": {
-        "settings": "Options"
+        "settings": "Collection settings"
       },
       "account": "Account",
       "collapse": "Collapse the sidebar",
@@ -228,7 +228,7 @@
     "loading": "Loading the collection",
     "retry": "Try again",
     "settingsPage": {
-      "pageTitle": "Collection options",
+      "pageTitle": "Collection settings",
       "details": "Basic information",
       "detailsHint": "The title and description tell guests where they are.",
       "cancel": "Cancel",
@@ -261,8 +261,8 @@
       "label": "Collection sections",
       "content": "Content",
       "links": "Links",
-      "appearance": "Appearance",
-      "settings": "Options"
+      "appearance": "Guest page",
+      "settings": "Collection settings"
     },
     "inline": {
       "editTitle": "Edit title",

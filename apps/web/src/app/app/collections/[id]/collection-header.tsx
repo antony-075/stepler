@@ -10,7 +10,7 @@ import { EditableDescription, EditableTitle } from './inline-edit';
  * The collection page's header (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02): the breadcrumbs
  * («Колекції › {title}»), the title as h1 and the description, each edited in place with a
  * visible pencil (read-only when archived), and the status and date. No actions menu: sharing is
- * per link, archive and delete are on the «Параметри» tab.
+ * per link, archive and delete are on the «Параметри колекції» tab.
  */
 export function CollectionHeader({ collection }: { collection: Collection }) {
   const tList = useTranslations('collections');

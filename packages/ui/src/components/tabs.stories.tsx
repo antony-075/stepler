@@ -200,7 +200,7 @@ export const SegmentedDark: Story = {
   globals: { theme: 'dark' },
 };
 
-/** Four segments on a 390px phone (the planned «Вигляд» tab): labels shorten, nothing scrolls. */
+/** Four segments on a 390px phone (the collection page's tabs): labels shorten, nothing scrolls. */
 export const SegmentedFourOnPhone: Story = {
   render: (args) => (
     <Tabs {...args} className="w-[358px]">
@@ -216,17 +216,17 @@ export const SegmentedFourOnPhone: Story = {
         </TabsTrigger>
         <TabsTrigger value="options">
           <Link2 aria-hidden="true" />
-          <span className="min-w-0 truncate">Options</span>
+          <span className="min-w-0 truncate">Collection settings</span>
         </TabsTrigger>
         <TabsTrigger value="look">
           <Images aria-hidden="true" />
-          <span className="min-w-0 truncate">Appearance</span>
+          <span className="min-w-0 truncate">Guest page</span>
         </TabsTrigger>
       </TabsList>
       <TabsContent value="photos">The gallery.</TabsContent>
       <TabsContent value="links">The links.</TabsContent>
-      <TabsContent value="options">Options.</TabsContent>
-      <TabsContent value="look">Appearance.</TabsContent>
+      <TabsContent value="options">Collection settings.</TabsContent>
+      <TabsContent value="look">Guest page.</TabsContent>
     </Tabs>
   ),
   play: async ({ canvasElement }) => {
