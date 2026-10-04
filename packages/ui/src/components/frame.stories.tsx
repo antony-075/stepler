@@ -11,7 +11,6 @@ const meta = {
   args: {
     kind: 'photo',
     number: 86,
-    time: '21:10',
     accessibleName: 'Кадр 86, фото, 21:10, Ірина',
     media: <img alt="" src={samplePhoto(150)} />,
     onOpen: fn(),
@@ -45,7 +44,6 @@ export const Kinds: Story = {
         <Frame
           kind="photo"
           number={1}
-          time="20:01"
           media={<img alt="" src={samplePhoto(30)} />}
           accessibleName="Кадр 1, фото, 20:01"
           onOpen={() => {}}
@@ -53,7 +51,6 @@ export const Kinds: Story = {
         <Frame
           kind="video"
           number={2}
-          time="20:04"
           meta="1:30"
           media={<img alt="" src={samplePhoto(210)} />}
           accessibleName="Кадр 2, відео 1:30, 20:04"
@@ -62,7 +59,6 @@ export const Kinds: Story = {
         <Frame
           kind="document"
           number={3}
-          time="20:09"
           meta="8,6 МБ"
           docType="PDF"
           docTitle="Програма вечора"
@@ -72,7 +68,6 @@ export const Kinds: Story = {
         <Frame
           kind="text"
           number={4}
-          time="20:15"
           text="Вітаємо! Нехай кожен день буде як сьогодні."
           name="Ірина"
           accessibleName="Кадр 4, побажання, 20:15, Ірина"
@@ -81,7 +76,6 @@ export const Kinds: Story = {
         <Frame
           kind="pending-preview"
           number={5}
-          time="20:16"
           placeholderLabel="Готується прев’ю"
           accessibleName="Кадр 5, фото, 20:16, готується прев’ю"
           onOpen={() => {}}
@@ -89,7 +83,6 @@ export const Kinds: Story = {
         <Frame
           kind="empty"
           number={6}
-          time=""
           placeholderLabel="Чекає на перший кадр"
           accessibleName="Кадр 6 ще порожній"
         />
@@ -105,7 +98,7 @@ export const Kinds: Story = {
   },
 };
 
-/** Selection mode: a toggle with `aria-pressed`, a pencil edge, a circle and a ✓. */
+/** Selection mode: a toggle with `aria-pressed`, a pencil ring inside the tile and a ✓ disc. */
 export const Selected: Story = {
   args: {
     selectable: true,
@@ -116,11 +109,11 @@ export const Selected: Story = {
   play: async ({ canvas, canvasElement, args }) => {
     const frame = canvas.getByRole('button', { name: /вибрано/ });
     await expect(frame).toHaveAttribute('aria-pressed', 'true');
-    const root = canvasElement.querySelector<HTMLElement>('[data-slot="frame"]')!;
-    await expect(getComputedStyle(root).boxShadow).toContain('inset');
-    await expect(
-      canvasElement.querySelector('[data-slot="pencil-mark"][data-variant="circle"]'),
-    ).toHaveAttribute('aria-hidden', 'true');
+    const ring = canvasElement.querySelector<HTMLElement>(
+      '[data-slot="frame-media"] > .rounded-control',
+    )!;
+    await expect(getComputedStyle(ring).boxShadow).toContain('inset');
+    await expect(canvasElement.querySelector('[data-slot="frame-check"]')).toBeNull();
     await userEvent.click(frame);
     await expect(args.onToggleSelect).toHaveBeenCalledOnce();
     await expect(args.onOpen).not.toHaveBeenCalled();
@@ -155,16 +148,29 @@ export const New: Story = {
   },
 };
 
-/** Another guest's frame: no number, only the time. */
+/** Another guest's frame: no number pill, just the picture; the name still says the time. */
 export const WithoutNumber: Story = {
   args: { number: undefined, accessibleName: 'Фото, 21:10' },
   play: async ({ canvas }) => {
     await expect(canvas.queryByText(/^#/)).toBeNull();
-    await expect(canvas.getByText('21:10')).toBeVisible();
+    await expect(canvas.getByRole('button', { name: 'Фото, 21:10' })).toBeVisible();
   },
 };
 
-/** 5000 characters clamp to the lines the square holds (four in a 160px frame); the width holds. */
+/** A video: the number and `▶ 1:30` as pills at the bottom-left, over the picture. */
+export const Video: Story = {
+  args: { kind: 'video', meta: '1:30', accessibleName: 'Кадр 86, відео 1:30, 21:10' },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByText('#086')).toBeVisible();
+    await expect(canvas.getByText('1:30')).toBeVisible();
+    // The tile is the picture edge to edge: no padding around the media.
+    const root = canvasElement.querySelector<HTMLElement>('[data-slot="frame"]')!;
+    const media = canvasElement.querySelector<HTMLElement>('[data-slot="frame-media"]')!;
+    await expect(media.getBoundingClientRect().width).toBe(root.getBoundingClientRect().width);
+  },
+};
+
+/** 5000 characters clamp to the lines the square holds (four in a 160px tile); the width holds. */
 export const LongText: Story = {
   args: {
     kind: 'text',

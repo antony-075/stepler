@@ -3,7 +3,7 @@
 // The collection's «Вміст» tab (DESIGN-SYSTEM.md §6.6; [C5], [C6], [O3]).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - A tool, not a showcase: one toolbar row (type chips with counts, the order select), then the
-//   contact sheet straight on the page (no white panel around it). Frames are large enough to
+//   photo grid of borderless tiles straight on the page (owner remark 62). Tiles are large enough to
 //   read (3 columns on a phone, about 170px on a desktop; 1–3 frames larger still); the admin
 //   sees every number and the contributor's name.
 // - A type no live link lets guests add, with nothing of it, is a locked chip with the reason
@@ -288,9 +288,9 @@ export function ContentTab({ collection }: { collection: Collection }) {
       {list.isPending ? (
         <div role="status" aria-busy="true">
           <span className="sr-only">{t('loading')}</span>
-          <div className="grid grid-cols-3 gap-px sm:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-6">
             {Array.from({ length: 12 }, (_, i) => (
-              <Skeleton key={i} className="aspect-square" />
+              <Skeleton key={i} className="aspect-square rounded-control" />
             ))}
           </div>
         </div>
@@ -383,7 +383,6 @@ function AdminFrame({
       <Frame
         kind="text"
         number={item.frameNo}
-        time={time}
         text={item.text ?? ''}
         name={name}
         accessibleName={accessibleName}
@@ -396,7 +395,6 @@ function AdminFrame({
       <Frame
         kind="document"
         number={item.frameNo}
-        time={time}
         {...(item.sizeBytes === null ? {} : { meta: formatBytes(format.number, item.sizeBytes) })}
         docType={documentType(item)}
         {...(item.originalFilename === null ? {} : { docTitle: item.originalFilename })}
@@ -418,7 +416,6 @@ function AdminFrame({
           ? { media: <Thumbnail url={picture.url} item={item} collectionId={collectionId} /> }
           : {})}
         number={item.frameNo}
-        time={time}
         {...duration}
         accessibleName={accessibleName}
         onOpen={onOpen}
@@ -429,7 +426,6 @@ function AdminFrame({
     <Frame
       kind="pending-preview"
       number={item.frameNo}
-      time={time}
       {...duration}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={accessibleName}

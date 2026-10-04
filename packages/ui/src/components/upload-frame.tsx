@@ -1,8 +1,9 @@
 // UploadFrame: one of the guest's files on its way into the collection (DESIGN-SYSTEM.md §5.11,
 // §8 "Frame fill", §9 "Скринридеры").
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
-// - The same sheet as `Frame` (6/6/4 padding, square media, mono label) so a finished upload
-//   becomes a frame in place: nothing jumps when it turns into «Додано #087».
+// - The same square tile as `Frame` (8px radius, no cell around it; owner remark 62, 2026-10-04)
+//   with the mono status line under it, so a finished upload becomes a frame in place: nothing
+//   jumps when it turns into «Додано #087».
 // - Progress is the picture itself developing: a `--veil` over the media shrinks upwards
 //   (`scaleY(1 − p)`, origin top, linear, no transition under reduced motion: it is data), with a
 //   1.5px pencil edge while bytes move and the percent in pencil mono. No text sits on the veil.
@@ -117,10 +118,7 @@ function UploadFrame({
     <div
       data-slot="upload-frame"
       data-state={state}
-      className={cn(
-        'relative flex min-w-0 flex-col gap-1 bg-card p-(--frame-pad,6px) pb-1',
-        className,
-      )}
+      className={cn('relative flex min-w-0 flex-col gap-1', className)}
     >
       <div
         role="group"
@@ -130,7 +128,7 @@ function UploadFrame({
       >
         <div
           aria-hidden="true"
-          className="relative aspect-square w-full overflow-hidden rounded-frame bg-muted"
+          className="relative aspect-square w-full overflow-hidden rounded-control bg-muted"
         >
           <div
             className={cn(
@@ -152,7 +150,7 @@ function UploadFrame({
             />
           ) : null}
           {state === 'uploading' ? (
-            <div className="absolute inset-0 z-(--z-frame-mark) rounded-frame shadow-[inset_0_0_0_1.5px_var(--pencil)]" />
+            <div className="absolute inset-0 z-(--z-frame-mark) rounded-control shadow-[inset_0_0_0_1.5px_var(--pencil)]" />
           ) : null}
           {state === 'failed' ? (
             <PencilMark

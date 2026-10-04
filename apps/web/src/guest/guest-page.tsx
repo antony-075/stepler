@@ -15,7 +15,7 @@
 //   quieter second action, or the pencil one on a text-only link. A view-only link has no dock.
 // - Uploads (PR C) show at the top of «Ваші кадри» (`UploadBatch`); the dock on phones is
 //   `UploadDock` with «Не закривайте сторінку…» while files are on their way.
-// - Frames are the contact sheet (`FrameGrid`): times only, numbers only on the guest's own frames,
+// - Frames are borderless tiles (`FrameGrid`, remark 62): numbers only on the guest's own frames,
 //   never other guests' names. The count line («86 кадрів», «останній о 21:10») only with the
 //   shared gallery (§11.3). Contribution-only links say who will see the frames instead.
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.

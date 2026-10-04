@@ -1,98 +1,45 @@
-// Frame: one contribution in the contact sheet (DESIGN-SYSTEM.md §5.9, §5.10, §5.13).
+// Frame: one contribution as a tile of the photo grid (DESIGN-SYSTEM.md §5.9, §5.10, §5.13).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
-// - The sheet is the interface: a card with 6/6/4 padding, a square media slot (2px radius) and a
-//   mono label (number left, time and data right). A text frame is a wish card on the frame's own
-//   sheet (no inner box). No shadow, no rotation; the grid line is the
-//   only separator. Content decides colour: neutral `--muted` placeholders, never tinted.
-// - One interactive target per frame (a button: open, or toggle in selection mode with
-//   `aria-pressed`), named by the caller ("Кадр 86, фото, 21:10, Ірина"); media is aria-hidden.
-//   Actions (e.g. «Повторити») sit below it, never nested inside the button.
-// - Selection is never colour alone: a 2px pencil edge inside the padding, a pencil circle around
-//   the number, a ✓ on a white disc, and `aria-pressed`. "New" is a pencil underline plus the
-//   caller's accessible name. Focus is the violet ring drawn inside, so `overflow: hidden` of the
-//   grid sheet cannot clip it in the first column.
-// - Long content never widens the frame: text clamps to 5 lines, titles break anywhere.
+// - Owner decision 2026-10-04 (remark 62): borderless tiles, as in Google Photos or iCloud,
+//   instead of the contact sheet's shared lines and white cells. A square with an 8px radius; a
+//   photo or video fills it edge to edge (`object-cover` on the 480px thumbnail); `FrameGrid`
+//   puts 6/8px gaps between tiles and no panel behind them.
+// - Meta sits on the picture, always visible (never on hover): the number (`#086`, Geist Mono)
+//   as a small dark pill at the bottom-left over a soft scrim, and for a video `▶ 0:12` beside
+//   it. The time is not on the tile (the viewer and the accessible name carry it), so the grid
+//   stays calm; the admin's contributor name is only on wish tiles.
+// - A wish is a sand card (the DS tint) with a quiet quote mark, large text clamped to the
+//   square, and the number and name (admin) at the bottom. A document is a lavender card: the
+//   type in mono violet, the file name in two lines, the size and number at the bottom.
+//   «Готується прев’ю» and failures are a neutral square with an icon and one short line.
+// - One interactive target per tile (a button: open, or toggle in selection mode with
+//   `aria-pressed`), named by the caller ("Кадр 86, фото, 21:10, Ірина"); the picture is
+//   aria-hidden. Actions (e.g. «Повторити») sit below it, never inside the button.
+// - Selection is never colour alone: a 3px pencil ring inside the tile, a pencil disc with ✓ at
+//   the top-left (an empty white circle on every tile while selecting), and `aria-pressed`.
+//   Focus is the violet ring outside the tile. Hover lifts the picture slightly (scale 1.03),
+//   not under reduced motion.
+// - Long content never widens the tile: text clamps, titles break anywhere.
 import { Check, FileText, ImageIcon, Play, Quote } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { focusRingInset } from '../lib/focus';
+import { focusRing } from '../lib/focus';
 import { formatFrameNumber } from '../lib/frame-number';
 import { cn } from '../lib/utils';
 import { PencilMark } from './pencil-mark';
 
 type FrameKind = 'photo' | 'video' | 'document' | 'text' | 'pending-preview' | 'empty';
 
-type FrameLabelProps = {
-  /** Rendered as `#086`; omit it where the viewer may not see numbers (other guests' frames). */
-  number?: number;
-  time: string;
-  /** Data after the time: a video's duration, a file's size or type. */
-  meta?: string;
-  isNew?: boolean;
-  selected?: boolean;
-  className?: string;
-};
-
-/**
- * The mono line under a frame (DESIGN-SYSTEM.md §5.10): the number on the left, the time and
- * data on the right, a flexible gap between them (no "·" glue). Decorative for assistive
- * technology when the frame carries the accessible name.
- */
-function FrameLabel({ number, time, meta, isNew, selected, className }: FrameLabelProps) {
-  const seed = number ?? 0;
-  const underline = isNew ? (
-    <PencilMark
-      variant="underline"
-      seed={seed}
-      className="absolute inset-x-0 -bottom-1 h-1.5 w-full"
-    />
-  ) : null;
-  return (
-    <div
-      data-slot="frame-label"
-      className={cn(
-        '@container/label flex min-w-0 items-baseline gap-2 px-0.5 pt-1 type-data',
-        className,
-      )}
-    >
-      {number === undefined ? null : (
-        <span
-          data-slot="frame-number"
-          translate="no"
-          className="relative shrink-0 font-medium text-foreground"
-        >
-          {formatFrameNumber(number)}
-          {underline}
-          {selected ? (
-            <PencilMark
-              variant="circle"
-              seed={seed}
-              className="absolute -inset-x-2 -inset-y-1 h-[calc(100%+0.5rem)] w-[calc(100%+1rem)]"
-            />
-          ) : null}
-        </span>
-      )}
-      <span className="ml-auto flex min-w-0 items-baseline gap-2 text-muted-foreground">
-        <span className="relative shrink-0">
-          {time}
-          {number === undefined ? underline : null}
-        </span>
-        {/* Data after the time only where it fits whole; the frame's name always says it. */}
-        {meta ? <span className="hidden shrink-0 @min-[132px]/label:inline">{meta}</span> : null}
-      </span>
-    </div>
-  );
-}
-
 type FrameProps = {
   kind: FrameKind;
   /** The picture the caller renders (`<img alt="">` of a thumbnail or poster). */
   media?: ReactNode;
+  /** Rendered as `#086`; omit it where the viewer may not see numbers (other guests' frames). */
   number?: number;
-  time: string;
+  /** A video's duration (in the pill after ▶), or a document's size (at the card's bottom). */
   meta?: string;
-  /** A text frame's body; clamped to the lines the square holds (3 to 5). */
+  /** A text frame's body; clamped to the lines the square holds. */
   text?: string;
-  /** The contributor's name under a text frame (admin only). */
+  /** The contributor's name at the bottom of a wish (admin only). */
   name?: string;
   /** A document's type (`PDF`, `DOCX`), shown in mono violet. */
   docType?: string;
@@ -103,7 +50,7 @@ type FrameProps = {
   selected?: boolean;
   /** Selection mode: the frame toggles (`aria-pressed`) instead of opening. */
   selectable?: boolean;
-  /** "Кадр 86, фото, 21:10, Ірина[, нове][, вибрано]": everything the picture says, in words. */
+  /** "Кадр 86, фото, 21:10, Ірина[, нове][, вибрано]": everything the tile says, in words. */
   accessibleName: string;
   onOpen?: () => void;
   onToggleSelect?: () => void;
@@ -112,73 +59,164 @@ type FrameProps = {
   className?: string;
 };
 
-function FrameMedia({
+/** The dark pill over a picture: white mono text, legible on any photo in both themes. */
+const PILL =
+  'inline-flex h-5 items-center gap-1 rounded-full bg-[rgb(0_0_0/0.55)] px-1.5 type-data text-[0.75rem] leading-none font-medium text-[#FFFFFF]';
+
+/** The number with its "new" underline, in the pill or on a card. */
+function FrameNumber({
+  number,
+  isNew,
+  className,
+}: {
+  number: number;
+  isNew?: boolean | undefined;
+  className?: string;
+}) {
+  return (
+    <span data-slot="frame-number" translate="no" className={cn('relative shrink-0', className)}>
+      {formatFrameNumber(number)}
+      {isNew ? (
+        <PencilMark
+          variant="underline"
+          seed={number}
+          className="absolute inset-x-0 -bottom-1 h-1.5 w-full"
+        />
+      ) : null}
+    </span>
+  );
+}
+
+/** Number and duration pills at the bottom-left of a tile. */
+function Pills({
+  number,
+  duration,
+  isNew,
+}: {
+  number?: number | undefined;
+  duration?: string | undefined;
+  isNew?: boolean | undefined;
+}) {
+  if (number === undefined && !duration) return null;
+  return (
+    <span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-0.75rem)] gap-1">
+      {number === undefined ? null : (
+        <span className={PILL}>
+          <FrameNumber number={number} isNew={isNew} />
+        </span>
+      )}
+      {duration ? (
+        <span className={PILL}>
+          <Play className="size-2.5 fill-current" />
+          {duration}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function FrameFace({
   kind,
   media,
+  number,
+  meta,
   text,
   name,
   docType,
   docTitle,
   placeholderLabel,
+  isNew,
 }: Pick<
   FrameProps,
-  'kind' | 'media' | 'text' | 'name' | 'docType' | 'docTitle' | 'placeholderLabel'
+  | 'kind'
+  | 'media'
+  | 'number'
+  | 'meta'
+  | 'text'
+  | 'name'
+  | 'docType'
+  | 'docTitle'
+  | 'placeholderLabel'
+  | 'isNew'
 >) {
   switch (kind) {
     case 'photo':
-      return <div className="size-full *:size-full *:object-cover">{media}</div>;
-    case 'video':
+    case 'video': {
+      const duration = kind === 'video' ? meta : undefined;
       return (
         <>
-          <div className="size-full bg-muted *:size-full *:object-cover">{media}</div>
-          <span className="absolute top-1/2 left-1/2 grid size-9 -translate-1/2 place-items-center rounded-full bg-[rgb(0_0_0/0.55)] text-[#FFFFFF]">
-            <Play className="size-4 translate-x-px fill-current" />
-          </span>
+          <div
+            data-slot="frame-picture"
+            className="size-full bg-muted *:size-full *:object-cover motion-safe:transition-transform motion-safe:duration-(--duration-base) motion-safe:ease-out motion-safe:group-hover/frame:scale-[1.03]"
+          >
+            {media}
+          </div>
+          {/* A video without a poster is ▶ on grey (D4). */}
+          {kind === 'video' && media === undefined ? (
+            <span className="absolute top-1/2 left-1/2 grid size-9 -translate-1/2 place-items-center rounded-full bg-[rgb(0_0_0/0.55)] text-[#FFFFFF]">
+              <Play className="size-4 translate-x-px fill-current" />
+            </span>
+          ) : null}
+          {number === undefined && !duration ? null : (
+            // A soft scrim under the pills, so they read on a white wedding dress too.
+            <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-[rgb(0_0_0/0.35)] to-transparent" />
+          )}
+          <Pills number={number} duration={duration} isNew={isNew} />
         </>
       );
+    }
     case 'document':
       return (
-        <div className="flex size-full flex-col justify-between gap-2 bg-muted p-2">
-          <span className="flex items-center gap-1 type-data font-medium text-link">
+        <div className="@container flex size-full flex-col gap-1.5 bg-tint-lavender p-2 @min-[150px]:p-3">
+          <span className="flex items-center gap-1 type-data font-medium text-tint-lavender-ink">
             <FileText className="size-3.5 shrink-0" />
-            {docType}
+            <span translate="no">{docType}</span>
           </span>
           {docTitle ? (
-            <span className="line-clamp-3 type-caption [overflow-wrap:anywhere] text-foreground">
+            <span className="line-clamp-2 type-caption [overflow-wrap:anywhere] text-foreground @min-[150px]:text-sm">
               {docTitle}
             </span>
           ) : null}
+          <span className="mt-auto flex min-w-0 items-baseline gap-2 type-data text-[0.75rem] text-tint-lavender-ink">
+            {number === undefined ? null : (
+              <FrameNumber number={number} isNew={isNew} className="font-medium" />
+            )}
+            {meta ? <span className="ml-auto truncate">{meta}</span> : null}
+          </span>
         </div>
       );
     case 'text':
       return (
-        // A wish card (owner review 2026-10-03): the words on the frame's own sheet, no inner box,
-        // comfortable padding and type that grow with the square (container = the text box): 13px
-        // and 4 lines in a phone frame, 15px from 128px, 16px with 6 lines from 168px. A quiet
-        // opening quote says "wish" before the words do.
-        <div className="@container flex size-full flex-col gap-1.5 bg-card px-1.5 pt-1 pb-1.5 @min-[168px]:gap-2 @min-[168px]:px-2.5 @min-[168px]:pt-2">
-          <Quote
-            aria-hidden="true"
-            className="size-3.5 shrink-0 text-muted-foreground @min-[168px]:size-4"
-          />
-          <p className="line-clamp-4 min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:line-clamp-4 @min-[128px]:text-[0.9375rem] @min-[168px]:line-clamp-6 @min-[168px]:text-base @min-[168px]:leading-[1.45]">
+        // The words on a sand card; type grows with the square (container = the card): 13px and
+        // 4 lines in a phone tile, 15px from 128px, 16px with 5 lines from 168px.
+        <div className="@container flex size-full flex-col gap-1 bg-tint-sand p-2 @min-[168px]:gap-1.5 @min-[168px]:p-3">
+          <Quote aria-hidden="true" className="size-3.5 shrink-0 text-tint-sand-ink" />
+          <p className="line-clamp-4 min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:text-[0.9375rem] @min-[168px]:line-clamp-5 @min-[168px]:text-base @min-[168px]:leading-[1.4]">
             {text}
           </p>
-          {name ? (
-            <span className="mt-auto truncate type-caption text-muted-foreground">{name}</span>
-          ) : null}
+          {number === undefined && !name ? null : (
+            <span className="mt-auto flex min-w-0 items-baseline gap-2 type-data text-[0.75rem] text-tint-sand-ink">
+              {number === undefined ? null : (
+                <FrameNumber number={number} isNew={isNew} className="font-medium" />
+              )}
+              {name ? <span className="min-w-0 truncate font-sans">{name}</span> : null}
+            </span>
+          )}
         </div>
       );
     case 'pending-preview':
       return (
-        <div className="grid size-full place-content-center justify-items-center gap-1 bg-muted p-2 text-center text-muted-foreground">
-          <ImageIcon className="size-5" />
-          {placeholderLabel ? <span className="type-caption">{placeholderLabel}</span> : null}
-        </div>
+        <>
+          <div className="grid size-full place-content-center justify-items-center gap-1 bg-muted p-2 pb-8 text-center text-muted-foreground">
+            <ImageIcon className="size-5" />
+            {placeholderLabel ? <span className="type-caption">{placeholderLabel}</span> : null}
+          </div>
+          <Pills number={number} duration={meta} isNew={isNew} />
+        </>
       );
     case 'empty':
       return (
-        <div className="grid size-full place-content-center rounded-frame border border-dashed border-input p-2 text-center type-caption text-muted-foreground">
+        <div className="grid size-full place-content-center rounded-control border border-dashed border-input p-2 text-center type-caption text-muted-foreground">
           {placeholderLabel}
         </div>
       );
@@ -186,16 +224,15 @@ function FrameMedia({
 }
 
 /**
- * One frame of the contact sheet (DESIGN-SYSTEM.md §5.9): a sheet with the media slot (square)
- * and the mono label. A button when it opens (`onOpen`) or toggles (`selectable` +
- * `onToggleSelect`, with `aria-pressed`); otherwise a named group. Lay frames out with
- * `FrameGrid`, which sets their padding (`--frame-pad`).
+ * One tile of the photo grid (DESIGN-SYSTEM.md §5.9): a square with the picture (or a wish or
+ * document card) and its number on it. A button when it opens (`onOpen`) or toggles
+ * (`selectable` + `onToggleSelect`, with `aria-pressed`); otherwise a named group. Lay tiles out
+ * with `FrameGrid`.
  */
 function Frame({
   kind,
   media,
   number,
-  time,
   meta,
   text,
   name,
@@ -212,42 +249,42 @@ function Frame({
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
-  const body = (
-    <>
-      <div
-        data-slot="frame-media"
-        aria-hidden="true"
-        className={cn(
-          'relative aspect-square w-full overflow-hidden rounded-frame outline-1 -outline-offset-1 outline-transparent transition-[outline-color] duration-(--duration-fast) motion-reduce:transition-none',
-          interactive && 'group-hover/frame:outline-input',
-        )}
-      >
-        <FrameMedia
-          kind={kind}
-          media={media}
-          text={text}
-          name={name}
-          docType={docType}
-          docTitle={docTitle}
-          placeholderLabel={placeholderLabel}
-        />
-        {selected ? (
-          <span className="absolute top-1 right-1 z-(--z-frame-mark) grid size-5 place-items-center rounded-full bg-[#FFFFFF] text-pencil">
-            <Check className="size-3.5" strokeWidth={3} />
+  const tile = (
+    <div
+      data-slot="frame-media"
+      aria-hidden="true"
+      className={cn(
+        'relative aspect-square w-full overflow-hidden rounded-control',
+        kind === 'empty' ? 'bg-transparent' : 'bg-muted',
+      )}
+    >
+      <FrameFace
+        kind={kind}
+        media={media}
+        number={number}
+        meta={meta}
+        text={text}
+        name={name}
+        docType={docType}
+        docTitle={docTitle}
+        placeholderLabel={placeholderLabel}
+        isNew={isNew}
+      />
+      {selected ? (
+        <>
+          <span className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-control shadow-[inset_0_0_0_3px_var(--pencil)]" />
+          <span className="absolute top-1.5 left-1.5 z-(--z-frame-mark) grid size-6 place-items-center rounded-full bg-pencil text-pencil-foreground shadow-[0_0_0_2px_#FFFFFF]">
+            <Check className="size-4" strokeWidth={3} />
           </span>
-        ) : selectable ? (
-          // In selection mode every frame shows its empty check (never hover-only, §5.13).
-          <span
-            data-slot="frame-check"
-            className="absolute top-1 right-1 z-(--z-frame-mark) size-5 rounded-full border-2 border-[#FFFFFF] bg-[rgb(0_0_0/0.25)] shadow-[0_0_0_1px_rgb(0_0_0/0.25)]"
-          />
-        ) : null}
-      </div>
-      {/* The frame's accessible name already says all of this. */}
-      <div aria-hidden="true" className="min-w-0">
-        <FrameLabel number={number} time={time} meta={meta} isNew={isNew} selected={selected} />
-      </div>
-    </>
+        </>
+      ) : selectable ? (
+        // In selection mode every tile shows its empty check (never hover-only, §5.13).
+        <span
+          data-slot="frame-check"
+          className="absolute top-1.5 left-1.5 z-(--z-frame-mark) size-6 rounded-full border-2 border-[#FFFFFF] bg-[rgb(0_0_0/0.2)] shadow-[0_0_0_1px_rgb(0_0_0/0.3)]"
+        />
+      ) : null}
+    </div>
   );
 
   return (
@@ -255,11 +292,7 @@ function Frame({
       data-slot="frame"
       data-kind={kind}
       data-selected={selected ? '' : undefined}
-      className={cn(
-        'group/frame relative flex min-w-0 flex-col gap-1 bg-card p-(--frame-pad,6px) pb-1',
-        selected && 'shadow-[inset_0_0_0_2px_var(--pencil)]',
-        className,
-      )}
+      className={cn('group/frame relative flex min-w-0 flex-col gap-1.5', className)}
     >
       {interactive ? (
         <button
@@ -268,15 +301,15 @@ function Frame({
           aria-pressed={selectable ? selected : undefined}
           onClick={selectable ? onToggleSelect : onOpen}
           className={cn(
-            'grid w-full min-w-0 cursor-pointer touch-manipulation rounded-frame text-left',
-            focusRingInset,
+            'block w-full min-w-0 cursor-pointer touch-manipulation rounded-control text-left',
+            focusRing,
           )}
         >
-          {body}
+          {tile}
         </button>
       ) : (
-        <div role="group" aria-label={accessibleName} className="grid w-full min-w-0">
-          {body}
+        <div role="group" aria-label={accessibleName} className="w-full min-w-0">
+          {tile}
         </div>
       )}
       {actions ? <div data-slot="frame-actions">{actions}</div> : null}
@@ -284,4 +317,4 @@ function Frame({
   );
 }
 
-export { Frame, FrameLabel, type FrameKind, type FrameLabelProps, type FrameProps };
+export { Frame, type FrameKind, type FrameProps };

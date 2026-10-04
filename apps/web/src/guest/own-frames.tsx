@@ -42,7 +42,6 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
       <Frame
         kind="text"
         number={number}
-        time={time}
         text={item.text ?? ''}
         accessibleName={
           number === undefined ? t('textOther', { time }) : t('textOwn', { number, time })
@@ -58,7 +57,6 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
       <Frame
         kind="document"
         number={number}
-        time={time}
         docType={type === '' ? t('documentType') : type}
         {...(name === null ? {} : { docTitle: name })}
         accessibleName={
@@ -96,7 +94,6 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
             }
           : {})}
         number={number}
-        time={time}
         accessibleName={
           picture.kind === 'failed'
             ? named('failedOwn', 'failedOther')
@@ -109,7 +106,6 @@ function GuestFrame({ item, onExpired }: { item: GuestContentItem; onExpired: ()
     <Frame
       kind="pending-preview"
       number={number}
-      time={time}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={
         picture.kind === 'failed'
@@ -175,10 +171,10 @@ export function GuestFrames({
 
   if (query.isPending) {
     return (
-      <div role="status" aria-busy="true" className="grid grid-cols-3 gap-px">
+      <div role="status" aria-busy="true" className="grid grid-cols-3 gap-1.5 sm:gap-2">
         <span className="sr-only">{t('loadingFrames')}</span>
         {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="aspect-square" />
+          <Skeleton key={i} className="aspect-square rounded-control" />
         ))}
       </div>
     );

@@ -28,7 +28,6 @@ function Demo({ onDelete }: { onDelete: (ids: number[]) => void }) {
             key={n}
             kind="photo"
             number={n}
-            time="21:10"
             media={<img alt="" src={samplePhoto(n * 15)} />}
             selectable
             selected={selected.has(n)}
