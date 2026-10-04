@@ -10,9 +10,11 @@
 //   the title, so no dock covers the frames on a tablet. ≥ 1024: two columns in the page container
 //   (1240px, 1320px from 1600): the collection's identity and the action on a sticky sheet on the
 //   left (380/420px), the frames on the right. Wider screens grow the margins, not the line length.
-// - The pencil is the guest's main action only. Until uploads exist it is «Написати побажання»,
-//   with a plain line that photos and videos come soon (no dead «Додати фото» button: rule 18);
-//   with uploads, «Додати фото» takes the pencil. A view-only link has no dock at all.
+// - The pencil is the guest's main action only: «Додати фото й відео» (or what the link takes),
+//   opening the system picker for many files at once; «Додати ще» after a batch. The wish is the
+//   quieter second action, or the pencil one on a text-only link. A view-only link has no dock.
+// - Uploads (PR C) show at the top of «Ваші кадри» (`UploadBatch`); the dock on phones is
+//   `UploadDock` with «Не закривайте сторінку…» while files are on their way.
 // - Frames are the contact sheet (`FrameGrid`): times only, numbers only on the guest's own frames,
 //   never other guests' names. The count line («86 кадрів», «останній о 21:10») only with the
 //   shared gallery (§11.3). Contribution-only links say who will see the frames instead.
@@ -27,31 +29,38 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
 import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { UserRound } from 'lucide-react';
+import { ImagePlus, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { UploadDock } from '@stepler/ui/components/upload-dock';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LinkStatePage } from '@/app/g/[token]/link-state-page';
 import { submitText, updateName } from './api';
-import { primaryContribution } from './contribute-actions';
+import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 import type { GuestPageState } from './guest-state';
 import { NamePrompt } from './name-prompt';
 import { GuestFrames, guestContentKey, useFrameTime } from './own-frames';
 import { TextComposer } from './text-composer';
+import { hasUnsettled } from './upload/queue';
+import { useUploadQueue } from './upload/use-upload-queue';
+import { KeepOpenNote, UploadBatch } from './uploader';
 import { useGuestSession } from './use-guest-session';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
 
 export function GuestPage({ token }: { token: string }) {
   const session = useGuestSession(token);
+  // Files this visit added, so a link closed mid-batch can still say how many arrived.
+  const [added, setAdded] = useState(0);
   if (session.status === 'loading') return <GuestLoading />;
   if (session.status !== 'ready')
-    return <GuestStatePage state={session.status} retry={session.retry} />;
+    return <GuestStatePage state={session.status} retry={session.retry} added={added} />;
   return (
     <GuestCollection
       collectionId={session.collectionId}
       context={session.context}
       call={session.call}
       setContext={session.setContext}
+      onAdded={setAdded}
     />
   );
 }
@@ -71,7 +80,15 @@ function GuestLoading() {
   );
 }
 
-function GuestStatePage({ state, retry }: { state: GuestPageState; retry: () => void }) {
+function GuestStatePage({
+  state,
+  retry,
+  added = 0,
+}: {
+  state: GuestPageState;
+  retry: () => void;
+  added?: number;
+}) {
   const t = useTranslations('guestLink');
   const again = (
     <Button variant="outline" className="w-full sm:w-auto" onClick={retry}>
@@ -102,21 +119,30 @@ function GuestStatePage({ state, retry }: { state: GuestPageState; retry: () => 
         );
     }
   })();
-  return <div className="mx-auto w-full max-w-[720px]">{page}</div>;
+  return (
+    <div className="mx-auto grid w-full max-w-[720px] gap-4">
+      {page}
+      {added > 0 ? (
+        <p className="text-muted-foreground">{t('addedBeforeClosed', { count: added })}</p>
+      ) : null}
+    </div>
+  );
 }
 
-type Pending = 'text' | null;
+type Pending = 'text' | 'files' | null;
 
 function GuestCollection({
   collectionId,
   context,
   call,
   setContext,
+  onAdded,
 }: {
   collectionId: string;
   context: GuestContext;
   call: Call;
   setContext: (context: GuestContext) => void;
+  onAdded: (count: number) => void;
 }) {
   const t = useTranslations('guest');
   const time = useFrameTime();
@@ -130,6 +156,26 @@ function GuestCollection({
     null,
   );
   const [composerOpen, setComposerOpen] = useState(false);
+  const uploads = useUploadQueue(context, call);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const busy = hasUnsettled(uploads.state);
+  const doneIds = useMemo(
+    () =>
+      new Set(
+        uploads.state.items.flatMap((item) => (item.result === undefined ? [] : [item.result.id])),
+      ),
+    [uploads.state.items],
+  );
+  const addedCount = uploads.summary.added;
+
+  // A new frame shows in the shared gallery too; the parent remembers the count for the
+  // link-state page if the link closes mid-batch.
+  useEffect(() => {
+    onAdded(addedCount);
+    if (addedCount > 0) {
+      void queryClient.invalidateQueries({ queryKey: guestContentKey(collectionId, 'all') });
+    }
+  }, [addedCount, collectionId, onAdded, queryClient]);
 
   const saveName = useMutation({
     mutationFn: (name: string | null) => call((id) => updateName(id, name)),
@@ -138,12 +184,18 @@ function GuestCollection({
   });
 
   /** Before the first contribution the name is asked once; then the action runs. */
-  function contribute(action: 'text') {
+  function contribute(action: 'text' | 'files') {
     if (!guest.nameAnswered) {
       setNamePrompt({ mode: 'first', then: action });
       return;
     }
-    setComposerOpen(true);
+    run(action);
+  }
+
+  /** Still inside the tap that asked for it: iOS opens a file picker only on a user gesture. */
+  function run(action: 'text' | 'files') {
+    if (action === 'files') fileInput.current?.click();
+    else setComposerOpen(true);
   }
 
   function nameDone(name: string | null) {
@@ -152,8 +204,8 @@ function GuestCollection({
     // Optimistic: the prompt does not come back while the save is in flight.
     setContext({ ...context, guest: { name, nameAnswered: true } });
     saveName.mutate(name);
-    // Still inside the tap: a file picker opened here would count as a user gesture (iOS).
-    if (then === 'text') setComposerOpen(true);
+    // Still inside the «Продовжити»/«Пропустити» tap, so the picker counts as a user gesture.
+    if (then !== null) run(then);
   }
 
   async function sendText(body: string, idempotencyKey: string) {
@@ -165,11 +217,14 @@ function GuestCollection({
     ]);
   }
 
+  const fileLabel = uploads.state.items.length > 0 ? 'addMore' : uploadLabelKey(permissions);
   const actions =
     primary === null ? null : (
       <ContributeActions
         primary={primary}
+        fileLabel={t(fileLabel)}
         canWrite={permissions.canSubmitText}
+        onFiles={() => contribute('files')}
         onWrite={() => contribute('text')}
       />
     );
@@ -203,8 +258,9 @@ function GuestCollection({
             </p>
           )}
           {actions === null ? null : (
-            <div className="mt-4 hidden sm:grid sm:max-w-sm lg:mt-6 lg:max-w-none lg:border-t lg:pt-6">
+            <div className="mt-4 hidden gap-3 sm:grid sm:max-w-sm lg:mt-6 lg:max-w-none lg:border-t lg:pt-6">
               {actions}
+              <KeepOpenNote busy={busy} />
             </div>
           )}
         </header>
@@ -228,11 +284,13 @@ function GuestCollection({
                   />
                 ) : null}
               </div>
+              <UploadBatch uploads={uploads} context={context} />
               <GuestFrames
                 collectionId={collectionId}
                 scope="own"
                 call={call}
                 label={t('listLabelOwn')}
+                hide={doneIds}
                 empty={
                   <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
                     {t('ownEmpty')}
@@ -267,13 +325,30 @@ function GuestCollection({
       </div>
 
       {actions === null ? null : (
-        <div
-          data-toast-avoid
-          className="fixed inset-x-0 bottom-0 z-(--z-dock) border-t bg-card px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:hidden"
-        >
-          {actions}
-        </div>
+        // Phones only: from 640px the actions sit under the title / in the side panel.
+        <UploadDock
+          className="sm:hidden"
+          primary={actions}
+          {...(busy ? { note: t('upload.keepOpen') } : {})}
+        />
       )}
+      {primary === 'files' ? (
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          accept={acceptFor(permissions)}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden="true"
+          onChange={(event) => {
+            const files = [...(event.target.files ?? [])];
+            // Cleared, so picking the same files again fires `change` again.
+            event.target.value = '';
+            if (files.length > 0) uploads.add(files);
+          }}
+        />
+      ) : null}
 
       <NamePrompt
         open={namePrompt !== null}
@@ -314,31 +389,40 @@ function GuestNameLine({ name, onChange }: { name: string | null; onChange: () =
 }
 
 /**
- * The action's content: in the dock on phones, under the title from 640px. Until uploads exist (PR C) there is no
- * file button at all, not even a disabled one (a dead main action in the thumb zone, rule 18):
- * the wish is the pencil action, and a link that takes files says plainly that they come soon.
+ * The actions: in the dock on phones, under the title from 640px, in the side panel from 1024px.
+ * Files take the pencil when the link takes any; the wish is then the quiet second action.
  */
 function ContributeActions({
   primary,
+  fileLabel,
   canWrite,
+  onFiles,
   onWrite,
 }: {
   primary: 'files' | 'text';
+  fileLabel: string;
   canWrite: boolean;
+  onFiles: () => void;
   onWrite: () => void;
 }) {
   const t = useTranslations('guest');
+  if (primary === 'text') {
+    return (
+      <Button variant="pencil" size="guest" className="w-full" onClick={onWrite}>
+        {t('writeWish')}
+      </Button>
+    );
+  }
   return (
     <div className="grid gap-2">
+      <Button variant="pencil" size="guest" className="w-full" onClick={onFiles}>
+        <ImagePlus aria-hidden="true" />
+        {fileLabel}
+      </Button>
       {canWrite ? (
-        <Button variant="pencil" size="guest" className="w-full" onClick={onWrite}>
+        <Button variant="ghost" size="lg" className="w-full" onClick={onWrite}>
           {t('writeWish')}
         </Button>
-      ) : null}
-      {primary === 'files' ? (
-        <p className="text-center text-sm text-muted-foreground sm:text-left">
-          {t('addFilesSoon')}
-        </p>
       ) : null}
     </div>
   );

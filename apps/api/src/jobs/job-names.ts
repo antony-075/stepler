@@ -77,3 +77,12 @@ export function singletonKeyFor<N extends JobName>(name: N, data: JobData[N]): s
   const entity = ENTITY_KEY[name](data);
   return entity === null ? name : `${name}:${entity}`;
 }
+
+/**
+ * How long a deleted collection's purge waits (spec §10.5): upload URLs issued just before the
+ * deletion stay valid for their TTL, and a part PUT that started in time may finish later (even
+ * after its upload is aborted), so the purge lists the prefix only after the TTL plus an hour.
+ */
+export function collectionPurgeDelaySeconds(uploadUrlTtlSeconds: number): number {
+  return uploadUrlTtlSeconds + 3600;
+}

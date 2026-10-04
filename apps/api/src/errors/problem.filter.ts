@@ -96,6 +96,8 @@ export class ProblemFilter implements ExceptionFilter {
 
     if (exception instanceof AppError) {
       return {
+        // Extensions first, so they can never replace a standard member.
+        ...exception.extensions,
         ...base(exception.status, exception.code, exception.retryable),
         ...(exception.detail === undefined ? {} : { detail: exception.detail }),
         ...(exception.errors === undefined ? {} : { errors: exception.errors }),

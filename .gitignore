@@ -29,6 +29,8 @@ service-account*.json
 # User media, uploads, local databases and dumps — never commit.
 # ---------------------------------------------------------------------------
 uploads/
+# Source code, not user media.
+!apps/api/src/uploads/
 tmp/
 *.sqlite
 *.sqlite3

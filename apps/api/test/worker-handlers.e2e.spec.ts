@@ -284,7 +284,7 @@ describe('worker handlers', () => {
       expect(await prisma.guestSession.count()).toBe(0);
     });
 
-    test('deletes long-idle guest sessions that contributed nothing', async () => {
+    test('deletes long-idle guest sessions that contributed nothing and have no uploads', async () => {
       const { collectionId, linkId } = await seed();
       const longAgo = new Date(Date.now() - 31 * DAY_MS);
       const idle = await addSession(collectionId, linkId, longAgo);
@@ -302,10 +302,33 @@ describe('worker handlers', () => {
         },
       });
 
+      const idleWithUpload = await addSession(collectionId, linkId, longAgo);
+      await prisma.uploadSession.create({
+        data: {
+          collectionId,
+          guestSessionId: idleWithUpload.id,
+          guestLinkId: linkId,
+          clientUploadId: randomUUID(),
+          kind: 'PHOTO',
+          originalFilename: 'IMG_1.jpg',
+          declaredMime: 'image/jpeg',
+          declaredSizeBytes: 1000n,
+          storageKey: `collections/${collectionId}/uploads/${randomUUID()}/original`,
+          multipartUploadId: 'mp',
+          partSizeBytes: 10_485_760n,
+          partCount: 1,
+          status: 'REJECTED',
+          rejectReason: 'FILE_TYPE_NOT_ALLOWED',
+          expiresAt: longAgo,
+        },
+      });
+
       await sweep({ GUEST_SESSION_IDLE_DAYS: '30', WORKER_PURGE_BATCH_SIZE: '1' }).handle();
 
       const left = await prisma.guestSession.findMany({ select: { id: true } });
-      expect(left.map((row) => row.id).sort()).toEqual([idleWithContent.id, recent.id].sort());
+      expect(left.map((row) => row.id).sort()).toEqual(
+        [idleWithContent.id, idleWithUpload.id, recent.id].sort(),
+      );
       expect(left.map((row) => row.id)).not.toContain(idle.id);
     });
   });
@@ -368,6 +391,9 @@ describe('worker handlers', () => {
       const jobs = await queuedJobs(prisma);
       expect(jobs).toHaveLength(1);
       expect(jobs[0]).toMatchObject({ name: 'collection.purge', data: { collectionId } });
+      // Scheduled after every upload URL issued before the deletion has expired (TTL + 1 h).
+      const delayMs = (jobs[0]?.startAfter.getTime() ?? 0) - (jobs[0]?.createdOn.getTime() ?? 0);
+      expect(Math.round(delayMs / 1000)).toBe(900 + 3600);
     });
   });
 

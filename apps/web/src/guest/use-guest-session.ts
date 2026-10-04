@@ -53,7 +53,8 @@ export type GuestSessionState =
 /**
  * The guest's session for the link in the address bar. Started once per page; every later call
  * goes through `call`, which re-runs the exchange on a lost cookie and turns a link or collection
- * state from any call into the page's state (pausing a link mid-visit shows the paused page).
+ * state from any call into the page's state (pausing a link mid-visit shows the paused page),
+ * except a full collection, which fails only that call.
  */
 export function useGuestSession(token: string): GuestSessionState {
   const queryClient = useQueryClient();
@@ -86,7 +87,12 @@ export function useGuestSession(token: string): GuestSessionState {
           async () => setContext(await exchangeSession(collectionId, token)),
         );
       } catch (error) {
-        if (isPageEndingError(error)) setEnded(guestPageState(error));
+        // A full collection ends the page only when the session itself says so (its first
+        // load); for a call (an upload) it fails that call and the page stays (owner decision
+        // 2026-10-03: the remaining files fail with a notice).
+        if (isPageEndingError(error) && !isApiError(error, 'QUOTA_EXCEEDED')) {
+          setEnded(guestPageState(error));
+        }
         throw error;
       }
     },

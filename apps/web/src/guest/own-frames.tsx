@@ -20,6 +20,9 @@ export function useFrameTime(): (iso: string) => string {
   return (iso) => format.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit' });
 }
 
+/** Decorative: the frame's accessible name says what the picture is. */
+const DECORATIVE = '';
+
 function GuestFrame({ item }: { item: GuestContentItem }) {
   const t = useTranslations('guest.frame');
   const time = useFrameTime()(item.createdAt);
@@ -37,7 +40,43 @@ function GuestFrame({ item }: { item: GuestContentItem }) {
       />
     );
   }
-  // Files arrive with uploads; until previews exist they show the placeholder.
+  if (item.kind === 'DOCUMENT') {
+    // Only the guest's own frames carry a file name; others show the type alone.
+    const name = item.originalFilename;
+    const type = name?.includes('.') ? (name.split('.').pop()?.toUpperCase() ?? '') : '';
+    return (
+      <Frame
+        kind="document"
+        number={number}
+        time={time}
+        docType={type === '' ? t('documentType') : type}
+        {...(name === null ? {} : { docTitle: name })}
+        accessibleName={
+          number === undefined
+            ? t('documentOther', { time })
+            : t('documentOwn', { number, time, type })
+        }
+      />
+    );
+  }
+  // Photos and videos show their thumbnail (or poster) once the worker made one (PR D); never
+  // the original: it can be 50 MB. Until then, the placeholder.
+  const thumb = item.kind === 'VIDEO' ? (item.posterUrl ?? item.thumbnailUrl) : item.thumbnailUrl;
+  if (thumb !== null) {
+    return (
+      <Frame
+        kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
+        // A presigned storage URL: nothing for next/image to optimise.
+        // eslint-disable-next-line @next/next/no-img-element
+        media={<img alt={DECORATIVE} src={thumb} loading="lazy" />}
+        number={number}
+        time={time}
+        accessibleName={
+          number === undefined ? t('fileOther', { time }) : t('fileOwn', { number, time })
+        }
+      />
+    );
+  }
   return (
     <Frame
       kind="pending-preview"
@@ -63,12 +102,15 @@ export function GuestFrames({
   call,
   label,
   empty,
+  hide,
 }: {
   collectionId: string;
   scope: 'own' | 'all';
   call: <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
   label: string;
   empty: ReactNode;
+  /** Items already shown elsewhere (this page's upload batch). */
+  hide?: ReadonlySet<string>;
 }) {
   const t = useTranslations('guest');
   const query = useInfiniteQuery({
@@ -108,8 +150,10 @@ export function GuestFrames({
     );
   }
 
-  const items = query.data.pages.flatMap((page) => page.items);
-  if (items.length === 0) return empty;
+  const items = query.data.pages
+    .flatMap((page) => page.items)
+    .filter((item) => hide === undefined || !hide.has(item.id));
+  if (items.length === 0) return hide !== undefined && hide.size > 0 ? null : empty;
   return (
     <div className="grid gap-3">
       <FrameGrid ariaLabel={label}>

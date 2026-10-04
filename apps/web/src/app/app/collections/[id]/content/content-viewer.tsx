@@ -1,23 +1,41 @@
 'use client';
 
-import type { AdminContentItem } from '@stepler/contracts';
+import type { AdminContentDetail, AdminContentItem } from '@stepler/contracts';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { FrameViewer } from '@stepler/ui/components/frame-viewer';
 import { useToast } from '@stepler/ui/components/toast';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { cn } from '@stepler/ui/lib/utils';
-import { ImageIcon, Quote, Trash2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Download, FileText, ImageIcon, Quote, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { getContent } from '@/api/content';
+import { formatBytes, formatDuration } from '@/format/bytes';
+import { documentType } from './document-type';
+
+/** Browsers outside Safari cannot show HEIC/HEIF: those get a tile and «Завантажити». */
+const NOT_SHOWN = new Set(['image/heic', 'image/heif']);
+
+/** Media links are signed for at least an hour (spec §10.6); refetch well before. */
+const DETAIL_STALE_MS = 30 * 60_000;
+
+const viewerButton = cn(
+  'inline-flex h-11 shrink-0 items-center gap-2 rounded-control px-3 text-[0.9375rem] font-semibold text-viewer-foreground transition-colors duration-(--duration-fast) hover:bg-[rgb(255_255_255/0.12)] motion-reduce:transition-none',
+  focusRing,
+);
 
 /**
  * One frame for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): full screen on phones and
  * tablets, a large centred dialog from `lg`. The number, date and contributor's name on top,
  * «Видалити» beside «Закрити», ←/→ across the frames already loaded in the grid. A wish is a
  * centred card in large type (20–24px, at most 60 characters a line; a long one scrolls in its
- * own focusable box); files
- * show the preview placeholder until uploads and processing exist. Deleting asks first, in plain
+ * own focusable box). Files (PR C) load their detail for presigned links: a photo shows its
+ * original (HEIC, which browsers cannot show, a tile with «Завантажити»), a video plays natively
+ * (`preload="metadata"`, with a fallback line when the browser cannot play it), a document is a
+ * type tile with «Завантажити» (always an attachment). The details add size, type, dimensions
+ * and duration. Deleting asks first, in plain
  * words: guests stop seeing it and its number is never reused.
  */
 export function ContentViewer({
@@ -38,10 +56,19 @@ export function ContentViewer({
   const format = useFormatter();
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
+  const [videoFailed, setVideoFailed] = useState<string | null>(null);
   const index = frameNo === undefined ? -1 : items.findIndex((item) => item.frameNo === frameNo);
   const item = index === -1 ? undefined : items[index];
   const prev = index > 0 ? items[index - 1] : undefined;
   const next = index !== -1 && index < items.length - 1 ? items[index + 1] : undefined;
+
+  const isFile = item !== undefined && item.kind !== 'TEXT';
+  const detail = useQuery({
+    queryKey: ['content-detail', item?.id],
+    queryFn: () => getContent(item?.id ?? ''),
+    enabled: isFile,
+    staleTime: DETAIL_STALE_MS,
+  });
 
   if (item === undefined) return null;
   const created = new Date(item.createdAt);
@@ -79,17 +106,18 @@ export function ContentViewer({
           document.querySelector<HTMLElement>(`[data-frame="${item.frameNo}"] button`)
         }
         actions={
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className={cn(
-              'inline-flex h-11 shrink-0 items-center gap-2 rounded-control px-3 text-[0.9375rem] font-semibold text-viewer-foreground transition-colors duration-(--duration-fast) hover:bg-[rgb(255_255_255/0.12)] motion-reduce:transition-none',
-              focusRing,
-            )}
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-            <span className="max-sm:sr-only">{t('viewer.delete')}</span>
-          </button>
+          <>
+            {isFile && detail.data?.downloadUrl ? (
+              <a href={detail.data.downloadUrl} className={viewerButton}>
+                <Download aria-hidden="true" className="size-4" />
+                <span className="max-sm:sr-only">{t('viewer.download')}</span>
+              </a>
+            ) : null}
+            <button type="button" onClick={() => setConfirming(true)} className={viewerButton}>
+              <Trash2 aria-hidden="true" className="size-4" />
+              <span className="max-sm:sr-only">{t('viewer.delete')}</span>
+            </button>
+          </>
         }
         details={
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1">
@@ -101,6 +129,35 @@ export function ContentViewer({
             <dd>{t(`kindTitle.${item.kind}`)}</dd>
             <dt className="text-muted-foreground">{t('viewer.from')}</dt>
             <dd className="[overflow-wrap:anywhere]">{name}</dd>
+            {item.originalFilename === null ? null : (
+              <>
+                <dt className="text-muted-foreground">{t('viewer.file')}</dt>
+                <dd className="[overflow-wrap:anywhere]">{item.originalFilename}</dd>
+              </>
+            )}
+            {item.sizeBytes === null ? null : (
+              <>
+                <dt className="text-muted-foreground">{t('viewer.size')}</dt>
+                <dd className="tabular-nums">{formatBytes(format.number, item.sizeBytes)}</dd>
+              </>
+            )}
+            {item.width === null || item.height === null ? null : (
+              <>
+                <dt className="text-muted-foreground">{t('viewer.dimensions')}</dt>
+                <dd className="tabular-nums">
+                  {t('viewer.dimensionsValue', { width: item.width, height: item.height })}
+                </dd>
+              </>
+            )}
+            {item.durationMs === null ? null : (
+              <>
+                <dt className="text-muted-foreground">{t('viewer.duration')}</dt>
+                <dd className="tabular-nums">{formatDuration(item.durationMs)}</dd>
+              </>
+            )}
+            <dd className="col-span-2 pt-2 text-sm text-muted-foreground">
+              {t('viewer.numberHint')}
+            </dd>
           </dl>
         }
       >
@@ -123,10 +180,14 @@ export function ContentViewer({
             </div>
           </div>
         ) : (
-          <div className="grid justify-items-center gap-2 text-muted-foreground">
-            <ImageIcon aria-hidden="true" className="size-8" />
-            <span>{t('pendingPreview')}</span>
-          </div>
+          <FileStage
+            item={item}
+            detail={detail.data}
+            loading={detail.isPending}
+            failed={detail.isError}
+            videoFailed={videoFailed === item.id}
+            onVideoError={() => setVideoFailed(item.id)}
+          />
         )}
       </FrameViewer>
       <ConfirmDialog
@@ -145,5 +206,86 @@ export function ContentViewer({
         }}
       />
     </>
+  );
+}
+
+/** The file itself on the viewer's stage, or a tile that says what to do with it. */
+function FileStage({
+  item,
+  detail,
+  loading,
+  failed,
+  videoFailed,
+  onVideoError,
+}: {
+  item: AdminContentItem;
+  detail: AdminContentDetail | undefined;
+  loading: boolean;
+  failed: boolean;
+  videoFailed: boolean;
+  onVideoError: () => void;
+}) {
+  const t = useTranslations('content');
+  const tile = (text: string, icon: 'image' | 'doc' = 'image') => (
+    <div className="grid max-w-sm justify-items-center gap-3 px-6 text-center text-muted-foreground">
+      {icon === 'doc' ? (
+        <FileText aria-hidden="true" className="size-10" />
+      ) : (
+        <ImageIcon aria-hidden="true" className="size-8" />
+      )}
+      {icon === 'doc' ? (
+        <span translate="no" className="type-data text-base text-viewer-foreground">
+          {documentType(item)}
+        </span>
+      ) : null}
+      {icon === 'doc' && item.originalFilename !== null ? (
+        <span className="[overflow-wrap:anywhere] text-viewer-foreground">
+          {item.originalFilename}
+        </span>
+      ) : null}
+      <span>{text}</span>
+      {detail?.downloadUrl ? (
+        <a
+          href={detail.downloadUrl}
+          className={cn(viewerButton, 'border border-[rgb(255_255_255/0.24)]')}
+        >
+          <Download aria-hidden="true" className="size-4" />
+          {t('viewer.download')}
+        </a>
+      ) : null}
+    </div>
+  );
+
+  if (loading) return tile(t('viewer.loadingMedia'));
+  if (failed || detail === undefined) return tile(t('viewer.mediaFailed'));
+  if (item.kind === 'DOCUMENT') return tile(t('viewer.documentOpen'), 'doc');
+  if (detail.originalUrl === null) return tile(t('pendingPreview'));
+  if (item.kind === 'PHOTO') {
+    if (item.mimeType !== null && NOT_SHOWN.has(item.mimeType)) return tile(t('viewer.heic'));
+    return (
+      // A presigned storage URL: nothing for next/image to optimise.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={detail.originalUrl}
+        alt={t('viewer.photoAlt', { number: item.frameNo })}
+        className="max-h-full max-w-full object-contain"
+      />
+    );
+  }
+  if (videoFailed) return tile(t('viewer.videoFallback'));
+  return (
+    // Guests' own recordings come without caption tracks; there is nothing to attach.
+    // eslint-disable-next-line jsx-a11y/media-has-caption
+    <video
+      key={item.id}
+      src={detail.originalUrl}
+      controls
+      preload="metadata"
+      playsInline
+      onError={onVideoError}
+      className="max-h-full max-w-full"
+    >
+      {t('viewer.videoFallback')}
+    </video>
   );
 }

@@ -21,6 +21,7 @@ export {
 } from './auth.js';
 export {
   collectionDescriptionSchema,
+  collectionDetailSchema,
   collectionIdParamsSchema,
   collectionListResponseSchema,
   collectionSchema,
@@ -31,6 +32,7 @@ export {
   NO_CONTROL_CHARACTERS,
   updateCollectionRequestSchema,
   type Collection,
+  type CollectionDetail,
   type CollectionListResponse,
   type CollectionStatus,
   type CreateCollectionRequest,
@@ -122,4 +124,26 @@ export {
   type HealthLiveResponse,
   type HealthReadyResponse,
 } from './health.js';
-export { usageResponseSchema, type UsageResponse } from './usage.js';
+export {
+  storageUsageSchema,
+  usageResponseSchema,
+  type StorageUsage,
+  type UsageResponse,
+} from './usage.js';
+export {
+  createUploadRequestSchema,
+  extensionOf,
+  FILE_TYPES,
+  fileKindSchema,
+  fileTypeFor,
+  guestUploadParamsSchema,
+  uploadPartsRequestSchema,
+  uploadPartsResponseSchema,
+  uploadSessionResponseSchema,
+  type CreateUploadRequest,
+  type FileKind,
+  type FileType,
+  type UploadPartsRequest,
+  type UploadPartsResponse,
+  type UploadSessionResponse,
+} from './uploads.js';

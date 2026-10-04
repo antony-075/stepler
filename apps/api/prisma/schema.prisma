@@ -52,6 +52,27 @@ enum ProcessingStatus {
   FAILED
 }
 
+enum UploadStatus {
+  INITIATED
+  /// A completion claimed it (`claimedAt`) and is checking storage outside any transaction; a
+  /// claim older than a few minutes (a crashed completion) can be claimed again or expired.
+  COMPLETING
+  COMPLETED
+  /// Cancelled by the guest, or by the collection's purge.
+  ABORTED
+  /// Not completed within its TTL; the expiry job discards its bytes.
+  EXPIRED
+  /// Completion refused (type, size, permission or state); the bytes are discarded.
+  REJECTED
+}
+
+enum MediaRole {
+  ORIGINAL
+  THUMBNAIL
+  PREVIEW
+  POSTER
+}
+
 enum AuditActorType {
   ADMIN
   OPERATOR
@@ -143,6 +164,7 @@ model Collection {
   guestLinks          GuestLink[]
   guestSessions       GuestSession[]
   contentItems        ContentItem[]
+  uploadSessions      UploadSession[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
 }
@@ -154,35 +176,36 @@ model Collection {
 /// "GuestLink_hidden_only_revoked_additional"; at most one non-revoked default
 /// link per collection (partial unique index "GuestLink_one_live_default").
 model GuestLink {
-  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId    String          @db.Uuid
-  isDefault       Boolean
+  id                 String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId       String          @db.Uuid
+  isDefault          Boolean
   /// Additional links only, 1 to 60 characters; the default link has none.
-  label           String?
-  status          GuestLinkStatus @default(ACTIVE)
-  revokedAt       DateTime?       @db.Timestamptz(3)
+  label              String?
+  status             GuestLinkStatus @default(ACTIVE)
+  revokedAt          DateTime?       @db.Timestamptz(3)
   /// Set when the owner deletes an additional link: revoked and no longer listed. The row stays,
   /// so audit events and (later) guest content keep pointing at it.
-  hiddenAt        DateTime?       @db.Timestamptz(3)
+  hiddenAt           DateTime?       @db.Timestamptz(3)
   /// Set on a rotated-out default link: the link that replaced it.
-  replacedById    String?         @unique @db.Uuid
+  replacedById       String?         @unique @db.Uuid
   /// SHA-256 of the token, for lookup. The raw token is never stored in clear.
-  tokenHash       String          @unique
+  tokenHash          String          @unique
   /// AES-256-GCM of the token so the owner can see the link again; NULL once revoked.
-  tokenCiphertext String?
-  tokenKeyId      String?
+  tokenCiphertext    String?
+  tokenKeyId         String?
   canUploadPhotos    Boolean
   canUploadVideos    Boolean
   canUploadDocuments Boolean
-  canSubmitText   Boolean
-  canViewGallery  Boolean
-  canDeleteOwn    Boolean
-  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
-  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  replacedBy      GuestLink?      @relation("LinkRotation", fields: [replacedById], references: [id], onDelete: SetNull)
-  replaces        GuestLink?      @relation("LinkRotation")
-  guestSessions   GuestSession[]
+  canSubmitText      Boolean
+  canViewGallery     Boolean
+  canDeleteOwn       Boolean
+  createdAt          DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime        @updatedAt @db.Timestamptz(3)
+  collection         Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  replacedBy         GuestLink?      @relation("LinkRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces           GuestLink?      @relation("LinkRotation")
+  guestSessions      GuestSession[]
+  uploadSessions     UploadSession[]
 
   @@unique([id, collectionId])
   @@index([collectionId, isDefault, status, createdAt])
@@ -193,22 +216,23 @@ model GuestLink {
 /// collection. The name is optional, asked once [O4]; 1 to 80 characters when set
 /// (CHECK "GuestSession_name_length").
 model GuestSession {
-  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId    String        @db.Uuid
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId    String          @db.Uuid
   /// A link of the same collection (composite key with "collectionId"). A link with sessions is
   /// never deleted (links are revoked and hidden instead). NO ACTION, not RESTRICT, so deleting
   /// the collection still cascades to both in one statement.
-  currentLinkId   String        @db.Uuid
+  currentLinkId   String          @db.Uuid
   /// SHA-256 of the cookie token; the raw token is never stored.
-  tokenHash       String        @unique
+  tokenHash       String          @unique
   contributorName String?
   /// Set when the guest saved or skipped the name prompt, so it is asked once per session.
-  nameAnsweredAt  DateTime?     @db.Timestamptz(3)
-  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
-  lastSeenAt      DateTime      @default(now()) @db.Timestamptz(3)
-  collection      Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  currentLink     GuestLink     @relation(fields: [currentLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "GuestSession_link_same_collection_fkey")
+  nameAnsweredAt  DateTime?       @db.Timestamptz(3)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  lastSeenAt      DateTime        @default(now()) @db.Timestamptz(3)
+  collection      Collection      @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  currentLink     GuestLink       @relation(fields: [currentLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "GuestSession_link_same_collection_fkey")
   contentItems    ContentItem[]
+  uploadSessions  UploadSession[]
 
   @@unique([id, collectionId])
   @@index([collectionId])
@@ -243,9 +267,78 @@ model ContentItem {
   createdAt                 DateTime         @default(now()) @db.Timestamptz(3)
   collection                Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   contributorGuestSession   GuestSession?    @relation(fields: [contributorGuestSessionId, collectionId], references: [id, collectionId], onDelete: SetNull, onUpdate: NoAction, map: "ContentItem_session_same_collection_fkey")
+  mediaObjects              MediaObject[]
+  uploadSession             UploadSession?
 
   @@unique([collectionId, frameNo])
   @@unique([contributorGuestSessionId, idempotencyKey])
+}
+
+/// A stored file of a content item (spec §7.3): the ORIGINAL as uploaded (immutable), and the
+/// derivatives the worker makes (disposable). Sizes are positive (CHECK "MediaObject_size_positive").
+model MediaObject {
+  id            String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contentItemId String      @db.Uuid
+  role          MediaRole
+  /// No user data in keys (spec §10.6).
+  storageKey    String      @unique
+  /// The verified type (content signature), never the browser's claim.
+  mimeType      String
+  sizeBytes     BigInt
+  width         Int?
+  height        Int?
+  durationMs    Int?
+  createdAt     DateTime    @default(now()) @db.Timestamptz(3)
+  contentItem   ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@unique([contentItemId, role])
+}
+
+/// One file on its way from a guest's browser to storage (spec §7.3, §10). Rules live as named
+/// CHECKs: "UploadSession_kind_is_file", "UploadSession_size_positive",
+/// "UploadSession_parts_positive", "UploadSession_completed_consistent", "UploadSession_claim_consistent",
+/// "UploadSession_reject_reason"; open uploads per guest session use the partial index
+/// "UploadSession_active_idx". The guest session and link belong to the row's own collection
+/// (composite keys). `INITIATED` rows reserve `declaredSizeBytes` of quota (ADR 0010).
+model UploadSession {
+  id                String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String       @db.Uuid
+  /// Deleting the guest session deletes its uploads; the idle sweep keeps sessions with uploads.
+  guestSessionId    String       @db.Uuid
+  /// The link the upload came through. NO ACTION (links are never deleted while referenced), so
+  /// deleting the collection still cascades in one statement.
+  guestLinkId       String       @db.Uuid
+  /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId).
+  clientUploadId    String       @db.Uuid
+  kind              ContentKind
+  originalFilename  String
+  declaredMime      String
+  declaredSizeBytes BigInt
+  /// `collections/{collectionId}/uploads/{id}/original`.
+  storageKey        String       @unique
+  /// Every upload is multipart (ADR 0008 addendum 2026-10-03): storage's upload id.
+  multipartUploadId String
+  partSizeBytes     BigInt
+  partCount         Int
+  status            UploadStatus @default(INITIATED)
+  /// A stable error code when REJECTED.
+  rejectReason      String?
+  expiresAt         DateTime     @db.Timestamptz(3)
+  completedAt       DateTime?    @db.Timestamptz(3)
+  /// Set while COMPLETING (CHECK "UploadSession_claim_consistent").
+  claimedAt         DateTime?    @db.Timestamptz(3)
+  /// The item it became; NULL once that item is purged.
+  contentItemId     String?      @unique @db.Uuid
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  collection        Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  guestSession      GuestSession @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
+  guestLink         GuestLink    @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
+  contentItem       ContentItem? @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+
+  @@unique([guestSessionId, clientUploadId])
+  @@index([status, expiresAt])
+  @@index([collectionId, status])
+  @@index([guestLinkId])
 }
 
 /// Append-only. Plain ids without foreign keys, so events outlive what they describe (spec §7.4).

@@ -13,6 +13,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { toAdminContentDetail, toAdminContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
+import { MediaUrls, WITH_MEDIA } from './media-urls.js';
 
 /**
  * The collection owner's view of content. Rows are reached only through
@@ -25,6 +26,7 @@ export class AdminContentService {
     private readonly prisma: PrismaService,
     private readonly queries: ContentQueries,
     private readonly audit: AuditService,
+    private readonly media: MediaUrls,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -40,7 +42,10 @@ export class AdminContentService {
       query.limit,
       query.sort,
     );
-    return { items: rows.map((row) => toAdminContentItem(row)), nextCursor };
+    const items = await Promise.all(
+      rows.map(async (row) => toAdminContentItem(row, await this.media.forItem(row))),
+    );
+    return { items, nextCursor };
   }
 
   async counts(a: AccountPrincipal, collectionId: string): Promise<ContentCounts> {
@@ -51,9 +56,10 @@ export class AdminContentService {
   async get(a: AccountPrincipal, id: string): Promise<AdminContentDetail> {
     const row = await this.prisma.contentItem.findFirst({
       where: { id, deletedAt: null, collection: ownedBy(a) },
+      include: WITH_MEDIA,
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
-    return toAdminContentDetail(row);
+    return toAdminContentDetail(row, await this.media.forItem(row), await this.media.original(row));
   }
 
   /**

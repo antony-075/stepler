@@ -1,4 +1,4 @@
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { type ExecutionContext, Injectable, SetMetadata } from '@nestjs/common';
 import {
   ThrottlerGuard,
@@ -6,7 +6,10 @@ import {
   type ThrottlerModuleOptions,
 } from '@nestjs/throttler';
 import { AppError } from '../errors/app-error.js';
+import { GUEST_SESSION_COOKIE } from '../guest-access/guest-session-cookie.js';
 import type { LimitsService } from '../limits/limits.service.js';
+import { readCookie } from './session-cookie.js';
+import { hashToken } from './tokens.js';
 
 /**
  * Named per-IP limits enforced by `RateLimitGuard`; a route opts into one with `@RateLimit`.
@@ -18,16 +21,31 @@ export type RateLimitName =
   | 'guest-link-resolve'
   | 'guest-session-create'
   | 'guest-text-create'
-  | 'guest-read';
+  | 'guest-read'
+  | 'guest-upload'
+  | 'guest-upload-session';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 
-export const RateLimit = (name: RateLimitName): MethodDecorator => SetMetadata(RATE_LIMIT, name);
+/** The route's named limits; several apply together (e.g. per IP and per guest session). */
+export const RateLimit = (...names: RateLimitName[]): MethodDecorator =>
+  SetMetadata(RATE_LIMIT, names);
 
-function routeLimit(context: ExecutionContext): unknown {
-  return Reflect.getMetadata(RATE_LIMIT, context.getHandler());
+function routeLimits(context: ExecutionContext): readonly unknown[] {
+  const names: unknown = Reflect.getMetadata(RATE_LIMIT, context.getHandler());
+  return Array.isArray(names) ? names : [];
+}
+
+/**
+ * Counts per guest session: the hash of the `st_gs` cookie (never the raw token), or the IP when
+ * there is none (the guard then refuses the request anyway). Runs before the session guard, so
+ * a flood is refused before any session lookup.
+ */
+function guestSessionTracker(req: Record<string, unknown>): string {
+  const cookie = readCookie(req as unknown as IncomingMessage, GUEST_SESSION_COOKIE);
+  return cookie === undefined ? `ip:${String(req.ip)}` : `gs:${hashToken(cookie)}`;
 }
 
 /**
@@ -40,7 +58,7 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
     name,
     ttl,
     limit,
-    skipIf: (context: ExecutionContext) => routeLimit(context) !== name,
+    skipIf: (context: ExecutionContext) => !routeLimits(context).includes(name),
   });
   return {
     throttlers: [
@@ -52,6 +70,12 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       named('guest-text-create', limits.guestTextCreatePerIpPerMinute(), MINUTE_MS),
       // Counted per route (the throttler keys by handler): context, content list, one item.
       named('guest-read', limits.guestReadsPerIpPerMinute(), MINUTE_MS),
+      // Upload calls (review I2), per route: per IP, and per guest session.
+      named('guest-upload', limits.uploadCallsPerIpPerMinute(), MINUTE_MS),
+      {
+        ...named('guest-upload-session', limits.uploadCallsPerGuestSessionPerMinute(), MINUTE_MS),
+        getTracker: guestSessionTracker,
+      },
     ],
     setHeaders: false,
   };

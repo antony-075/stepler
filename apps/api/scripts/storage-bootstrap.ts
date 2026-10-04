@@ -62,7 +62,7 @@ for (const Bucket of BUCKETS) {
         CORSRules: [
           {
             AllowedOrigins: ORIGINS,
-            AllowedMethods: ['PUT', 'GET'],
+            AllowedMethods: ['PUT', 'GET', 'HEAD'],
             AllowedHeaders: ['*'],
             ExposeHeaders: ['ETag'],
             MaxAgeSeconds: 600,

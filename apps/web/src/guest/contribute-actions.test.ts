@@ -1,6 +1,6 @@
 import type { GuestLinkPermissions } from '@stepler/contracts';
 import { describe, expect, it } from 'vitest';
-import { acceptFor, primaryContribution } from './contribute-actions';
+import { acceptFor, primaryContribution, uploadLabelKey } from './contribute-actions';
 
 const none: GuestLinkPermissions = {
   canUploadPhotos: false,
@@ -34,5 +34,18 @@ describe('acceptFor', () => {
       'image/*,.heic,.heif,.pdf,.docx,.xlsx,.pptx,.txt',
     );
     expect(acceptFor({ ...none, canSubmitText: true })).toBe('');
+  });
+});
+
+describe('uploadLabelKey', () => {
+  it('names what the link takes', () => {
+    const p = { ...none, canUploadPhotos: true };
+    expect(uploadLabelKey(p)).toBe('addPhotos');
+    expect(uploadLabelKey({ ...p, canUploadVideos: true })).toBe('addPhotosVideos');
+    expect(uploadLabelKey({ ...none, canUploadVideos: true })).toBe('addVideos');
+    expect(uploadLabelKey({ ...none, canUploadDocuments: true })).toBe('addDocuments');
+    expect(uploadLabelKey({ ...p, canUploadVideos: true, canUploadDocuments: true })).toBe(
+      'addPhotosVideos',
+    );
   });
 });

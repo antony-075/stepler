@@ -4,7 +4,7 @@ import {
   adminContentDetailSchema,
   adminContentPageSchema,
   collectionListResponseSchema,
-  collectionSchema,
+  collectionDetailSchema,
   contentCountsSchema,
 } from '@stepler/contracts';
 import request from 'supertest';
@@ -335,7 +335,7 @@ describe('admin content API', () => {
       });
       expect(byId.get(emptyId)).toMatchObject({ contentCount: 0, lastContentAt: null });
       expect(
-        collectionSchema.parse(
+        collectionDetailSchema.parse(
           (await get(cookie, `/collections/${collectionId}`).expect(200)).body,
         ),
       ).toMatchObject({ contentCount: 3 });

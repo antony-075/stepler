@@ -25,3 +25,16 @@ export function acceptFor(p: GuestLinkPermissions): string {
     .flatMap((permission) => ACCEPT[permission])
     .join(',');
 }
+
+export type UploadLabelKey = 'addPhotosVideos' | 'addPhotos' | 'addVideos' | 'addDocuments';
+
+/**
+ * The file button's words: photos and videos lead (documents, when allowed, are picked through
+ * the same button), «Додати документи» only on a documents-only link.
+ */
+export function uploadLabelKey(p: GuestLinkPermissions): UploadLabelKey {
+  const { canUploadPhotos: photos, canUploadVideos: videos } = p;
+  if (photos && videos) return 'addPhotosVideos';
+  if (photos) return 'addPhotos';
+  return videos ? 'addVideos' : 'addDocuments';
+}

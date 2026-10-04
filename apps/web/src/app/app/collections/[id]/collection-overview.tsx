@@ -1,6 +1,6 @@
 'use client';
 
-import type { Collection } from '@stepler/contracts';
+import type { Collection, CollectionDetail } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
@@ -190,7 +190,10 @@ function ArchivedNotice({ id }: { id: string }) {
   const unarchive = useMutation({
     mutationFn: () => unarchiveCollection(id),
     onSuccess: async (collection) => {
-      queryClient.setQueryData(collectionKey(id), collection);
+      // The detail also holds the storage line, which a mutation's answer leaves out.
+      queryClient.setQueryData<CollectionDetail>(collectionKey(id), (previous) =>
+        previous === undefined ? undefined : { ...previous, ...collection },
+      );
       toast({ variant: 'success', title: t('unarchived') });
       await invalidate();
     },

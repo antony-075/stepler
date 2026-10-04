@@ -35,6 +35,14 @@ export interface GuestSessionLimits {
   concurrentUploads: number;
 }
 
+/** The direct-upload protocol's sizes and lifetimes (spec §10.2, §10.6). */
+export interface UploadSettings {
+  partSizeBytes: bigint;
+  sessionTtlHours: number;
+  urlTtlSeconds: number;
+  mediaUrlWindowSeconds: number;
+}
+
 /**
  * Single source of limits. Values are config-backed today; plans and entitlements plug in
  * behind `forUser` later without changing callers (ADR 0010).
@@ -82,6 +90,16 @@ export class LimitsService {
     return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
   }
 
+  /** Upload API calls per client IP per minute, per route (venue NAT shares an IP). */
+  uploadCallsPerIpPerMinute(): number {
+    return this.env.LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE;
+  }
+
+  /** Upload API calls per guest session per minute, per route. */
+  uploadCallsPerGuestSessionPerMinute(): number {
+    return this.env.LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {
@@ -90,6 +108,15 @@ export class LimitsService {
         DOCUMENT: this.env.LIMIT_FILE_BYTES_DOCUMENT,
       },
       filesPerBatch: this.env.LIMIT_FILES_PER_BATCH,
+    };
+  }
+
+  uploads(): UploadSettings {
+    return {
+      partSizeBytes: this.env.UPLOAD_PART_SIZE_BYTES,
+      sessionTtlHours: this.env.UPLOAD_SESSION_TTL_HOURS,
+      urlTtlSeconds: this.env.UPLOAD_URL_TTL_SECONDS,
+      mediaUrlWindowSeconds: this.env.MEDIA_URL_WINDOW_SECONDS,
     };
   }
 
