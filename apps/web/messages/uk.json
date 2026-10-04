@@ -858,7 +858,7 @@
       "description": "Як Stepler обробляє персональні дані."
     },
     "draftBanner": "Чернетка — текст буде замінено",
-    "meta": "Версія {version} · діє з <time>{date}</time>",
+    "meta": "Версія {version} · діє з <time>{date}</time>",
     "contact": {
       "title": "Контакти",
       "text": "З питань персональних даних і скарг на вміст пишіть на <email>{address}</email>."

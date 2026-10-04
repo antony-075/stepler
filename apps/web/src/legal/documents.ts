@@ -12,8 +12,8 @@ import { LEGAL_SLUGS } from './slugs';
 
 /**
  * The legal texts, one Markdown file per document × locale × version (docs/legal/README.md).
- * `process.cwd()` is the app directory both in `next dev` and in the standalone server, and
- * `next.config.ts` traces the directory into the standalone output.
+ * `process.cwd()` is the app directory both in `next dev` and in the standalone server; the
+ * build copies the directory next to the standalone server (`scripts/copy-standalone-assets.mjs`).
  */
 export const LEGAL_CONTENT_DIR = path.join(process.cwd(), 'content/legal');
 

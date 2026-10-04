@@ -858,7 +858,7 @@
       "description": "How Stepler handles personal data."
     },
     "draftBanner": "Draft — the text will be replaced",
-    "meta": "Version {version} · effective from <time>{date}</time>",
+    "meta": "Version {version} · effective from <time>{date}</time>",
     "contact": {
       "title": "Contact",
       "text": "For personal data requests and content complaints, write to <email>{address}</email>."

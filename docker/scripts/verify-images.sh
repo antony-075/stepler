@@ -161,6 +161,8 @@ docker stop stepler-verify-worker >/dev/null
 body=$(curl -fsS http://127.0.0.1:3199/api/v1/health/live) || fail "web → api proxy failed"
 [ "$body" = '{"status":"ok"}' ] || fail "unexpected health body: $body"
 # The legal pages are served from the standalone output (the Markdown files are traced into it).
-curl -fsS http://127.0.0.1:3199/legal/terms | grep -q 'Чернетка' || fail "/legal/terms is not served with the draft text"
+# Captured first: `grep -q` would close the pipe early and fail curl under pipefail.
+legal=$(curl -fsS http://127.0.0.1:3199/legal/terms) || fail "/legal/terms is not served"
+grep -q 'Чернетка' <<<"$legal" || fail "/legal/terms does not show the draft text"
 
 echo "All image checks passed."

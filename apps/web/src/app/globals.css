@@ -28,6 +28,8 @@
 @utility legal-prose {
   font-size: 1.0625rem;
   line-height: 1.6;
+  /* A long URL or term in a future text must wrap at 320px, not scroll the page. */
+  overflow-wrap: break-word;
   & > :first-child {
     margin-top: 0;
   }
