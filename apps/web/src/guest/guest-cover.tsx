@@ -4,9 +4,10 @@
 // §6.1). Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - Only when the admin set a cover and it is `READY` (the context never carries anything else):
 //   the guest page had no initials tile before, so without a cover nothing new appears.
-// - Above the title, the full width of the column: 16:10 on phones and tablets (at 360px it is
-//   about 205px tall, so the title and the dock still share the first screen), 4:3 in the 380/420px
-//   side panel from 1024px. The title keeps priority: the picture never carries text.
+// - Above the title, the full width of the column: 16:10 on phones (at 360px it is about 205px
+//   tall, so the title and the dock still share the first screen), 2:1 in the 720px tablet column
+//   (360px, not 450), 4:3 in the 380/420px side panel from 1024px. The title keeps priority: the
+//   picture never carries text.
 // - The 1600px preview with `object-cover`, eager (it is the first thing seen), `width`/`height`
 //   from the context so nothing shifts while it loads on `--muted`.
 // - Decorative (`alt=""`): the h1 under it names the collection.
@@ -32,7 +33,7 @@ export function GuestCover({
       tint={collectionTint(collection.id)}
       initials={collectionInitials(collection.title)}
       size="hero"
-      className="mb-3 lg:mb-4 lg:aspect-[4/3]"
+      className="mb-3 sm:aspect-[2/1] lg:mb-4 lg:aspect-[4/3]"
       image={
         <MediaImg
           src={cover.previewUrl}

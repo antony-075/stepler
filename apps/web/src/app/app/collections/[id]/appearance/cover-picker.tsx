@@ -10,7 +10,8 @@
 //   with «Показати ще».
 // - Single choice: tapping a tile selects it (the pencil ring and ✓, `aria-pressed`; tapping
 //   another moves the choice). A photo without a thumbnail yet is shown «Готується прев’ю» and
-//   cannot be chosen (the API would refuse a photo the worker failed on).
+//   cannot be chosen (the API would refuse a photo the worker failed on); it is asked for again
+//   every 10 s like in «Вміст», and becomes selectable in place.
 // - The footer never scrolls: «Зробити обкладинкою» (ink, 44px, waits for a choice) and
 //   «Скасувати». Empty: «Гості ще не додали фото»; a failed load: an alert with «Спробувати ще».
 // - Closing returns focus to the button that opened it (Radix).
@@ -36,6 +37,7 @@ import { useState } from 'react';
 import { contentListKey, listContent } from '@/api/content';
 import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
+import { usePendingPreviews } from '../content/use-pending-previews';
 
 export function CoverPicker({
   collectionId,
@@ -99,6 +101,8 @@ function PickerBody({
     getNextPageParam: (last: AdminContentPage) => last.nextCursor,
   });
   const items = list.data?.pages.flatMap((page) => page.items) ?? [];
+  // A photo that just arrived becomes selectable once the worker made its thumbnail.
+  usePendingPreviews(collectionId, items);
 
   async function confirm() {
     if (selected === null || pending) return;
