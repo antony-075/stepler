@@ -80,11 +80,26 @@ export class CoversService {
 
     const coverId = await this.newId();
     const key = coverKey(item.collection.id, coverId, 'original');
-    await viaStorage(() => this.storage.copyObject(original.storageKey, key, original.mimeType));
+    try {
+      await viaStorage(() => this.storage.copyObject(original.storageKey, key, original.mimeType));
+    } catch (error) {
+      // The frame was purged since it was read: gone, like a deleted frame. Anything else is
+      // storage trouble (503, retryable).
+      const source = await this.storage.head(original.storageKey).catch(() => undefined);
+      if (source === null) throw new AppError('NOT_FOUND', 404);
+      throw error;
+    }
     try {
       await this.prisma.$transaction(async (tx) => {
         await this.usage.lockOwner(tx, item.collection.ownerId);
         const locked = await this.lockMutable(tx, a, item.collection.id);
+        // Deleted while the original was copied: no cover from it. The share lock keeps a
+        // concurrent delete waiting until this transaction ends.
+        const live = await tx.$queryRaw<{ id: string }[]>`
+          SELECT "id"::text AS "id" FROM "ContentItem"
+          WHERE "id" = ${item.id}::uuid AND "deletedAt" IS NULL
+          FOR SHARE`;
+        if (live.length === 0) throw new AppError('NOT_FOUND', 404);
         await this.replace(
           tx,
           locked.id,

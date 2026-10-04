@@ -13,6 +13,7 @@ import { createApp } from '../src/create-app.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
@@ -210,6 +211,42 @@ describe('cover from a frame and cover removal [A8]', () => {
     expect(await coverRows(b.collectionId)).toEqual([]);
     expect(await coverPrefixKeys(a.collectionId)).toEqual([]);
     expect(await coverPrefixKeys(b.collectionId)).toEqual([]);
+  });
+
+  test('a frame deleted while its original was copied → 404, nothing recorded or left', async () => {
+    const o = await owner();
+    const item = await frame(o);
+    const shared = s.app.get<ObjectStorage>(OBJECT_STORAGE);
+    Object.assign(shared, {
+      copyObject: async (from: string, to: string, type: string) => {
+        await S3ObjectStorage.prototype.copyObject.call(shared, from, to, type);
+        await prisma.contentItem.update({
+          where: { id: item.id },
+          data: { deletedAt: new Date() },
+        });
+      },
+    });
+    try {
+      const res = await o.fromFrame(item.id).expect(404);
+      expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
+    } finally {
+      delete (shared as { copyObject?: unknown }).copyObject;
+    }
+    expect(await coverRows(o.collectionId)).toEqual([]);
+    expect(await coverPrefixKeys(o.collectionId)).toEqual([]);
+  });
+
+  test('a frame whose original is already purged from storage → 404, not 503', async () => {
+    const o = await owner();
+    const item = await frame(o);
+    const original = await prisma.mediaObject.findFirstOrThrow({
+      where: { contentItemId: item.id, role: 'ORIGINAL' },
+    });
+    await storage.delete(original.storageKey);
+    const res = await o.fromFrame(item.id).expect(404);
+    expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
+    expect(await coverRows(o.collectionId)).toEqual([]);
+    expect(await coverPrefixKeys(o.collectionId)).toEqual([]);
   });
 
   test('replacing a FRAME cover with another frame: one row, the old id queued for purge', async () => {

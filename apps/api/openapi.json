@@ -696,13 +696,13 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -1188,18 +1188,18 @@
                     "maxLength": 1000,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "title": {
                     "maxLength": 100,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "welcomeMessage": {
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -2335,7 +2335,7 @@
                   "filename": {
                     "maxLength": 255,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "mimeType": {
@@ -3032,7 +3032,7 @@
                   "label": {
                     "maxLength": 60,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "permissions": {
@@ -3844,7 +3844,7 @@
                   "label": {
                     "maxLength": 60,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "permissions": {
@@ -5138,7 +5138,7 @@
                 "properties": {
                   "name": {
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -5662,7 +5662,7 @@
                 "additionalProperties": false,
                 "properties": {
                   "body": {
-                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   }
                 },
@@ -5854,7 +5854,7 @@
                   "filename": {
                     "maxLength": 255,
                     "minLength": 1,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "mimeType": {
@@ -6706,7 +6706,7 @@
                     "maxLength": 80,
                     "minLength": 1,
                     "nullable": true,
-                    "pattern": "^[^\\u0000-\\u001f]*$",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
                     "type": "string"
                   },
                   "locale": {

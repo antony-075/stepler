@@ -35,7 +35,8 @@ export const MAX_OPEN_COVER_UPLOADS = 3;
 
 /** What a short transaction decided; errors are thrown after it commits. */
 type Outcome =
-  | { kind: 'done' }
+  /** `inserted`: this request recorded the cover (else another completion did, earlier). */
+  | { kind: 'done'; inserted: boolean }
   | { kind: 'claimed'; claimedAt: Date; row: UploadSession }
   | { kind: 'refused'; error: AppError };
 
@@ -80,12 +81,13 @@ export class CoverUploadsService {
 
     // Scope before anything else: another owner's collection is 404, replay included.
     const collection = await this.findOwned(a, collectionId);
+    // [A6] before the replay too: an archived collection hands out no upload URLs at all.
+    if (collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     const existing = await this.findByClientId(a, body.clientUploadId);
     if (existing !== null) {
       if (existing.collectionId !== collection.id) throw new AppError('IDEMPOTENCY_CONFLICT', 409);
       return this.replay(existing, body);
     }
-    if (collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     const open = await this.prisma.uploadSession.count({
       where: {
         collectionId: collection.id,
@@ -168,6 +170,12 @@ export class CoverUploadsService {
     partNumbers: readonly number[],
   ): Promise<UploadPartsResponse> {
     const row = await this.findCoverUpload(this.prisma, a, collectionId, uploadId);
+    const { status } = await this.prisma.collection.findUniqueOrThrow({
+      where: { id: row.collectionId },
+      select: { status: true },
+    });
+    // [A6]: no part URLs while archived (cancel stays allowed; completion refuses and discards).
+    if (status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     assertOpen(row);
     const { partCount, partSizeBytes, multipartUploadId } = row;
     if (partNumbers.some((n) => n > partCount)) {
@@ -295,7 +303,7 @@ export class CoverUploadsService {
             coverId,
             sizeBytes: verdict.size,
           });
-          return { kind: 'done' };
+          return { kind: 'done', inserted: true };
         }),
       );
     } catch (error) {
@@ -303,7 +311,7 @@ export class CoverUploadsService {
       await this.storage.delete(original).catch(() => undefined);
       throw error;
     }
-    if (outcome.kind === 'done') {
+    if (outcome.kind === 'done' && outcome.inserted) {
       await this.storage.delete(claim.row.storageKey).catch((error: unknown) => {
         this.logger.warn({
           msg: 'cover upload key not deleted after completion',
@@ -312,7 +320,8 @@ export class CoverUploadsService {
         });
       });
     } else {
-      // The refusal was recorded without this copy; its discard job removes the upload's key.
+      // This copy was not recorded: a refusal (its discard job removes the upload's key), or a
+      // completion that took over a claim it thought stale and recorded its own copy first.
       await this.storage.delete(original).catch(() => undefined);
     }
     return this.finish(a, collectionId, outcome);
@@ -340,7 +349,7 @@ export class CoverUploadsService {
     await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${own.id}::uuid FOR UPDATE`;
     const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: own.id } });
 
-    if (row.status === 'COMPLETED') return { kind: 'done' };
+    if (row.status === 'COMPLETED') return { kind: 'done', inserted: false };
     if (row.status === 'ABORTED' || row.status === 'REJECTED') {
       throw new AppError('UPLOAD_CLOSED', 409);
     }
@@ -388,7 +397,7 @@ export class CoverUploadsService {
     if (row === null) throw new AppError('NOT_FOUND', 404);
     // Another request took over a claim it thought stale, or the purge aborted the upload.
     if (row.status !== 'COMPLETING' || row.claimedAt?.getTime() !== claimedAt.getTime()) {
-      if (row.status === 'COMPLETED') return { kind: 'done' };
+      if (row.status === 'COMPLETED') return { kind: 'done', inserted: false };
       if (row.status === 'COMPLETING') throw uploadInProgress();
       throw new AppError('UPLOAD_CLOSED', 409);
     }

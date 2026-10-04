@@ -12,6 +12,7 @@ import { PrismaService } from '../src/database/prisma.service.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
+import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { ExpireUploadsHandler } from '../src/worker/handlers/expire-uploads.handler.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
@@ -308,6 +309,67 @@ describe('admin cover upload [A1]', () => {
     // Cancelling still works while archived (it only frees things).
     await o.calls.cancel(open.uploadId).expect(204);
     expect((await uploadRow(open.uploadId)).status).toBe('ABORTED');
+  });
+
+  test('archived: a replay of an open upload and its part URLs → 409; cancel still works', async () => {
+    const o = await owner();
+    const clientUploadId = randomUUID();
+    const open = asSession(
+      (await o.calls.initiate({ filename: 'a.jpg', sizeBytes: 100, clientUploadId }).expect(201))
+        .body,
+    );
+    await prisma.collection.update({
+      where: { id: o.collectionId },
+      data: { status: 'ARCHIVED', archivedAt: new Date() },
+    });
+    const replay = await o.calls
+      .initiate({ filename: 'a.jpg', sizeBytes: 100, clientUploadId })
+      .expect(409);
+    expect(replay.body).toMatchObject({ code: 'COLLECTION_ARCHIVED' });
+    const parts = await o.calls.parts(open.uploadId, [1]).expect(409);
+    expect(parts.body).toMatchObject({ code: 'COLLECTION_ARCHIVED' });
+    expect(parts.text).not.toMatch(/X-Amz-|https?:\/\//);
+    await o.calls.cancel(open.uploadId).expect(204);
+  });
+
+  test('a completion that lost its stale claim to another deletes its own copy', async () => {
+    const o = await owner();
+    const session = await uploadFile(o.calls, 'a.jpg', fixture('photo.jpg'));
+    const shared = app.get<ObjectStorage>(OBJECT_STORAGE);
+    const copied: string[] = [];
+    // While this request copies, another completion takes the claim over and records first.
+    Object.assign(shared, {
+      copyObject: async (from: string, to: string, type: string) => {
+        await S3ObjectStorage.prototype.copyObject.call(shared, from, to, type);
+        copied.push(to);
+        await prisma.uploadSession.update({
+          where: { id: session.uploadId },
+          data: { status: 'COMPLETED', completedAt: new Date(), claimedAt: null },
+        });
+      },
+    });
+    try {
+      await o.calls.complete(session.uploadId).expect(200);
+    } finally {
+      delete (shared as { copyObject?: unknown }).copyObject;
+    }
+    expect(copied).toHaveLength(1);
+    expect(await storage.head(copied[0] ?? '')).toBeNull();
+    expect(await coverRows(o.collectionId)).toEqual([]);
+    expect(await coverJobs()).toEqual([]);
+  });
+
+  test('a cover upload id on the guest routes, by a guest of the same collection → 404', async () => {
+    const o = await owner();
+    const session = asSession(
+      (await o.calls.initiate({ filename: 'a.jpg', sizeBytes: 100 }).expect(201)).body,
+    );
+    const guestCookie = await joinAsGuest(server, o.collectionId, o.link.token);
+    const guest = uploadCalls(server, o.collectionId, guestCookie);
+    await guest.parts(session.uploadId, [1]).expect(404);
+    await guest.complete(session.uploadId).expect(404);
+    await guest.cancel(session.uploadId).expect(404);
+    expect((await uploadRow(session.uploadId)).status).toBe('INITIATED');
   });
 
   describe('Review Focus 3: scope', () => {

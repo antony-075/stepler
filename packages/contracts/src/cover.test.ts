@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
   collectionCoverSchema,
+  collectionDescriptionSchema,
+  collectionTitleSchema,
+  displayNameSchema,
   collectionWelcomeMessageSchema,
   coverUploadParamsSchema,
   ERROR_CODES,
@@ -87,6 +90,41 @@ describe('cover requests', () => {
     const id = '01a0ee76-0574-7fe5-a38b-53b07a9b40f9';
     expect(coverUploadParamsSchema.safeParse({ id, uploadId: id }).success).toBe(true);
     expect(coverUploadParamsSchema.safeParse({ id, uploadId: '1' }).success).toBe(false);
+  });
+});
+
+describe('the shared control-character rule', () => {
+  // DEL, C1, the Unicode line/paragraph separators and the bidi controls.
+  const invisible = [
+    '\u007f',
+    '\u0085',
+    '\u009f',
+    '\u2028',
+    '\u2029',
+    '\u202a',
+    '\u202e',
+    '\u2066',
+    '\u2069',
+  ];
+
+  test('one-line fields reject DEL, C1, U+2028/U+2029 and bidi controls', () => {
+    for (const schema of [
+      collectionWelcomeMessageSchema,
+      collectionTitleSchema,
+      displayNameSchema,
+    ]) {
+      for (const char of invisible) {
+        expect(schema.safeParse(`a${char}b`).success).toBe(false);
+      }
+      expect(schema.safeParse('Весілля Олі 😀').success).toBe(true);
+    }
+  });
+
+  test('the description rejects them too but keeps line breaks and tabs', () => {
+    expect(collectionDescriptionSchema.safeParse('Line 1\r\nLine 2\tend').success).toBe(true);
+    for (const char of ['\u2028', '\u202e', '\u0085']) {
+      expect(collectionDescriptionSchema.safeParse(`a${char}b`).success).toBe(false);
+    }
   });
 });
 
