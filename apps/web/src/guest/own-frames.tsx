@@ -9,6 +9,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
+import { awaitsPreview, gridPicture, PREVIEW_POLL_MS } from '@/media/previews';
 import { listGuestContent } from './api';
 
 export const guestContentKey = (collectionId: string, scope: 'own' | 'all') =>
@@ -59,20 +60,39 @@ function GuestFrame({ item }: { item: GuestContentItem }) {
       />
     );
   }
-  // Photos and videos show their thumbnail (or poster) once the worker made one (PR D); never
-  // the original: it can be 50 MB. Until then, the placeholder.
-  const thumb = item.kind === 'VIDEO' ? (item.posterUrl ?? item.thumbnailUrl) : item.thumbnailUrl;
-  if (thumb !== null) {
+  // Photos and videos show their 480px thumbnail (videos with ▶), never the original: it can be
+  // 50 MB. Until the worker made it, the placeholder; if it cannot, the type tile.
+  const picture = gridPicture(item);
+  const kind = t(`kind.${item.kind}`);
+  const named = (own: string, other: string) =>
+    number === undefined ? t(other, { kind, time }) : t(own, { number, kind, time });
+  if (picture.kind === 'thumbnail' || (picture.kind === 'failed' && item.kind === 'VIDEO')) {
     return (
       <Frame
         kind={item.kind === 'VIDEO' ? 'video' : 'photo'}
-        // A presigned storage URL: nothing for next/image to optimise.
-        // eslint-disable-next-line @next/next/no-img-element
-        media={<img alt={DECORATIVE} src={thumb} loading="lazy" />}
+        {...(picture.kind === 'thumbnail'
+          ? {
+              media: (
+                // A presigned storage URL: nothing for next/image to optimise.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={DECORATIVE}
+                  src={picture.url}
+                  loading="lazy"
+                  decoding="async"
+                  {...(item.width === null || item.height === null
+                    ? {}
+                    : { width: item.width, height: item.height })}
+                />
+              ),
+            }
+          : {})}
         number={number}
         time={time}
         accessibleName={
-          number === undefined ? t('fileOther', { time }) : t('fileOwn', { number, time })
+          picture.kind === 'failed'
+            ? named('failedOwn', 'failedOther')
+            : named('mediaOwn', 'mediaOther')
         }
       />
     );
@@ -82,9 +102,13 @@ function GuestFrame({ item }: { item: GuestContentItem }) {
       kind="pending-preview"
       number={number}
       time={time}
-      placeholderLabel={t('pendingPreview')}
+      placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={
-        number === undefined ? t('fileOther', { time }) : t('fileOwn', { number, time })
+        picture.kind === 'failed'
+          ? named('failedOwn', 'failedOther')
+          : number === undefined
+            ? t('fileOther', { time })
+            : t('fileOwn', { number, time })
       }
     />
   );
@@ -94,6 +118,7 @@ function GuestFrame({ item }: { item: GuestContentItem }) {
  * The guest's frames (`own`: this browser's session) or everyone's (`all`, only with the shared
  * gallery), newest first [C5], 48 per page with «Показати ще» (a button, not scroll-triggered).
  * Numbers appear only on the guest's own frames; names never (the API omits them, [C16]).
+ * Frames waiting for their preview are refreshed every 10 s until it arrives.
  * `empty` renders when there is nothing; `null` hides the whole list then.
  */
 export function GuestFrames({
@@ -123,6 +148,13 @@ export function GuestFrames({
     getNextPageParam: (last: GuestContentPage) => last.nextCursor,
     retry: false,
     refetchOnWindowFocus: false,
+    // While a frame waits for its preview, the list is asked again every 10 s (a guest's own
+    // list only grows with their own uploads, so nothing moves unexpectedly); then it stops.
+    refetchInterval: (q) =>
+      q.state.data?.pages.some((page) => page.items.some((item) => awaitsPreview(item)))
+        ? PREVIEW_POLL_MS
+        : false,
+    refetchIntervalInBackground: false,
   });
 
   if (query.isPending) {

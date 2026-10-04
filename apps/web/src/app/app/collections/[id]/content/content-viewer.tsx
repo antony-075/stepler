@@ -14,8 +14,9 @@ import { useState } from 'react';
 import { getContent } from '@/api/content';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { documentType } from './document-type';
+import { contentDetailKey } from './use-pending-previews';
 
-/** Browsers outside Safari cannot show HEIC/HEIF: those get a tile and «Завантажити». */
+/** Browsers outside Safari cannot show HEIC/HEIF: only their preview is shown. */
 const NOT_SHOWN = new Set(['image/heic', 'image/heif']);
 
 /** Media links are signed for at least an hour (spec §10.6); refetch well before. */
@@ -31,10 +32,11 @@ const viewerButton = cn(
  * tablets, a large centred dialog from `lg`. The number, date and contributor's name on top,
  * «Видалити» beside «Закрити», ←/→ across the frames already loaded in the grid. A wish is a
  * centred card in large type (20–24px, at most 60 characters a line; a long one scrolls in its
- * own focusable box). Files (PR C) load their detail for presigned links: a photo shows its
- * original (HEIC, which browsers cannot show, a tile with «Завантажити»), a video plays natively
- * (`preload="metadata"`, with a fallback line when the browser cannot play it), a document is a
- * type tile with «Завантажити» (always an attachment). The details add size, type, dimensions
+ * own focusable box). Files load their detail for presigned links: a photo shows its 1600px
+ * preview (upright, HEIC included; before it exists, the original where the browser can show
+ * it), a video plays natively over its poster (`preload="metadata"`, with a fallback line when
+ * the browser cannot play it), a document or a photo without a preview is a type tile with
+ * «Завантажити» (always an attachment). The details add size, type, dimensions
  * and duration. Deleting asks first, in plain
  * words: guests stop seeing it and its number is never reused.
  */
@@ -64,7 +66,7 @@ export function ContentViewer({
 
   const isFile = item !== undefined && item.kind !== 'TEXT';
   const detail = useQuery({
-    queryKey: ['content-detail', item?.id],
+    queryKey: contentDetailKey(item?.id ?? ''),
     queryFn: () => getContent(item?.id ?? ''),
     enabled: isFile,
     staleTime: DETAIL_STALE_MS,
@@ -259,19 +261,30 @@ function FileStage({
   if (loading) return tile(t('viewer.loadingMedia'));
   if (failed || detail === undefined) return tile(t('viewer.mediaFailed'));
   if (item.kind === 'DOCUMENT') return tile(t('viewer.documentOpen'), 'doc');
-  if (detail.originalUrl === null) return tile(t('pendingPreview'));
   if (item.kind === 'PHOTO') {
-    if (item.mimeType !== null && NOT_SHOWN.has(item.mimeType)) return tile(t('viewer.heic'));
+    // The preview, else the original while the worker is on it (not HEIC: browsers can't show it).
+    const shown =
+      detail.previewUrl ??
+      (detail.processingStatus === 'PENDING' &&
+      !(detail.mimeType !== null && NOT_SHOWN.has(detail.mimeType))
+        ? detail.originalUrl
+        : null);
+    if (shown === null) {
+      return tile(
+        t(detail.processingStatus === 'FAILED' ? 'previewUnavailable' : 'pendingPreview'),
+      );
+    }
     return (
       // A presigned storage URL: nothing for next/image to optimise.
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={detail.originalUrl}
+        src={shown}
         alt={t('viewer.photoAlt', { number: item.frameNo })}
         className="max-h-full max-w-full object-contain"
       />
     );
   }
+  if (detail.originalUrl === null) return tile(t('viewer.mediaFailed'));
   if (videoFailed) return tile(t('viewer.videoFallback'));
   return (
     // Guests' own recordings come without caption tracks; there is nothing to attach.
@@ -279,6 +292,7 @@ function FileStage({
     <video
       key={item.id}
       src={detail.originalUrl}
+      {...(detail.posterUrl === null ? {} : { poster: detail.posterUrl })}
       controls
       preload="metadata"
       playsInline

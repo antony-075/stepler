@@ -466,14 +466,15 @@ collections/{collectionId}/derived/{contentItemId}/{thumbnail|preview|poster}.we
 Decision details: ADR 0009.
 
 - Worker process, same codebase (`apps/api/src/worker`), queue in PostgreSQL via pg-boss (no new infrastructure). Jobs are enqueued in the same transaction as the state change that needs them (spike S7); queues use the `exclusive` policy with one job per entity.
-- *Implemented (Phase 4 PR B):* the queue port and pg-boss adapter, the worker entrypoint and image, `content.purge`, `collection.purge` and the hourly `maintenance.sweep` (re-enqueues lost purges; deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS`, default 400, that never contributed). The jobs below marked *pending* arrive with the upload and processing slices.
+- *Implemented (Phase 4 PR B):* the queue port and pg-boss adapter, the worker entrypoint and image, `content.purge`, `collection.purge` and the hourly `maintenance.sweep` (re-enqueues lost purges; deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS`, default 400, that never contributed).
+- *Implemented (Phase 4 PR D, 2026-10-04):* `media.image-derivatives` and `media.video-poster`, with the HEIC and video tools chosen by spike S5; details and measurements in ADR 0009 "Implementation notes (processing)".
 - Jobs:
-  - `media.image-derivatives` — thumbnail (~480 px) and preview (~1600 px) WebP via sharp, with pixel limits. The original is always kept unchanged. The preview is required so HEIC/HEIF can be viewed in browsers that do not support the original format. **[verify S5]** HEVC-HEIC decoding (prebuilt sharp likely lacks it; options: libheif in the worker image, WASM decoder).
-  - `media.video-poster` — ffmpeg reads the original through a presigned URL with range requests (the 2 GB file never passes through Node memory), extracts one frame.
+  - `media.image-derivatives` — thumbnail (480 px) and preview (1600 px) WebP via sharp, without metadata, with a 100 MP input limit. The original is always kept unchanged. The preview is what makes HEIC/HEIF viewable in every browser. HEVC-HEIC is decoded by the libheif CLI (`heif-dec`/`heif-convert` with libde265) to a temporary JPEG, then sharp (spike S5); a decoded HEIC is not auto-oriented again, every other format is. Implemented.
+  - `media.video-poster` — ffprobe and ffmpeg read the original through a presigned URL with range requests (the 2 GB file never passes through Node memory) with `-threads 1` and protocol and format whitelists, take one frame at `min(1 s, duration / 2)` and record the duration; poster 1600 px and thumbnail 480 px. Implemented.
   - `content.purge`, `collection.purge` — idempotent (missing rows and objects are success); implemented. `storage.discard-upload` (bytes of rejected or cancelled uploads) — *pending*, upload slice. (Earlier drafts named these `storage.purge-content`, `storage.purge-collection`, `storage.delete-object`.)
   - `uploads.expire` — scheduled every 15 min; *pending*, upload slice (the schedule is registered once its handler exists).
   - `maintenance.sweep` — hourly; implemented (see above).
-- Retries with exponential backoff; terminal failure → `processingStatus = FAILED`. Content stays available; the UI shows a type icon instead of a preview.
+- Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
 - Worker Docker target includes ffmpeg/libheif; the API image does not.

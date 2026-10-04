@@ -344,7 +344,6 @@
       "loadingMedia": "Loading the file…",
       "mediaFailed": "Couldn’t open the file.",
       "videoFallback": "Your browser can’t play this video — download it.",
-      "heic": "Browsers don’t show HEIC — download the file.",
       "noPreviewYet": "The preview comes later",
       "documentOpen": "Documents open after you download them.",
       "photoAlt": "Frame {number}",
@@ -358,7 +357,8 @@
       "pending": "Deleting",
       "failed": "Couldn’t delete the frame. Try again.",
       "done": "Frame deleted"
-    }
+    },
+    "previewUnavailable": "No preview"
   },
   "guestLinks": {
     "summary": {
@@ -619,7 +619,16 @@
       "pendingPreview": "Preview on its way",
       "documentOwn": "Frame {number}, document {type}, {time}",
       "documentOther": "Document, {time}",
-      "documentType": "DOC"
+      "documentType": "DOC",
+      "mediaOwn": "Frame {number}, {kind}, {time}",
+      "mediaOther": "{kind}, {time}",
+      "failedOwn": "Frame {number}, {kind}, {time}, no preview",
+      "failedOther": "{kind}, {time}, no preview",
+      "previewUnavailable": "No preview",
+      "kind": {
+        "PHOTO": "photo",
+        "VIDEO": "video"
+      }
     },
     "textSent": "Wish added",
     "name": {

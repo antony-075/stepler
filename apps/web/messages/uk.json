@@ -344,7 +344,6 @@
       "loadingMedia": "Завантажуємо файл…",
       "mediaFailed": "Не вдалося відкрити файл.",
       "videoFallback": "Браузер не може відтворити це відео — завантажте його.",
-      "heic": "Браузер не показує HEIC — завантажте файл.",
       "noPreviewYet": "Прев’ю з’явиться згодом",
       "documentOpen": "Документ відкривається лише після завантаження.",
       "photoAlt": "Кадр {number}",
@@ -358,7 +357,8 @@
       "pending": "Видаляємо",
       "failed": "Не вдалося видалити кадр. Спробуйте ще.",
       "done": "Кадр видалено"
-    }
+    },
+    "previewUnavailable": "Прев’ю недоступне"
   },
   "guestLinks": {
     "summary": {
@@ -619,7 +619,16 @@
       "pendingPreview": "Готується прев’ю",
       "documentOwn": "Кадр {number}, документ {type}, {time}",
       "documentOther": "Документ, {time}",
-      "documentType": "DOC"
+      "documentType": "DOC",
+      "mediaOwn": "Кадр {number}, {kind}, {time}",
+      "mediaOther": "{kind}, {time}",
+      "failedOwn": "Кадр {number}, {kind}, {time}, прев’ю недоступне",
+      "failedOther": "{kind}, {time}, прев’ю недоступне",
+      "previewUnavailable": "Прев’ю недоступне",
+      "kind": {
+        "PHOTO": "фото",
+        "VIDEO": "відео"
+      }
     },
     "textSent": "Побажання додано",
     "name": {
