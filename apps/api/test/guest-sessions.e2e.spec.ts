@@ -230,6 +230,40 @@ describe('guest sessions [C3]', () => {
     expect(await prisma.guestSession.count()).toBe(0);
   });
 
+  test('context carries the welcome message and the cover only once it is READY', async () => {
+    const { collectionId, link } = await seedCollection(prisma, tokens);
+    await prisma.collection.update({
+      where: { id: collectionId },
+      data: { welcomeMessage: 'Дякуємо, що ви з нами!' },
+    });
+    const cover = await prisma.collectionCover.create({
+      data: { collectionId, source: 'FRAME', mimeType: 'image/jpeg', originalSizeBytes: 1000n },
+    });
+    const cookie = await joinAsGuest(server(), collectionId, link.token);
+    const pending = guestContextSchema.parse(
+      (await context(collectionId, cookie).expect(200)).body,
+    );
+    expect(pending.collection).toMatchObject({
+      welcomeMessage: 'Дякуємо, що ви з нами!',
+      cover: null,
+    });
+
+    await prisma.collectionCover.update({
+      where: { id: cover.id },
+      data: { status: 'READY', width: 4000, height: 3000, derivedSizeBytes: 500n },
+    });
+    const res = await context(collectionId, cookie).expect(200);
+    const ready = guestContextSchema.parse(res.body);
+    expect(ready.collection.cover).toMatchObject({ width: 4000, height: 3000 });
+    expect(ready.collection.cover?.thumbnailUrl).toMatch(/^https?:\/\//);
+    expect(ready.collection.cover?.previewUrl).toMatch(/^https?:\/\//);
+    // Never a status, a source or the frame it came from (the strict schema would also refuse).
+    expect(res.text).not.toMatch(/"status"|"source"|ContentItemId/);
+    // The exchange answers the same context.
+    const again = guestContextSchema.parse((await exchange(collectionId, link.token, cookie)).body);
+    expect(again.collection.cover).toEqual(ready.collection.cover);
+  });
+
   test('context counts only non-deleted items, and only with the shared gallery', async () => {
     const { collectionId, link } = await seedCollection(prisma, tokens, {
       permissions: SHARED_GALLERY,

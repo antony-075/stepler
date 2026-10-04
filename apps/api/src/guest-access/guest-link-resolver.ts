@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { type CoverRow, WITH_COVER } from '../collections/cover-urls.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type {
@@ -16,6 +17,7 @@ export interface ResolvedGuestLink {
     title: string;
     description: string | null;
     welcomeMessage: string | null;
+    cover: CoverRow | null;
   };
 }
 
@@ -66,6 +68,7 @@ export class GuestLinkResolver {
                   title: true,
                   description: true,
                   welcomeMessage: true,
+                  ...WITH_COVER,
                   status: true,
                   owner: { select: { status: true } },
                 },
@@ -82,6 +85,7 @@ export class GuestLinkResolver {
         title: collection.title,
         description: collection.description,
         welcomeMessage: collection.welcomeMessage,
+        cover: collection.cover,
       },
     };
   }

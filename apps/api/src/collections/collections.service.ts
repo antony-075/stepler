@@ -24,6 +24,7 @@ import {
   toCollectionDto,
   WITH_DEFAULT_LINK,
 } from './collection-dto.js';
+import { CoverUrls } from './cover-urls.js';
 
 const DAY_MS = 24 * 3600_000;
 
@@ -36,6 +37,7 @@ export class CollectionsService {
     private readonly usage: UsageService,
     private readonly audit: AuditService,
     private readonly guestLinks: GuestLinksService,
+    private readonly covers: CoverUrls,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -81,7 +83,7 @@ export class CollectionsService {
       });
       // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
-      return toCollectionDto({ ...row, guestLinks: [link] });
+      return toCollectionDto({ ...row, guestLinks: [link], cover: null });
     });
   }
 
@@ -116,8 +118,14 @@ export class CollectionsService {
     const items = rows.slice(0, query.limit);
     const last = items.at(-1);
     const content = await this.contentStats(items.map((row) => row.id));
+    // One signing moment for the page, so every URL falls in the same window.
+    const now = new Date();
     return {
-      items: items.map((row) => toCollectionDto(row, content.get(row.id))),
+      items: await Promise.all(
+        items.map(async (row) =>
+          toCollectionDto(row, content.get(row.id), await this.covers.forAdmin(row.cover, now)),
+        ),
+      ),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
     };
   }
@@ -128,7 +136,7 @@ export class CollectionsService {
     return { ...dto, storage: await this.usage.forCollection(id) };
   }
 
-  /** Last write wins. Archived collections stay editable (D9). */
+  /** Last write wins. Archived collections stay editable (D9), the welcome message too [A6]. */
   async update(
     principal: AccountPrincipal,
     id: string,
@@ -140,6 +148,7 @@ export class CollectionsService {
         data: {
           ...(body.title === undefined ? {} : { title: body.title }),
           ...(body.description === undefined ? {} : { description: body.description }),
+          ...(body.welcomeMessage === undefined ? {} : { welcomeMessage: body.welcomeMessage }),
         },
         include: WITH_DEFAULT_LINK,
       });
@@ -254,7 +263,7 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Collection> {
     const content = await this.contentStats([row.id], tx);
-    return toCollectionDto(row, content.get(row.id));
+    return toCollectionDto(row, content.get(row.id), await this.covers.forAdmin(row.cover));
   }
 
   /** One grouped query for a whole page, never one per collection (no N+1). */

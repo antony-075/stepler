@@ -1,16 +1,18 @@
-import type { Collection } from '@stepler/contracts';
+import type { Collection, CollectionCover } from '@stepler/contracts';
 import { AppError } from '../errors/app-error.js';
 import type {
   Collection as CollectionRow,
   GuestLink as GuestLinkRow,
   Prisma,
 } from '../generated/prisma/client.js';
+import { type CoverRow, WITH_COVER } from './cover-urls.js';
 
 /**
- * Reads include the live default link's status and permissions, in the same query (no N+1): the
- * dashboard shows what guests may add per collection.
+ * Reads include the live default link's status and permissions, and the cover row, in the same
+ * query (no N+1): the dashboard shows what guests may add per collection and the cover tile.
  */
 export const WITH_DEFAULT_LINK = {
+  ...WITH_COVER,
   guestLinks: {
     where: { isDefault: true, status: { not: 'REVOKED' } },
     select: {
@@ -37,7 +39,10 @@ type DefaultLinkFields = Pick<
   | 'canDeleteOwn'
 >;
 
-export type CollectionWithDefaultLink = CollectionRow & { guestLinks: DefaultLinkFields[] };
+export type CollectionWithDefaultLink = CollectionRow & {
+  guestLinks: DefaultLinkFields[];
+  cover: CoverRow | null;
+};
 
 /** Non-deleted frames of a collection; read for a whole page in one grouped query. */
 export interface ContentStats {
@@ -51,6 +56,7 @@ export const NO_CONTENT: ContentStats = { count: 0, lastAt: null };
 export function toCollectionDto(
   row: CollectionWithDefaultLink,
   content: ContentStats = NO_CONTENT,
+  cover: CollectionCover | null = null,
 ): Collection {
   // Owner-scoped queries exclude DELETING rows; reaching here with one is a bug.
   if (row.status === 'DELETING') throw new AppError('NOT_FOUND', 404);
@@ -66,8 +72,7 @@ export function toCollectionDto(
     contentCount: content.count,
     lastContentAt: content.lastAt?.toISOString() ?? null,
     welcomeMessage: row.welcomeMessage,
-    // Cover URLs arrive with the cover DTO (Task 3 of the appearance plan).
-    cover: null,
+    cover,
   };
 }
 
