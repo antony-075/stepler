@@ -7,10 +7,14 @@
     "./core": {
       "types": "./dist/core/index.d.ts",
       "import": "./dist/core/index.js"
-    }
+    },
+    "./styles.css": "./src/styles.css",
+    "./fonts/*": "./fonts/*"
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "fonts"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

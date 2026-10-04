@@ -9,8 +9,8 @@ const config: NextConfig = {
   // Monorepo root, so the standalone output traces workspace packages.
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   poweredByHeader: false,
-  // packages/ui ships TypeScript sources.
-  transpilePackages: ['@stepler/ui'],
+  // packages/ui and the templates' React entry ship TypeScript sources.
+  transpilePackages: ['@stepler/ui', '@stepler/templates'],
   // The landing's photos (static imports): AVIF first, WebP as the fallback.
   images: { formats: ['image/avif', 'image/webp'] },
   headers() {

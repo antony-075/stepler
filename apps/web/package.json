@@ -14,6 +14,7 @@
   "dependencies": {
     "@hookform/resolvers": "5.9.1",
     "@stepler/contracts": "workspace:*",
+    "@stepler/templates": "workspace:*",
     "@stepler/ui": "workspace:*",
     "@tanstack/react-query": "5.104.0",
     "lucide-react": "1.48.0",

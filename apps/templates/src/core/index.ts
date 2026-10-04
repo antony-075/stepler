@@ -26,3 +26,4 @@ export {
   type AccentContrast,
   type ThemeTokens,
 } from './tokens.js';
+export { fontCssVar, FONTS, type FontEntry, type FontFile } from './fonts.js';
