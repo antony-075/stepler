@@ -114,10 +114,22 @@ test.describe('guest uploads', () => {
   }) => {
     const { path } = await setUp(page);
     const guest = await asGuest(browser, path);
-    // Hold the video's part PUT until it is cancelled.
+    // Hold the video's part PUT until it is cancelled. The video is recognised by its upload id,
+    // taken from its initiation: a PUT's Content-Length is not reported to routes on every
+    // engine (Linux WebKit reports no body headers for an XHR Blob), so it cannot select it.
+    let videoUploadId: string | null = null;
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, async (route) => {
+      const response = await route.fetch();
+      const request = route.request().postDataJSON() as { sizeBytes: number };
+      if (request.sizeBytes > 1_000_000 && response.ok()) {
+        videoUploadId = ((await response.json()) as { uploadId: string }).uploadId;
+      }
+      await route.fulfill({ response });
+    });
     await guest.route(/\/stepler-test\/collections\//, async (route) => {
-      const size = Number(route.request().headers()['content-length'] ?? '0');
-      if (route.request().method() === 'PUT' && size > 1_000_000) return; // never answered
+      const url = route.request().url();
+      const held = videoUploadId !== null && url.includes(`/uploads/${videoUploadId}/`);
+      if (route.request().method() === 'PUT' && held) return; // never answered
       await route.continue();
     });
     await pickFiles(guest, [
