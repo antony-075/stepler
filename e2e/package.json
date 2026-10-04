@@ -11,6 +11,7 @@
   "devDependencies": {
     "@stepler/api": "workspace:*",
     "@stepler/config": "workspace:*",
+    "@stepler/contracts": "workspace:*",
     "@stepler/web": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",

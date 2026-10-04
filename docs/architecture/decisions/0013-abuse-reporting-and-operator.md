@@ -13,7 +13,7 @@ Open registration means the collection owner may themselves be the source of ill
 - Operator = user with a verified email listed in `OPERATOR_EMAILS` config.
 - Operator actions: hide/delete content, block/unblock collection or account, change report status. Exposed as operator API endpoints plus a minimal protected page.
 - All operator actions are audited.
-- Public abuse contact published in legal documents.
+- Public abuse contact published in the legal documents: the `LEGAL_CONTACT_EMAIL` variable, rendered as the «Контакти» block of `/legal/terms` and `/legal/privacy` (slice 10, PR F1; `docs/legal/README.md`).
 
 ## Alternatives considered
 

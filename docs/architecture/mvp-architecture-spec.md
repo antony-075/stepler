@@ -583,9 +583,9 @@ Decision details: ADR 0013.
 
 ## 15. Legal and privacy (D15, F6, F8)
 
-- Pages: Terms of Service, Privacy Policy (uk/en), versioned; texts provided by the owner/lawyer. Engineering does not write legal wording.
-- Admin registration records `LegalAcceptance(document, version, acceptedAt)` (Phase 4 slice 10; not in Phase 2). No IP stored by default. Document updates do not force re-acceptance without a separate decision.
-- Guest page shows a short notice with links (no checkbox).
+- Pages (slice 10, PR F1): `/legal/terms` and `/legal/privacy`, uk/en, server-rendered from Markdown files (`apps/web/content/legal/<slug>.<locale>.<version>.md`) with a registry of current versions in `@stepler/contracts` (`LEGAL_DOCUMENTS`: `version`, `effectiveDate`, `draft`, `requireReacceptance`); a draft banner while a text is a placeholder; the «Контакти» block from `LEGAL_CONTACT_EMAIL`; the web server refuses to start on drafts or without a contact unless `LEGAL_ALLOW_DRAFT=true` (CI, staging; never production). Texts are provided by the owner/lawyer per `docs/legal/README.md`; engineering does not write legal wording.
+- Admin acceptance records `LegalAcceptance(document, version, acceptedAt, requestId)` (slice 10, PR F2: in progress). No IP stored by default. A new document version does not force re-acceptance unless its registry entry sets `requireReacceptance` (a separate product/legal decision).
+- Guest page shows a short notice with links under the contribution actions (no checkbox): PR F1, with placeholder copy (`guest.legalNotice`) until the lawyer's sentence.
 - Privacy requests: email channel, processed manually by the operator. Data locatable by: admin account (email); guest data via collection + content item or guest session ID. Guests have no email, so guest requests must identify the content concerned — a known limitation.
 - Data minimization: the guest name is optional, held on the guest session ([O4], amended 2026-10-03) and snapshotted per submission; the session holds nothing else about the guest; other guests never see a name or another guest's file name or frame number; logs and audit events exclude text bodies, names, file names, cookies, tokens and signed URLs.
 

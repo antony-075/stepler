@@ -277,6 +277,9 @@ importers:
       '@stepler/config':
         specifier: workspace:*
         version: link:../packages/config
+      '@stepler/contracts':
+        specifier: workspace:*
+        version: link:../packages/contracts
       '@stepler/web':
         specifier: workspace:*
         version: link:../apps/web
