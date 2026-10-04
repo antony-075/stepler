@@ -18,6 +18,7 @@ import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
+import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
@@ -64,6 +65,7 @@ export class WorkerModule {
         ExpireUploadsHandler,
         DerivativeStore,
         ImageDerivativesHandler,
+        VideoPosterHandler,
         JobRunner,
       ],
     };

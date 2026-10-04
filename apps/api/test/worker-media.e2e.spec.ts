@@ -1,3 +1,5 @@
+import { createServer, type Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import type { Readable } from 'node:stream';
 import sharp from 'sharp';
 import { afterAll, beforeEach, describe, expect, test } from 'vitest';
@@ -8,6 +10,7 @@ import type { PgBossClient } from '../src/jobs/pg-boss-queue.js';
 import type { ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { ImageDerivativesHandler } from '../src/worker/handlers/image-derivatives.handler.js';
+import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.js';
 import type { JobHandler } from '../src/worker/job-handler.js';
 import { JobRunner } from '../src/worker/job-runner.js';
 import { DerivativeStore, derivedKey } from '../src/worker/media/derivative-store.js';
@@ -36,7 +39,12 @@ const store = new DerivativeStore(prisma, storage);
 let sequence = 0;
 
 /** A pending PHOTO/VIDEO item whose original (`bytes`) is in storage under an upload-style key. */
-async function addMedia(kind: ContentKind, bytes: Buffer, mimeType: string) {
+async function addMedia(
+  kind: ContentKind,
+  bytes: Buffer,
+  mimeType: string,
+  storedType: string = mimeType,
+) {
   const owner = await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } });
   const collection = await prisma.collection.create({
     data: { ownerId: owner.id, title: 'Весілля', description: 'Опис' },
@@ -45,7 +53,7 @@ async function addMedia(kind: ContentKind, bytes: Buffer, mimeType: string) {
     data: { collectionId: collection.id, frameNo: 1, kind, processingStatus: 'PENDING' },
   });
   const storageKey = `collections/${collection.id}/uploads/${item.id}/original`;
-  await storage.putObject(storageKey, bytes, mimeType, bytes.length);
+  await storage.putObject(storageKey, bytes, storedType, bytes.length);
   await prisma.mediaObject.create({
     data: {
       contentItemId: item.id,
@@ -181,6 +189,85 @@ describe('media.image-derivatives', () => {
   });
 });
 
+describe('media.video-poster', () => {
+  const handler = (s: ObjectStorage = storage) => new VideoPosterHandler(store, s);
+
+  test.each([
+    ['clip.mp4', 'video/mp4'],
+    ['clip.mov', 'video/quicktime'],
+    ['clip.webm', 'video/webm'],
+  ])('%s gets a poster, a thumbnail, its duration and size', async (name, mime) => {
+    const { collectionId, itemId } = await addMedia('VIDEO', fixture(name), mime);
+    await handler().handle({ contentItemId: itemId });
+
+    expect(await statusOf(itemId)).toBe('READY');
+    const rows = await mediaRows(itemId);
+    expect(rows.map((row) => row.role)).toEqual(['ORIGINAL', 'THUMBNAIL', 'POSTER']);
+    const [original, thumbnail, poster] = rows;
+    if (name !== 'clip.webm') {
+      expect(original?.durationMs).toBeGreaterThanOrEqual(900);
+      expect(original?.durationMs).toBeLessThanOrEqual(1100);
+    }
+    const size = name === 'clip.webm' ? [160, 120] : [320, 240];
+    expect([original?.width, original?.height]).toEqual(size);
+    expect([poster?.width, poster?.height]).toEqual(size);
+    expect(thumbnail?.storageKey).toBe(derivedKey(collectionId, itemId, 'THUMBNAIL'));
+    expect(poster?.storageKey).toBe(derivedKey(collectionId, itemId, 'POSTER'));
+    const meta = await sharp(await objectBytes(poster?.storageKey ?? '')).metadata();
+    expect([meta.format, meta.width]).toEqual(['webp', size[0]]);
+  });
+
+  test('a truncated MP4 is FAILED at once; the original stays', async () => {
+    const truncated = fixture('clip.mp4').subarray(0, 2000);
+    const { itemId, storageKey } = await addMedia('VIDEO', truncated, 'video/mp4');
+    await handler().handle({ contentItemId: itemId });
+    expect(await statusOf(itemId)).toBe('FAILED');
+    expect(await storage.head(storageKey)).not.toBeNull();
+  });
+
+  test('a playlist uploaded as a video never makes ffmpeg fetch the URLs it names', async () => {
+    let hits = 0;
+    const target: Server = createServer((_req, res) => {
+      hits += 1;
+      res.end(fixture('clip.mp4'));
+    });
+    await new Promise<void>((resolve) => target.listen(0, '127.0.0.1', resolve));
+    const { port } = target.address() as AddressInfo;
+    try {
+      const playlist = Buffer.from(
+        `#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\nhttp://127.0.0.1:${port}/internal.mp4\n#EXT-X-ENDLIST\n`,
+      );
+      // Stored as HLS: recent ffmpeg probes a playlist only by its type or extension.
+      const { itemId } = await addMedia(
+        'VIDEO',
+        playlist,
+        'video/mp4',
+        'application/vnd.apple.mpegurl',
+      );
+      await handler().handle({ contentItemId: itemId });
+      expect(await statusOf(itemId)).toBe('FAILED');
+      expect(hits).toBe(0);
+    } finally {
+      await new Promise((resolve) => target.close(resolve));
+    }
+  });
+
+  test('a storage error is retried, and its message carries no presigned URL', async () => {
+    const { itemId } = await addMedia('VIDEO', fixture('clip.mp4'), 'video/mp4');
+    const missing = Object.assign(Object.create(storage) as ObjectStorage, {
+      presignGet: () =>
+        storage.presignGet(`collections/${itemId}/missing`, { expiresInSeconds: 60 }),
+    });
+    const error = await handler(missing)
+      .handle({ contentItemId: itemId })
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).not.toMatch(/X-Amz-Signature|X-Amz-Credential|127\.0\.0\.1/);
+    expect(await statusOf(itemId)).toBe('PENDING');
+  });
+});
+
 describe('JobRunner', () => {
   /** A runner around one handler; the pg-boss client is never started here. */
   function runnerWith(handler: JobHandler) {
@@ -194,6 +281,7 @@ describe('JobRunner', () => {
       noop('storage.discard-upload') as never,
       noop('uploads.expire') as never,
       handler as never,
+      noop('media.video-poster') as never,
     );
   }
   const job = (retryCount: number) =>

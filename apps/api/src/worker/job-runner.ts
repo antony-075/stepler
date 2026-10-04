@@ -8,6 +8,7 @@ import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
+import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
 
@@ -37,6 +38,7 @@ export class JobRunner implements OnApplicationBootstrap {
     discardUpload: DiscardUploadHandler,
     expireUploads: ExpireUploadsHandler,
     imageDerivatives: ImageDerivativesHandler,
+    videoPoster: VideoPosterHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -45,6 +47,7 @@ export class JobRunner implements OnApplicationBootstrap {
       discardUpload,
       expireUploads,
       imageDerivatives,
+      videoPoster,
     ] as JobHandler[];
   }
 
