@@ -391,6 +391,64 @@ describe('worker handlers', () => {
       expect(await status(recent.id)).toBe('PENDING');
     });
 
+    test('backfill: queues the media job of READY photos, videos and images not sanitised yet', async () => {
+      const { collectionId } = await seed();
+      const deleting = await seed({ status: 'DELETING' });
+      const media = (
+        frameNo: number,
+        kind: 'PHOTO' | 'VIDEO' | 'DOCUMENT',
+        data: { sanitizedAt?: Date; processingStatus?: 'PENDING' | 'READY' | 'FAILED' } = {},
+        inCollection = collectionId,
+      ) =>
+        prisma.contentItem.create({
+          data: {
+            collectionId: inCollection,
+            frameNo,
+            kind,
+            processingStatus: kind === 'DOCUMENT' ? 'NOT_REQUIRED' : 'READY',
+            ...data,
+          },
+        });
+      const oldPhoto = await media(1, 'PHOTO');
+      const oldVideo = await media(2, 'VIDEO');
+      await media(3, 'PHOTO', { sanitizedAt: new Date() });
+      await media(4, 'PHOTO', { processingStatus: 'PENDING' }); // its own job sanitises it
+      await media(5, 'PHOTO', { processingStatus: 'FAILED' }); // admin-only, never retried
+      await media(6, 'DOCUMENT');
+      await media(1, 'PHOTO', {}, deleting.collectionId);
+      await prisma.contentItem.update({
+        where: { id: (await media(7, 'PHOTO')).id },
+        data: { deletedAt: new Date() },
+      });
+      const image = (data: { sanitizedAt?: Date; status?: 'READY' | 'PENDING' } = {}) =>
+        prisma.collectionImage.create({
+          data: {
+            collectionId,
+            slot: 'COVER',
+            source: 'UPLOAD',
+            mimeType: 'image/jpeg',
+            originalSizeBytes: 1000n,
+            status: 'READY',
+            width: 10,
+            height: 10,
+            ...data,
+          },
+        });
+      const oldImage = await image();
+      await image({ sanitizedAt: new Date() });
+
+      await sweep().handle();
+      await sweep().handle();
+
+      const data = async (name: Parameters<typeof queuedJobs>[1]) =>
+        (await queuedJobs(prisma, name)).map((job) => job.data);
+      expect(await data('media.image-derivatives')).toEqual([{ contentItemId: oldPhoto.id }]);
+      expect(await data('media.video-poster')).toEqual([{ contentItemId: oldVideo.id }]);
+      expect(await data('media.collection-image')).toEqual([
+        { collectionId, imageId: oldImage.id },
+      ]);
+    });
+
     test('re-enqueues purges for old DELETING collections and old deleted items only', async () => {
       const stale = await seed({ status: 'DELETING', deletedHoursAgo: 2 });
       const recent = await seed({ status: 'DELETING', deletedHoursAgo: 0.1 });
