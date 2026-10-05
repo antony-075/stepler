@@ -6,7 +6,7 @@ import type { JobHandler } from '../job-handler.js';
 import { decodeHeic, needsHeifDecoder } from '../media/decode.js';
 import { DerivativeStore } from '../media/derivative-store.js';
 import { MediaSlots } from '../media/media-slots.js';
-import { OriginalSanitizer } from '../media/original-sanitizer.js';
+import { needsSanitizing, OriginalSanitizer } from '../media/original-sanitizer.js';
 import { renderDerivatives } from '../media/images.js';
 import { PermanentMediaError } from '../media/media-error.js';
 import { withWorkDir } from '../media/work-dir.js';
@@ -34,31 +34,38 @@ export class ImageDerivativesHandler implements JobHandler<'media.image-derivati
   async handle({ contentItemId }: JobData['media.image-derivatives']): Promise<void> {
     const item = await this.store.source(contentItemId, 'PHOTO');
     if (item === null) return;
-    if (item.sanitizedAt !== null && item.processingStatus === 'READY') return;
+    if (item.processingStatus === 'READY' && !needsSanitizing(item)) return;
     try {
       // One media job at a time in the whole worker (memory), whatever its type.
       await this.slots.run(() =>
         withWorkDir(async (dir) => {
-          let input = join(dir, 'original');
+          const input = join(dir, 'original');
           const downloaded = await this.storage.downloadToFile(item.storageKey, input);
           if (downloaded === null) {
             throw new PermanentMediaError('original is missing from storage');
           }
-          if (item.sanitizedAt === null) {
-            const sanitized = await this.sanitizer.item(item, {
-              path: input,
-              etag: downloaded.etag,
-              workDir: dir,
-            });
-            if (sanitized === null) return;
-            input = sanitized;
-          }
-          // A legacy photo keeps its previews: they never carried metadata.
-          if (item.processingStatus === 'READY') return;
+          const original = { path: input, etag: downloaded.etag, workDir: dir };
+          const prepared = needsSanitizing(item)
+            ? await this.sanitizer.prepare(original, item.mimeType, () =>
+                this.sanitizer.giveUpItem(item.id, 'PHOTO'),
+              )
+            : null;
+          // Previews from the sanitised file, rendered BEFORE it replaces the original: that it
+          // decodes is part of checking the rewrite. One that cannot be sanitised still gets its
+          // previews (they carry no metadata); only its original stays the admin's.
+          const source = prepared?.kind === 'clean' ? prepared.path : input;
           const heic = needsHeifDecoder(item.mimeType);
-          const decoded = heic ? await decodeHeic(input, dir) : input;
+          const decoded = heic ? await decodeHeic(source, dir) : source;
           // A decoded HEIC is already upright (libheif); everything else follows its EXIF tag.
           const result = await renderDerivatives(decoded, { autoOrient: !heic });
+          if (
+            prepared?.kind === 'clean' &&
+            !(await this.sanitizer.commitItem(item, original, prepared))
+          ) {
+            return;
+          }
+          // A legacy photo (backfill) keeps its previews: they never carried metadata.
+          if (item.processingStatus === 'READY') return;
           await this.store.save(
             item,
             { THUMBNAIL: result.thumbnail, PREVIEW: result.large },
@@ -69,11 +76,17 @@ export class ImageDerivativesHandler implements JobHandler<'media.image-derivati
     } catch (error) {
       if (!(error instanceof PermanentMediaError)) throw error;
       this.logger.warn({ msg: 'image cannot be processed', contentItemId, reason: error.message });
-      await this.store.markFailed(item.id);
+      await this.giveUp(item.id);
     }
   }
 
   async onFinalFailure({ contentItemId }: JobData['media.image-derivatives']): Promise<void> {
+    await this.giveUp(contentItemId);
+  }
+
+  /** `FAILED` if still `PENDING`; an original not sanitised by now never will be (backfill). */
+  private async giveUp(contentItemId: string): Promise<void> {
     await this.store.markFailed(contentItemId);
+    await this.sanitizer.giveUpItem(contentItemId, 'PHOTO');
   }
 }

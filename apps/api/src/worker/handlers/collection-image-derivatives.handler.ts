@@ -9,13 +9,13 @@ import type { JobHandler } from '../job-handler.js';
 import { decodeHeic, needsHeifDecoder } from '../media/decode.js';
 import { renderRenditions } from '../media/images.js';
 import { MediaSlots } from '../media/media-slots.js';
-import { OriginalSanitizer } from '../media/original-sanitizer.js';
+import { needsSanitizing, OriginalSanitizer } from '../media/original-sanitizer.js';
 import { PermanentMediaError } from '../media/media-error.js';
 import { withWorkDir } from '../media/work-dir.js';
 
 type ImageSource = Pick<
   CollectionImage,
-  'id' | 'collectionId' | 'slot' | 'mimeType' | 'status' | 'sanitizedAt'
+  'id' | 'collectionId' | 'slot' | 'mimeType' | 'status' | 'sanitizedAt' | 'sanitizeFailedAt'
 >;
 
 /**
@@ -53,37 +53,44 @@ export class CollectionImageDerivativesHandler implements JobHandler<'media.coll
         mimeType: true,
         status: true,
         sanitizedAt: true,
+        sanitizeFailedAt: true,
       },
     });
     if (image === null) return;
-    if (image.sanitizedAt !== null && image.status === 'READY') return;
+    if (image.status === 'READY' && !needsSanitizing(image)) return;
     try {
       // One media job at a time in the whole worker (memory), whatever its type.
       await this.slots.run(() =>
         withWorkDir(async (dir) => {
-          let input = join(dir, 'original');
-          const original = imageKey(image.collectionId, image.slot, image.id, 'original');
-          const downloaded = await this.storage.downloadToFile(original, input);
+          const input = join(dir, 'original');
+          const key = imageKey(image.collectionId, image.slot, image.id, 'original');
+          const downloaded = await this.storage.downloadToFile(key, input);
           if (downloaded === null) {
             throw new PermanentMediaError('image original is missing from storage');
           }
-          if (image.sanitizedAt === null) {
-            const sanitized = await this.sanitizer.image(image, original, {
-              path: input,
-              etag: downloaded.etag,
-              workDir: dir,
-            });
-            if (sanitized === null) return;
-            input = sanitized;
-          }
-          // A legacy image keeps its renditions: they never carried metadata.
-          if (image.status === 'READY') return;
+          const original = { path: input, etag: downloaded.etag, workDir: dir };
+          const prepared = needsSanitizing(image)
+            ? await this.sanitizer.prepare(original, image.mimeType, () =>
+                this.sanitizer.giveUpImage(image.id),
+              )
+            : null;
+          // Rendered from the sanitised file before it replaces the original (it must decode);
+          // one that cannot be sanitised still gets its renditions (they carry no metadata).
+          const source = prepared?.kind === 'clean' ? prepared.path : input;
           const heic = needsHeifDecoder(image.mimeType);
-          const decoded = heic ? await decodeHeic(input, dir) : input;
+          const decoded = heic ? await decodeHeic(source, dir) : source;
           // A decoded HEIC is already upright (libheif); everything else follows its EXIF tag.
           const result = await renderRenditions(decoded, RENDITIONS[image.slot], {
             autoOrient: !heic,
           });
+          if (
+            prepared?.kind === 'clean' &&
+            !(await this.sanitizer.commitImage(image, key, original, prepared))
+          ) {
+            return;
+          }
+          // A legacy image (backfill) keeps its renditions: they never carried metadata.
+          if (image.status === 'READY') return;
           await this.save(image, result);
         }),
       );
@@ -126,12 +133,16 @@ export class CollectionImageDerivativesHandler implements JobHandler<'media.coll
     }
   }
 
-  /** Only a `PENDING` image changes: a rerun that already succeeded stays `READY`. */
+  /**
+   * Only a `PENDING` image changes: a rerun that already succeeded stays `READY`. An original not
+   * sanitised by now never will be (the backfill stops here).
+   */
   private async markFailed(imageId: string): Promise<void> {
     await this.prisma.collectionImage.updateMany({
       where: { id: imageId, status: 'PENDING' },
       data: { status: 'FAILED' },
     });
+    await this.sanitizer.giveUpImage(imageId);
   }
 }
 

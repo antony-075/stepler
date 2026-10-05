@@ -25,6 +25,7 @@ export interface MediaSource {
   /** `READY` when the job only sanitises a legacy original (backfill): its previews exist. */
   processingStatus: ProcessingStatus;
   sanitizedAt: Date | null;
+  sanitizeFailedAt: Date | null;
 }
 
 export interface OriginalFacts {
@@ -55,6 +56,7 @@ export class DerivativeStore {
         collectionId: true,
         processingStatus: true,
         sanitizedAt: true,
+        sanitizeFailedAt: true,
         mediaObjects: { where: { role: 'ORIGINAL' }, select: { storageKey: true, mimeType: true } },
       },
     });
@@ -65,6 +67,7 @@ export class DerivativeStore {
       collectionId: item.collectionId,
       processingStatus: item.processingStatus,
       sanitizedAt: item.sanitizedAt,
+      sanitizeFailedAt: item.sanitizeFailedAt,
       ...original,
     };
   }

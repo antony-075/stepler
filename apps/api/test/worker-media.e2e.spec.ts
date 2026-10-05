@@ -743,21 +743,53 @@ describe('location stripping before previews (ADR 0008 addendum 2026-10-05)', ()
     expect((await mediaRows(itemId)).map((row) => row.role)).toEqual(['ORIGINAL']);
   });
 
-  test('a file that cannot be sanitised is FAILED at once, even a READY one (backfill)', async () => {
+  test("a photo that cannot be sanitised still gets its previews; its original stays the admin's", async () => {
     const pending = await addMedia('PHOTO', fixture('photo.jpg'), 'image/bmp');
     await photos().handle({ contentItemId: pending.itemId });
-    expect(await itemOf(pending.itemId)).toMatchObject({
-      processingStatus: 'FAILED',
-      sanitizedAt: null,
-    });
+    const item = await itemOf(pending.itemId);
+    expect(item).toMatchObject({ processingStatus: 'READY', sanitizedAt: null });
+    expect(item.sanitizeFailedAt).not.toBeNull();
+    expect((await mediaRows(pending.itemId)).map((row) => row.role)).toEqual([
+      'ORIGINAL',
+      'THUMBNAIL',
+      'PREVIEW',
+    ]);
 
+    // A legacy one keeps READY and is not tried again.
     const legacy = await addMedia('PHOTO', fixture('photo.jpg'), 'image/bmp');
     await prisma.contentItem.update({
       where: { id: legacy.itemId },
       data: { processingStatus: 'READY' },
     });
     await photos().handle({ contentItemId: legacy.itemId });
-    expect(await statusOf(legacy.itemId)).toBe('FAILED');
+    expect(await itemOf(legacy.itemId)).toMatchObject({ processingStatus: 'READY' });
+    expect((await itemOf(legacy.itemId)).sanitizeFailedAt).not.toBeNull();
+  });
+
+  test('a video that cannot be sanitised is FAILED', async () => {
+    const { itemId } = await addMedia('VIDEO', fixture('clip.mp4'), 'video/x-msvideo');
+    await videos().handle({ contentItemId: itemId });
+    const item = await itemOf(itemId);
+    expect(item.processingStatus).toBe('FAILED');
+    expect(item.sanitizeFailedAt).not.toBeNull();
+  });
+
+  test('backfill: the last failed retry of a READY item gives up, so the sweep stops', async () => {
+    const { itemId } = await addMedia('PHOTO', fixture('location.jpg'), 'image/jpeg');
+    await prisma.contentItem.update({ where: { id: itemId }, data: { processingStatus: 'READY' } });
+    const down = Object.assign(Object.create(storage) as ObjectStorage, {
+      downloadToFile: () => Promise.reject(new Error('storage unavailable')),
+    });
+    await expect(photos(down).handle({ contentItemId: itemId })).rejects.toThrow();
+    expect((await itemOf(itemId)).sanitizeFailedAt).toBeNull();
+
+    await photos(down).onFinalFailure({ contentItemId: itemId });
+    const item = await itemOf(itemId);
+    expect(item).toMatchObject({ processingStatus: 'READY', sanitizedAt: null });
+    expect(item.sanitizeFailedAt).not.toBeNull();
+    // A later job (or sweep) leaves it alone.
+    await photos().handle({ contentItemId: itemId });
+    expect((await itemOf(itemId)).sanitizedAt).toBeNull();
   });
 
   test('backfill: a READY item from before is only sanitised; its previews stay', async () => {

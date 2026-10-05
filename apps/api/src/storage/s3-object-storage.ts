@@ -269,6 +269,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
     try {
       let body: unknown;
       let etag: string | undefined;
+      let length: number | undefined;
       try {
         const res = await this.client.send(
           new GetObjectCommand({ Bucket: this.bucket, Key: key }),
@@ -278,6 +279,7 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
         );
         body = res.Body;
         etag = res.ETag;
+        length = res.ContentLength;
         clearTimeout(timer);
         timer = setTimeout(abort, this.transferTimeoutMs(res.ContentLength ?? 0));
       } catch (error) {
@@ -287,6 +289,11 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
       if (!(body instanceof Readable)) throw new Error('GetObject returned no stream');
       if (etag === undefined) throw new Error('GetObject returned no ETag');
       await pipeline(body, createWriteStream(path), { signal: controller.signal });
+      // A cut-short body must never become the "original" the worker rewrites and puts back.
+      const { size } = await stat(path);
+      if (length !== undefined && size !== length) {
+        throw new Error(`download incomplete: ${size} of ${length} bytes`);
+      }
       return { etag };
     } finally {
       clearTimeout(timer);

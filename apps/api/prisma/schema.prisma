@@ -272,11 +272,11 @@ model Collection {
 
 /// An admin image of a collection (plan 2026-10-05, ADR 0017): a guest page cover or background,
 /// or the collection image. Rows are immutable apart from the worker's READY/FAILED and its
-/// location stripping (`sanitizedAt`, `originalSizeBytes`); a replaced image is a new row. A row
-/// lives while a guest page version or the collection references it; the transaction that drops
-/// the last reference deletes it and queues `collection-image.purge`. Keys come from ids only:
-/// `imageKey(collectionId, slot, id, role)`. Rules live as named CHECKs: "CollectionImage_sizes",
-/// "CollectionImage_ready_dimensions".
+/// location stripping (`sanitizedAt`/`sanitizeFailedAt`, `originalSizeBytes`); a replaced image
+/// is a new row. A row lives while a guest page version or the collection references it; the
+/// transaction that drops the last reference deletes it and queues `collection-image.purge`. Keys
+/// come from ids only: `imageKey(collectionId, slot, id, role)`. Rules live as named CHECKs:
+/// "CollectionImage_sizes", "CollectionImage_ready_dimensions".
 model CollectionImage {
   id                String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
   collectionId      String             @db.Uuid
@@ -291,6 +291,9 @@ model CollectionImage {
   /// When the worker removed location metadata from the original (ADR 0008 addendum
   /// 2026-10-05), before its renditions; `originalSizeBytes` is the sanitised size from then.
   sanitizedAt       DateTime?          @db.Timestamptz(3)
+  /// When the worker gave up on sanitising; the backfill skips it. CHECK
+  /// "CollectionImage_sanitize_outcome".
+  sanitizeFailedAt  DateTime?          @db.Timestamptz(3)
   /// The source's upright dimensions, set with READY.
   width             Int?
   height            Int?
@@ -454,8 +457,12 @@ model ContentItem {
   processingStatus          ProcessingStatus
   /// PHOTO/VIDEO: when the worker removed location metadata from the original (ADR 0008
   /// addendum 2026-10-05); NULL until then, and the original is not served before it.
-  /// CHECK "ContentItem_sanitized_media_only"; the backfill reads "ContentItem_unsanitized_idx".
+  /// CHECKs "ContentItem_sanitized_media_only", "ContentItem_sanitize_outcome"; the backfill
+  /// reads "ContentItem_unsanitized_idx".
   sanitizedAt               DateTime?        @db.Timestamptz(3)
+  /// When the worker gave up on sanitising (a file it cannot rewrite, or its last retry): the
+  /// original stays the admin's only, and the backfill skips the item.
+  sanitizeFailedAt          DateTime?        @db.Timestamptz(3)
   /// Soft delete: hidden at once, purged by the worker.
   deletedAt                 DateTime?        @db.Timestamptz(3)
   createdAt                 DateTime         @default(now()) @db.Timestamptz(3)

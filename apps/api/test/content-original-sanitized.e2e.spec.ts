@@ -53,6 +53,7 @@ describe('original links wait for location stripping', () => {
       kind: ContentKind,
       processingStatus: ProcessingStatus,
       sanitizedAt: Date | null,
+      sanitizeFailedAt: Date | null = null,
     ) => {
       const item = await prisma.contentItem.create({
         data: {
@@ -62,6 +63,7 @@ describe('original links wait for location stripping', () => {
           contributorGuestSessionId: session!.id,
           processingStatus,
           sanitizedAt,
+          sanitizeFailedAt,
           mediaObjects: {
             create: {
               role: 'ORIGINAL',
@@ -136,6 +138,13 @@ describe('original links wait for location stripping', () => {
   test('could not be sanitised (FAILED): the admin only', async () => {
     const { add, asGuest, asAdmin } = await scene();
     const id = await add('PHOTO', 'FAILED', null);
+    expect(links(await asGuest(id))).toEqual(none);
+    expect(links(await asAdmin(id))).toEqual(both);
+  });
+
+  test('given up on (sanitizeFailedAt), previews kept: the admin only', async () => {
+    const { add, asGuest, asAdmin } = await scene();
+    const id = await add('PHOTO', 'READY', null, new Date());
     expect(links(await asGuest(id))).toEqual(none);
     expect(links(await asAdmin(id))).toEqual(both);
   });

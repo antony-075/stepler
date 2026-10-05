@@ -5,7 +5,7 @@ import { OBJECT_STORAGE, type ObjectStorage } from '../../storage/object-storage
 import type { JobHandler } from '../job-handler.js';
 import { DerivativeStore } from '../media/derivative-store.js';
 import { MediaSlots } from '../media/media-slots.js';
-import { OriginalSanitizer } from '../media/original-sanitizer.js';
+import { needsSanitizing, OriginalSanitizer } from '../media/original-sanitizer.js';
 import { withWorkDir } from '../media/work-dir.js';
 import { extractFrame, posterTime, probeVideo } from '../media/ffmpeg.js';
 import { renderDerivatives } from '../media/images.js';
@@ -39,11 +39,11 @@ export class VideoPosterHandler implements JobHandler<'media.video-poster'> {
   async handle({ contentItemId }: JobData['media.video-poster']): Promise<void> {
     const item = await this.store.source(contentItemId, 'VIDEO');
     if (item === null) return;
-    if (item.sanitizedAt !== null && item.processingStatus === 'READY') return;
+    if (item.processingStatus === 'READY' && !needsSanitizing(item)) return;
     try {
       // One media job at a time in the whole worker (memory), whatever its type.
       await this.slots.run(async () => {
-        if (item.sanitizedAt === null) {
+        if (needsSanitizing(item)) {
           const live = await withWorkDir(async (dir) => {
             const input = join(dir, 'original');
             const downloaded = await this.storage.downloadToFile(item.storageKey, input);
@@ -51,7 +51,12 @@ export class VideoPosterHandler implements JobHandler<'media.video-poster'> {
               throw new PermanentMediaError('original is missing from storage');
             }
             const original = { path: input, etag: downloaded.etag, workDir: dir };
-            return (await this.sanitizer.item(item, original)) !== null;
+            const prepared = await this.sanitizer.prepare(original, item.mimeType, () =>
+              this.sanitizer.giveUpItem(item.id, 'VIDEO'),
+            );
+            // A video that cannot be sanitised is FAILED: guests could not play it.
+            if (prepared.kind === 'unsanitizable') return false;
+            return this.sanitizer.commitItem(item, original, prepared);
           });
           if (!live) return;
         }
@@ -73,11 +78,13 @@ export class VideoPosterHandler implements JobHandler<'media.video-poster'> {
     } catch (error) {
       if (!(error instanceof PermanentMediaError)) throw error;
       this.logger.warn({ msg: 'video cannot be processed', contentItemId, reason: error.message });
-      await this.store.markFailed(item.id);
+      await this.onFinalFailure({ contentItemId: item.id });
     }
   }
 
   async onFinalFailure({ contentItemId }: JobData['media.video-poster']): Promise<void> {
     await this.store.markFailed(contentItemId);
+    // An original not sanitised by now never will be (the backfill stops here).
+    await this.sanitizer.giveUpItem(contentItemId, 'VIDEO');
   }
 }

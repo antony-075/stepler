@@ -29,6 +29,7 @@ export interface ItemWithMedia {
   originalFilename: string | null;
   processingStatus: ProcessingStatus;
   sanitizedAt: Date | null;
+  sanitizeFailedAt: Date | null;
   mediaObjects?: readonly MediaRow[];
 }
 
@@ -38,13 +39,16 @@ export type OriginalViewer = 'admin' | 'guest';
 /**
  * Whether the original may be handed out (ADR 0008 addendum 2026-10-05). Documents always.
  * A photo or video only once the worker has removed its location metadata (`sanitizedAt`):
- * before that nobody gets it. One that could not be sanitised (`FAILED` without `sanitizedAt`)
- * stays the admin's: they own the collection and may need the file; guests never get it.
+ * before that nobody gets it. One the worker gave up on (`sanitizeFailedAt`, or `FAILED` from
+ * before stripping existed) stays the admin's: they own the collection and may need the file;
+ * guests never get it.
  */
 export function canServeOriginal(item: ItemWithMedia, viewer: OriginalViewer): boolean {
   if (item.kind !== 'PHOTO' && item.kind !== 'VIDEO') return true;
   if (item.sanitizedAt !== null) return true;
-  return viewer === 'admin' && item.processingStatus === 'FAILED';
+  return (
+    viewer === 'admin' && (item.sanitizeFailedAt !== null || item.processingStatus === 'FAILED')
+  );
 }
 
 /** The `include` that brings the media rows with content rows. */

@@ -23,7 +23,7 @@ const ENQUEUE_CHUNK = 50;
  *   hour after they were set with no rendition job queued, retrying or running for them (for
  *   example a job lost while the worker was down during a deploy); the owner can set them again;
  * - backfills location stripping (ADR 0008 addendum 2026-10-05): queues the media job of
- *   `READY` photos, videos and admin images not sanitised yet (uploaded before it existed); the
+ *   `READY` photos, videos and admin images with no outcome yet (uploaded before it existed); the
  *   job then only sanitises their original. Up to `WORKER_PURGE_BATCH_SIZE` of each per run,
  *   oldest first; a job already queued for one makes it a no-op, and a sanitised one is skipped;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
@@ -63,6 +63,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       this.prisma.contentItem.findMany({
         where: {
           sanitizedAt: null,
+          sanitizeFailedAt: null,
           deletedAt: null,
           kind: { in: ['PHOTO', 'VIDEO'] },
           processingStatus: 'READY',
@@ -75,6 +76,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       this.prisma.collectionImage.findMany({
         where: {
           sanitizedAt: null,
+          sanitizeFailedAt: null,
           status: 'READY',
           collection: { status: { not: 'DELETING' } },
         },

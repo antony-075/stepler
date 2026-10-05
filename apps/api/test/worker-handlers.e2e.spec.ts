@@ -397,7 +397,11 @@ describe('worker handlers', () => {
       const media = (
         frameNo: number,
         kind: 'PHOTO' | 'VIDEO' | 'DOCUMENT',
-        data: { sanitizedAt?: Date; processingStatus?: 'PENDING' | 'READY' | 'FAILED' } = {},
+        data: {
+          sanitizedAt?: Date;
+          sanitizeFailedAt?: Date;
+          processingStatus?: 'PENDING' | 'READY' | 'FAILED';
+        } = {},
         inCollection = collectionId,
       ) =>
         prisma.contentItem.create({
@@ -412,6 +416,7 @@ describe('worker handlers', () => {
       const oldPhoto = await media(1, 'PHOTO');
       const oldVideo = await media(2, 'VIDEO');
       await media(3, 'PHOTO', { sanitizedAt: new Date() });
+      await media(8, 'VIDEO', { sanitizeFailedAt: new Date() }); // given up: admin-only
       await media(4, 'PHOTO', { processingStatus: 'PENDING' }); // its own job sanitises it
       await media(5, 'PHOTO', { processingStatus: 'FAILED' }); // admin-only, never retried
       await media(6, 'DOCUMENT');
@@ -420,7 +425,9 @@ describe('worker handlers', () => {
         where: { id: (await media(7, 'PHOTO')).id },
         data: { deletedAt: new Date() },
       });
-      const image = (data: { sanitizedAt?: Date; status?: 'READY' | 'PENDING' } = {}) =>
+      const image = (
+        data: { sanitizedAt?: Date; sanitizeFailedAt?: Date; status?: 'READY' | 'PENDING' } = {},
+      ) =>
         prisma.collectionImage.create({
           data: {
             collectionId,
@@ -436,6 +443,7 @@ describe('worker handlers', () => {
         });
       const oldImage = await image();
       await image({ sanitizedAt: new Date() });
+      await image({ sanitizeFailedAt: new Date() });
 
       await sweep().handle();
       await sweep().handle();
