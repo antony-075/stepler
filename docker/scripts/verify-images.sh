@@ -77,7 +77,8 @@ done
 # decoded to WebP previews, and a poster from an MP4 that ffmpeg reads over HTTP (as from a
 # presigned URL), with its duration; tiny files declaring huge images fail cleanly (prlimit,
 # -max_pixels) instead of being OOM-killed; a JPEG and an MP4 with GPS lose it (exiftool under
-# prlimit).
+# prlimit, the MP4's streams compared by `-f streamhash`), and a PNG whose XMP inflates to 600 MB
+# fails cleanly under exiftool's cap.
 media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
   set -e
   cd /tmp
@@ -91,7 +92,7 @@ media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
   exiftool -q -overwrite_original -DateTimeOriginal="2026:06:14 15:30:00" -GPSLatitude=50.45 -GPSLatitudeRef=N -GPSLongitude=30.52 -GPSLongitudeRef=E gps.jpg
   cp clip.mp4 gps.mp4
   exiftool -q -overwrite_original -UserData:GPSCoordinates="50.45, 30.52" -Keys:GPSCoordinates="50.45, 30.52" gps.mp4
-  mkdir strip-jpg strip-mp4
+  mkdir strip-jpg strip-mp4 strip-png
   node --input-type=module -e "
     import { createServer } from \"node:http\";
     import { readFileSync } from \"node:fs\";
@@ -109,6 +110,14 @@ media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
     if (photo.large.width !== 320 || photo.large.height !== 240) throw new Error(\"HEIC preview size\");
     const permanent = (p) => p.then(() => { throw new Error(\"oversized input accepted\"); }, (e) => { if (e.name !== \"PermanentMediaError\") throw e; });
     await permanent(decodeHeic(\"/tmp/huge.heic\", \"/tmp\"));
+    const zlib = await import(\"node:zlib\");
+    const png = readFileSync(\"/tmp/src.png\");
+    const xmp = Buffer.concat([Buffer.from(\"XML:com.adobe.xmp\\0\\x01\\0\\0\\0\", \"latin1\"), zlib.deflateSync(Buffer.alloc(600 * 1024 * 1024, 97), { level: 1 })]);
+    const body = Buffer.concat([Buffer.from(\"iTXt\", \"latin1\"), xmp]);
+    const len = Buffer.alloc(4); len.writeUInt32BE(xmp.length);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(body));
+    (await import(\"node:fs\")).writeFileSync(\"/tmp/bomb.png\", Buffer.concat([png.subarray(0, 33), len, body, crc, png.subarray(33)]));
+    await permanent(stripLocation(\"/tmp/bomb.png\", \"image/png\", \"/tmp/strip-png\"));
     const server = createServer((req, res) => res.end(readFileSync(\"/tmp\" + req.url)));
     await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));
     const url = \"http://127.0.0.1:\" + server.address().port + \"/clip.mp4\";
