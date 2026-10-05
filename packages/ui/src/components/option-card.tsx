@@ -3,7 +3,7 @@
 import { Check } from 'lucide-react';
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import { type ComponentProps, type ReactNode, useId } from 'react';
-import { focusRing } from '../lib/focus';
+import { focusHalo } from '../lib/focus';
 import { cn } from '../lib/utils';
 
 /**
@@ -45,7 +45,8 @@ function OptionCard({ className, title, description, preview, ...props }: Option
       aria-describedby={description ? `${id}-description` : undefined}
       className={cn(
         'group/option relative grid min-w-0 content-start gap-3 rounded-sheet border bg-card p-3 text-left transition-[border-color] duration-(--duration-fast) motion-reduce:transition-none',
-        focusRing,
+        focusHalo,
+        'data-[state=checked]:focus-visible:border-ring',
         'hover:border-input data-[state=checked]:border-foreground',
         'disabled:cursor-not-allowed disabled:text-muted-foreground',
         className,

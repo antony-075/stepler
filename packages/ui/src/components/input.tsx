@@ -1,17 +1,19 @@
 import type { ComponentProps } from 'react';
+import { fieldFocus } from '../lib/focus';
 import { cn } from '../lib/utils';
 
 /**
  * The field look shared by Input, Textarea and SelectTrigger (DESIGN-SYSTEM.md §5.2): a sheet
  * with a 1px `--input` edge and an 8px radius; hover darkens the edge to `--foreground`; focus
- * turns it violet and adds the 2px ring; invalid uses `--destructive` for both; disabled is a
+ * (any focus) turns it violet with a soft violet halo, no outline (owner remark 103); invalid
+ * uses `--destructive` for both; disabled is a
  * muted fill with muted text (readable, not half-transparent).
  */
 const fieldClassName = cn(
-  'w-full min-w-0 rounded-control border border-input bg-card text-base text-foreground transition-[border-color] duration-(--duration-fast) outline-none motion-reduce:transition-none',
+  'w-full min-w-0 rounded-control border border-input bg-card text-base text-foreground transition-[border-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
   'hover:border-foreground',
-  'focus-visible:border-ring focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring',
-  'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
+  fieldFocus,
+  'aria-invalid:border-destructive aria-invalid:focus:border-destructive aria-invalid:focus:ring-destructive/25',
   'disabled:cursor-not-allowed disabled:border-transparent disabled:bg-muted disabled:text-muted-foreground',
 );
 

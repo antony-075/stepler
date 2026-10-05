@@ -3,7 +3,7 @@
 import { LockKeyhole } from 'lucide-react';
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui';
 import { type ComponentProps, type MouseEvent, type ReactNode, useId, useState } from 'react';
-import { focusRing } from '../lib/focus';
+import { focusHalo } from '../lib/focus';
 import { cn } from '../lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
@@ -76,7 +76,8 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
  */
 const itemClassName = cn(
   'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
-  focusRing,
+  focusHalo,
+  'data-[state=on]:focus-visible:border-ring',
   'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',
   'aria-disabled:cursor-not-allowed aria-disabled:hover:text-muted-foreground',
