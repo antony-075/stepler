@@ -38,7 +38,7 @@ Where a collection has a shared gallery, content submitted through that link may
 
 - everything you submit is visible to the collection administrator, who may also download and delete it;
 - the name you may optionally enter is shown to the administrator and is never shown to other guests;
-- if the link has a shared gallery, other guests with that link can view your photos, videos, documents and texts and download the files in their original form, including metadata embedded in them (for example, the time and place a photo was taken);
+- if the link has a shared gallery, other guests with that link can view your photos, videos, documents and texts and download the files in their original form, including metadata embedded in them (for example, the time a photo was taken; location data is removed from photos and videos on upload, and documents are not changed);
 - you can delete your own submissions only if the link allows it, and only from the browser in which you submitted them: your access is tied to a cookie in that browser, so clearing cookies or using another device or browser means you can no longer delete them yourself (you can then ask the administrator or contact us).
 
 Guests under [MINIMUM AGE] may submit content only with the permission of a parent or guardian [LAWYER TO CONFIRM].
