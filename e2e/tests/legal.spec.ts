@@ -38,10 +38,15 @@ test.describe('legal pages', () => {
     await page.goto('/legal/privacy');
     await expectDocument(page, 'privacy');
     // The contact block comes from LEGAL_CONTACT_EMAIL (set for the e2e web server).
-    await expect(page.getByRole('link', { name: 'privacy@stepler.test' })).toHaveAttribute(
+    const contact = page.getByRole('region', { name: 'Контакти' });
+    await expect(contact.getByRole('link', { name: 'privacy@stepler.test' })).toHaveAttribute(
       'href',
       'mailto:privacy@stepler.test',
     );
+    // The same address fills the text's placeholders.
+    const article = page.locator('article');
+    await expect(article).not.toContainText('[LEGAL_CONTACT_EMAIL]');
+    await expect(article.getByRole('link', { name: 'privacy@stepler.test' }).first()).toBeVisible();
   });
 
   test('an English browser reads the English text', async ({ browser }) => {

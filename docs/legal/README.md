@@ -18,6 +18,7 @@ The Terms of Service and the Privacy Policy are public, versioned pages at `/leg
 - The page renders the `h1` from the message catalog; a file starts at `##`. Sections and numbering are the text's own (`## 1. …`), so numbered clauses line up.
 - Markdown only (GFM): headings, paragraphs, lists, emphasis, links. No raw HTML — `apps/web/src/legal/documents.test.ts` rejects a file with `<tag>`, an `# ` heading or less than 100 bytes, and checks that a `draft: true` entry starts with the draft line (`> Чернетка — …` / `> Draft — …`) and a published one does not.
 - Both locales always exist for the current version, with the same structure.
+- The contact address is written as the placeholder `[LEGAL_CONTACT_EMAIL]`, never as a literal address: the page fills every occurrence with the deployment's `LEGAL_CONTACT_EMAIL` at render time (`fillLegalPlaceholders` in `apps/web/src/legal/documents.ts`), and leaves it visibly unfilled when the variable is unset (drafts only). Every other bracketed placeholder (operator name, address, registration details, governing law, court, periods marked `[LAWYER TO CONFIRM]` / `[ПЕРЕВІРИТИ ЮРИСТОМ]`) is text the owner/lawyer replaces before `draft: false`.
 - Files are read at request time from `apps/web/content/legal`; the web build copies the directory next to the standalone server (`apps/web/scripts/copy-standalone-assets.mjs`), so a deployment carries them without extra steps.
 
 ## Publishing a new version (or the first real text)

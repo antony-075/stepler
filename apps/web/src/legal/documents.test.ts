@@ -2,7 +2,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { LEGAL_DOCUMENTS } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
 import { LOCALES } from '@/i18n/locales';
-import { legalDocumentFile, loadLegalDocument } from './documents';
+import { fillLegalPlaceholders, legalDocumentFile, loadLegalDocument } from './documents';
 import { legalDocumentFromSlug, legalPath } from './slugs';
 
 const DRAFT_MARK = { uk: 'Чернетка', en: 'Draft' } as const;
@@ -46,6 +46,31 @@ describe('loadLegalDocument', () => {
     expect(meta.document).toBe('TERMS');
     expect(html).toContain('<h2');
     expect(html).toContain('<blockquote');
+  });
+
+  test('fills the contact e-mail placeholder when the address is given', async () => {
+    const { html } = await loadLegalDocument('PRIVACY', 'en', 'privacy@example.com');
+    expect(html).not.toContain('[LEGAL_CONTACT_EMAIL]');
+    expect(html).toContain('href="mailto:privacy@example.com"');
+  });
+
+  test('leaves the placeholder visibly unfilled without an address', async () => {
+    const { html } = await loadLegalDocument('PRIVACY', 'en');
+    expect(html).toContain('[LEGAL_CONTACT_EMAIL]');
+  });
+});
+
+describe('fillLegalPlaceholders', () => {
+  test('replaces every occurrence of the contact placeholder and nothing else', () => {
+    const markdown = 'Write to [LEGAL_CONTACT_EMAIL] or [LEGAL_CONTACT_EMAIL]. [LEGAL ADDRESS]';
+    expect(fillLegalPlaceholders(markdown, { contactEmail: 'legal@example.com' })).toBe(
+      'Write to legal@example.com or legal@example.com. [LEGAL ADDRESS]',
+    );
+  });
+
+  test('keeps the placeholder when the address is unset', () => {
+    const markdown = 'Write to [LEGAL_CONTACT_EMAIL].';
+    expect(fillLegalPlaceholders(markdown, { contactEmail: undefined })).toBe(markdown);
   });
 });
 
