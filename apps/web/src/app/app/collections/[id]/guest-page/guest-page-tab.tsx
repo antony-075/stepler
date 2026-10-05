@@ -17,7 +17,7 @@
 // - Only «Класика» exists until PR K: the other five show «Скоро» and cannot be chosen.
 // - Archived: everything is shown, read-only, with one notice [A6]; the preview still works.
 
-import type { GuestPageEditor } from '@stepler/contracts';
+import type { Collection, GuestPageEditor } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Skeleton } from '@stepler/ui/components/skeleton';
@@ -25,23 +25,16 @@ import { definitionOf } from '@stepler/templates/core';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useSyncExternalStore } from 'react';
-import type { Collection } from '@stepler/contracts';
 import { fetchGuestPage, guestPageKey } from '@/api/collections';
 import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { PREVIEW_POLL_MS } from '@/media/previews';
 import { currentVersion } from './editor-state';
-import { EditorSection } from './locked-option';
-import { PreviewFrame, PreviewPane } from './preview-pane';
+import { PhoneEditor } from './phone-editor';
+import { PreviewPane } from './preview-pane';
 import { SaveBar } from './save-bar';
-import { AccentSection } from './sections/accent-section';
-import { BackgroundSection } from './sections/background-section';
-import { CoverSection } from './sections/cover-section';
-import { FontSection } from './sections/font-section';
-import { LayoutSection } from './sections/layout-section';
 import type { SectionProps } from './sections/section-props';
-import { TemplateSection } from './sections/template-section';
-import { WelcomeSection } from './sections/welcome-section';
-import { type GuestPageEditorApi, useGuestPageEditor } from './use-guest-page-editor';
+import { Sections } from './sections/section-list';
+import { useGuestPageEditor } from './use-guest-page-editor';
 
 const DESKTOP = '(min-width: 1024px)';
 
@@ -140,63 +133,8 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
           />
         </div>
       ) : (
-        <div className="grid gap-4">
-          <div className="h-[30rem]">
-            <PreviewFrame collectionId={collection.id} page={editor.previewPage} device="phone" />
-          </div>
-          <div role="region" aria-label={t('panelLabel')} className="rounded-sheet border bg-card">
-            <Sections {...props} />
-            <SaveBar editor={editor} readOnly={readOnly} className="sticky bottom-0" />
-          </div>
-        </div>
+        <PhoneEditor {...props} templateName={templateName} />
       )}
     </div>
   );
 }
-
-/** The panel's sections, in the order of Appendix B. */
-export function Sections(props: SectionProps & { only?: SectionId }) {
-  const t = useTranslations('guestPage.sections');
-  return (
-    <>
-      {SECTION_IDS.filter((id) => props.only === undefined || props.only === id).map((id) => (
-        <EditorSection key={id} id={`guest-page-${id}`} title={t(id)}>
-          <SectionBody id={id} {...props} />
-        </EditorSection>
-      ))}
-    </>
-  );
-}
-
-export const SECTION_IDS = [
-  'template',
-  'cover',
-  'welcome',
-  'background',
-  'accent',
-  'font',
-  'layout',
-] as const;
-export type SectionId = (typeof SECTION_IDS)[number];
-
-export function SectionBody({ id, ...props }: SectionProps & { id: SectionId }) {
-  switch (id) {
-    case 'template':
-      return <TemplateSection {...props} />;
-    case 'cover':
-      return <CoverSection {...props} />;
-    case 'welcome':
-      // Starts over when the working copy is replaced (a reset, the latest version).
-      return <WelcomeSection key={props.editor.generation} {...props} />;
-    case 'background':
-      return <BackgroundSection {...props} />;
-    case 'accent':
-      return <AccentSection key={props.editor.generation} {...props} />;
-    case 'font':
-      return <FontSection {...props} />;
-    case 'layout':
-      return <LayoutSection {...props} />;
-  }
-}
-
-export type { GuestPageEditorApi };

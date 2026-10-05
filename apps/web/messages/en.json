@@ -297,76 +297,6 @@
       "failed": "Couldn’t save"
     }
   },
-  "appearance": {
-    "archived": "An archived collection can’t be changed. Bring it back from the archive to change its cover or welcome message.",
-    "cover": {
-      "title": "Cover",
-      "hint": "Guests see it above the collection’s title, and you see it in your collections. Use a JPEG, PNG, WebP, HEIC or GIF photo up to 50 MB.",
-      "readyHint": "This is how guests see the cover on a phone. Other screens crop it to fit and keep the centre in view.",
-      "upload": "Upload an image",
-      "pickFrame": "Choose from frames",
-      "replace": "Replace",
-      "remove": "Remove cover",
-      "uploading": "Uploading the cover",
-      "cancel": "Cancel",
-      "uploadFailed": "Couldn’t upload the cover",
-      "retry": "Try again",
-      "chooseAnother": "Choose another file",
-      "dismiss": "Close",
-      "reason": {
-        "NETWORK": "The connection dropped. Check the internet and try again.",
-        "STORAGE_403": "Storage refused the file. Try again."
-      },
-      "processing": "Preparing the cover…",
-      "failedTitle": "Couldn’t prepare the cover",
-      "failedText": "Try another image.",
-      "uploaded": "Cover uploaded — preparing it",
-      "updated": "Cover updated",
-      "removed": "Cover removed",
-      "removeConfirmTitle": "Remove the cover?",
-      "removeConfirmText": "The collection’s initials will show in its place again. The guest’s frame it came from stays.",
-      "removeConfirm": "Remove",
-      "removePending": "Removing",
-      "leave": "The cover is still uploading. Leave the page and cancel the upload?",
-      "setFailed": "Couldn’t make it the cover",
-      "archivedRefused": "The collection is archived — its cover can’t be changed now.",
-      "frameGone": "That frame has already been deleted."
-    },
-    "welcome": {
-      "title": "Welcome message for guests",
-      "label": "Welcome text",
-      "hint": "One or two lines, no formatting. Guests see it above the add button.",
-      "placeholder": "For example: Thank you for being with us! Add your photos from tonight.",
-      "counter": "{count} of {max}",
-      "tooLong": "At most {max} characters.",
-      "lineBreaks": "One paragraph only, no line breaks.",
-      "save": "Save",
-      "saving": "Saving…",
-      "clear": "Remove",
-      "saved": "Saved",
-      "failed": "Couldn’t save",
-      "none": "No welcome message."
-    },
-    "picker": {
-      "title": "Choose a photo for the cover",
-      "description": "The photo is copied into the cover: if the guest deletes it, the cover stays.",
-      "close": "Close",
-      "listLabel": "Guests’ photos",
-      "loading": "Loading photos",
-      "loadFailed": "Couldn’t load the photos.",
-      "retry": "Try again",
-      "empty": "Guests haven’t added photos yet",
-      "emptyText": "As soon as the first photo arrives, you can make it the cover.",
-      "loadMore": "Show more",
-      "cancel": "Cancel",
-      "confirm": "Make it the cover",
-      "pending": "Saving…",
-      "notReady": "Preparing preview",
-      "unavailable": "Preview unavailable",
-      "frameName": "Frame {number}, photo",
-      "frameNotReady": "Frame {number}, photo still preparing — can’t be chosen"
-    }
-  },
   "content": {
     "filterLabel": "Content type",
     "filter": {
@@ -1087,7 +1017,10 @@
       "chipSaved": "Saved",
       "dirty": "there are unsaved changes",
       "fromFrame": "Picked from frames",
-      "imageSummary": "Image, {dim}%"
+      "imageSummary": "Image, {dim}%",
+      "layoutSummary": "{placement}, {align, select, start {left} other {centred}}",
+      "sectionsLabel": "Guest page settings",
+      "previewLabel": "Guest page preview"
     },
     "picker": {
       "title": "Choose a photo",
@@ -1107,6 +1040,12 @@
       "unavailable": "Preview unavailable",
       "frameName": "Frame {number}, photo",
       "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen"
+    },
+    "fromViewer": {
+      "added": "Cover added to the draft",
+      "addedText": "Guests will see it once you save the guest page.",
+      "open": "Open the guest page",
+      "openAlt": "Open the «Guest page» tab to save the changes."
     }
   },
   "templates": {

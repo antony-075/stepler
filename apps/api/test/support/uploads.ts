@@ -17,7 +17,6 @@ export function bigBuffer(size: number, header: Uint8Array): Buffer {
 }
 
 const base = (collectionId: string) => `/api/v1/guest/collections/${collectionId}/uploads`;
-const coverBase = (collectionId: string) => `/api/v1/collections/${collectionId}/cover/uploads`;
 
 export interface UploadCalls {
   initiate(body: {
@@ -53,13 +52,6 @@ function callsAt(server: Server, root: string, cookie: string): UploadCalls {
 /** The guest upload routes for one collection, as one guest (its `st_gs` cookie). */
 export const uploadCalls = (server: Server, collectionId: string, cookie: string): UploadCalls =>
   callsAt(server, base(collectionId), cookie);
-
-/** The admin's cover upload routes for one collection, as the holder of an admin session. */
-export const coverUploadCalls = (
-  server: Server,
-  collectionId: string,
-  cookie: string,
-): UploadCalls => callsAt(server, coverBase(collectionId), cookie);
 
 /** The admin's upload routes of a guest page draft image (`cover` or `background`). */
 export const draftImageUploadCalls = (

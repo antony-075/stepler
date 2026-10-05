@@ -52,9 +52,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
           value: p.hex,
           label: t(`names.${p.id}`),
           ariaLabel: t('swatch', { name: t(`names.${p.id}`) }),
-          icon: (
-            <span className="block size-7 rounded-full" style={{ backgroundColor: p.hex }} />
-          ),
+          icon: <span className="block size-7 rounded-full" style={{ backgroundColor: p.hex }} />,
         }))}
       />
       <div className="grid gap-1.5">

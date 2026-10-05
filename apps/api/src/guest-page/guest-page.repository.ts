@@ -95,21 +95,6 @@ export class GuestPageRepository {
     });
   }
 
-  /**
-   * A change made outside the editor (the slice 8a routes, PR I only) moves the draft to the next
-   * revision, so a tab that saves from the revision before gets a conflict instead of undoing it.
-   * No draft: nothing to do.
-   */
-  async bumpDraft(tx: Prisma.TransactionClient, collectionId: string): Promise<void> {
-    const draft = await tx.guestPageVersion.findUnique({
-      where: { collectionId_state: { collectionId, state: 'DRAFT' } },
-      select: { id: true },
-    });
-    if (draft === null) return;
-    const revision = await this.nextRevision(tx, collectionId);
-    await tx.guestPageVersion.update({ where: { id: draft.id }, data: { revision } });
-  }
-
   /** The draft row, locked for this transaction (`FOR UPDATE`), or `null`. */
   async lockDraft(
     tx: Prisma.TransactionClient,

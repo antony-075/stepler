@@ -103,8 +103,10 @@ enum GuestPageVersionState {
 }
 
 /// What an admin image upload completes into, fixed at initiation (CHECK
-/// "UploadSession_image_target"): the draft's cover or background, the slice 8a cover routes
-/// (published and draft, until PR J), or the collection image. A route completes only its own.
+/// "UploadSession_image_target"): the draft's cover or background, or the collection image. A
+/// route completes only its own. `LEGACY_COVER` (the slice 8a cover routes, removed in PR J) is
+/// no longer written; its open uploads cannot complete and expire. The value stays so that
+/// removing it needs no enum rewrite of existing rows.
 enum ImageUploadTarget {
   DRAFT
   LEGACY_COVER

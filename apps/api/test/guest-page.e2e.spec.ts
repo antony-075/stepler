@@ -97,19 +97,19 @@ async function owner(started: Started = s) {
     uploads: (slot: 'cover' | 'background') =>
       draftImageUploadCalls(started.server, seeded.collectionId, cookie, slot),
   });
+  const own = as(admin.cookie);
   return {
     ...admin,
     ...seeded,
     guestCookie,
     guest: uploadCalls(started.server, seeded.collectionId, guestCookie),
-    ...as(admin.cookie),
+    ...own,
     as,
-    legacyCover: (contentItemId: string) =>
-      request(started.server)
-        .post(`/api/v1/collections/${seeded.collectionId}/cover/from-frame`)
-        .set('Cookie', admin.cookie)
-        .set('Origin', ORIGIN)
-        .send({ contentItemId }),
+    /** A frame as the published cover: into the draft, then published (what «Зберегти» does). */
+    publishedCover: async (contentItemId: string) => {
+      const res = await own.fromFrame('cover', contentItemId).expect(200);
+      await own.publish(editor(res.body).draft?.revision ?? 0).expect(200);
+    },
     context: () =>
       request(started.server)
         .get(`/api/v1/guest/collections/${seeded.collectionId}/context`)
@@ -224,7 +224,7 @@ describe('guest page editor API', () => {
   describe('Review Focus 1: images and garbage collection', () => {
     test('published cover A, draft cover B, reset: B goes and is purged, A stays', async () => {
       const o = await owner();
-      await o.legacyCover((await frame(o, 'a.jpg')).id).expect(200);
+      await o.publishedCover((await frame(o, 'a.jpg')).id);
       const [a] = await images(o.collectionId);
       const withB = editor(
         (await o.fromFrame('cover', (await frame(o, 'b.jpg')).id).expect(200)).body,
@@ -246,7 +246,7 @@ describe('guest page editor API', () => {
 
     test('published A, draft B, publish: A is purged and B is published', async () => {
       const o = await owner();
-      await o.legacyCover((await frame(o, 'a.jpg')).id).expect(200);
+      await o.publishedCover((await frame(o, 'a.jpg')).id);
       const [a] = await images(o.collectionId);
       const withB = editor(
         (await o.fromFrame('cover', (await frame(o, 'b.jpg')).id).expect(200)).body,
@@ -265,7 +265,7 @@ describe('guest page editor API', () => {
 
     test('a draft that keeps the published cover keeps it through publish and reset', async () => {
       const o = await owner();
-      await o.legacyCover((await frame(o, 'a.jpg')).id).expect(200);
+      await o.publishedCover((await frame(o, 'a.jpg')).id);
       const [a] = await images(o.collectionId);
       const first = editor((await o.save(draftBody(null, { accent: '#2C7350' })).expect(200)).body);
       await o.reset().expect(204);
@@ -297,7 +297,7 @@ describe('guest page editor API', () => {
 
     test('removing the draft cover leaves the published one; an upload completes into the draft', async () => {
       const o = await owner();
-      await o.legacyCover((await frame(o, 'a.jpg')).id).expect(200);
+      await o.publishedCover((await frame(o, 'a.jpg')).id);
       const removed = editor((await o.removeImage('cover').expect(200)).body);
       expect(removed.draft?.cover).toBeNull();
       expect(removed.published.cover).not.toBeNull();
@@ -405,31 +405,34 @@ describe('guest page editor API', () => {
       await o.save(draftBody(null)).expect(409);
     });
 
-    test('M2: the legacy routes move the draft on, so a stale save conflicts', async () => {
+    test('the slice 8a routes are gone: PATCH welcomeMessage → 400, /cover → 404', async () => {
       const o = await owner();
-      const saved = editor((await o.save(draftBody(null)).expect(200)).body);
-      await request(s.server)
+      const patch = await request(s.server)
         .patch(`/api/v1/collections/${o.collectionId}`)
         .set('Cookie', o.cookie)
         .set('Origin', ORIGIN)
         .send({ welcomeMessage: 'Вітаємо!' })
-        .expect(200);
-      await o.save(draftBody(saved.draft?.revision ?? 0)).expect(409);
-      const now = editor((await o.get().expect(200)).body);
-      expect(now.draft?.welcomeMessage).toBe('Вітаємо!');
-      await o.legacyCover((await frame(o)).id).expect(200);
-      await o.save(draftBody(now.draft?.revision ?? 0)).expect(409);
+        .expect(400);
+      expect(patch.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+      const item = await frame(o);
+      for (const call of [
+        request(s.server).post(`/api/v1/collections/${o.collectionId}/cover/from-frame`),
+        request(s.server).delete(`/api/v1/collections/${o.collectionId}/cover`),
+        request(s.server).post(`/api/v1/collections/${o.collectionId}/cover/uploads`),
+      ]) {
+        await call
+          .set('Cookie', o.cookie)
+          .set('Origin', ORIGIN)
+          .send({ contentItemId: item.id })
+          .expect(404);
+      }
+      expect(await prisma.collectionImage.count()).toBe(0);
     });
 
-    test('M3: a draft upload cannot be completed through the legacy cover route, nor the other slot', async () => {
+    test('M3: a draft cover upload cannot be completed through the other slot', async () => {
       const o = await owner();
       const calls = o.uploads('cover');
       const session = await uploadFile(calls, 'c.jpg', fixture('photo.jpg'));
-      await request(s.server)
-        .post(`/api/v1/collections/${o.collectionId}/cover/uploads/${session.uploadId}/complete`)
-        .set('Cookie', o.cookie)
-        .set('Origin', ORIGIN)
-        .expect(404);
       await o.uploads('background').complete(session.uploadId).expect(404);
       await calls.complete(session.uploadId).expect(200);
     });

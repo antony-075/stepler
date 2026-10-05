@@ -16,10 +16,6 @@ describe('image targets', () => {
       { slot: 'BACKGROUND', version: 'DRAFT' },
       { purpose: 'BACKGROUND', imageTarget: 'DRAFT' },
     ],
-    [
-      { slot: 'COVER', version: 'BOTH' },
-      { purpose: 'COVER', imageTarget: 'LEGACY_COVER' },
-    ],
     [{ slot: 'COLLECTION_IMAGE' }, { purpose: 'COLLECTION_IMAGE', imageTarget: 'COLLECTION' }],
   ])('%j uploads as %j', (target, expected) => {
     expect(uploadTargetOf(target)).toEqual(expected);
@@ -32,7 +28,6 @@ describe('image targets', () => {
       [
         { slot: 'COVER', version: 'DRAFT' },
         { slot: 'BACKGROUND', version: 'DRAFT' },
-        { slot: 'COVER', version: 'BOTH' },
         { slot: 'COLLECTION_IMAGE' },
       ] satisfies ImageTarget[]
     ).map((target) => JSON.stringify(uploadTargetOf(target)));
