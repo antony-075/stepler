@@ -47,8 +47,11 @@ test.afterAll(async () => {
   workerAdmin = null;
 });
 
-/** A collection of the worker's admin whose main link takes every kind. */
-async function admin(browser: Browser, title = 'Весілля Олі та Тараса') {
+/**
+ * A collection of the worker's admin whose main link takes every kind; `gallery: false` hides
+ * the shared gallery (guests see only their own frames).
+ */
+async function admin(browser: Browser, title = 'Весілля Олі та Тараса', gallery = true) {
   const page = await signedInAdmin(browser);
   const { id } = await createCollectionViaApi(page, title);
   const main = (await guestLinks(page, id)).find((link) => link.isDefault)!;
@@ -59,7 +62,7 @@ async function admin(browser: Browser, title = 'Весілля Олі та Та�
         canUploadVideos: true,
         canUploadDocuments: true,
         canSubmitText: true,
-        canViewGallery: true,
+        canViewGallery: gallery,
         canDeleteOwn: true,
       },
     },
@@ -156,6 +159,38 @@ test.describe('guest page templates at 360px', () => {
       const owner = await admin(browser);
       await join(guest, owner.path);
       await publish(owner.page, guest, owner.id, templateId);
+      await checkPage(guest);
+      await owner.done();
+    });
+  }
+});
+
+// Owner remarks 91, 93, 95, 97: a phone at 390 on a link that shows only the guest's own frames.
+// No template draws «Усі кадри» then; the page still fits, reaches the bottom of the window, and
+// keeps the header clear of the content.
+test.describe('guest page templates at 390px, gallery hidden', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const templateId of TEMPLATE_IDS) {
+    test(`${templateId}: only «Ваші кадри», no «Усі кадри»; the page fills the window`, async ({
+      page: guest,
+      browser,
+    }) => {
+      const owner = await admin(browser, 'Весілля Олі та Тараса', false);
+      await join(guest, owner.path);
+      await publish(owner.page, guest, owner.id, templateId);
+      await expect(guest.locator('[data-slot="guest-all-frames"]')).toHaveCount(0);
+      await expect(guest.getByRole('heading', { name: 'Усі кадри' })).toHaveCount(0);
+      await expect(shown(guest.getByText('Ваші кадри побачить лише організатор'))).toBeVisible();
+      // The footer ends at or below the window's bottom edge: no empty band under it.
+      const gap = await guest.evaluate(() => {
+        const footers = [...document.querySelectorAll('[data-template] footer')].filter(
+          (footer) => (footer as HTMLElement).offsetParent !== null,
+        );
+        const bottom = Math.max(...footers.map((f) => f.getBoundingClientRect().bottom));
+        return window.innerHeight - (bottom + window.scrollY);
+      });
+      expect(gap).toBeLessThanOrEqual(1);
       await checkPage(guest);
       await owner.done();
     });

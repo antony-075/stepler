@@ -307,15 +307,33 @@ test.describe('guest page editor', () => {
     for (const src of sources) expect(src.startsWith('data:image/svg+xml')).toBe(true);
     await expect(frame.locator('[data-slot="guest-own-frames"]')).toBeVisible();
 
-    const state = page.getByRole('combobox', { name: /^Стан сторінки/ });
-    await state.click();
-    await page.getByRole('option', { name: 'Посилання лише для перегляду' }).click();
+    // Two controls (owner remark 92): the link's access, then the content.
+    const access = page.getByRole('combobox', { name: /^Доступ за посиланням/ });
+    const content = page.getByRole('combobox', { name: /^Вміст/ });
+    await expect(access).toContainText('Бачать усе');
+    await expect(content).toContainText('Мої й чужі');
+
+    // Only their own: never «Усі кадри» (remark 91); others' content is refused with a reason.
+    await access.click();
+    await page.getByRole('option', { name: 'Лише своє' }).click();
+    await expect(frame.locator('[data-slot="guest-own-frames"]')).toBeVisible();
+    await expect(frame.locator('[data-slot="guest-all-frames"]')).toHaveCount(0);
+    await expect(content).toContainText('Лише мої');
+    await content.click();
+    const others = page.getByRole('option', { name: /^Лише чужі/ });
+    await expect(others).toHaveAttribute('aria-disabled', 'true');
+    await expect(others).toContainText('Посилання не показує чужі кадри');
+    await page.keyboard.press('Escape');
+
+    await access.click();
+    await page.getByRole('option', { name: 'Лише перегляд' }).click();
     await expect(frame.locator('[data-slot="guest-own-frames"]')).toHaveCount(0);
     await expect(frame.getByRole('button', { name: 'Додати фото й відео' })).toHaveCount(0);
 
-    await state.click();
-    await page.getByRole('option', { name: 'Посилання призупинене' }).click();
+    await access.click();
+    await page.getByRole('option', { name: 'Призупинено' }).click();
     await expect(frame.getByRole('heading', { name: 'Посилання призупинене' })).toBeVisible();
+    await expect(content).toBeDisabled();
 
     // The tablet frame: a 820px wide page inside.
     await page.getByRole('radio', { name: 'Планшет' }).click();
@@ -337,9 +355,11 @@ test.describe('guest page editor', () => {
       await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
     ).toBeLessThanOrEqual(0);
     const panel = page.locator('[data-slot="settings-panel"]');
-    for (const name of ['Обкладинка', 'Привітання', 'Фон', 'Акцент', 'Шрифт', 'Розташування'])
+    for (const name of ['Привітання', 'Фон', 'Акцент', 'Шрифт', 'Розташування'])
       await openSection(page, name);
     expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    // The cover lives in «Розташування» with its placement (remark 89), once.
+    await expect(panel.locator('[data-slot="image-control"][data-image="cover"]')).toHaveCount(1);
     // «Зберегти» stays in view in the preview pane's header (remark 71).
     await panel.evaluate((el) => el.scrollTo(0, el.scrollHeight));
     await expect(page.getByRole('button', { name: /^Зберегти/ })).toBeInViewport();
