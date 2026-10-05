@@ -20,8 +20,27 @@ type SiteHeaderProps = {
 
 /**
  * The text wordmark «stepler» (Geologica 600, SHRP 100; direction C has no graphic mark yet,
- * DESIGN-SYSTEM.md §5.18) plus an optional slot on the right; public pages show the wordmark
- * only. Synchronous so both server pages and the client app shell can render it.
+ * DESIGN-SYSTEM.md §5.18), linking to `href`; 44px tall. Also the guest page template's brand.
+ */
+export function SiteWordmark({ href = '/' }: { href?: string }) {
+  const t = useTranslations('brand');
+  return (
+    <Link
+      href={href}
+      translate="no"
+      className={cn(
+        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center rounded-control px-1 text-xl text-foreground no-underline',
+        focusRing,
+      )}
+    >
+      <span className="font-wordmark lowercase">{t('name')}</span>
+    </Link>
+  );
+}
+
+/**
+ * The wordmark plus an optional slot on the right; public pages show the wordmark only.
+ * Synchronous so both server pages and the client app shell can render it.
  */
 export function SiteHeader({
   variant = 'public',
@@ -29,21 +48,11 @@ export function SiteHeader({
   children,
   container = 'stepler-container',
 }: SiteHeaderProps) {
-  const t = useTranslations('brand');
   const app = variant === 'app';
   return (
     <header className={app ? 'border-b border-border bg-background' : undefined}>
       <div className={cn(container, 'flex h-14 items-center justify-between gap-3')}>
-        <Link
-          href={brandHref}
-          translate="no"
-          className={cn(
-            '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center rounded-control px-1 text-xl text-foreground no-underline',
-            focusRing,
-          )}
-        >
-          <span className="font-wordmark lowercase">{t('name')}</span>
-        </Link>
+        <SiteWordmark href={brandHref} />
         {children}
       </div>
     </header>

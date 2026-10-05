@@ -2,6 +2,8 @@
   "extends": "@stepler/config/tsconfig/next.json",
   "compilerOptions": {
     "types": ["node"],
+    // @stepler/templates ships TS sources whose relative imports name the .ts file.
+    "allowImportingTsExtensions": true,
     "paths": { "@/*": ["./src/*"] }
   },
   "include": ["next-env.d.ts", "src", "messages", "*.ts", "*.mjs", ".next/types/**/*.ts"],

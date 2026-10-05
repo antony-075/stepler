@@ -1,0 +1,133 @@
+/*
+ * The template fonts as plain @font-face, for Storybook (.storybook/preview.tsx), with their
+ * --font-tpl-* variables on :root. apps/web loads the same files with next/font/local
+ * (apps/web/src/guest/template-fonts.ts), which sets each variable on the template root only for
+ * the fonts that template uses. Generated from FONTS (src/core/fonts.ts); sources, licences and
+ * sizes in CREDITS.md. Geologica's variable is in ../src/styles.css (the app's interface font).
+ */
+
+@font-face {
+  font-family: 'Geologica';
+  src: url('./geologica.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Manrope';
+  src: url('./manrope.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Unbounded';
+  src: url('./unbounded.woff2') format('woff2');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stepler Display Serif';
+  src: url('./playfair-display.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Cormorant';
+  src: url('./cormorant.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stepler Book Serif';
+  src: url('./lora.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nunito';
+  src: url('./nunito.woff2') format('woff2');
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('./rubik.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Montserrat Alternates';
+  src: url('./montserrat-alternates-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Montserrat Alternates';
+  src: url('./montserrat-alternates-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stepler Rounded';
+  src: url('./comfortaa.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stepler Text Serif';
+  src: url('./pt-serif-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stepler Text Serif';
+  src: url('./pt-serif-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Golos Text';
+  src: url('./golos-text.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-tpl-manrope: 'Manrope', sans-serif;
+  --font-tpl-unbounded: 'Unbounded', sans-serif;
+  --font-tpl-playfair-display: 'Stepler Display Serif', serif;
+  --font-tpl-cormorant: 'Cormorant', serif;
+  --font-tpl-lora: 'Stepler Book Serif', serif;
+  --font-tpl-nunito: 'Nunito', sans-serif;
+  --font-tpl-rubik: 'Rubik', sans-serif;
+  --font-tpl-montserrat-alternates: 'Montserrat Alternates', sans-serif;
+  --font-tpl-comfortaa: 'Stepler Rounded', sans-serif;
+  --font-tpl-pt-serif: 'Stepler Text Serif', serif;
+  --font-tpl-golos-text: 'Golos Text', sans-serif;
+}

@@ -321,10 +321,3 @@ function UploadSummaryRejectedOnly({ line, context }: { line: string; context: G
     </details>
   );
 }
-
-/** «Не закривайте сторінку…» while anything is on its way. */
-export function KeepOpenNote({ busy }: { busy: boolean }) {
-  const t = useTranslations('guest.upload');
-  if (!busy) return null;
-  return <p className="text-center text-sm text-muted-foreground sm:text-left">{t('keepOpen')}</p>;
-}

@@ -50,6 +50,7 @@ pnpm infra:down   # docker compose -f docker/compose.yaml --env-file docker/.env
 | S3 emulator API | http://127.0.0.1:8333 | `pnpm infra:up`, then `pnpm storage:bootstrap` |
 | Bucket browser (SeaweedFS filer UI; no auth, localhost only) | http://127.0.0.1:8888/buckets/ | `pnpm infra:up` |
 | Storybook | http://localhost:6006 | `pnpm storybook` |
+| Guest page templates gallery (Storybook) | http://localhost:6007 | `pnpm templates:dev` |
 | e2e servers | web :3100, api :4100 | `pnpm e2e` |
 
 Staging and provider consoles: https://stepler-staging.onrender.com (site), https://dashboard.render.com (deploys, logs, env), https://dash.cloudflare.com (R2, Turnstile), https://app.brevo.com (staging email), https://console.cloud.google.com/apis/credentials (OAuth clients).
@@ -77,11 +78,12 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm release:check`                            | Full pre-release check before a manual staging deploy: format, lint, typecheck, tests, builds, Storybook, three-browser e2e, Docker image checks (needs `pnpm infra:up`) |
 | `pnpm build`                                    | Build all packages and apps                                   |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion). In `@stepler/templates`, `test` runs the core's unit tests in Node and every template story (each fixture at 360/390/768/1440, with axe) in headless Chromium |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm e2e -- --shard=1/2`                       | Run one half of the Playwright tests (CI runs shards `1/2` and `2/2` in parallel); any Playwright flag works after `--`, e.g. `-- --grep @desktop` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
+| `pnpm templates:dev`     | The guest page templates gallery (`apps/templates` Storybook) on 6007: every template against fixture models at 360/390/768/1440 |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
 | `bash docker/scripts/verify-images.sh`          | Build the api, worker and web images and check non-root, no `.env`, no dev deps, health, proxy, and that the worker starts and stops on SIGTERM |
 | `pnpm db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |

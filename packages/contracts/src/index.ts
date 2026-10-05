@@ -132,6 +132,25 @@ export {
   type UpdateGuestSessionRequest,
 } from './guest.js';
 export {
+  ACCENT_PRESETS,
+  alignSchema,
+  backgroundSettingsSchema,
+  cornersSchema,
+  coverPlacementSchema,
+  FONT_IDS,
+  hexColorSchema,
+  templateIdSchema,
+  themeSettingsSchema,
+  type Align,
+  type BackgroundKind,
+  type BackgroundSettings,
+  type Corners,
+  type CoverPlacement,
+  type FontId,
+  type Hex,
+  type ThemeSettings,
+} from './guest-page.js';
+export {
   healthLiveResponseSchema,
   healthReadyResponseSchema,
   type HealthLiveResponse,

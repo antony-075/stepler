@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>T4 · Листівка, телефон</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@500..700&amp;family=Nunito:ital,wght@0,400..800;1,400..800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2E4E8F}a:hover{color:#24304F}
+.st{border:0;padding:5px;margin:0;cursor:pointer;font:inherit;text-align:left;transition:box-shadow 140ms ease-out}
+.st-red{background:radial-gradient(circle at 5px 5px,#FFFCF5 2.6px,transparent 3px) -5px -5px/10px 10px,#B3303B}
+.st-navy{background:radial-gradient(circle at 5px 5px,#FFFCF5 2.6px,transparent 3px) -5px -5px/10px 10px,#2E4E8F}
+.st:hover{box-shadow:0 8px 14px -8px rgba(36,48,79,0.6)}
+.t4-lang:hover{background:#FFFFFF}
+.t4-demo:hover{color:#FFFFFF}
+.st:focus-visible,.t4-lang:focus-visible,.t4-demo:focus-visible,a:focus-visible{outline:2px solid #24304F;outline-offset:3px}
+.t4-demo:focus-visible{outline-color:#FFFCF5}
+.ph{position:relative;overflow:hidden}
+.ph::after{content:"";position:absolute;inset:0;background:radial-gradient(100% 70% at 25% 15%,rgba(255,255,255,0.35),rgba(255,255,255,0) 60%);pointer-events:none}
+.pill{position:absolute;z-index:1;bottom:5px;padding:2px 6px;border-radius:999px;background:rgba(36,48,79,0.88);color:#FFFFFF;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:3px}
+@media (prefers-reduced-motion: reduce){.st{transition:none}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: radial-gradient(rgba(255, 255, 255, 0.6) 1.4px, transparent 1.8px) 0 0 / 16px 16px, #C9D7E8; color: #24304F; font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; flex-direction: column">
+
+  <div role="group" aria-label="Стан макета" style="flex-shrink: 0; height: 40px; background: #24304F; display: flex; align-items: center; justify-content: center; gap: 4px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px">
+    <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ true }}">
+      <button type="button" class="t4-demo" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #FFFCF5; color: #24304F; font: inherit; font-weight: 600; cursor: pointer">Перший візит</button>
+      <button type="button" class="t4-demo" aria-pressed="false" onClick="{{ showAfter }}" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #C9D2E4; font: inherit; cursor: pointer">Після завантаження</button>
+    </sc-if>
+    <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}">
+      <button type="button" class="t4-demo" aria-pressed="false" onClick="{{ showFirst }}" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #C9D2E4; font: inherit; cursor: pointer">Перший візит</button>
+      <button type="button" class="t4-demo" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #FFFCF5; color: #24304F; font: inherit; font-weight: 600; cursor: pointer">Після завантаження</button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ true }}">
+    <header style="flex-shrink: 0; height: 56px; padding: 0 16px; display: flex; align-items: center; justify-content: flex-end">
+      <button type="button" class="t4-lang" aria-label="Мова: українська. Змінити мову" style="height: 44px; padding: 0 14px; border: 0; border-radius: 999px; background: rgba(255, 252, 245, 0.85); color: #24304F; font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; cursor: pointer">
+        <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><rect width="18" height="6" rx="1" fill="#0057B7"></rect><rect y="6" width="18" height="6" rx="1" fill="#FFD700"></rect></svg>
+        Українська
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+    </header>
+
+    <main style="flex-shrink: 0; margin: 0 16px; padding: 6px; border-radius: 10px; background: repeating-linear-gradient(135deg, #B3303B 0 12px, #FFFCF5 12px 18px, #2E4E8F 18px 30px, #FFFCF5 30px 36px); box-shadow: 0 22px 40px -24px rgba(36, 48, 79, 0.55)">
+      <div style="border-radius: 6px; background: #FFFCF5; padding: 22px 18px 18px; display: flex; flex-direction: column; align-items: center; text-align: center">
+        <div style="position: relative; width: 100%; height: 266px">
+          <figure style="position: absolute; left: 50%; top: 10px; margin: 0 0 0 -108px; width: 216px; box-sizing: border-box; padding: 10px 10px 36px; background: #FFFFFF; transform: rotate(-3deg); box-shadow: 0 1px 2px rgba(36, 48, 79, 0.12), 0 12px 24px -12px rgba(36, 48, 79, 0.4)">
+            <div class="ph" role="img" aria-label="Обкладинка" style="width: 196px; height: 196px; background: linear-gradient(160deg, #F2C6A8 0%, #E3A27F 55%, #C97F62 100%)">
+              <span aria-hidden="true" style="position: absolute; z-index: 1; right: 8px; bottom: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.8)">IMG_2041</span>
+            </div>
+            <span aria-hidden="true" style="position: absolute; left: 50%; top: -12px; width: 86px; height: 24px; margin-left: -43px; transform: rotate(4deg); background: rgba(236, 222, 184, 0.82); box-shadow: 0 1px 1px rgba(36, 48, 79, 0.08)"></span>
+          </figure>
+          <div style="position: absolute; right: -4px; top: 190px; width: 82px; height: 82px; box-sizing: border-box; border: 4px double #2E4E8F; border-radius: 50%; background: rgba(255, 252, 245, 0.88); transform: rotate(-12deg); display: flex; align-items: center; justify-content: center">
+            <p style="margin: 0; font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 14px; line-height: 1.1; font-weight: 700; color: #2E4E8F">12<br>кадрів</p>
+          </div>
+        </div>
+
+        <h1 style="margin: 12px 0 0; font-family: 'Comfortaa', 'Nunito', system-ui, sans-serif; font-size: 27px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance">Весілля Олі та&#160;Тараса</h1>
+        <p style="margin: 10px 0 0; max-width: 290px; font-size: 16px; line-height: 1.5; color: #3A4562; text-wrap: pretty">Дякуємо, що ви з нами! Додайте свої фото й відео з цього вечора.</p>
+
+        <div style="align-self: stretch; margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px">
+          <button type="button" class="st st-red" onClick="{{ showAfter }}" style="transform: rotate(-2deg)">
+            <span style="display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 92px; box-sizing: border-box; padding: 10px 10px 9px; background: #B3303B; color: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+              <span style="font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 15px; line-height: 1.2; font-weight: 700">Додати фото й відео</span>
+            </span>
+          </button>
+          <button type="button" class="st st-navy" style="transform: rotate(1.5deg)">
+            <span style="display: flex; flex-direction: column; justify-content: space-between; gap: 10px; min-height: 92px; box-sizing: border-box; padding: 10px 10px 9px; background: #FFFCF5; color: #2E4E8F; box-shadow: inset 0 0 0 1.5px #2E4E8F">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+              <span style="font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 15px; line-height: 1.2; font-weight: 700">Написати побажання</span>
+            </span>
+          </button>
+        </div>
+        <p style="margin: 16px 0 0; font-size: 12.5px; line-height: 1.45; color: #4F5A73">Додаючи вміст, ви погоджуєтеся з <a href="#">Умовами використання</a> і <a href="#">Політикою конфіденційності</a>.</p>
+      </div>
+    </main>
+
+    <footer style="margin: 14px 16px 0; font-size: 12px; line-height: 1.5; color: #24304F; text-align: center; display: flex; flex-wrap: wrap; justify-content: center; column-gap: 12px">
+      <span>© Stepler</span><a href="#" style="color: #24304F">Умови використання</a><a href="#" style="color: #24304F">Політика конфіденційності</a>
+    </footer>
+  </sc-if>
+
+  <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}">
+    <div style="flex-shrink: 0; margin: 12px 16px 0; padding: 4px; border-radius: 8px; background: repeating-linear-gradient(135deg, #B3303B 0 9px, #FFFCF5 9px 13px, #2E4E8F 13px 22px, #FFFCF5 22px 26px)">
+      <div style="border-radius: 5px; background: #FFFCF5; padding: 10px 14px; display: flex; align-items: center; gap: 14px">
+        <div style="flex-shrink: 0; padding: 4px 4px 12px; background: #FFFFFF; transform: rotate(-4deg); box-shadow: 0 6px 12px -6px rgba(36, 48, 79, 0.45)">
+          <div class="ph" role="img" aria-label="Обкладинка" style="width: 46px; height: 46px; background: linear-gradient(160deg, #F2C6A8 0%, #E3A27F 55%, #C97F62 100%)"></div>
+        </div>
+        <div style="min-width: 0">
+          <p style="margin: 0; font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 17px; line-height: 1.25; font-weight: 700">Весілля Олі та&#160;Тараса</p>
+          <p style="margin: 2px 0 0; font-size: 13px; color: #4F5A73">18 кадрів</p>
+        </div>
+      </div>
+    </div>
+
+    <main style="flex-grow: 1; min-height: 0; padding: 0 16px">
+      <p role="status" style="margin: 14px 0 0; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: #FFFCF5; font-size: 14px; font-weight: 600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2C7350" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+        Додано 6 кадрів. Дякуємо!
+      </p>
+
+      <section aria-labelledby="t4p-mine" style="margin-top: 14px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <h2 id="t4p-mine" style="margin: 0; font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 22px; font-weight: 700">Ваші кадри</h2>
+          <span style="font-size: 14px; font-weight: 600">6 кадрів</span>
+        </div>
+        <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px">
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(-2deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Ваше фото, кадр 18" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #F1DFA6 0%, #DCC07A 100%)"><span class="pill" style="left: 5px">#018</span></div>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(1.5deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Ваше відео, кадр 17, 12 секунд" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #B8D0E6 0%, #8FB0D3 100%)"><span class="pill" style="left: 5px">#017</span><span class="pill" style="right: 5px"><svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 3 21 12 6 21 6 3"></polygon></svg>0:12</span></div>
+          </figure>
+          <figure style="margin: 0; position: relative; padding: 14px 10px 10px; background: #FFF0B3; transform: rotate(-1deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5); display: flex; flex-direction: column">
+            <span aria-hidden="true" style="position: absolute; left: 50%; top: -8px; width: 44px; height: 16px; margin-left: -22px; transform: rotate(-5deg); background: rgba(236, 222, 184, 0.85)"></span>
+            <span aria-hidden="true" style="font-family: 'Comfortaa', sans-serif; font-size: 34px; line-height: 0.6; height: 16px; font-weight: 700; color: #B3303B">&#8220;</span>
+            <blockquote style="margin: 2px 0 0; font-size: 12px; line-height: 1.35; font-weight: 600; color: #24304F">Щастя вам і тепла, рідні!</blockquote>
+            <figcaption style="margin-top: auto; padding-top: 6px"><span style="padding: 2px 6px; border-radius: 999px; background: rgba(36, 48, 79, 0.88); color: #FFFFFF; font-size: 11px; font-weight: 700">#016</span></figcaption>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(2deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Ваше фото, кадр 15" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #BFDCCB 0%, #93BFA5 100%)"><span class="pill" style="left: 5px">#015</span></div>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(-1.5deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Ваше фото, кадр 14" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #EFB3A8 0%, #D98778 100%)"><span class="pill" style="left: 5px">#014</span></div>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(1deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Ваше фото, кадр 13" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #D6C8E8 0%, #B3A0D2 100%)"><span class="pill" style="left: 5px">#013</span></div>
+          </figure>
+        </div>
+      </section>
+
+      <section aria-labelledby="t4p-all" style="margin-top: 24px">
+        <div style="display: flex; align-items: baseline; justify-content: space-between">
+          <h2 id="t4p-all" style="margin: 0; font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 22px; font-weight: 700">Усі кадри</h2>
+          <span style="font-size: 14px; font-weight: 600">18 кадрів</span>
+        </div>
+        <div style="margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px">
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(1deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Фото гостя, кадр 12" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #F4D2B8 0%, #E2A988 100%)"><span class="pill" style="left: 5px">#012</span></div>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(-2deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Фото гостя, кадр 11" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #C4D8C0 0%, #9DBE97 100%)"><span class="pill" style="left: 5px">#011</span></div>
+          </figure>
+          <figure style="margin: 0; padding: 6px 6px 18px; background: #FFFFFF; transform: rotate(1.5deg); box-shadow: 0 8px 16px -10px rgba(36, 48, 79, 0.5)">
+            <div class="ph" role="img" aria-label="Фото гостя, кадр 10" style="aspect-ratio: 1 / 1; border-radius: 2px; background: linear-gradient(160deg, #C3CDEA 0%, #9DAAD8 100%)"><span class="pill" style="left: 5px">#010</span></div>
+          </figure>
+        </div>
+      </section>
+    </main>
+
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; background: #FFFCF5; box-shadow: 0 -10px 24px -16px rgba(36, 48, 79, 0.5)">
+      <div aria-hidden="true" style="height: 5px; background: repeating-linear-gradient(135deg, #B3303B 0 9px, #FFFCF5 9px 13px, #2E4E8F 13px 22px, #FFFCF5 22px 26px)"></div>
+      <div style="padding: 12px 16px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <button type="button" class="st st-red" style="transform: rotate(-1deg)">
+          <span style="display: flex; align-items: center; gap: 8px; min-height: 50px; box-sizing: border-box; padding: 6px 10px; background: #B3303B; color: #FFFFFF; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
+            <span style="font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 14px; line-height: 1.2; font-weight: 700">Додати фото й відео</span>
+          </span>
+        </button>
+        <button type="button" class="st st-navy" style="transform: rotate(1deg)">
+          <span style="display: flex; align-items: center; gap: 8px; min-height: 50px; box-sizing: border-box; padding: 6px 10px; background: #FFFCF5; color: #2E4E8F; box-shadow: inset 0 0 0 1.5px #2E4E8F">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            <span style="font-family: 'Comfortaa', 'Nunito', sans-serif; font-size: 14px; line-height: 1.2; font-weight: 700">Написати побажання</span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const after = s.view === 'after';
+    return {
+      isFirst: !after,
+      isAfter: after,
+      showFirst: function () { self.setState({ view: 'first' }); },
+      showAfter: function () { self.setState({ view: 'after' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
