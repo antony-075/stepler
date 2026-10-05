@@ -22,6 +22,18 @@
   }
 }
 
+/* The admin page column (DESIGN-SYSTEM.md §6.0; owner remark 102, 2026-10-05): fluid, the full
+   width right of the sidebar with gutters that grow with the screen (16px on a phone, 48px from
+   1600px), capped only on very wide screens. One column for every admin page and the top bar;
+   text-heavy pages cap their own form columns inside it. */
+@utility admin-container {
+  width: 100%;
+  max-width: 2200px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 3vw, 48px);
+  box-sizing: border-box;
+}
+
 /* Legal documents (DESIGN-SYSTEM.md §6.11): the Markdown body of /legal/*, read as a document.
    17px / 1.6 for long reading (the page caps the measure at 68ch), real h2/h3 in the heading
    scale (the values of `type-h2` / `type-h3`, which @utility cannot compose), outside list

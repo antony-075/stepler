@@ -25,7 +25,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AccountPage() {
   const t = await getTranslations();
   return (
-    <AdminPage>
+    // A form page: a readable column inside the fluid admin frame (DESIGN-SYSTEM.md §6.0).
+    <AdminPage className="*:max-w-[1240px]">
       <header className="grid gap-2">
         <h1 className="type-h1">{t('account.pageTitle')}</h1>
         <p className="max-w-[60ch] text-muted-foreground">{t('account.description')}</p>

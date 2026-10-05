@@ -175,7 +175,8 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
         <TabsContent value="appearance">
           <GuestPageTab collection={collection} />
         </TabsContent>
-        <TabsContent value="settings">
+        {/* A form tab: a readable column inside the fluid admin frame (DESIGN-SYSTEM.md §6.0). */}
+        <TabsContent value="settings" className="max-w-[1240px]">
           <CollectionSettingsPanel collection={collection} onDeleted={onDeleted} />
         </TabsContent>
       </Tabs>
