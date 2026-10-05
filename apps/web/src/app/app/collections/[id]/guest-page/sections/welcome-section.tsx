@@ -27,7 +27,7 @@ export function WelcomeSection({ editor, readOnly }: SectionProps) {
         ? t('lineBreaks')
         : undefined;
   return (
-    <Field id="guest-page-welcome" label={t('label')} description={t('helper')} error={error}>
+    <Field id="guest-page-welcome" label={t('label')} hint={t('helper')} error={error}>
       {(control) => (
         <div className="grid gap-1">
           <Textarea
