@@ -907,12 +907,20 @@
         "FFFFFF": "white",
         "EFE8DD": "sand",
         "E4EAEE": "blue-grey",
-        "ECE6F0": "lilac"
+        "ECE6F0": "lilac",
+        "F1EADF": "linen",
+        "F4EEE4": "cream",
+        "FAF6EF": "paper",
+        "EFE6E6": "ash rose",
+        "E9ECE4": "sage"
       },
       "gradientNames": {
         "mist": "mist",
         "sand": "sand",
-        "lilac": "lilac"
+        "lilac": "lilac",
+        "linen": "linen",
+        "blush": "blush",
+        "sage": "sage"
       },
       "dim": "Dimming",
       "dimValue": "{value}%",
@@ -1063,7 +1071,11 @@
       }
     },
     "journal": {
-      "name": "Journal"
+      "name": "Journal",
+      "locks": {
+        "align": "In «Journal» the text is always centred.",
+        "corners": "«Journal» keeps its own corners, like a printed album."
+      }
     },
     "postcard": {
       "name": "Postcard"
