@@ -9,7 +9,8 @@ import { LanguageSwitch } from '@/i18n/language-switch';
  */
 export function GuestChrome({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
+    // `viewport-fit=cover` on the guest route: keep clear of the notch and the home indicator.
+    <div className="flex min-h-dvh flex-col bg-background pt-[env(safe-area-inset-top)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)]">
       <SiteHeader>
         <LanguageSwitch variant="header" />
       </SiteHeader>

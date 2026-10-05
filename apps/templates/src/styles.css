@@ -168,11 +168,23 @@
   hyphens: auto;
   position: relative;
   isolation: isolate;
-  min-height: 100svh;
+  /* The dynamic viewport: the page always reaches the window's bottom edge, whatever the
+     browser's bars do (owner, items 95, 96). */
+  min-height: 100dvh;
+  /* The guest page is `viewport-fit=cover` (items 96): keep content off the notch and the
+     rounded corners; the background still runs edge to edge. */
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  padding-top: env(safe-area-inset-top);
   background-color: var(--tpl-bg);
   background-image: var(--tpl-gradient);
   color: var(--tpl-body);
   font-family: var(--tpl-font-body);
+}
+
+/* The footer ends above the home indicator (item 96); fixed and sticky bars add the inset
+   themselves. */
+[data-template] footer {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
 
 /* Headings in the template's heading face, the app's slots included («Ваші кадри»). */

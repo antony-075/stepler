@@ -6,8 +6,9 @@
 // stops at React 18 and was last released in 2023 (rule 14).
 // - The screen is a real viewport (390×844, 820×1180, 1440×900 CSS px) scaled to fit the pane.
 //   The system bars are part of the screen, as on the device: the phone's status bar with the
-//   Dynamic Island and the home indicator, the tablet's status bar, the laptop's browser bar. The
-//   page gets what is left, so its own header is never hidden under them.
+//   Dynamic Island and the home indicator's safe area, the tablet's status bar and home
+//   indicator, the laptop's browser bar. The page gets what is left (owner, item 96), so its
+//   header and its fixed bottom bars are never hidden under them.
 // - The bars take the template's background (`--tpl-bg`) with the text colour that reads on it,
 //   like Safari tinting the status bar to the page.
 // - The hardware itself is dark graphite in both themes (it is a picture of a device) with a thin
@@ -38,14 +39,14 @@ type Geometry = {
 const GEOMETRY: Record<PreviewDevice, Geometry> = {
   phone: {
     screen: { width: 390, height: 844 },
-    bars: { top: 54, bottom: 0 },
+    bars: { top: 54, bottom: 34 },
     bezel: { x: 11, top: 11, bottom: 11 },
     extra: { x: 6, y: 0, widthFactor: 1 },
     maxScale: 0.7,
   },
   tablet: {
     screen: { width: 820, height: 1180 },
-    bars: { top: 28, bottom: 0 },
+    bars: { top: 28, bottom: 20 },
     bezel: { x: 16, top: 16, bottom: 16 },
     extra: { x: 4, y: 4, widthFactor: 1 },
     maxScale: 0.75,
@@ -135,12 +136,25 @@ export function DeviceFrame({
     >
       {bar}
       <div className="relative min-h-0 flex-1 overflow-hidden">{children(scale)}</div>
-      {device === 'phone' ? (
-        <span
+      {bars.bottom > 0 ? (
+        // The home indicator's safe area (owner, item 96): as on the device, the page's own
+        // bars end above it, so a fixed action bar in the preview sits where it would really.
+        <div
           aria-hidden="true"
-          className="pointer-events-none absolute left-1/2 -translate-x-1/2 rounded-full bg-black/75 outline outline-white/50"
-          style={{ bottom: 8 * scale, width: 134 * scale, height: Math.max(2, 5 * scale) }}
-        />
+          className="relative shrink-0"
+          style={{ height: bars.bottom * scale, backgroundColor: barColors.background }}
+        >
+          <span
+            className="absolute left-1/2 -translate-x-1/2 rounded-full"
+            style={{
+              bottom: 8 * scale,
+              width: (device === 'phone' ? 134 : 200) * scale,
+              height: Math.max(2, 5 * scale),
+              backgroundColor: barColors.foreground,
+              opacity: 0.85,
+            }}
+          />
+        </div>
       ) : null}
     </div>
   );

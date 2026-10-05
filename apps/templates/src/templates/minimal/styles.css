@@ -18,7 +18,7 @@
 [data-template='minimal'] .mn-page {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 [data-template='minimal'] .mn-aside {
@@ -228,6 +228,9 @@
 
 [data-template='minimal'] .mn-sections {
   display: grid;
+  /* The sections take the room left, so the footer ends at the window's bottom (item 95). */
+  flex: 1 0 auto;
+  align-content: start;
   gap: 72px;
   width: 100%;
   max-width: 720px;

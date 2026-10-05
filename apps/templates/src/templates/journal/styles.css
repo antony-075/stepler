@@ -17,7 +17,7 @@
 [data-template='journal'] .jr-page {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 [data-template='journal'] .jr-aside {
@@ -231,8 +231,17 @@
   text-align: center;
 }
 
+[data-template='journal'] .jr-main {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+
 [data-template='journal'] .jr-sections {
   display: grid;
+  /* The sections take the room left, so the footer ends at the window's bottom (item 95). */
+  flex: 1 0 auto;
+  align-content: start;
   gap: 40px;
   width: 100%;
   max-width: 720px;
@@ -423,7 +432,7 @@
   [data-template='journal'] .jr-main {
     display: flex;
     flex-direction: column;
-    min-height: 100svh;
+    min-height: 100dvh;
   }
 
   [data-template='journal'] .jr-sections {
