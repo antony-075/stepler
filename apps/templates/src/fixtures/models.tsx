@@ -53,34 +53,39 @@ const WISHES = [
   'Гірко! Найкращий перший танець.',
 ];
 
+/** Each frame in a wrapper, as the app's list renders it (`<div data-item>`). */
 function frames(count: number, own: boolean) {
-  return Array.from({ length: count }, (_, i) => {
-    const number = count - i;
-    const numbered = own ? { number } : {};
-    if (i % 4 === 1) {
-      return (
-        <Frame
-          key={i}
-          kind="text"
-          {...numbered}
-          text={WISHES[Math.floor(i / 4) % WISHES.length]}
-          accessibleName={`Кадр ${number}, побажання`}
-          onOpen={() => {}}
-        />
-      );
-    }
+  return Array.from({ length: count }, (_, i) => (
+    <div key={i} data-item={i}>
+      {frame(count, own, i)}
+    </div>
+  ));
+}
+
+function frame(count: number, own: boolean, i: number) {
+  const number = count - i;
+  const numbered = own ? { number } : {};
+  if (i % 4 === 1) {
     return (
       <Frame
-        key={i}
-        kind={i % 4 === 2 ? 'video' : 'photo'}
+        kind="text"
         {...numbered}
-        {...(i % 4 === 2 ? { meta: '0:12' } : {})}
-        media={<img alt="" src={samplePhoto((i * 47 + 12) % 360)} />}
-        accessibleName={`Кадр ${number}, ${i % 4 === 2 ? 'відео' : 'фото'}`}
+        text={WISHES[Math.floor(i / 4) % WISHES.length]}
+        accessibleName={`Кадр ${number}, побажання`}
         onOpen={() => {}}
       />
     );
-  });
+  }
+  return (
+    <Frame
+      kind={i % 4 === 2 ? 'video' : 'photo'}
+      {...numbered}
+      {...(i % 4 === 2 ? { meta: '0:12' } : {})}
+      media={<img alt="" src={samplePhoto((i * 47 + 12) % 360)} />}
+      accessibleName={`Кадр ${number}, ${i % 4 === 2 ? 'відео' : 'фото'}`}
+      onOpen={() => {}}
+    />
+  );
 }
 
 function FramesSection({

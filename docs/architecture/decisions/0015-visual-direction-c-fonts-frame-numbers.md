@@ -18,7 +18,7 @@ Three parts of that choice reach beyond styling:
 ### Visual direction
 
 - **Direction C «Контактний аркуш»** (contact sheet) is the visual direction of the whole product: light-table background, white sheets, a flat 1px grid of equal frames, frame number and time under each frame, ink for admin actions, a rare red-orange "wax pencil" for selection, "new", the active tab and the guest's main action, dusty violet for links, information and **focus**. The focus ring (and a focused field's edge) is never the pencil: red-orange around a field reads as an error (owner change 2026-10-02).
-- **Plus one moment from Direction B «Відбиток»:** on the guest success screen, the guest's own last frames lie as a small stack of prints (±1.5° rotation, one shadow, a "develop" fade). This is the only place in the product with rotation, overlap or a shadow on a frame.
+- **Plus one moment from Direction B «Відбиток»:** on the guest success screen, the guest's own last frames lie as a small stack of prints (±1.5° rotation, one shadow, a "develop" fade). This is the only place in the product with rotation, overlap or a shadow on a frame — except inside the guest page template «Листівка» (T4, ADR 0017), see the amendment below.
 - Everything else from A, B and D is not used. Tokens, components, layouts and motion follow DESIGN-SYSTEM.md; `docs/ux/design-system.md` records what is implemented.
 - shadcn component and token names are kept (`--background`, `--primary`, `Button`, …) so existing code keeps working while values change.
 
@@ -68,3 +68,16 @@ Three parts of that choice reach beyond styling:
 ## Addendum 2026-10-02: a handwriting accent on the landing
 
 The owner's landing reference adds three short handwritten step labels. They use **Caveat** (OFL 1.1, google/fonts `ofl/caveat/Caveat[wght].ttf`), committed as `apps/web/src/assets/landing/fonts/caveat-500.woff2` with its licence: one static weight (`varLib.instancer wght=500`), latin + cyrillic (Ukrainian і ї є ґ checked in the cmap), kerning only (`pyftsubset --layout-features=kern`; the contextual alternates would make it 71 KB instead of 32 KB). It is loaded with `next/font/local` only by the landing and not preloaded. It is not an interface font: Geologica and Geist Mono remain the only families anywhere else.
+
+## Amendment 2026-10-05: rotation inside T4 «Листівка» (owner decision, PR K)
+
+- **Context:** the guest page templates (ADR 0017) let the admin choose a look for the guest page.
+  T4 «Листівка» is an airmail postcard: its artboard shows frames as polaroids, tilted and with a
+  soft shadow, wishes as sticky notes, the cover as a taped polaroid, stamps for buttons.
+- **Decision:** inside `[data-template='postcard']` only, frames may rotate (−2…+2°, from their
+  place in the grid with `nth-child`) and carry a shadow; the cover (−3°), the postmark (−12°) and
+  the stamps (−2°, +1.5°) rotate too. The rotations are static (no motion), so they stay under
+  `prefers-reduced-motion: reduce`; only the hover lift is a transition, and it runs under
+  `no-preference` only. Everywhere else the rule above stands: no rotation or shadow on frames.
+- **Consequences:** a template-scoped exception, enforced by the scoping test of template sheets
+  (`apps/templates/src/styles.test.ts`). Other templates keep flat, untilted frames.

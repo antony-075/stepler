@@ -9,6 +9,20 @@ pnpm templates:dev          # the gallery: Storybook on http://localhost:6007
 pnpm --filter @stepler/templates test
 ```
 
+## The templates
+
+| id | name | scheme | heading / body | notes |
+|---|---|---|---|---|
+| `classic` | T1 «Класика» | light | Geologica | the light table, a 472px white aside on desktop |
+| `fullscreen` | T2 «На весь екран» | dark | Manrope | the cover is the first screen and the background; a glass action bar |
+| `journal` | T3 «Журнал» | light | Cormorant / Lora | a printed album; centred, a matted 3:4 print |
+| `postcard` | T4 «Листівка» | light | Comfortaa / Nunito | an airmail card, polaroid frames (rotation: ADR 0015 amendment) |
+| `party` | T5 «Вечірка» | dark | Unbounded / Manrope | a round emblem with the title around it, bento grids |
+| `minimal` | T6 «Мінімалізм» | light | Golos Text | white space, a ruled action row; cover none, top or side |
+
+Each template has a fixed scheme [D5]: the root sets `data-scheme`, and `src/styles.css` bridges the
+app's tokens to the template's (`--tpl-*`) so the app's slots follow it.
+
 ## Two entry points
 
 - **`@stepler/templates/core`**: plain TypeScript, built to `dist` (like `@stepler/contracts`).
@@ -43,8 +57,15 @@ package (`eslint.boundaries.js`).
 
 Styling rules: every selector in a template's `styles.css` starts with `[data-template='<id>']`
 (`src/styles.test.ts`); no `vh`/`dvh` in template sheets (use `svh`); motion only under
-`prefers-reduced-motion: no-preference`; touch targets at least 44px; nothing critical on hover
-only; no sideways scroll at 320/360/390.
+`prefers-reduced-motion: no-preference` (stories tagged `reduced-motion` run in a second Vitest
+project that emulates `reduce`); touch targets at least 44px; nothing critical on hover only; no
+sideways scroll at 320/360/390. Text colours always come from the theme tokens (`--tpl-text`,
+`--tpl-body`, `--tpl-muted`, `--tpl-link`, `--tpl-accent-text`, `--tpl-on-accent`), so the contrast
+auto-adjustment [D3] works whatever the admin chooses. A sticky action bar comes before the footer
+in the DOM, so at the end of the page it rests above the footer instead of covering it. The app's
+frames are restyled through their slots (`[data-slot=guest-own-frames]`,
+`[data-slot=frame-grid] > ul`, `li > div` (the app's wrapper), `[data-slot=frame-media]`,
+`[data-kind]`).
 
 ## Add a template
 

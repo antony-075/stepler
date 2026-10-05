@@ -310,6 +310,11 @@
     [data-slot='guest-own-frames']
     [data-slot='frame-grid']
     li:first-child
+    > div,
+  [data-template='journal']
+    [data-slot='guest-own-frames']
+    [data-slot='frame-grid']
+    li:first-child
     [data-slot='frame'],
   [data-template='journal']
     [data-slot='guest-own-frames']

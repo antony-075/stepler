@@ -98,12 +98,13 @@ export function PostcardLayout({ model, actions, slots }: TemplateLayoutProps) {
         {slots.ownFrames}
         {slots.allFrames}
       </main>
-      {slots.footer}
+      {/* Before the footer: at the end of the page the bar rests above it, never over it. */}
       {actions === null || !contributed ? null : (
         <div className="pc-sticky">
           <PostcardActions actions={actions} legalNotice={slots.legalNotice} compact />
         </div>
       )}
+      {slots.footer}
     </div>
   );
 }

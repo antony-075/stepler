@@ -359,6 +359,9 @@ importers:
       '@stepler/contracts':
         specifier: workspace:*
         version: link:../packages/contracts
+      '@stepler/templates':
+        specifier: workspace:*
+        version: link:../apps/templates
       '@stepler/web':
         specifier: workspace:*
         version: link:../apps/web

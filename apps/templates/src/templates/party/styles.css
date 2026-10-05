@@ -266,7 +266,9 @@
   gap: 4px;
 }
 
+/* The app wraps each frame (`[data-item]`), so every level down to the tile fills the cell. */
 [data-template='party'] [data-slot='frame-grid'] li,
+[data-template='party'] [data-slot='frame-grid'] li > div,
 [data-template='party'] [data-slot='frame-grid'] [data-slot='frame'],
 [data-template='party'] [data-slot='frame-grid'] [data-slot='frame'] > button,
 [data-template='party'] [data-slot='frame-grid'] [data-slot='frame'] > [role='group'] {

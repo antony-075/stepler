@@ -75,13 +75,14 @@ export function JournalLayout({ model, actions, slots }: TemplateLayoutProps) {
           {slots.ownFrames}
           {slots.allFrames}
         </main>
+        {/* Before the footer: at the end of the page the bar rests above it, never over it. */}
+        {actions === null || !contributed ? null : (
+          <div className="jr-sticky">
+            <JournalActions actions={actions} legalNotice={slots.legalNotice} compact />
+          </div>
+        )}
         <div className="jr-main-footer">{slots.footer}</div>
       </div>
-      {actions === null || !contributed ? null : (
-        <div className="jr-sticky">
-          <JournalActions actions={actions} legalNotice={slots.legalNotice} compact />
-        </div>
-      )}
     </div>
   );
 }

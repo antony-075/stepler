@@ -131,6 +131,8 @@ test.describe('guest page editor', () => {
     page,
     browser,
   }) => {
+    // The worker prepares the cover, then the editor asks again within 10 s: allow for both.
+    test.setTimeout(60_000);
     const { id, path } = await setUp(page);
     const guest = await asGuest(browser, path);
     await uploadViaApi(guest, id, 'photo.jpg');
