@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import type { GuestLinkThemeResponse } from '@stepler/contracts';
+import { resolveTheme } from '@stepler/templates/core';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type {
@@ -47,6 +49,49 @@ export class GuestLinkResolver {
     private readonly prisma: PrismaService,
     private readonly tokens: GuestLinkTokens,
   ) {}
+
+  /**
+   * The published page's look for a link in any state (live, paused, revoked, its collection
+   * archived): the guest page draws its loading and state screens in it (owner remarks 99, 100).
+   * Unknown token, or the collection gone (deleting, owner blocked) → 404. Never the title.
+   */
+  async themeOf(rawToken: string): Promise<GuestLinkThemeResponse> {
+    const tokenHash = this.tokens.hashForLookup(rawToken);
+    const row =
+      tokenHash === null
+        ? null
+        : await this.prisma.guestLink.findUnique({
+            where: { tokenHash },
+            select: {
+              collection: {
+                select: {
+                  status: true,
+                  owner: { select: { status: true } },
+                  guestPageVersions: {
+                    where: { state: 'PUBLISHED' },
+                    select: { templateId: true, templateVersion: true, settings: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          });
+    if (
+      row === null ||
+      row.collection.status === 'DELETING' ||
+      row.collection.owner.status === 'BLOCKED'
+    ) {
+      throw new AppError('NOT_FOUND', 404);
+    }
+    const published = row.collection.guestPageVersions[0];
+    // As the guest context reads it: a removed template or stale settings are the defaults.
+    const { def, settings } = resolveTheme(
+      published?.templateId ?? '',
+      published?.templateVersion ?? 1,
+      published?.settings,
+    );
+    return { templateId: def.id, templateVersion: def.version, settings };
+  }
 
   /** Unknown → 404, then the [G5] states of `assertLinkUsable`. */
   async resolveActive(rawToken: string): Promise<ResolvedGuestLink> {

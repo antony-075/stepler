@@ -11693,6 +11693,205 @@
         ]
       }
     },
+    "/api/v1/guest/links/theme": {
+      "post": {
+        "operationId": "GuestController_theme_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "linkToken": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "linkToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "settings": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accent": {
+                          "pattern": "^#[0-9A-F]{6}$",
+                          "type": "string"
+                        },
+                        "align": {
+                          "enum": [
+                            "start",
+                            "center"
+                          ],
+                          "type": "string"
+                        },
+                        "background": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "color": {
+                                  "pattern": "^#[0-9A-F]{6}$",
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "solid"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "color"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "gradient"
+                                  ],
+                                  "type": "string"
+                                },
+                                "preset": {
+                                  "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "preset"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dim": {
+                                  "maximum": 90,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "image"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "dim"
+                              ],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "corners": {
+                          "enum": [
+                            "sharp",
+                            "soft",
+                            "round"
+                          ],
+                          "type": "string"
+                        },
+                        "coverPlacement": {
+                          "enum": [
+                            "top",
+                            "full",
+                            "side",
+                            "none"
+                          ],
+                          "type": "string"
+                        },
+                        "headingFont": {
+                          "enum": [
+                            "geologica",
+                            "manrope",
+                            "unbounded",
+                            "playfair-display",
+                            "cormorant",
+                            "lora",
+                            "nunito",
+                            "rubik",
+                            "montserrat-alternates",
+                            "comfortaa",
+                            "pt-serif",
+                            "golos-text"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "accent",
+                        "headingFont",
+                        "coverPlacement",
+                        "align",
+                        "corners"
+                      ],
+                      "type": "object"
+                    },
+                    "templateId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "templateVersion": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "templateId",
+                    "templateVersion",
+                    "settings"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: unknown token, or the collection is gone"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Guest"
+        ]
+      }
+    },
     "/api/v1/health/live": {
       "get": {
         "operationId": "HealthController_live_v1",
