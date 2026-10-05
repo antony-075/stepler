@@ -9,7 +9,8 @@
 //   (primary 56, outline 52) closed by the terms notice, then «Ваші кадри» and «Усі кадри» in 3
 //   columns (4 from 640px) and the footer.
 // - From 1024px: a 472px white aside that stays in view (wordmark, a 4:3 cover, title 34,
-//   welcome 17, the count; the actions and the notice pinned to its bottom), beside a scrolling
+//   welcome 17, the count; the actions and the notice right after them, never pinned to the
+//   bottom of a tall empty aside: owner, item 82), beside a scrolling
 //   column with the language at the top, the sections at 21px in 6-column grids (8 on wide
 //   screens) and the footer.
 // - Every tweak shows: the background (colour, gradient, an image under the veil), the accent
