@@ -9,7 +9,7 @@ import type { JobData, JobName } from '../src/jobs/job-names.js';
 import type { PgBossClient } from '../src/jobs/pg-boss-queue.js';
 import type { ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
-import { coverKey } from '../src/collections/cover-keys.js';
+import { imageKey } from '../src/images/image-keys.js';
 import { CoverDerivativesHandler } from '../src/worker/handlers/cover-derivatives.handler.js';
 import { ImageDerivativesHandler } from '../src/worker/handlers/image-derivatives.handler.js';
 import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.js';
@@ -22,6 +22,9 @@ import { resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { allKeys } from './support/storage.js';
 import { fixture } from './support/uploads.js';
+
+const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
+  imageKey(collectionId, 'COVER', id, role);
 
 const apiEnv = testEnv();
 const env = loadWorkerEnv({

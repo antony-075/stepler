@@ -1,27 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { canContribute, type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
-import { DEFAULT_TEMPLATE_ID, definitionOf } from '@stepler/templates/core';
+import { resolveTheme } from '@stepler/templates/core';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { generateToken, hashToken, TOKEN_PATTERN } from '../auth/tokens.js';
-import { type CoverRow, CoverUrls, WITH_COVER } from '../collections/cover-urls.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { GuestSession as GuestSessionRow } from '../generated/prisma/client.js';
+import { ImageUrls } from '../images/image-urls.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { permissionsOf } from './guest-link-dto.js';
 import { assertLinkUsable, GuestLinkResolver } from './guest-link-resolver.js';
+import { CONTEXT_COLLECTION, type ContextCollection } from './guest-context-select.js';
 import { canListAll } from './guest-policy.js';
 
 /** `lastSeenAt` is written at most this often, so reads stay reads. */
 const LAST_SEEN_RESOLUTION_MS = 3600_000;
-
-interface ContextCollection {
-  id: string;
-  title: string;
-  description: string | null;
-  welcomeMessage: string | null;
-  cover: CoverRow | null;
-}
 
 /**
  * Guest sessions (ADR 0007, spec §9.1 as amended by [C3]). The cookie's raw token is never
@@ -34,7 +27,7 @@ export class GuestSessionsService {
     private readonly prisma: PrismaService,
     private readonly resolver: GuestLinkResolver,
     private readonly limits: LimitsService,
-    private readonly covers: CoverUrls,
+    private readonly images: ImageUrls,
   ) {}
 
   /**
@@ -149,9 +142,7 @@ export class GuestSessionsService {
     const session = await this.prisma.guestSession.findUniqueOrThrow({
       where: { id: p.guestSessionId },
       include: {
-        collection: {
-          select: { id: true, title: true, description: true, welcomeMessage: true, ...WITH_COVER },
-        },
+        collection: { select: CONTEXT_COLLECTION },
       },
     });
     return this.buildContext(p, session.collection, session);
@@ -174,23 +165,32 @@ export class GuestSessionsService {
     session: Pick<GuestSessionRow, 'contributorName' | 'nameAnsweredAt'>,
   ): Promise<GuestContext> {
     const rules = this.limits.fileRules();
-    const cover = await this.covers.forGuest(collection.cover);
-    // Until guest page versions are stored (plan Task 7), every page is the default template.
-    const template = definitionOf(DEFAULT_TEMPLATE_ID)!;
+    const published = collection.guestPageVersions[0];
+    // A removed template or settings it no longer accepts read as the defaults (never a throw).
+    const { def, settings } = resolveTheme(
+      published?.templateId ?? '',
+      published?.templateVersion ?? 1,
+      published?.settings,
+    );
+    const now = new Date();
+    const [cover, background] = await Promise.all([
+      this.images.forGuest(published?.coverImage ?? null, now),
+      this.images.forGuest(published?.backgroundImage ?? null, now),
+    ]);
     return {
       collection: {
         id: collection.id,
         title: collection.title,
         description: collection.description,
       },
+      // The published page only; images once READY, never their source [A2].
       page: {
-        templateId: template.id,
-        templateVersion: template.version,
-        settings: template.defaults,
-        welcomeMessage: collection.welcomeMessage,
-        // Only a READY cover, and never its source [A2].
-        cover: cover === null ? null : { ...cover, largeUrl: null },
-        background: null,
+        templateId: def.id,
+        templateVersion: def.version,
+        settings,
+        welcomeMessage: published?.welcomeMessage ?? null,
+        cover,
+        background,
       },
       permissions: p.link.permissions,
       guest: { name: session.contributorName, nameAnswered: session.nameAnsweredAt !== null },

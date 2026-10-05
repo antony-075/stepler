@@ -18,13 +18,15 @@ import { collectionPurgeDelaySeconds } from '../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
+import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
+import { ImageUrls } from '../images/image-urls.js';
 import {
   type CollectionWithDefaultLink,
   type ContentStats,
+  imagesOf,
   toCollectionDto,
   WITH_DEFAULT_LINK,
 } from './collection-dto.js';
-import { CoverUrls } from './cover-urls.js';
 
 const DAY_MS = 24 * 3600_000;
 
@@ -37,7 +39,8 @@ export class CollectionsService {
     private readonly usage: UsageService,
     private readonly audit: AuditService,
     private readonly guestLinks: GuestLinksService,
-    private readonly covers: CoverUrls,
+    private readonly images: ImageUrls,
+    private readonly pages: GuestPageRepository,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -83,7 +86,14 @@ export class CollectionsService {
       });
       // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
-      return toCollectionDto({ ...row, guestLinks: [link], cover: null });
+      // And its guest page: the default template with its defaults, published (ADR 0017).
+      await this.pages.ensurePublished(tx, row.id);
+      return toCollectionDto({
+        ...row,
+        guestLinks: [link],
+        guestPageVersions: [{ welcomeMessage: null, coverImage: null }],
+        image: null,
+      });
     });
   }
 
@@ -123,7 +133,7 @@ export class CollectionsService {
     return {
       items: await Promise.all(
         items.map(async (row) =>
-          toCollectionDto(row, content.get(row.id), await this.covers.forAdmin(row.cover, now)),
+          toCollectionDto(row, content.get(row.id), await this.signImages(row, now)),
         ),
       ),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
@@ -141,27 +151,39 @@ export class CollectionsService {
     return this.toDto(await this.findOwned(id, principal.userId));
   }
 
-  /** Last write wins. Archived collections stay editable (D9), the welcome message too [A6]. */
+  /**
+   * Last write wins. Archived collections stay editable (D9), the welcome message too [A6]. The
+   * welcome is the guest page's now (plan Task 7, legacy adapter until PR J): it is written to the
+   * published version, and to the draft while one exists, so guests see it at once as before.
+   */
   async update(
     principal: AccountPrincipal,
     id: string,
     body: UpdateCollectionRequest,
   ): Promise<Collection> {
-    try {
-      const row = await this.prisma.collection.update({
-        where: { id, ownerId: principal.userId, status: { not: 'DELETING' } },
-        data: {
-          ...(body.title === undefined ? {} : { title: body.title }),
-          ...(body.description === undefined ? {} : { description: body.description }),
-          ...(body.welcomeMessage === undefined ? {} : { welcomeMessage: body.welcomeMessage }),
-        },
-        include: WITH_DEFAULT_LINK,
+    return this.prisma.$transaction(async (tx) => {
+      let row: CollectionWithDefaultLink;
+      try {
+        row = await tx.collection.update({
+          where: { id, ownerId: principal.userId, status: { not: 'DELETING' } },
+          data: {
+            ...(body.title === undefined ? {} : { title: body.title }),
+            ...(body.description === undefined ? {} : { description: body.description }),
+          },
+          include: WITH_DEFAULT_LINK,
+        });
+      } catch (error) {
+        if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
+        throw error;
+      }
+      if (body.welcomeMessage === undefined) return this.toDto(row, tx);
+      await this.pages.ensurePublished(tx, row.id);
+      await tx.guestPageVersion.updateMany({
+        where: { collectionId: row.id },
+        data: { welcomeMessage: body.welcomeMessage },
       });
-      return await this.toDto(row);
-    } catch (error) {
-      if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
-      throw error;
-    }
+      return this.toDto(await this.findOwned(row.id, principal.userId, tx), tx);
+    });
   }
 
   /** `ACTIVE` → `ARCHIVED`; guests lose access. Idempotent: an archived one is returned as is. */
@@ -268,7 +290,17 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Collection> {
     const content = await this.contentStats([row.id], tx);
-    return toCollectionDto(row, content.get(row.id), await this.covers.forAdmin(row.cover));
+    return toCollectionDto(row, content.get(row.id), await this.signImages(row));
+  }
+
+  /** The cover and the collection image, signed in one window. */
+  private async signImages(row: CollectionWithDefaultLink, now = new Date()) {
+    const { cover, image } = imagesOf(row);
+    const [coverDto, imageDto] = await Promise.all([
+      this.images.forAdmin(cover, now),
+      this.images.forAdmin(image, now),
+    ]);
+    return { cover: coverDto, image: imageDto };
   }
 
   /** One grouped query for a whole page, never one per collection (no N+1). */

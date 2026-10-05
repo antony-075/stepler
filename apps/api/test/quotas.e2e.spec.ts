@@ -182,11 +182,12 @@ describe('storage usage and quotas', () => {
     await expect(reserve(b, 1n)).rejects.toMatchObject({ code: 'QUOTA_EXCEEDED' });
   });
 
-  test('cover bytes (original and derivatives) count toward the collection and the account', async () => {
+  test('image bytes (original and renditions) of every slot count toward the collection and the account', async () => {
     const s = await seed();
-    await prisma.collectionCover.create({
+    await prisma.collectionImage.create({
       data: {
         collectionId: s.collectionId,
+        slot: 'COVER',
         status: 'READY',
         source: 'FRAME',
         mimeType: 'image/jpeg',
@@ -199,8 +200,29 @@ describe('storage usage and quotas', () => {
     expect(await usage.collectionStorageBytes(prisma, s.collectionId)).toBe(6n * MB + 1000n);
     expect(await usage.accountStorageBytes(prisma, s.ownerId)).toBe(6n * MB + 1000n);
     await expect(reserve(s, 6n * MB)).rejects.toMatchObject({ code: 'QUOTA_EXCEEDED' });
-    // Removing the cover (its row) frees the bytes at once, before the purge runs.
-    await prisma.collectionCover.deleteMany({ where: { collectionId: s.collectionId } });
+    // Every slot counts: a background and a collection image too.
+    await prisma.collectionImage.create({
+      data: {
+        collectionId: s.collectionId,
+        slot: 'BACKGROUND',
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 1000n,
+      },
+    });
+    await prisma.collectionImage.create({
+      data: {
+        collectionId: s.collectionId,
+        slot: 'COLLECTION_IMAGE',
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 1000n,
+      },
+    });
+    expect(await usage.collectionStorageBytes(prisma, s.collectionId)).toBe(6n * MB + 3000n);
+    expect(await usage.accountStorageBytes(prisma, s.ownerId)).toBe(6n * MB + 3000n);
+    // Removing the images (their rows) frees the bytes at once, before the purge runs.
+    await prisma.collectionImage.deleteMany({ where: { collectionId: s.collectionId } });
     await reserve(s, 6n * MB);
   });
 
@@ -220,9 +242,10 @@ describe('storage usage and quotas', () => {
       { role: 'THUMBNAIL', bytes: 1234n },
     ]);
     await photo(s, [{ role: 'ORIGINAL', bytes: 4n * MB }], true);
-    await prisma.collectionCover.create({
+    await prisma.collectionImage.create({
       data: {
         collectionId: s.collectionId,
+        slot: 'COVER',
         source: 'UPLOAD',
         mimeType: 'image/jpeg',
         originalSizeBytes: 1_000_000n,

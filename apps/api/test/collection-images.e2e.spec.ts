@@ -5,7 +5,7 @@ import type { INestApplication } from '@nestjs/common';
 import { collectionSchema, guestContentItemSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { coverKey } from '../src/collections/cover-keys.js';
+import { imageKey } from '../src/images/image-keys.js';
 import { createApp } from '../src/create-app.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/database/prisma.service.js';
@@ -29,6 +29,9 @@ import {
   uploadCalls,
   uploadFile,
 } from './support/uploads.js';
+
+const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
+  imageKey(collectionId, 'COVER', id, role);
 
 const MB = 1_000_000;
 const UPLOAD_ENV = { UPLOAD_PART_SIZE_BYTES: '5242880' };
@@ -65,9 +68,9 @@ async function owner(s: Server = server, a: INestApplication = app, t: GuestLink
 }
 
 const coverRows = (collectionId: string) =>
-  prisma.collectionCover.findMany({ where: { collectionId } });
+  prisma.collectionImage.findMany({ where: { collectionId, slot: 'COVER' } });
 const uploadRow = (id: string) => prisma.uploadSession.findUniqueOrThrow({ where: { id } });
-const coverJobs = () => queuedJobs(prisma, 'media.cover-derivatives');
+const coverJobs = () => queuedJobs(prisma, 'media.collection-image');
 
 describe('admin cover upload [A1]', () => {
   beforeAll(async () => {
@@ -115,7 +118,7 @@ describe('admin cover upload [A1]', () => {
     });
     const coverId = rows[0]?.id ?? '';
     expect((await coverJobs()).map((job) => job.data)).toEqual([
-      { collectionId: o.collectionId, coverId },
+      { collectionId: o.collectionId, imageId: coverId },
     ]);
     const original = await storage.head(coverKey(o.collectionId, coverId, 'original'));
     expect(original).toEqual({ size: photo.length, contentType: 'image/jpeg' });
@@ -206,8 +209,8 @@ describe('admin cover upload [A1]', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).not.toBe(old?.id);
     expect(rows[0]).toMatchObject({ mimeType: 'image/png', status: 'PENDING' });
-    expect((await queuedJobs(prisma, 'cover.purge')).map((job) => job.data)).toEqual([
-      { collectionId: o.collectionId, coverId: old?.id },
+    expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+      { collectionId: o.collectionId, imageId: old?.id, slot: 'COVER' },
     ]);
     // Both derivative jobs exist (the old one finds no row and cleans up after itself).
     expect(await coverJobs()).toHaveLength(2);
@@ -445,8 +448,8 @@ describe('admin cover upload [A1]', () => {
       const session = await uploadFile(o.calls, 'Весілля Олі.jpg', fixture('photo.jpg'));
       await o.calls.complete(session.uploadId).expect(200);
       await o.calls.complete(randomUUID()).expect(404);
-      expect(logs.output).toContain('cover upload completed');
-      expect(logs.output).toContain('cover set');
+      expect(logs.output).toContain('image upload completed');
+      expect(logs.output).toContain('image set');
       expect(logs.output).not.toMatch(/X-Amz-|https?:\/\/127\.0\.0\.1:\d+\/stepler-test/);
       expect(logs.output).not.toContain(o.cookie.split('=')[1] ?? 'never');
       expect(logs.output).not.toContain('Весілля Олі');

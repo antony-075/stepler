@@ -47,10 +47,10 @@ export class UsageService {
 
   /**
    * Bytes a collection holds (spec §13.2, ADR 0010): every stored file (originals and
-   * derivatives) of its non-deleted items, the cover (its original and derivatives), plus the
-   * declared size of its open (`INITIATED` or `COMPLETING`) uploads, which reserve their space
-   * until they complete, fail or expire. A deleted item or a removed cover stops counting at
-   * once, before the worker purges its objects.
+   * derivatives) of its non-deleted items, its admin images of every slot (original and
+   * renditions; plan Task 7), plus the declared size of its open (`INITIATED` or `COMPLETING`)
+   * uploads, which reserve their space until they complete, fail or expire. A deleted item or an
+   * image nothing references any more stops counting at once, before the worker purges its objects.
    */
   async collectionStorageBytes(
     tx: Prisma.TransactionClient,
@@ -64,7 +64,7 @@ export class UsageService {
           WHERE c."collectionId" = ${collectionId}::uuid AND c."deletedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
-          SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionCover" v
+          SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
           WHERE v."collectionId" = ${collectionId}::uuid
         ), 0)::bigint
         + COALESCE((
@@ -87,7 +87,7 @@ export class UsageService {
             AND c."deletedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
-          SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionCover" v
+          SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
           JOIN "Collection" k ON k."id" = v."collectionId"
           WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
         ), 0)::bigint

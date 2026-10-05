@@ -1,18 +1,24 @@
-import type { Collection, CollectionCover } from '@stepler/contracts';
+import type { AdminImage, Collection } from '@stepler/contracts';
 import { AppError } from '../errors/app-error.js';
 import type {
   Collection as CollectionRow,
   GuestLink as GuestLinkRow,
   Prisma,
 } from '../generated/prisma/client.js';
-import { type CoverRow, WITH_COVER } from './cover-urls.js';
+import { IMAGE_SELECT, type ImageRow } from '../images/image-urls.js';
 
 /**
- * Reads include the live default link's status and permissions, and the cover row, in the same
- * query (no N+1): the dashboard shows what guests may add per collection and the cover tile.
+ * Reads include the live default link's status and permissions, the published guest page's
+ * welcome and cover, and the collection image, in the same query (no N+1): the dashboard shows
+ * what guests may add per collection and the cover tile.
  */
 export const WITH_DEFAULT_LINK = {
-  ...WITH_COVER,
+  guestPageVersions: {
+    where: { state: 'PUBLISHED' },
+    select: { welcomeMessage: true, coverImage: { select: IMAGE_SELECT } },
+    take: 1,
+  },
+  image: { select: IMAGE_SELECT },
   guestLinks: {
     where: { isDefault: true, status: { not: 'REVOKED' } },
     select: {
@@ -41,8 +47,18 @@ type DefaultLinkFields = Pick<
 
 export type CollectionWithDefaultLink = CollectionRow & {
   guestLinks: DefaultLinkFields[];
-  cover: CoverRow | null;
+  /** The published version (one at most). */
+  guestPageVersions: { welcomeMessage: string | null; coverImage: ImageRow | null }[];
+  image: ImageRow | null;
 };
+
+/** The image rows a collection DTO shows, before they are signed. */
+export function imagesOf(row: CollectionWithDefaultLink): {
+  cover: ImageRow | null;
+  image: ImageRow | null;
+} {
+  return { cover: row.guestPageVersions[0]?.coverImage ?? null, image: row.image };
+}
 
 /** Non-deleted frames of a collection; read for a whole page in one grouped query. */
 export interface ContentStats {
@@ -56,7 +72,7 @@ export const NO_CONTENT: ContentStats = { count: 0, lastAt: null };
 export function toCollectionDto(
   row: CollectionWithDefaultLink,
   content: ContentStats = NO_CONTENT,
-  cover: CollectionCover | null = null,
+  images: { cover: AdminImage | null; image: AdminImage | null } = { cover: null, image: null },
 ): Collection {
   // Owner-scoped queries exclude DELETING rows; reaching here with one is a bug.
   if (row.status === 'DELETING') throw new AppError('NOT_FOUND', 404);
@@ -71,10 +87,10 @@ export function toCollectionDto(
     ...defaultLink(row.guestLinks[0]),
     contentCount: content.count,
     lastContentAt: content.lastAt?.toISOString() ?? null,
-    welcomeMessage: row.welcomeMessage,
-    cover,
-    // «Картинка колекції» arrives with its API (plan Task 10).
-    image: null,
+    // The published guest page's (the column is kept for PR L's contraction only).
+    welcomeMessage: row.guestPageVersions[0]?.welcomeMessage ?? null,
+    cover: images.cover,
+    image: images.image,
   };
 }
 

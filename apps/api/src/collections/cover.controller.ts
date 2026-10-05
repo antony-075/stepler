@@ -30,13 +30,17 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
-import { CoverUploadsService } from './cover-uploads.service.js';
-import { CoversService } from './covers.service.js';
+import { CollectionImagesService, type ImageTarget } from '../images/collection-images.service.js';
+import { ImageUploadsService } from '../images/image-uploads.service.js';
+import { CollectionsService } from './collections.service.js';
 
 type CollectionIdParams = z.infer<typeof collectionIdParamsSchema>;
 type CoverUploadParams = z.infer<typeof coverUploadParamsSchema>;
 
 const RATE_LIMITED = 'RATE_LIMITED: calls per IP or per user (see Retry-After)';
+
+/** The legacy routes change the published cover, and the draft's while one exists. */
+const LEGACY_COVER: ImageTarget = { slot: 'COVER', version: 'BOTH' };
 
 /**
  * The collection cover, set by its owner (slice 8a): from an uploaded photo [A1] (the file goes
@@ -44,6 +48,10 @@ const RATE_LIMITED = 'RATE_LIMITED: calls per IP or per user (see Retry-After)';
  * a guest photo frame [A8]; removed whole. All under the admin session: only the owner's own
  * collection, uploads and frames are reachable; anything else is `404`. Every route also keeps
  * the CSRF origin check (unsafe methods). No cover change on an archived collection [A6].
+ *
+ * Legacy adapter (plan Task 7, PR I only): the cover is now a COVER image referenced by the
+ * guest page versions, and these routes "publish now", as the slice 8a tab expects. PR J's
+ * editor uses the draft image routes instead and removes these.
  */
 @ApiTags('Collections')
 @ApiCookieAuth(SESSION_COOKIE_SCHEME)
@@ -52,8 +60,9 @@ const RATE_LIMITED = 'RATE_LIMITED: calls per IP or per user (see Retry-After)';
 @Controller({ path: 'collections/:id/cover', version: '1' })
 export class CoverController {
   constructor(
-    private readonly uploads: CoverUploadsService,
-    private readonly covers: CoversService,
+    private readonly uploads: ImageUploadsService,
+    private readonly images: CollectionImagesService,
+    private readonly collections: CollectionsService,
   ) {}
 
   /** Copies a guest photo's original into the cover; the frame itself is untouched. */
@@ -76,12 +85,13 @@ export class CoverController {
   })
   @ApiResponse({ status: 429, description: RATE_LIMITED })
   @ApiResponse({ status: 503, description: 'DEPENDENCY_UNAVAILABLE: storage; retryable' })
-  fromFrame(
+  async fromFrame(
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @Body({ schema: setCoverFromFrameRequestSchema }) body: SetCoverFromFrameRequest,
   ): Promise<Collection> {
-    return this.covers.setFromFrame(principal, params.id, body.contentItemId);
+    await this.images.setFromFrame(principal, params.id, LEGACY_COVER, body.contentItemId);
+    return this.collections.read(principal, params.id);
   }
 
   /** Removes the cover (the initials tile shows again). Idempotent. */
@@ -96,7 +106,7 @@ export class CoverController {
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
   ): Promise<void> {
-    return this.covers.remove(principal, params.id);
+    return this.images.remove(principal, params.id, LEGACY_COVER);
   }
 
   /** Opens a cover upload (photos only); the same `clientUploadId` and file returns the open one. */
@@ -125,7 +135,7 @@ export class CoverController {
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @Body({ schema: createUploadRequestSchema }) body: CreateUploadRequest,
   ): Promise<UploadSessionResponse> {
-    return this.uploads.initiate(principal, params.id, body);
+    return this.uploads.initiate(principal, params.id, 'COVER', body);
   }
 
   @Post('uploads/:uploadId/parts')
@@ -143,7 +153,13 @@ export class CoverController {
     @Param({ schema: coverUploadParamsSchema }) params: CoverUploadParams,
     @Body({ schema: uploadPartsRequestSchema }) body: UploadPartsRequest,
   ): Promise<UploadPartsResponse> {
-    return this.uploads.presignParts(principal, params.id, params.uploadId, body.partNumbers);
+    return this.uploads.presignParts(
+      principal,
+      params.id,
+      'COVER',
+      params.uploadId,
+      body.partNumbers,
+    );
   }
 
   /**
@@ -168,11 +184,12 @@ export class CoverController {
   })
   @ApiResponse({ status: 429, description: RATE_LIMITED })
   @ApiResponse({ status: 503, description: 'DEPENDENCY_UNAVAILABLE: storage; retryable' })
-  complete(
+  async complete(
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: coverUploadParamsSchema }) params: CoverUploadParams,
   ): Promise<Collection> {
-    return this.uploads.complete(principal, params.id, params.uploadId);
+    await this.uploads.complete(principal, params.id, params.uploadId, LEGACY_COVER);
+    return this.collections.read(principal, params.id);
   }
 
   /** Idempotent; allowed while archived (it only frees space). */
@@ -191,6 +208,6 @@ export class CoverController {
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: coverUploadParamsSchema }) params: CoverUploadParams,
   ): Promise<void> {
-    return this.uploads.cancel(principal, params.id, params.uploadId);
+    return this.uploads.cancel(principal, params.id, 'COVER', params.uploadId);
   }
 }

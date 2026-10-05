@@ -9,6 +9,7 @@ import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { listenOnLoopback } from './support/app.js';
+import { seedPublishedCover, setPublishedPage } from './support/guest-page.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import {
@@ -240,13 +241,8 @@ describe('guest sessions [C3]', () => {
 
   test('context carries the welcome message and the cover only once it is READY', async () => {
     const { collectionId, link } = await seedCollection(prisma, tokens);
-    await prisma.collection.update({
-      where: { id: collectionId },
-      data: { welcomeMessage: 'Дякуємо, що ви з нами!' },
-    });
-    const cover = await prisma.collectionCover.create({
-      data: { collectionId, source: 'FRAME', mimeType: 'image/jpeg', originalSizeBytes: 1000n },
-    });
+    await setPublishedPage(prisma, collectionId, { welcomeMessage: 'Дякуємо, що ви з нами!' });
+    const cover = await seedPublishedCover(prisma, collectionId);
     const cookie = await joinAsGuest(server(), collectionId, link.token);
     const pending = guestContextSchema.parse(
       (await context(collectionId, cookie).expect(200)).body,
@@ -256,7 +252,7 @@ describe('guest sessions [C3]', () => {
       cover: null,
     });
 
-    await prisma.collectionCover.update({
+    await prisma.collectionImage.update({
       where: { id: cover.id },
       data: { status: 'READY', width: 4000, height: 3000, derivedSizeBytes: 500n },
     });

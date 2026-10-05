@@ -8,11 +8,13 @@ import {
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import { coverKey } from '../src/collections/cover-keys.js';
+import { imageKey } from '../src/images/image-keys.js';
 import { createApp } from '../src/create-app.js';
 import type { ApiEnv } from '../src/config/env.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { GuestPageRepository } from '../src/guest-page/guest-page.repository.js';
+import { CollectionImagesService } from '../src/images/collection-images.service.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
@@ -24,6 +26,9 @@ import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys } from './support/storage.js';
 import { bigBuffer, fixture, uploadCalls, uploadFile } from './support/uploads.js';
+
+const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
+  imageKey(collectionId, 'COVER', id, role);
 
 const MB = 1_000_000;
 const UPLOAD_ENV = { UPLOAD_PART_SIZE_BYTES: '5242880' };
@@ -85,7 +90,7 @@ async function frame(o: Owner, name = 'IMG_0001.jpg', bytes: Buffer = fixture('p
 }
 
 const coverRows = (collectionId: string) =>
-  prisma.collectionCover.findMany({ where: { collectionId } });
+  prisma.collectionImage.findMany({ where: { collectionId, slot: 'COVER' } });
 const coverPrefixKeys = (collectionId: string) =>
   allKeys(storage, `collections/${collectionId}/cover/`);
 
@@ -125,8 +130,8 @@ describe('cover from a frame and cover removal [A8]', () => {
       size: photo.length,
       contentType: 'image/jpeg',
     });
-    expect((await queuedJobs(prisma, 'media.cover-derivatives')).map((job) => job.data)).toEqual([
-      { collectionId: o.collectionId, coverId },
+    expect((await queuedJobs(prisma, 'media.collection-image')).map((job) => job.data)).toEqual([
+      { collectionId: o.collectionId, imageId: coverId },
     ]);
     // The frame's own row and object are as they were.
     const original = await prisma.mediaObject.findFirstOrThrow({
@@ -261,8 +266,8 @@ describe('cover from a frame and cover removal [A8]', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ source: 'FRAME', mimeType: 'image/png' });
     expect(rows[0]?.id).not.toBe(old?.id);
-    expect((await queuedJobs(prisma, 'cover.purge')).map((job) => job.data)).toEqual([
-      { collectionId: o.collectionId, coverId: old?.id },
+    expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+      { collectionId: o.collectionId, imageId: old?.id, slot: 'COVER' },
     ]);
   });
 
@@ -272,7 +277,7 @@ describe('cover from a frame and cover removal [A8]', () => {
     await o.fromFrame(item.id).expect(200);
     const [cover] = await coverRows(o.collectionId);
     // As the worker would leave it.
-    await prisma.collectionCover.update({
+    await prisma.collectionImage.update({
       where: { id: cover?.id ?? '' },
       data: { status: 'READY', width: 320, height: 240, derivedSizeBytes: 500n },
     });
@@ -286,14 +291,14 @@ describe('cover from a frame and cover removal [A8]', () => {
 
     await o.remove().expect(204);
     expect(await coverRows(o.collectionId)).toEqual([]);
-    expect((await queuedJobs(prisma, 'cover.purge')).map((job) => job.data)).toEqual([
-      { collectionId: o.collectionId, coverId: cover?.id },
+    expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+      { collectionId: o.collectionId, imageId: cover?.id, slot: 'COVER' },
     ]);
     expect((await o.detail().expect(200)).body).toMatchObject({ cover: null });
     const after = guestContextSchema.parse((await context().expect(200)).body);
     expect(after.page.cover).toBeNull();
     await o.remove().expect(204);
-    expect(await queuedJobs(prisma, 'cover.purge')).toHaveLength(1);
+    expect(await queuedJobs(prisma, 'collection-image.purge')).toHaveLength(1);
   });
 
   test('archived: from-frame and remove → 409 COLLECTION_ARCHIVED, nothing changes', async () => {
@@ -310,6 +315,118 @@ describe('cover from a frame and cover removal [A8]', () => {
     expect(kept.body).toMatchObject({ code: 'COLLECTION_ARCHIVED' });
     expect(await coverRows(o.collectionId)).toHaveLength(1);
     expect(await coverPrefixKeys(o.collectionId)).toHaveLength(1);
+  });
+
+  describe('legacy adapter: the cover routes publish now (plan Task 7)', () => {
+    const versions = (collectionId: string) =>
+      prisma.guestPageVersion.findMany({ where: { collectionId }, orderBy: { state: 'asc' } });
+    /** A draft copied from the published version, as the editor (Task 9) will make it. */
+    async function draftOf(collectionId: string) {
+      const published = await prisma.guestPageVersion.findUniqueOrThrow({
+        where: { collectionId_state: { collectionId, state: 'PUBLISHED' } },
+      });
+      return prisma.guestPageVersion.create({
+        data: {
+          collectionId,
+          state: 'DRAFT',
+          templateId: published.templateId,
+          templateVersion: published.templateVersion,
+          settings: published.settings ?? {},
+          welcomeMessage: published.welcomeMessage,
+          coverImageId: published.coverImageId,
+          revision: 3,
+        },
+      });
+    }
+
+    test('a cover is a COVER image the published version references', async () => {
+      const o = await owner();
+      await o.fromFrame((await frame(o)).id).expect(200);
+      const [image] = await coverRows(o.collectionId);
+      const [published] = await versions(o.collectionId);
+      expect(published).toMatchObject({ state: 'PUBLISHED', coverImageId: image?.id });
+    });
+
+    test('with a draft, the cover changes in both; the old one is purged once nothing references it', async () => {
+      const o = await owner();
+      await o.fromFrame((await frame(o, 'a.jpg')).id).expect(200);
+      const [a] = await coverRows(o.collectionId);
+      await draftOf(o.collectionId);
+      await o.fromFrame((await frame(o, 'b.jpg')).id).expect(200);
+      const [b] = (await coverRows(o.collectionId)).filter((row) => row.id !== a?.id);
+      const both = await versions(o.collectionId);
+      expect(both.map((v) => [v.state, v.coverImageId])).toEqual([
+        ['PUBLISHED', b?.id],
+        ['DRAFT', b?.id],
+      ]);
+      // The draft's revision is untouched: image changes never conflict with autosave.
+      expect(both[1]?.revision).toBe(3);
+      expect(await coverRows(o.collectionId)).toHaveLength(1);
+      expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+        { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },
+      ]);
+    });
+
+    test('garbage collection keeps an image any version still references', async () => {
+      const o = await owner();
+      await o.fromFrame((await frame(o, 'a.jpg')).id).expect(200);
+      const [a] = await coverRows(o.collectionId);
+      await draftOf(o.collectionId);
+      const images = s.app.get(CollectionImagesService);
+      const pages = s.app.get(GuestPageRepository);
+      // The published version lets go of A (as a publish of another cover will); the draft keeps it.
+      await prisma.$transaction(async (tx) => {
+        await pages.setImageRef(tx, o.collectionId, 'PUBLISHED', 'COVER', null);
+        await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
+      });
+      expect(await coverRows(o.collectionId)).toHaveLength(1);
+      expect(await queuedJobs(prisma, 'collection-image.purge')).toEqual([]);
+      // Then the draft lets go too: now it goes.
+      await prisma.$transaction(async (tx) => {
+        await pages.setImageRef(tx, o.collectionId, 'DRAFT', 'COVER', null);
+        await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
+      });
+      expect(await coverRows(o.collectionId)).toEqual([]);
+      expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+        { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },
+      ]);
+    });
+
+    test('remove clears the published and the draft cover', async () => {
+      const o = await owner();
+      await o.fromFrame((await frame(o)).id).expect(200);
+      await draftOf(o.collectionId);
+      await o.remove().expect(204);
+      expect((await versions(o.collectionId)).map((v) => v.coverImageId)).toEqual([null, null]);
+      expect(await coverRows(o.collectionId)).toEqual([]);
+    });
+
+    test('PATCH welcomeMessage writes the published version (and the draft); guests see it', async () => {
+      const o = await owner();
+      await draftOf(o.collectionId);
+      await request(s.server)
+        .patch(`/api/v1/collections/${o.collectionId}`)
+        .set('Cookie', o.cookie)
+        .set('Origin', ORIGIN)
+        .send({ welcomeMessage: 'Дякуємо, що ви з нами!' })
+        .expect(200);
+      expect((await versions(o.collectionId)).map((v) => v.welcomeMessage)).toEqual([
+        'Дякуємо, що ви з нами!',
+        'Дякуємо, що ви з нами!',
+      ]);
+      const context = guestContextSchema.parse(
+        (
+          await request(s.server)
+            .get(`/api/v1/guest/collections/${o.collectionId}/context`)
+            .set('Cookie', o.guestCookie)
+            .expect(200)
+        ).body,
+      );
+      expect(context.page.welcomeMessage).toBe('Дякуємо, що ви з нами!');
+      expect(collectionDetailSchema.parse((await o.detail().expect(200)).body).welcomeMessage).toBe(
+        'Дякуємо, що ви з нами!',
+      );
+    });
   });
 });
 

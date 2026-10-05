@@ -1,6 +1,12 @@
 import { join } from 'node:path';
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { COVER_DERIVED_MIME, coverKey } from '../../collections/cover-keys.js';
+import { IMAGE_DERIVED_MIME as COVER_DERIVED_MIME, imageKey } from '../../images/image-keys.js';
+
+const coverKey = (
+  collectionId: string,
+  coverId: string,
+  role: 'original' | 'thumbnail' | 'preview',
+) => imageKey(collectionId, 'COVER', coverId, role);
 import { PrismaService } from '../../database/prisma.service.js';
 import type { CollectionCover } from '../../generated/prisma/client.js';
 import type { JobData } from '../../jobs/job-names.js';

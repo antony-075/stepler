@@ -1,5 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { coverPrefix } from '../../collections/cover-keys.js';
+import { imagePrefix } from '../../images/image-keys.js';
+
+const coverPrefix = (collectionId: string, coverId: string) =>
+  imagePrefix(collectionId, 'COVER', coverId);
 import { PrismaService } from '../../database/prisma.service.js';
 import type { JobData } from '../../jobs/job-names.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../../storage/object-storage.js';

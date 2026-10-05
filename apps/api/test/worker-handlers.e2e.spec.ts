@@ -15,7 +15,7 @@ import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-swee
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
 import { PurgeCoverHandler } from '../src/worker/handlers/purge-cover.handler.js';
-import { coverKey, coverPrefix } from '../src/collections/cover-keys.js';
+import { imageKey, imagePrefix } from '../src/images/image-keys.js';
 import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
@@ -25,6 +25,10 @@ import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys, putObject } from './support/storage.js';
+
+const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
+  imageKey(collectionId, 'COVER', id, role);
+const coverPrefix = (collectionId: string, id: string) => imagePrefix(collectionId, 'COVER', id);
 
 const apiEnv = testEnv();
 const workerEnv = (overrides: Record<string, string> = {}): WorkerEnv =>

@@ -1,3 +1,4 @@
+import { setPublishedPage } from './guest-page.js';
 import type { Server } from 'node:http';
 import type { GuestLinkPermissions } from '@stepler/contracts';
 import request from 'supertest';
@@ -63,6 +64,8 @@ export async function seedCollection(
     data: { ownerId, title: options.title ?? 'Весілля', description: 'Опис' },
   });
   const link = await addLink(prisma, tokens, collection.id, options.permissions, true);
+  // As the API creates it: with its published guest page.
+  await setPublishedPage(prisma, collection.id);
   return { ownerId, collectionId: collection.id, link };
 }
 
