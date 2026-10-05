@@ -80,6 +80,15 @@ async function openEditor(page: Page, id: string) {
   await expect(preview(page).locator('[data-template]')).toBeVisible({ timeout: 15_000 });
 }
 
+/** Opens a closed section of the desktop panel's accordion. */
+async function openSection(page: Page, name: string) {
+  const row = page
+    .getByRole('region', { name: 'Налаштування гостьової сторінки' })
+    .getByRole('button', { name: new RegExp(`^${name}`) });
+  if ((await row.getAttribute('aria-expanded')) !== 'true') await row.click();
+  await expect(row).toHaveAttribute('aria-expanded', 'true');
+}
+
 test.describe('guest page editor', () => {
   test('an accent change shows in the preview at once; guests see it only after «Зберегти»; «Скинути зміни» reverts @desktop', async ({
     page,
@@ -91,6 +100,7 @@ test.describe('guest page editor', () => {
 
     await openEditor(page, id);
     await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await openSection(page, 'Акцент');
     await page.getByRole('radio', { name: 'Акцент: слива' }).click();
     // The working copy reaches the preview by postMessage, not by a save.
     await expect
@@ -171,6 +181,8 @@ test.describe('guest page editor', () => {
     const other = await page.context().newPage();
     await openEditor(page, id);
     await openEditor(other, id);
+    await openSection(page, 'Акцент');
+    await openSection(other, 'Акцент');
 
     await page.getByRole('radio', { name: 'Акцент: слива' }).click();
     await expect
@@ -272,6 +284,80 @@ test.describe('guest page editor', () => {
     const guest = await asGuest(browser, path);
     expect(await accentOf(guest.locator('[data-template]'))).toBe(PLUM);
     await guest.context().close();
+  });
+
+  test('the preview shows sample frames, never the collection’s own, in the chosen page state @desktop', async ({
+    page,
+    browser,
+  }) => {
+    const { id, path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    await uploadViaApi(guest, id, 'photo.jpg');
+    await waitForContentProcessed(page, id, 1);
+    await guest.context().close();
+
+    await openEditor(page, id);
+    const frame = preview(page);
+    // Mine + others' by default: generated pictures, no presigned link to a guest's photo.
+    await expect(frame.locator('[data-slot="guest-all-frames"] img').first()).toBeVisible();
+    const sources = await frame
+      .locator('[data-slot="guest-all-frames"] img')
+      .evaluateAll((images) => images.map((image) => (image as HTMLImageElement).src));
+    expect(sources.length).toBeGreaterThan(0);
+    for (const src of sources) expect(src.startsWith('data:image/svg+xml')).toBe(true);
+    await expect(frame.locator('[data-slot="guest-own-frames"]')).toBeVisible();
+
+    const state = page.getByRole('combobox', { name: /^Стан сторінки/ });
+    await state.click();
+    await page.getByRole('option', { name: 'Посилання лише для перегляду' }).click();
+    await expect(frame.locator('[data-slot="guest-own-frames"]')).toHaveCount(0);
+    await expect(frame.getByRole('button', { name: 'Додати фото й відео' })).toHaveCount(0);
+
+    await state.click();
+    await page.getByRole('option', { name: 'Посилання призупинене' }).click();
+    await expect(frame.getByRole('heading', { name: 'Посилання призупинене' })).toBeVisible();
+
+    // The tablet frame: a 820px wide page inside.
+    await page.getByRole('radio', { name: 'Планшет' }).click();
+    await expect(page.locator('[data-slot="preview-device"]')).toHaveAttribute(
+      'data-device',
+      'tablet',
+    );
+    await expect(page.locator('[data-slot="preview-iframe"]')).toHaveCSS('width', '820px');
+  });
+
+  test('on a computer the editor is one workspace: the page does not scroll, the splitter resizes and is remembered @desktop', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const { id } = await setUp(page);
+    await openEditor(page, id);
+    // Only the settings panel scrolls (owner remark 66).
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight),
+    ).toBeLessThanOrEqual(0);
+    const panel = page.locator('[data-slot="settings-panel"]');
+    for (const name of ['Обкладинка', 'Привітання', 'Фон', 'Акцент', 'Шрифт', 'Розташування'])
+      await openSection(page, name);
+    expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    // «Зберегти» stays in view in the preview pane's header (remark 71).
+    await panel.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect(page.getByRole('button', { name: /^Зберегти/ })).toBeInViewport();
+
+    // The splitter, from the keyboard (remark 67).
+    const before = (await panel.boundingBox())!.width;
+    const handle = page.getByRole('separator', { name: 'Ширина панелі налаштувань' });
+    await handle.focus();
+    for (let i = 0; i < 5; i += 1) await page.keyboard.press('ArrowRight');
+    await expect.poll(async () => (await panel.boundingBox())!.width).toBeGreaterThan(before + 20);
+    const wider = (await panel.boundingBox())!.width;
+    await page.waitForTimeout(500);
+    await page.reload();
+    await expect(preview(page).locator('[data-template]')).toBeVisible({ timeout: 15_000 });
+    await expect
+      .poll(async () => Math.round((await panel.boundingBox())!.width))
+      .toBeGreaterThan(Math.round(before) + 20);
+    expect(Math.abs((await panel.boundingBox())!.width - wider)).toBeLessThan(4);
   });
 
   test('the four tab labels are never cut at 768, 1024 and 1440 @desktop', async ({ page }) => {
