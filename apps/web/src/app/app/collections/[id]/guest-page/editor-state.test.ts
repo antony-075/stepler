@@ -139,49 +139,35 @@ describe('Autosaver', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  const body = (welcome: string, baseRevision: number | null) => ({
-    baseRevision,
+  const working = (welcome: string) => ({
     templateId: 'classic',
     settings: classic.defaults,
     welcomeMessage: welcome,
   });
 
+  /**
+   * As the hook wires it: the snapshot only follows local changes (the hook sets it from an
+   * effect, after a render); the revision comes from each answer, inside the saver.
+   */
   function setup(send: (b: SaveGuestPageDraftRequest) => Promise<GuestPageEditor>) {
-    let current: { welcome: string; revision: number | null; version: number } | null = null;
+    let version = 0;
     const saved: number[] = [];
     const states: { inFlight: boolean; failure: string | null }[] = [];
     const sender = vi.fn(send);
     const saver = new Autosaver({
       send: sender,
-      onSaved: (editor, v) => {
-        saved.push(v);
-        if (current !== null) {
-          current.revision = editor.draft?.revision ?? null;
-          sync();
-        }
-      },
+      initialBaseRevision: null,
+      onSaved: (_editor, v) => saved.push(v),
       onState: (state) => states.push(state),
     });
-    /** What the hook does after every change: the body the next save sends. */
-    function sync() {
-      saver.setSnapshot(
-        current === null
-          ? null
-          : { body: body(current.welcome, current.revision), version: current.version },
-      );
-    }
     return {
       saver,
       sender,
       saved,
       states,
       change: (welcome: string) => {
-        current = {
-          welcome,
-          revision: current?.revision ?? null,
-          version: (current?.version ?? 0) + 1,
-        };
-        sync();
+        version += 1;
+        saver.setSnapshot({ working: working(welcome), version });
         saver.schedule();
       },
     };

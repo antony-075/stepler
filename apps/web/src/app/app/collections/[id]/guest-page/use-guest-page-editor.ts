@@ -89,6 +89,7 @@ export function useGuestPageEditor(
     () =>
       new Autosaver({
         send: (body) => saveGuestPageDraft(collectionId, body),
+        initialBaseRevision: baseRevisionOf(initial),
         onSaved: (editor, version) => {
           rawDispatch({ type: 'saved', editor, version });
           putServer(editor);
@@ -97,17 +98,19 @@ export function useGuestPageEditor(
       }),
   );
   useEffect(() => () => saver.dispose(), [saver]);
+  // The draft revision the next save or publish names (the saver holds it): set at once from
+  // every answer of our own (a save, an image route, a publish, a reset), not after a render, so
+  // a save that follows straight on never names the revision before. A refetch moves it only
+  // while nothing is pending: with local changes, another tab's newer draft must end in a
+  // conflict, not be overwritten.
+  const know = useCallback(
+    (editor: GuestPageEditor) => saver.setBaseRevision(baseRevisionOf(editor)),
+    [saver],
+  );
   // After every change: what the next save sends, with the draft revision known now.
   useEffect(() => {
     latest.current = state;
-    saver.setSnapshot(
-      state.pending
-        ? {
-            version: state.version,
-            body: { baseRevision: baseRevisionOf(state.editor), ...state.working },
-          }
-        : null,
-    );
+    saver.setSnapshot(state.pending ? { version: state.version, working: state.working } : null);
   }, [saver, state]);
 
   // Answers that reach the query from elsewhere (a refetch, another tab's change once loaded).
@@ -117,8 +120,10 @@ export function useGuestPageEditor(
     initialData: initial,
   });
   useEffect(() => {
-    if (server.data !== latest.current.editor) rawDispatch({ type: 'server', editor: server.data });
-  }, [server.data]);
+    if (server.data === latest.current.editor) return;
+    if (!latest.current.pending) know(server.data);
+    rawDispatch({ type: 'server', editor: server.data });
+  }, [know, server.data]);
 
   const dispatch = useCallback<GuestPageEditorApi['dispatch']>(
     (action) => {
@@ -130,19 +135,21 @@ export function useGuestPageEditor(
 
   const adopt = useCallback(
     (editor: GuestPageEditor) => {
+      know(editor);
       rawDispatch({ type: 'server', editor });
       putServer(editor);
     },
-    [putServer],
+    [know, putServer],
   );
 
   const save = useCallback(async () => {
     await saver.flush();
-    const revision = baseRevisionOf(latest.current.editor);
+    const revision = saver.baseRevision;
     if (revision === null) return;
     setPublishing(true);
     try {
       const editor = await publishGuestPage(collectionId, revision);
+      know(editor);
       rawDispatch({ type: 'reset', editor });
       putServer(editor);
       // The dashboard card and the detail show the published cover and welcome.
@@ -150,23 +157,25 @@ export function useGuestPageEditor(
     } finally {
       setPublishing(false);
     }
-  }, [collectionId, invalidate, putServer, saver]);
+  }, [collectionId, invalidate, know, putServer, saver]);
 
   const reset = useCallback(async () => {
     saver.dispose();
     await discardGuestPageDraft(collectionId);
     const editor = await fetchGuestPage(collectionId);
+    know(editor);
     rawDispatch({ type: 'reset', editor });
     putServer(editor);
     saver.clearFailure();
-  }, [collectionId, putServer, saver]);
+  }, [collectionId, know, putServer, saver]);
 
   const reloadLatest = useCallback(async () => {
     const editor = await fetchGuestPage(collectionId);
+    know(editor);
     rawDispatch({ type: 'reset', editor });
     putServer(editor);
     saver.clearFailure();
-  }, [collectionId, putServer, saver]);
+  }, [collectionId, know, putServer, saver]);
 
   const retry = useCallback(() => {
     saver.clearFailure();
