@@ -57,8 +57,26 @@ export const MAX_VIDEO_PIXELS = 40_000_000;
 const FRAME_FILTER =
   "scale=w='min(1600,iw)':h='min(1600,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2";
 /** stderr of a run that failed because of the file, not the network. */
-const BAD_INPUT =
+export const BAD_INPUT =
   /Invalid data found|moov atom not found|does not contain any stream|no video stream|Format not on whitelist|Codec .* not on whitelist|could not find codec parameters|Output file is empty|exceeds specified max pixel count|Could not allocate memory|Error while opening decoder/i;
+
+/**
+ * The same hardening for a file the worker has downloaded (location stripping): one decoder
+ * thread, the `file` protocol only, the allowed demuxers and decoders, and the pixel cap (a
+ * 750 KB MP4 declaring 16000×16000 frames otherwise took 660 MB just to be probed).
+ */
+export const localInputOptions = (): string[] => [
+  '-threads',
+  '1',
+  '-protocol_whitelist',
+  'file',
+  '-format_whitelist',
+  FORMAT_WHITELIST,
+  '-codec_whitelist',
+  CODEC_WHITELIST,
+  '-max_pixels',
+  String(MAX_VIDEO_PIXELS),
+];
 
 /** `https,tls,tcp` for R2; `http,tcp` for the local emulator. Anything else is refused. */
 export function protocolWhitelist(url: string): string {

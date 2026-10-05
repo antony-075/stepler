@@ -38,6 +38,17 @@ et -Orientation#=6 -DateTimeOriginal="$WHEN" -Make='Stepler Test Camera' -Model=
   -XMP-exif:GPSLatitude=$LAT -XMP-exif:GPSLongitude=$LON \
   -XMP-photoshop:City=Kyiv -XMP-iptcCore:Location='Maidan' location.jpg
 
+# PNG (eXIf chunk) and WebP (EXIF chunk): EXIF GPS with a capture date; GIF: XMP GPS only (GIF
+# has no EXIF).
+ff -i "$tmp/src.png" location.png
+et -DateTimeOriginal="$WHEN" -GPSLatitude=$LAT -GPSLatitudeRef=N -GPSLongitude=$LON \
+  -GPSLongitudeRef=E location.png
+ff -i "$tmp/src.png" -c:v libwebp location.webp
+et -DateTimeOriginal="$WHEN" -GPSLatitude=$LAT -GPSLatitudeRef=N -GPSLongitude=$LON \
+  -GPSLongitudeRef=E location.webp
+ff -f lavfi -i 'testsrc=size=160x120:rate=4' -t 0.5 location.gif
+et -XMP-exif:GPSLatitude=$LAT -XMP-exif:GPSLongitude=$LON -XMP-photoshop:City=Kyiv location.gif
+
 # HEIC (as an iPhone): EXIF GPS in the Exif item, capture date and camera.
 heif-enc -q 50 "$tmp/src.png" -o location.heic >/dev/null
 et -DateTimeOriginal="$WHEN" -Make='Stepler Test Camera' \
