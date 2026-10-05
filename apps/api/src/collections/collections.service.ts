@@ -182,6 +182,8 @@ export class CollectionsService {
         where: { collectionId: row.id },
         data: { welcomeMessage: body.welcomeMessage },
       });
+      // Changed outside the editor: a tab saving from the draft's revision before gets a 409.
+      await this.pages.bumpDraft(tx, row.id);
       return this.toDto(await this.findOwned(row.id, principal.userId, tx), tx);
     });
   }

@@ -16,6 +16,9 @@ CREATE TYPE "ImageSource" AS ENUM ('UPLOAD', 'FRAME');
 -- CreateEnum
 CREATE TYPE "GuestPageVersionState" AS ENUM ('PUBLISHED', 'DRAFT');
 
+-- CreateEnum
+CREATE TYPE "ImageUploadTarget" AS ENUM ('DRAFT', 'LEGACY_COVER', 'COLLECTION');
+
 -- AlterEnum
 -- This migration adds more than one value to an enum.
 -- With PostgreSQL versions 11 and earlier, this is not possible
@@ -28,7 +31,11 @@ ALTER TYPE "UploadPurpose" ADD VALUE 'BACKGROUND';
 ALTER TYPE "UploadPurpose" ADD VALUE 'COLLECTION_IMAGE';
 
 -- AlterTable
-ALTER TABLE "Collection" ADD COLUMN     "imageId" UUID;
+ALTER TABLE "Collection" ADD COLUMN     "imageId" UUID,
+ADD COLUMN     "lastPageRevision" INTEGER NOT NULL DEFAULT 1;
+
+-- AlterTable
+ALTER TABLE "UploadSession" ADD COLUMN     "imageTarget" "ImageUploadTarget";
 
 -- CreateTable
 CREATE TABLE "CollectionImage" (
@@ -59,6 +66,7 @@ CREATE TABLE "GuestPageVersion" (
     "coverImageId" UUID,
     "backgroundImageId" UUID,
     "revision" INTEGER NOT NULL DEFAULT 1,
+    "savedAt" TIMESTAMPTZ(3),
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
 
@@ -132,6 +140,18 @@ ALTER TABLE "UploadSession" DROP CONSTRAINT "UploadSession_purpose_actor";
 ALTER TABLE "UploadSession" ADD CONSTRAINT "UploadSession_purpose_actor" CHECK (
   ("purpose" = 'CONTENT') = ("guestSessionId" IS NOT NULL AND "guestLinkId" IS NOT NULL)
   AND ("purpose" <> 'CONTENT') = ("uploaderUserId" IS NOT NULL)
+);
+
+-- Open COVER uploads from before the upgrade came through the slice 8a routes.
+UPDATE "UploadSession" SET "imageTarget" = 'LEGACY_COVER' WHERE "purpose" = 'COVER';
+
+-- An admin image upload knows what it completes into; a guest upload has no such target.
+ALTER TABLE "UploadSession" ADD CONSTRAINT "UploadSession_image_target" CHECK (
+  ("purpose" = 'CONTENT') = ("imageTarget" IS NULL)
+);
+
+ALTER TABLE "Collection" ADD CONSTRAINT "Collection_page_revision_positive" CHECK (
+  "lastPageRevision" >= 1
 );
 
 -- An admin image is always a photo.

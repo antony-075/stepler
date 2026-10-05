@@ -58,10 +58,28 @@ export class GuestPageRepository {
     });
   }
 
-  /** The draft, or a new one copied from the published version with revision 1. */
+  /**
+   * The next guest page revision of the collection (`Collection.lastPageRevision + 1`, taken).
+   * Revisions never repeat within a collection, so one names one draft state: a draft created
+   * after a publish or a reset never reuses the number an old tab still holds.
+   */
+  async nextRevision(tx: Prisma.TransactionClient, collectionId: string): Promise<number> {
+    const [row] = await tx.$queryRaw<{ revision: number }[]>`
+      UPDATE "Collection" SET "lastPageRevision" = "lastPageRevision" + 1
+      WHERE "id" = ${collectionId}::uuid
+      RETURNING "lastPageRevision" AS "revision"`;
+    if (row === undefined) throw new Error('The collection is gone');
+    return row.revision;
+  }
+
+  /**
+   * The draft, or a new one copied from the published version with the next revision and no
+   * `savedAt` (untouched: a first save with `baseRevision: null` may still take it).
+   */
   async ensureDraft(tx: Prisma.TransactionClient, collectionId: string): Promise<GuestPageVersion> {
     const { published, draft } = await this.readVersions(tx, collectionId);
     if (draft !== null) return draft;
+    const revision = await this.nextRevision(tx, collectionId);
     return tx.guestPageVersion.create({
       data: {
         collectionId,
@@ -72,9 +90,24 @@ export class GuestPageRepository {
         welcomeMessage: published.welcomeMessage,
         coverImageId: published.coverImageId,
         backgroundImageId: published.backgroundImageId,
-        revision: 1,
+        revision,
       },
     });
+  }
+
+  /**
+   * A change made outside the editor (the slice 8a routes, PR I only) moves the draft to the next
+   * revision, so a tab that saves from the revision before gets a conflict instead of undoing it.
+   * No draft: nothing to do.
+   */
+  async bumpDraft(tx: Prisma.TransactionClient, collectionId: string): Promise<void> {
+    const draft = await tx.guestPageVersion.findUnique({
+      where: { collectionId_state: { collectionId, state: 'DRAFT' } },
+      select: { id: true },
+    });
+    if (draft === null) return;
+    const revision = await this.nextRevision(tx, collectionId);
+    await tx.guestPageVersion.update({ where: { id: draft.id }, data: { revision } });
   }
 
   /** The draft row, locked for this transaction (`FOR UPDATE`), or `null`. */

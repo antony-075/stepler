@@ -135,7 +135,7 @@ export class CoverController {
     @Param({ schema: collectionIdParamsSchema }) params: CollectionIdParams,
     @Body({ schema: createUploadRequestSchema }) body: CreateUploadRequest,
   ): Promise<UploadSessionResponse> {
-    return this.uploads.initiate(principal, params.id, 'COVER', body);
+    return this.uploads.initiate(principal, params.id, LEGACY_COVER, body);
   }
 
   @Post('uploads/:uploadId/parts')
@@ -156,7 +156,7 @@ export class CoverController {
     return this.uploads.presignParts(
       principal,
       params.id,
-      'COVER',
+      LEGACY_COVER,
       params.uploadId,
       body.partNumbers,
     );
@@ -208,6 +208,6 @@ export class CoverController {
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: coverUploadParamsSchema }) params: CoverUploadParams,
   ): Promise<void> {
-    return this.uploads.cancel(principal, params.id, 'COVER', params.uploadId);
+    return this.uploads.cancel(principal, params.id, LEGACY_COVER, params.uploadId);
   }
 }

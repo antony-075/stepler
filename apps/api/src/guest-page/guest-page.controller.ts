@@ -207,7 +207,7 @@ export class GuestPageController {
     @Param({ schema: guestPageImageParamsSchema }) params: ImageParams,
     @Body({ schema: createUploadRequestSchema }) body: CreateUploadRequest,
   ): Promise<UploadSessionResponse> {
-    return this.uploads.initiate(principal, params.id, SLOT[params.slot], body);
+    return this.uploads.initiate(principal, params.id, draftTarget(params.slot), body);
   }
 
   @Post('draft/:slot/uploads/:uploadId/parts')
@@ -231,7 +231,7 @@ export class GuestPageController {
     return this.uploads.presignParts(
       principal,
       params.id,
-      SLOT[params.slot],
+      draftTarget(params.slot),
       params.uploadId,
       body.partNumbers,
     );
@@ -275,6 +275,6 @@ export class GuestPageController {
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: guestPageImageUploadParamsSchema }) params: ImageUploadParams,
   ): Promise<void> {
-    return this.uploads.cancel(principal, params.id, SLOT[params.slot], params.uploadId);
+    return this.uploads.cancel(principal, params.id, draftTarget(params.slot), params.uploadId);
   }
 }

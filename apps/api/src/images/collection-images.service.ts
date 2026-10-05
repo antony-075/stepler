@@ -197,6 +197,7 @@ export class CollectionImagesService {
       },
     });
     await this.point(tx, collectionId, target, image.id);
+    await this.bumpIfLegacy(tx, collectionId, target);
     await this.jobs.enqueue(tx, 'media.collection-image', { collectionId, imageId: image.id });
     this.logger.log({
       msg: 'image set',
@@ -217,6 +218,7 @@ export class CollectionImagesService {
   ): Promise<void> {
     const replaced = await this.point(tx, collectionId, target, null);
     await this.collectGarbage(tx, collectionId, replaced);
+    if (replaced.length > 0) await this.bumpIfLegacy(tx, collectionId, target);
     if (replaced.length > 0) {
       this.logger.log({
         msg: 'image removed',
@@ -253,6 +255,20 @@ export class CollectionImagesService {
         imageId: row.id,
         slot: row.slot,
       });
+    }
+  }
+
+  /**
+   * The slice 8a routes change the draft outside the editor: its revision moves on, so a tab
+   * saving from the revision before gets a 409 instead of silently undoing the change.
+   */
+  private async bumpIfLegacy(
+    tx: Prisma.TransactionClient,
+    collectionId: string,
+    target: ImageTarget,
+  ): Promise<void> {
+    if ('version' in target && target.version === 'BOTH') {
+      await this.pages.bumpDraft(tx, collectionId);
     }
   }
 

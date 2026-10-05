@@ -325,6 +325,11 @@ describe('cover from a frame and cover removal [A8]', () => {
       const published = await prisma.guestPageVersion.findUniqueOrThrow({
         where: { collectionId_state: { collectionId, state: 'PUBLISHED' } },
       });
+      // Revision 3 handed out, as the editor's saves would have.
+      await prisma.collection.update({
+        where: { id: collectionId },
+        data: { lastPageRevision: 3 },
+      });
       return prisma.guestPageVersion.create({
         data: {
           collectionId,
@@ -359,8 +364,9 @@ describe('cover from a frame and cover removal [A8]', () => {
         ['PUBLISHED', b?.id],
         ['DRAFT', b?.id],
       ]);
-      // The draft's revision is untouched: image changes never conflict with autosave.
-      expect(both[1]?.revision).toBe(3);
+      // Changed outside the editor: the draft moved to a new revision, so a tab saving from
+      // revision 3 gets a conflict instead of undoing the change.
+      expect(both[1]?.revision).toBeGreaterThan(3);
       expect(await coverRows(o.collectionId)).toHaveLength(1);
       expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
         { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },

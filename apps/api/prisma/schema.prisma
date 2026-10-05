@@ -102,6 +102,15 @@ enum GuestPageVersionState {
   DRAFT
 }
 
+/// What an admin image upload completes into, fixed at initiation (CHECK
+/// "UploadSession_image_target"): the draft's cover or background, the slice 8a cover routes
+/// (published and draft, until PR J), or the collection image. A route completes only its own.
+enum ImageUploadTarget {
+  DRAFT
+  LEGACY_COVER
+  COLLECTION
+}
+
 enum UploadStatus {
   INITIATED
   /// A completion claimed it (`claimedAt`) and is checking storage outside any transaction; a
@@ -238,6 +247,10 @@ model Collection {
   /// The next frame number (ADR 0015); taken and incremented in the transaction that creates an
   /// item. Gaps are never filled. At least 1 (CHECK "Collection_next_frame_positive").
   nextFrameNo         Int                @default(1)
+  /// The highest guest page revision handed out (a new draft and every save take the next one),
+  /// so a revision names one draft state for the life of the collection, across publishes and
+  /// resets. At least 1 (CHECK "Collection_page_revision_positive").
+  lastPageRevision    Int                @default(1)
   createdAt           DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
   owner               User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
@@ -305,7 +318,11 @@ model GuestPageVersion {
   welcomeMessage    String?
   coverImageId      String?               @db.Uuid
   backgroundImageId String?               @db.Uuid
+  /// From `Collection.lastPageRevision`; a published version keeps the revision it was published at.
   revision          Int                   @default(1)
+  /// Set when the editor (or a legacy route) first saves the draft; NULL while it only holds what
+  /// it was copied from plus image changes, so a first save with `baseRevision: null` may take it.
+  savedAt           DateTime?             @db.Timestamptz(3)
   createdAt         DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime              @updatedAt @db.Timestamptz(3)
   collection        Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
@@ -473,47 +490,49 @@ model MediaObject {
 /// session and link belong to the row's own collection (composite keys). `INITIATED` rows
 /// reserve `declaredSizeBytes` of quota (ADR 0010).
 model UploadSession {
-  id                String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId      String        @db.Uuid
-  purpose           UploadPurpose @default(CONTENT)
+  id                String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String             @db.Uuid
+  purpose           UploadPurpose      @default(CONTENT)
+  /// Admin image uploads only: what the upload completes into (set iff purpose <> CONTENT).
+  imageTarget       ImageUploadTarget?
   /// CONTENT only. Deleting the guest session deletes its uploads; the idle sweep keeps sessions
   /// with uploads. Optional beside the required `collectionId` of its composite key (the
   /// `ContentItem.contributorGuestSession` precedent).
-  guestSessionId    String?       @db.Uuid
+  guestSessionId    String?            @db.Uuid
   /// CONTENT only: the link the upload came through. NO ACTION (links are never deleted while
   /// referenced), so deleting the collection still cascades in one statement.
-  guestLinkId       String?       @db.Uuid
+  guestLinkId       String?            @db.Uuid
   /// Admin images only (every purpose but CONTENT): the admin who uploads. Deleting the user
   /// deletes their image uploads.
-  uploaderUserId    String?       @db.Uuid
+  uploaderUserId    String?            @db.Uuid
   /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId)
   /// for guests and (uploaderUserId, clientUploadId) for admins.
-  clientUploadId    String        @db.Uuid
+  clientUploadId    String             @db.Uuid
   kind              ContentKind
   originalFilename  String
   declaredMime      String
   declaredSizeBytes BigInt
   /// `collections/{collectionId}/uploads/{id}/original`.
-  storageKey        String        @unique
+  storageKey        String             @unique
   /// Every upload is multipart (ADR 0008 addendum 2026-10-03): storage's upload id.
   multipartUploadId String
   partSizeBytes     BigInt
   partCount         Int
-  status            UploadStatus  @default(INITIATED)
+  status            UploadStatus       @default(INITIATED)
   /// A stable error code when REJECTED.
   rejectReason      String?
-  expiresAt         DateTime      @db.Timestamptz(3)
-  completedAt       DateTime?     @db.Timestamptz(3)
+  expiresAt         DateTime           @db.Timestamptz(3)
+  completedAt       DateTime?          @db.Timestamptz(3)
   /// Set while COMPLETING (CHECK "UploadSession_claim_consistent").
-  claimedAt         DateTime?     @db.Timestamptz(3)
+  claimedAt         DateTime?          @db.Timestamptz(3)
   /// The item it became (CONTENT); NULL once that item is purged, and always for an admin image.
-  contentItemId     String?       @unique @db.Uuid
-  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
-  collection        Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
-  guestSession      GuestSession? @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
-  guestLink         GuestLink?    @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
-  uploader          User?         @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
-  contentItem       ContentItem?  @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
+  contentItemId     String?            @unique @db.Uuid
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  collection        Collection         @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  guestSession      GuestSession?      @relation(fields: [guestSessionId, collectionId], references: [id, collectionId], onDelete: Cascade, onUpdate: NoAction, map: "UploadSession_session_same_collection_fkey")
+  guestLink         GuestLink?         @relation(fields: [guestLinkId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "UploadSession_link_same_collection_fkey")
+  uploader          User?              @relation(fields: [uploaderUserId], references: [id], onDelete: Cascade)
+  contentItem       ContentItem?       @relation(fields: [contentItemId], references: [id], onDelete: SetNull)
 
   @@unique([guestSessionId, clientUploadId])
   @@unique([uploaderUserId, clientUploadId])

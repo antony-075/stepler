@@ -105,11 +105,19 @@ export class GuestPageService {
     await this.prisma.$transaction(async (tx) => {
       const locked = await this.images.lockMutable(tx, a, collectionId);
       let draft = await this.pages.lockDraft(tx, locked.id);
+      // A draft made by this save already has a revision of its own (the next one).
+      let fresh = false;
       if (draft === null) {
         // A revision named for a draft that is gone (published or reset elsewhere) is stale too.
         if (body.baseRevision !== null) throw conflict();
         draft = await this.pages.ensureDraft(tx, locked.id);
-      } else if (body.baseRevision !== draft.revision) {
+        fresh = true;
+      } else if (
+        body.baseRevision !== draft.revision &&
+        // A draft no save has touched yet (an image change made it) holds only what was
+        // published: a first save from "no draft" may take it, nothing is lost.
+        !(body.baseRevision === null && draft.savedAt === null)
+      ) {
         throw conflict();
       }
       await tx.guestPageVersion.update({
@@ -119,7 +127,8 @@ export class GuestPageService {
           templateVersion: def.version,
           settings: parsed.data,
           welcomeMessage: body.welcomeMessage,
-          revision: draft.revision + 1,
+          revision: fresh ? draft.revision : await this.pages.nextRevision(tx, locked.id),
+          savedAt: new Date(),
         },
       });
     });
@@ -129,8 +138,9 @@ export class GuestPageService {
   /**
    * Publishes the draft named by `revision`: its columns replace the published version's, the
    * draft row goes, and the images the old published version referenced that nothing else does
-   * are collected. No draft: nothing to publish, `200` as is (a repeated publish). A revision
-   * that is not the draft's: `409`.
+   * are collected; the published version keeps the draft's revision. No draft: `200` as is when
+   * `revision` is the published one (a repeated publish), else `409` (a draft published or reset
+   * elsewhere). A revision that is not the draft's: `409`.
    */
   async publish(
     a: AccountPrincipal,
@@ -141,9 +151,12 @@ export class GuestPageService {
     await this.prisma.$transaction(async (tx) => {
       const locked = await this.images.lockMutable(tx, a, collectionId);
       const draft = await this.pages.lockDraft(tx, locked.id);
-      if (draft === null) return;
-      if (draft.revision !== revision) throw conflict();
       const published = await this.pages.ensurePublished(tx, locked.id);
+      if (draft === null) {
+        if (published.revision === revision) return;
+        throw conflict();
+      }
+      if (draft.revision !== revision) throw conflict();
       // The draft row goes first: the published row takes its image references.
       await tx.guestPageVersion.delete({ where: { id: draft.id } });
       await tx.guestPageVersion.update({
@@ -155,6 +168,7 @@ export class GuestPageService {
           welcomeMessage: draft.welcomeMessage,
           coverImageId: draft.coverImageId,
           backgroundImageId: draft.backgroundImageId,
+          revision: draft.revision,
         },
       });
       await this.images.collectGarbage(tx, locked.id, [

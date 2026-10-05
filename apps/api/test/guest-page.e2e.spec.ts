@@ -254,9 +254,12 @@ describe('guest page editor API', () => {
       const o = await owner();
       await o.legacyCover((await frame(o, 'a.jpg')).id).expect(200);
       const [a] = await images(o.collectionId);
-      const saved = editor((await o.save(draftBody(null, { accent: '#2C7350' })).expect(200)).body);
+      const first = editor((await o.save(draftBody(null, { accent: '#2C7350' })).expect(200)).body);
       await o.reset().expect(204);
-      await o.save(draftBody(null)).expect(200);
+      const saved = editor((await o.save(draftBody(null)).expect(200)).body);
+      // A revision never repeats: the reset draft's number names nothing now.
+      expect(saved.draft?.revision).toBeGreaterThan(first.draft?.revision ?? 0);
+      await o.publish(first.draft?.revision ?? 0).expect(409);
       await o.publish(saved.draft?.revision ?? 0).expect(200);
       expect((await images(o.collectionId)).map((row) => row.id)).toEqual([a?.id]);
       expect(await purges()).toEqual([]);
@@ -343,6 +346,65 @@ describe('guest page editor API', () => {
         revision: 3,
         settings: { corners: 'round' },
       });
+    });
+
+    test('I1: a stale tab cannot save into or publish a newer draft that reuses a number', async () => {
+      const o = await owner();
+      // Tab A: an image-only draft (no save yet), revision r1.
+      const a = editor((await o.fromFrame('cover', (await frame(o, 'a.jpg')).id).expect(200)).body);
+      const r1 = a.draft?.revision ?? 0;
+      // Tab B saves, publishes, then changes an image: a new draft.
+      const b = editor((await o.save(draftBody(null, { accent: '#8B5CF6' })).expect(200)).body);
+      await o.publish(b.draft?.revision ?? 0).expect(200);
+      const again = editor(
+        (await o.fromFrame('background', (await frame(o, 'b.jpg')).id).expect(200)).body,
+      );
+      expect(again.draft?.revision).not.toBe(r1);
+      // Tab A autosaves and publishes from r1: both are conflicts, B's page stays live.
+      await o.save(draftBody(r1, { accent: '#2C7350' })).expect(409);
+      await o.publish(r1).expect(409);
+      expect(editor((await o.get().expect(200)).body).published.settings.accent).toBe('#8B5CF6');
+    });
+
+    test('I2: a tab’s first save takes the draft its own image change created', async () => {
+      const o = await owner();
+      const withImage = editor((await o.fromFrame('cover', (await frame(o)).id).expect(200)).body);
+      expect(withImage.draft).not.toBeNull();
+      // The editor still thought there was no draft: baseRevision null is accepted once.
+      const saved = editor((await o.save(draftBody(null, { align: 'center' })).expect(200)).body);
+      expect(saved.draft).toMatchObject({ settings: { align: 'center' } });
+      expect(saved.draft?.cover).not.toBeNull();
+      // After that save, null is a conflict again.
+      await o.save(draftBody(null)).expect(409);
+    });
+
+    test('M2: the legacy routes move the draft on, so a stale save conflicts', async () => {
+      const o = await owner();
+      const saved = editor((await o.save(draftBody(null)).expect(200)).body);
+      await request(s.server)
+        .patch(`/api/v1/collections/${o.collectionId}`)
+        .set('Cookie', o.cookie)
+        .set('Origin', ORIGIN)
+        .send({ welcomeMessage: 'Вітаємо!' })
+        .expect(200);
+      await o.save(draftBody(saved.draft?.revision ?? 0)).expect(409);
+      const now = editor((await o.get().expect(200)).body);
+      expect(now.draft?.welcomeMessage).toBe('Вітаємо!');
+      await o.legacyCover((await frame(o)).id).expect(200);
+      await o.save(draftBody(now.draft?.revision ?? 0)).expect(409);
+    });
+
+    test('M3: a draft upload cannot be completed through the legacy cover route, nor the other slot', async () => {
+      const o = await owner();
+      const calls = o.uploads('cover');
+      const session = await uploadFile(calls, 'c.jpg', fixture('photo.jpg'));
+      await request(s.server)
+        .post(`/api/v1/collections/${o.collectionId}/cover/uploads/${session.uploadId}/complete`)
+        .set('Cookie', o.cookie)
+        .set('Origin', ORIGIN)
+        .expect(404);
+      await o.uploads('background').complete(session.uploadId).expect(404);
+      await calls.complete(session.uploadId).expect(200);
     });
 
     test('two saves with the same base at once: one 200, one 409', async () => {

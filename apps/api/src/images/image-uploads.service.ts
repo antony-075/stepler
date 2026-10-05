@@ -9,7 +9,7 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { constraintViolation } from '../database/constraint-violation.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
-import type { Prisma, UploadSession } from '../generated/prisma/client.js';
+import type { ImageUploadTarget, Prisma, UploadSession } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
@@ -33,6 +33,19 @@ export const MAX_OPEN_IMAGE_UPLOADS = 3;
 
 /** The upload purpose of each admin image slot (the same names). */
 export type ImagePurpose = ImageSlotKey;
+
+/** What a route's uploads complete into, stored on the upload so another route cannot complete it. */
+export function uploadTargetOf(target: ImageTarget): {
+  purpose: ImagePurpose;
+  imageTarget: ImageUploadTarget;
+} {
+  if (target.slot === 'COLLECTION_IMAGE')
+    return { purpose: target.slot, imageTarget: 'COLLECTION' };
+  return {
+    purpose: target.slot,
+    imageTarget: target.version === 'BOTH' ? 'LEGACY_COVER' : 'DRAFT',
+  };
+}
 
 /** What a short transaction decided; errors are thrown after it commits. */
 type Outcome =
@@ -74,9 +87,10 @@ export class ImageUploadsService {
   async initiate(
     a: AccountPrincipal,
     collectionId: string,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     body: CreateUploadRequest,
   ): Promise<UploadSessionResponse> {
+    const { purpose, imageTarget } = uploadTargetOf(target);
     const type = fileTypeFor(body.filename, body.mimeType);
     if (type === null || type.kind !== 'PHOTO') throw new AppError('FILE_TYPE_NOT_ALLOWED', 422);
     const size = BigInt(body.sizeBytes);
@@ -88,7 +102,11 @@ export class ImageUploadsService {
     if (collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     const existing = await this.findByClientId(a, body.clientUploadId);
     if (existing !== null) {
-      if (existing.collectionId !== collection.id || existing.purpose !== purpose) {
+      if (
+        existing.collectionId !== collection.id ||
+        existing.purpose !== purpose ||
+        existing.imageTarget !== imageTarget
+      ) {
         throw new AppError('IDEMPOTENCY_CONFLICT', 409);
       }
       return this.replay(existing, body);
@@ -97,6 +115,7 @@ export class ImageUploadsService {
       where: {
         collectionId: collection.id,
         purpose,
+        imageTarget,
         status: { in: ['INITIATED', 'COMPLETING'] },
         expiresAt: { gt: new Date() },
       },
@@ -128,6 +147,7 @@ export class ImageUploadsService {
             id,
             collectionId: locked.id,
             purpose,
+            imageTarget,
             uploaderUserId: a.userId,
             clientUploadId: body.clientUploadId,
             kind: 'PHOTO',
@@ -154,7 +174,8 @@ export class ImageUploadsService {
         if (
           winner !== null &&
           winner.collectionId === collection.id &&
-          winner.purpose === purpose
+          winner.purpose === purpose &&
+          winner.imageTarget === imageTarget
         ) {
           return this.replay(winner, body);
         }
@@ -176,11 +197,11 @@ export class ImageUploadsService {
   async presignParts(
     a: AccountPrincipal,
     collectionId: string,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     uploadId: string,
     partNumbers: readonly number[],
   ): Promise<UploadPartsResponse> {
-    const row = await this.findUpload(this.prisma, a, collectionId, purpose, uploadId);
+    const row = await this.findUpload(this.prisma, a, collectionId, target, uploadId);
     const { status } = await this.prisma.collection.findUniqueOrThrow({
       where: { id: row.collectionId },
       select: { status: true },
@@ -220,13 +241,13 @@ export class ImageUploadsService {
   async cancel(
     a: AccountPrincipal,
     collectionId: string,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     uploadId: string,
   ): Promise<void> {
     // Started outside the transaction, so a first start never runs while it holds a connection.
     await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
-      const row = await this.findUpload(tx, a, collectionId, purpose, uploadId);
+      const row = await this.findUpload(tx, a, collectionId, target, uploadId);
       if (row.status === 'ABORTED') return;
       if (row.status === 'COMPLETED') throw new AppError('UPLOAD_CLOSED', 409);
       if (isBeingCompleted(row)) throw uploadInProgress();
@@ -265,10 +286,10 @@ export class ImageUploadsService {
     uploadId: string,
     target: ImageTarget,
   ): Promise<void> {
-    const purpose = target.slot;
+    const { purpose } = uploadTargetOf(target);
     await this.jobs.ready();
     const claim = await this.prisma.$transaction((tx) =>
-      this.claim(tx, a, collectionId, purpose, uploadId),
+      this.claim(tx, a, collectionId, target, uploadId),
     );
     if (claim.kind !== 'claimed') return this.finish(claim);
 
@@ -283,7 +304,7 @@ export class ImageUploadsService {
     if (verdict.kind === 'refuse') {
       const refusal = verdict.error;
       const outcome = await this.prisma.$transaction((tx) =>
-        this.record(tx, a, purpose, claim.row.id, claim.claimedAt, (row) =>
+        this.record(tx, a, target, claim.row.id, claim.claimedAt, (row) =>
           this.close(tx, row, 'REJECTED', refusal),
         ),
       );
@@ -301,7 +322,7 @@ export class ImageUploadsService {
     let outcome: Outcome;
     try {
       outcome = await this.prisma.$transaction((tx) =>
-        this.record(tx, a, purpose, claim.row.id, claim.claimedAt, async (row) => {
+        this.record(tx, a, target, claim.row.id, claim.claimedAt, async (row) => {
           let locked: { id: string };
           try {
             locked = await this.images.lockMutable(tx, a, row.collectionId);
@@ -362,11 +383,11 @@ export class ImageUploadsService {
     tx: Prisma.TransactionClient,
     a: AccountPrincipal,
     collectionId: string,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     uploadId: string,
   ): Promise<Outcome> {
     // Scope first (another admin's upload is 404), then lock the row and read it again.
-    const own = await this.findUpload(tx, a, collectionId, purpose, uploadId);
+    const own = await this.findUpload(tx, a, collectionId, target, uploadId);
     await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${own.id}::uuid FOR UPDATE`;
     const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: own.id } });
 
@@ -407,14 +428,14 @@ export class ImageUploadsService {
   private async record(
     tx: Prisma.TransactionClient,
     a: AccountPrincipal,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     uploadId: string,
     claimedAt: Date,
     then: (row: UploadSession) => Promise<Outcome>,
   ): Promise<Outcome> {
     await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${uploadId}::uuid FOR UPDATE`;
     const row = await tx.uploadSession.findFirst({
-      where: { id: uploadId, purpose, uploaderUserId: a.userId },
+      where: { id: uploadId, ...uploadTargetOf(target), uploaderUserId: a.userId },
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
     // Another request took over a claim it thought stale, or the purge aborted the upload.
@@ -461,21 +482,21 @@ export class ImageUploadsService {
   }
 
   /**
-   * The admin's own upload of this purpose in their own collection; anything else (another
-   * admin's upload, a guest's upload, another purpose, another collection, a `DELETING` one) is
-   * `404` like a missing one.
+   * The admin's own upload for this target in their own collection; anything else (another
+   * admin's upload, a guest's upload, another slot or route, another collection, a `DELETING`
+   * one) is `404` like a missing one.
    */
   private async findUpload(
     prisma: Pick<Prisma.TransactionClient, 'uploadSession'>,
     a: AccountPrincipal,
     collectionId: string,
-    purpose: ImagePurpose,
+    target: ImageTarget,
     uploadId: string,
   ): Promise<UploadSession> {
     const row = await prisma.uploadSession.findFirst({
       where: {
         id: uploadId,
-        purpose,
+        ...uploadTargetOf(target),
         uploaderUserId: a.userId,
         collectionId,
         collection: { ownerId: a.userId, status: { not: 'DELETING' } },

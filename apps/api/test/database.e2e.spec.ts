@@ -692,6 +692,7 @@ describe('upload session and media object schema', () => {
         data: {
           collectionId: ids.collectionId,
           purpose: 'COVER',
+          imageTarget: 'LEGACY_COVER',
           uploaderUserId: ownerId,
           clientUploadId: `0199a000-0000-7000-8000-${String(n).padStart(12, '0')}`,
           kind: 'PHOTO',
@@ -725,6 +726,15 @@ describe('upload session and media object schema', () => {
       });
       expect(await violation(upload(ids, { uploaderUserId: ownerId }))).toEqual(rule);
       await coverUpload(ids);
+    });
+
+    test('an admin image upload names its target; a guest upload never does', async () => {
+      const ids = await setup();
+      const rule = check('UploadSession_image_target');
+      expect(await violation(coverUpload(ids, { imageTarget: null }))).toEqual(rule);
+      expect(await violation(upload(ids, { imageTarget: 'DRAFT' }))).toEqual(rule);
+      await coverUpload(ids, { purpose: 'BACKGROUND', imageTarget: 'DRAFT' });
+      await coverUpload(ids, { purpose: 'COLLECTION_IMAGE', imageTarget: 'COLLECTION' });
     });
 
     test('an admin image is always a photo', async () => {
@@ -920,6 +930,13 @@ describe('collection images and guest page versions (plan 2026-10-05)', () => {
     expect(await violation(version(id, { welcomeMessage: '' }))).toEqual(welcome);
     expect(await violation(version(id, { welcomeMessage: '😀'.repeat(161) }))).toEqual(welcome);
     await version(id, { welcomeMessage: '😀'.repeat(160) });
+  });
+
+  test('the collection’s page revision counter is at least 1', async () => {
+    const id = await collection();
+    expect(
+      await violation(prisma.collection.update({ where: { id }, data: { lastPageRevision: 0 } })),
+    ).toEqual(check('Collection_page_revision_positive'));
   });
 
   test('one PUBLISHED and at most one DRAFT per collection', async () => {
