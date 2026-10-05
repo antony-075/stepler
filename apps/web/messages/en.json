@@ -901,6 +901,7 @@
       "unavailable": "This collection’s preview could not be shown.",
       "placeholder": "Guests’ frames will be here",
       "frame": "A guest’s frame"
-    }
+    },
+    "leave": "Your changes are still being saved. Leave the page?"
   }
 }
