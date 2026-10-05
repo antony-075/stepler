@@ -32,6 +32,7 @@ export const fullscreenLike: TemplateDefinition = {
     text: '#F3EFE9',
     body: '#D9D3CA',
     muted: '#ADA69D',
+    link: '#F2A65A',
     surfaces: ['#1B1917', '#24211E', '#221F1C'],
     veil: '#0E0B09',
     onImageText: '#FFFFFF',

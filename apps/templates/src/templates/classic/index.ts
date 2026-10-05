@@ -7,5 +7,4 @@ export const classic: GuestTemplate = {
   ...definition,
   Layout: ClassicLayout,
   Thumbnail: ClassicThumbnail,
-  followsSystemScheme: true,
 };

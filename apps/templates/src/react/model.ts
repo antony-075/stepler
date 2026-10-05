@@ -81,9 +81,4 @@ export type GuestTemplate = TemplateDefinition & {
   Layout: ComponentType<TemplateLayoutProps>;
   /** A small decorative picture of the template for the editor's picker. */
   Thumbnail: ComponentType;
-  /**
-   * PR H only: `classic` is today's guest page, which still follows the visitor's light/dark
-   * setting, so the root sets no `color-scheme` of its own. Removed when classic is redesigned.
-   */
-  followsSystemScheme?: boolean;
 };

@@ -4,10 +4,7 @@ import type { TemplateDefinition } from '../../core/definition.ts';
 const TEXT = '#141614';
 const VEIL = '#F0F1EE';
 
-/**
- * T1 «Класика» (plan Appendix A). Until PR K its layout is today's guest page, which still
- * follows the visitor's light/dark setting [D5]; `scheme` is what the designed T1 will be.
- */
+/** T1 «Класика» (plan Appendix A): the light table, a white aside, Geologica, the pencil. */
 export const classic: TemplateDefinition = {
   id: 'classic',
   version: 1,
@@ -41,7 +38,9 @@ export const classic: TemplateDefinition = {
     text: TEXT,
     body: '#3B3E39',
     muted: '#5A5D58',
-    surfaces: ['#FFFFFF'],
+    link: '#5A4A8C',
+    // The aside and the wish tile, which text and the accent's text form also sit on.
+    surfaces: ['#FFFFFF', '#FBECE8'],
     veil: VEIL,
     onImageText: '#FFFFFF',
   },

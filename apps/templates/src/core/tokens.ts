@@ -10,6 +10,7 @@ import {
   withAlpha,
 } from './contrast.ts';
 import type { TemplateDefinition } from './definition.ts';
+import { fontCssVar } from './fonts.ts';
 
 /** CSS custom properties a template root carries (`GuestTemplateRoot`), all `--tpl-*`. */
 export type ThemeTokens = Record<`--tpl-${string}`, string>;
@@ -27,6 +28,15 @@ const ACCENT_GLOW_ALPHA = 0.55;
 /** The veil over a background image: the admin's dimming, never below what keeps text readable. */
 function veilAlpha(def: TemplateDefinition, dim: number): number {
   return Math.max(dim / 100, minVeil(def.palette.text, def.palette.veil));
+}
+
+/**
+ * The scrim under text set straight on a picture (T2's hero): the admin's dimming, never below
+ * what keeps `onImageText` readable over any picture.
+ */
+function textBandAlpha(def: TemplateDefinition, settings: ThemeSettings): number {
+  const dim = settings.background.kind === 'image' ? settings.background.dim / 100 : 0;
+  return Math.max(dim, minVeil(def.palette.onImageText, def.palette.veil));
 }
 
 /**
@@ -83,6 +93,13 @@ export function themeTokens(def: TemplateDefinition, settings: ThemeSettings): T
     '--tpl-text': readableOn(def.palette.text, backgrounds),
     '--tpl-body': readableOn(def.palette.body, backgrounds),
     '--tpl-muted': readableOn(def.palette.muted, backgrounds),
+    '--tpl-link': readableOn(def.palette.link, backgrounds),
+    '--tpl-surface': def.palette.surfaces[0] ?? def.palette.veil,
+    '--tpl-veil': def.palette.veil,
+    '--tpl-on-image': def.palette.onImageText,
+    '--tpl-text-band': String(textBandAlpha(def, settings)),
+    '--tpl-font-heading': `var(${fontCssVar(settings.headingFont)})`,
+    '--tpl-font-body': `var(${fontCssVar(def.bodyFont)})`,
     '--tpl-accent': accent,
     '--tpl-on-accent': bestTextOn(accent),
     '--tpl-accent-text': readableOn(accent, backgrounds),
@@ -140,7 +157,13 @@ export function assertReadable(def: TemplateDefinition, settings: ThemeSettings)
     const ratio = Math.min(...against.map((bg) => contrastRatio(tokens[token] as Hex, bg)));
     if (ratio < MIN_RATIO) throw new ContrastError(token, ratio);
   };
-  for (const token of ['--tpl-text', '--tpl-body', '--tpl-muted', '--tpl-accent-text'] as const) {
+  for (const token of [
+    '--tpl-text',
+    '--tpl-body',
+    '--tpl-muted',
+    '--tpl-link',
+    '--tpl-accent-text',
+  ] as const) {
     check(token, backgrounds);
   }
   check('--tpl-on-accent', [settings.accent]);

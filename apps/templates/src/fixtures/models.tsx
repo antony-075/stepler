@@ -47,30 +47,55 @@ const textActions: TemplateActions = {
   note: null,
 };
 
+/** Wishes and a video among the photos, as a real collection has (every fourth a wish). */
+const WISHES = [
+  'Олю, Тарасе, кохайте одне одного так, як сьогодні!',
+  'Гірко! Найкращий перший танець.',
+];
+
 function frames(count: number, own: boolean) {
-  return Array.from({ length: count }, (_, i) => (
-    <Frame
-      key={i}
-      kind="photo"
-      {...(own ? { number: count - i } : {})}
-      media={<img alt="" src={samplePhoto((i * 47 + 12) % 360)} />}
-      accessibleName={`Кадр ${count - i}, фото`}
-      onOpen={() => {}}
-    />
-  ));
+  return Array.from({ length: count }, (_, i) => {
+    const number = count - i;
+    const numbered = own ? { number } : {};
+    if (i % 4 === 1) {
+      return (
+        <Frame
+          key={i}
+          kind="text"
+          {...numbered}
+          text={WISHES[Math.floor(i / 4) % WISHES.length]}
+          accessibleName={`Кадр ${number}, побажання`}
+          onOpen={() => {}}
+        />
+      );
+    }
+    return (
+      <Frame
+        key={i}
+        kind={i % 4 === 2 ? 'video' : 'photo'}
+        {...numbered}
+        {...(i % 4 === 2 ? { meta: '0:12' } : {})}
+        media={<img alt="" src={samplePhoto((i * 47 + 12) % 360)} />}
+        accessibleName={`Кадр ${number}, ${i % 4 === 2 ? 'відео' : 'фото'}`}
+        onOpen={() => {}}
+      />
+    );
+  });
 }
 
 function FramesSection({
   id,
+  slot,
   title,
   children,
 }: {
   id: string;
+  slot: 'guest-own-frames' | 'guest-all-frames';
   title: string;
   children: ReactNode;
 }) {
   return (
-    <section aria-labelledby={id} className="grid gap-4">
+    <section aria-labelledby={id} data-slot={slot} className="grid gap-4">
       <h2 id={id} className="type-h2">
         {title}
       </h2>
@@ -80,7 +105,7 @@ function FramesSection({
 }
 
 const ownEmpty = (
-  <FramesSection id="own-title" title="Ваші кадри, додані з цього пристрою">
+  <FramesSection id="own-title" slot="guest-own-frames" title="Ваші кадри, додані з цього пристрою">
     <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
       Тут з’являться ваші кадри.
     </p>
@@ -88,14 +113,14 @@ const ownEmpty = (
 );
 
 const ownFull = (
-  <FramesSection id="own-title" title="Ваші кадри, додані з цього пристрою">
-    <FrameGrid ariaLabel="Ваші кадри">{frames(4, true)}</FrameGrid>
+  <FramesSection id="own-title" slot="guest-own-frames" title="Ваші кадри, додані з цього пристрою">
+    <FrameGrid ariaLabel="Ваші кадри">{frames(6, true)}</FrameGrid>
   </FramesSection>
 );
 
 const allFrames = (
-  <FramesSection id="all-title" title="Усі кадри">
-    <FrameGrid ariaLabel="Усі кадри">{frames(9, false)}</FrameGrid>
+  <FramesSection id="all-title" slot="guest-all-frames" title="Усі кадри">
+    <FrameGrid ariaLabel="Усі кадри">{frames(12, false)}</FrameGrid>
   </FramesSection>
 );
 
@@ -169,6 +194,8 @@ export type Fixture = {
   model: GuestPageModel;
   actions: TemplateActions | null;
   slots: TemplateSlots;
+  /** An image background (where the template allows one); else the template's defaults. */
+  imageBackground?: true;
 };
 
 /** The plan's fixture set (Task 3): every template is checked against each of these. */
@@ -195,6 +222,12 @@ export const FIXTURES = {
     },
     actions: filesActions,
     slots: slots(ownEmpty),
+  },
+  ImageBackground: {
+    model: { ...base, background: sampleImage(260, 1600, 1200) },
+    actions: filesActions,
+    slots: slots(ownFull),
+    imageBackground: true,
   },
 } satisfies Record<string, Fixture>;
 

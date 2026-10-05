@@ -116,7 +116,11 @@ function PreviewPage({
     ...staticSlots(),
     ownFrames:
       actions === null ? null : (
-        <section aria-labelledby="preview-own-title" className="grid gap-4">
+        <section
+          aria-labelledby="preview-own-title"
+          data-slot="guest-own-frames"
+          className="grid gap-4"
+        >
           <h2 id="preview-own-title" className="type-h2">
             {t('ownTitle')}
           </h2>
@@ -126,7 +130,11 @@ function PreviewPage({
         </section>
       ),
     allFrames: (
-      <section aria-labelledby="preview-all-title" className="grid gap-4">
+      <section
+        aria-labelledby="preview-all-title"
+        data-slot="guest-all-frames"
+        className="grid gap-4"
+      >
         <h2 id="preview-all-title" className="type-h2">
           {t('allTitle')}
         </h2>
