@@ -19,14 +19,14 @@ export function buildGuestPageModel(
     onCoverError?: () => void;
   },
 ): GuestPageModel {
-  const { collection } = context;
+  const { collection, page } = context;
   return {
     title: collection.title,
     description: collection.description,
-    welcomeMessage: collection.welcomeMessage,
+    welcomeMessage: page.welcomeMessage,
     countsLabel: opts.countsLabel,
     lastAddedLabel: opts.lastAddedLabel,
-    cover: coverImage(collection.cover, opts.onCoverError),
+    cover: coverImage(page.cover, opts.onCoverError),
     // PR I brings the background image with the published page.
     background: null,
     phase: opts.contributed ? 'contributed' : 'first-visit',

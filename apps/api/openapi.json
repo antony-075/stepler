@@ -39,7 +39,9 @@
               "UPLOAD_IN_PROGRESS",
               "COVER_SOURCE_INVALID",
               "LEGAL_ACCEPTANCE_REQUIRED",
-              "LEGAL_VERSION_OUTDATED"
+              "LEGAL_VERSION_OUTDATED",
+              "GUEST_PAGE_DRAFT_CONFLICT",
+              "THEME_CONTRAST_TOO_LOW"
             ],
             "type": "string"
           },
@@ -557,6 +559,11 @@
                                 "nullable": true,
                                 "type": "integer"
                               },
+                              "largeUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
                               "previewUrl": {
                                 "format": "uri",
                                 "nullable": true,
@@ -586,6 +593,7 @@
                               "status",
                               "thumbnailUrl",
                               "previewUrl",
+                              "largeUrl",
                               "width",
                               "height"
                             ],
@@ -646,6 +654,56 @@
                             "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                             "type": "string"
                           },
+                          "image": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "height": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "largeUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "previewUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "status": {
+                                "enum": [
+                                  "PENDING",
+                                  "READY",
+                                  "FAILED"
+                                ],
+                                "type": "string"
+                              },
+                              "thumbnailUrl": {
+                                "format": "uri",
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "width": {
+                                "maximum": 9007199254740991,
+                                "minimum": 1,
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "thumbnailUrl",
+                              "previewUrl",
+                              "largeUrl",
+                              "width",
+                              "height"
+                            ],
+                            "type": "object"
+                          },
                           "lastContentAt": {
                             "format": "date-time",
                             "nullable": true,
@@ -685,7 +743,8 @@
                           "contentCount",
                           "lastContentAt",
                           "welcomeMessage",
-                          "cover"
+                          "cover",
+                          "image"
                         ],
                         "type": "object"
                       },
@@ -786,6 +845,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -815,6 +879,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -875,6 +940,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -914,7 +1029,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -1030,6 +1146,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1059,6 +1180,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -1118,6 +1240,56 @@
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
+                    },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
                     },
                     "lastContentAt": {
                       "format": "date-time",
@@ -1179,6 +1351,7 @@
                     "lastContentAt",
                     "welcomeMessage",
                     "cover",
+                    "image",
                     "storage"
                   ],
                   "type": "object"
@@ -1280,6 +1453,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1309,6 +1487,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -1369,6 +1548,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -1408,7 +1637,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -1480,6 +1710,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1509,6 +1744,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -1569,6 +1805,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -1608,7 +1894,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -2177,6 +2464,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -2206,6 +2498,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -2266,6 +2559,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -2305,7 +2648,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -2594,6 +2938,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -2623,6 +2972,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -2683,6 +3033,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -2722,7 +3122,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -3447,6 +3848,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
                         "previewUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -3476,6 +3882,7 @@
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
+                        "largeUrl",
                         "width",
                         "height"
                       ],
@@ -3536,6 +3943,56 @@
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
                       "type": "string"
                     },
+                    "image": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "height": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "largeUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "previewUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "READY",
+                            "FAILED"
+                          ],
+                          "type": "string"
+                        },
+                        "thumbnailUrl": {
+                          "format": "uri",
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "width": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "thumbnailUrl",
+                        "previewUrl",
+                        "largeUrl",
+                        "width",
+                        "height"
+                      ],
+                      "type": "object"
+                    },
                     "lastContentAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -3575,7 +4032,8 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover"
+                    "cover",
+                    "image"
                   ],
                   "type": "object"
                 }
@@ -4947,37 +5405,6 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
-                        "cover": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "height": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            },
-                            "previewUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "thumbnailUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "width": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "thumbnailUrl",
-                            "previewUrl",
-                            "width",
-                            "height"
-                          ],
-                          "type": "object"
-                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -4989,18 +5416,12 @@
                         },
                         "title": {
                           "type": "string"
-                        },
-                        "welcomeMessage": {
-                          "nullable": true,
-                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description",
-                        "welcomeMessage",
-                        "cover"
+                        "description"
                       ],
                       "type": "object"
                     },
@@ -5090,6 +5511,231 @@
                       ],
                       "type": "object"
                     },
+                    "page": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "background": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "settings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "accent": {
+                              "pattern": "^#[0-9A-F]{6}$",
+                              "type": "string"
+                            },
+                            "align": {
+                              "enum": [
+                                "start",
+                                "center"
+                              ],
+                              "type": "string"
+                            },
+                            "background": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "color": {
+                                      "pattern": "^#[0-9A-F]{6}$",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "solid"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "color"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "gradient"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "preset": {
+                                      "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "preset"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "dim": {
+                                      "maximum": 90,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "image"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "dim"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "corners": {
+                              "enum": [
+                                "sharp",
+                                "soft",
+                                "round"
+                              ],
+                              "type": "string"
+                            },
+                            "coverPlacement": {
+                              "enum": [
+                                "top",
+                                "full",
+                                "side",
+                                "none"
+                              ],
+                              "type": "string"
+                            },
+                            "headingFont": {
+                              "enum": [
+                                "geologica",
+                                "manrope",
+                                "unbounded",
+                                "playfair-display",
+                                "cormorant",
+                                "lora",
+                                "nunito",
+                                "rubik",
+                                "montserrat-alternates",
+                                "comfortaa",
+                                "pt-serif",
+                                "golos-text"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "background",
+                            "accent",
+                            "headingFont",
+                            "coverPlacement",
+                            "align",
+                            "corners"
+                          ],
+                          "type": "object"
+                        },
+                        "templateId": {
+                          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                          "type": "string"
+                        },
+                        "templateVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "templateVersion",
+                        "settings",
+                        "welcomeMessage",
+                        "cover",
+                        "background"
+                      ],
+                      "type": "object"
+                    },
                     "permissions": {
                       "additionalProperties": false,
                       "properties": {
@@ -5125,6 +5771,7 @@
                   },
                   "required": [
                     "collection",
+                    "page",
                     "permissions",
                     "guest",
                     "limits",
@@ -5204,37 +5851,6 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
-                        "cover": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "height": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            },
-                            "previewUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "thumbnailUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "width": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "thumbnailUrl",
-                            "previewUrl",
-                            "width",
-                            "height"
-                          ],
-                          "type": "object"
-                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -5246,18 +5862,12 @@
                         },
                         "title": {
                           "type": "string"
-                        },
-                        "welcomeMessage": {
-                          "nullable": true,
-                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description",
-                        "welcomeMessage",
-                        "cover"
+                        "description"
                       ],
                       "type": "object"
                     },
@@ -5347,6 +5957,231 @@
                       ],
                       "type": "object"
                     },
+                    "page": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "background": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "settings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "accent": {
+                              "pattern": "^#[0-9A-F]{6}$",
+                              "type": "string"
+                            },
+                            "align": {
+                              "enum": [
+                                "start",
+                                "center"
+                              ],
+                              "type": "string"
+                            },
+                            "background": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "color": {
+                                      "pattern": "^#[0-9A-F]{6}$",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "solid"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "color"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "gradient"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "preset": {
+                                      "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "preset"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "dim": {
+                                      "maximum": 90,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "image"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "dim"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "corners": {
+                              "enum": [
+                                "sharp",
+                                "soft",
+                                "round"
+                              ],
+                              "type": "string"
+                            },
+                            "coverPlacement": {
+                              "enum": [
+                                "top",
+                                "full",
+                                "side",
+                                "none"
+                              ],
+                              "type": "string"
+                            },
+                            "headingFont": {
+                              "enum": [
+                                "geologica",
+                                "manrope",
+                                "unbounded",
+                                "playfair-display",
+                                "cormorant",
+                                "lora",
+                                "nunito",
+                                "rubik",
+                                "montserrat-alternates",
+                                "comfortaa",
+                                "pt-serif",
+                                "golos-text"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "background",
+                            "accent",
+                            "headingFont",
+                            "coverPlacement",
+                            "align",
+                            "corners"
+                          ],
+                          "type": "object"
+                        },
+                        "templateId": {
+                          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                          "type": "string"
+                        },
+                        "templateVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "templateVersion",
+                        "settings",
+                        "welcomeMessage",
+                        "cover",
+                        "background"
+                      ],
+                      "type": "object"
+                    },
                     "permissions": {
                       "additionalProperties": false,
                       "properties": {
@@ -5382,6 +6217,7 @@
                   },
                   "required": [
                     "collection",
+                    "page",
                     "permissions",
                     "guest",
                     "limits",
@@ -5467,37 +6303,6 @@
                     "collection": {
                       "additionalProperties": false,
                       "properties": {
-                        "cover": {
-                          "additionalProperties": false,
-                          "nullable": true,
-                          "properties": {
-                            "height": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            },
-                            "previewUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "thumbnailUrl": {
-                              "format": "uri",
-                              "type": "string"
-                            },
-                            "width": {
-                              "maximum": 9007199254740991,
-                              "minimum": 1,
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "thumbnailUrl",
-                            "previewUrl",
-                            "width",
-                            "height"
-                          ],
-                          "type": "object"
-                        },
                         "description": {
                           "nullable": true,
                           "type": "string"
@@ -5509,18 +6314,12 @@
                         },
                         "title": {
                           "type": "string"
-                        },
-                        "welcomeMessage": {
-                          "nullable": true,
-                          "type": "string"
                         }
                       },
                       "required": [
                         "id",
                         "title",
-                        "description",
-                        "welcomeMessage",
-                        "cover"
+                        "description"
                       ],
                       "type": "object"
                     },
@@ -5610,6 +6409,231 @@
                       ],
                       "type": "object"
                     },
+                    "page": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "background": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "width",
+                            "height",
+                            "largeUrl"
+                          ],
+                          "type": "object"
+                        },
+                        "settings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "accent": {
+                              "pattern": "^#[0-9A-F]{6}$",
+                              "type": "string"
+                            },
+                            "align": {
+                              "enum": [
+                                "start",
+                                "center"
+                              ],
+                              "type": "string"
+                            },
+                            "background": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "color": {
+                                      "pattern": "^#[0-9A-F]{6}$",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "solid"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "color"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "gradient"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "preset": {
+                                      "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "preset"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "dim": {
+                                      "maximum": 90,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "image"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "dim"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "corners": {
+                              "enum": [
+                                "sharp",
+                                "soft",
+                                "round"
+                              ],
+                              "type": "string"
+                            },
+                            "coverPlacement": {
+                              "enum": [
+                                "top",
+                                "full",
+                                "side",
+                                "none"
+                              ],
+                              "type": "string"
+                            },
+                            "headingFont": {
+                              "enum": [
+                                "geologica",
+                                "manrope",
+                                "unbounded",
+                                "playfair-display",
+                                "cormorant",
+                                "lora",
+                                "nunito",
+                                "rubik",
+                                "montserrat-alternates",
+                                "comfortaa",
+                                "pt-serif",
+                                "golos-text"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "background",
+                            "accent",
+                            "headingFont",
+                            "coverPlacement",
+                            "align",
+                            "corners"
+                          ],
+                          "type": "object"
+                        },
+                        "templateId": {
+                          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                          "type": "string"
+                        },
+                        "templateVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "templateVersion",
+                        "settings",
+                        "welcomeMessage",
+                        "cover",
+                        "background"
+                      ],
+                      "type": "object"
+                    },
                     "permissions": {
                       "additionalProperties": false,
                       "properties": {
@@ -5645,6 +6669,7 @@
                   },
                   "required": [
                     "collection",
+                    "page",
                     "permissions",
                     "guest",
                     "limits",

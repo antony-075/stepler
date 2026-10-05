@@ -169,7 +169,7 @@ function GuestCollection({
   const time = useFrameTime();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { collection, permissions, guest, counts } = context;
+  const { permissions, guest, counts } = context;
   const primary = primaryContribution(permissions);
   const contributes = primary !== null;
 
@@ -249,7 +249,7 @@ function GuestCollection({
   /** The cover's links expired (a tab left open for hours): ask for fresh ones, once per link. */
   const [coverRetried, setCoverRetried] = useState<string | null>(null);
   function coverExpired() {
-    const src = collection.cover?.previewUrl ?? null;
+    const src = context.page.cover?.previewUrl ?? null;
     if (src === null || coverRetried === src) return;
     setCoverRetried(src);
     refreshContext();

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { guestNameSchema } from './content.js';
-import { guestCoverSchema } from './cover.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
+import { guestPageSchema } from './guest-page.js';
 
 /**
  * `POST /api/v1/guest/collections/:collectionId/session` [C3]: exchanges the link token from the
@@ -17,7 +17,7 @@ const count = z.number().int().min(0);
 /**
  * Everything the guest page needs. No session, link or owner ids: the session lives only in the
  * HttpOnly cookie. `counts` is `null` unless the link shows the shared gallery (DESIGN-SYSTEM §11.3).
- * `cover` is set only once the cover is `READY`; `welcomeMessage` is `null` when hidden.
+ * `page` is the published guest page (template, settings, welcome, images); never a draft.
  */
 export const guestContextSchema = z
   .object({
@@ -26,10 +26,9 @@ export const guestContextSchema = z
         id: z.uuid(),
         title: z.string(),
         description: z.string().nullable(),
-        welcomeMessage: z.string().nullable(),
-        cover: guestCoverSchema.nullable(),
       })
       .strict(),
+    page: guestPageSchema,
     permissions: guestLinkPermissionsSchema,
     /** `nameAnswered` is true once the guest saved or skipped the name prompt [O4]. */
     guest: z.object({ name: z.string().nullable(), nameAnswered: z.boolean() }).strict(),

@@ -73,6 +73,8 @@ export function toCollectionDto(
     lastContentAt: content.lastAt?.toISOString() ?? null,
     welcomeMessage: row.welcomeMessage,
     cover,
+    // «Картинка колекції» arrives with its API (plan Task 10).
+    image: null,
   };
 }
 

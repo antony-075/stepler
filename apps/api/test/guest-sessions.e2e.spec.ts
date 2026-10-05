@@ -1,3 +1,4 @@
+import { definitionOf } from '@stepler/templates/core';
 import type { Server } from 'node:http';
 import { Writable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
@@ -89,8 +90,14 @@ describe('guest sessions [C3]', () => {
         id: collectionId,
         title: 'Весілля',
         description: 'Опис',
+      },
+      page: {
+        templateId: 'classic',
+        templateVersion: 1,
+        settings: definitionOf('classic')!.defaults,
         welcomeMessage: null,
         cover: null,
+        background: null,
       },
       permissions: CONTRIBUTE_ONLY,
       guest: { name: null, nameAnswered: false },
@@ -244,7 +251,7 @@ describe('guest sessions [C3]', () => {
     const pending = guestContextSchema.parse(
       (await context(collectionId, cookie).expect(200)).body,
     );
-    expect(pending.collection).toMatchObject({
+    expect(pending.page).toMatchObject({
       welcomeMessage: 'Дякуємо, що ви з нами!',
       cover: null,
     });
@@ -255,14 +262,14 @@ describe('guest sessions [C3]', () => {
     });
     const res = await context(collectionId, cookie).expect(200);
     const ready = guestContextSchema.parse(res.body);
-    expect(ready.collection.cover).toMatchObject({ width: 4000, height: 3000 });
-    expect(ready.collection.cover?.thumbnailUrl).toMatch(/^https?:\/\//);
-    expect(ready.collection.cover?.previewUrl).toMatch(/^https?:\/\//);
+    expect(ready.page.cover).toMatchObject({ width: 4000, height: 3000 });
+    expect(ready.page.cover?.thumbnailUrl).toMatch(/^https?:\/\//);
+    expect(ready.page.cover?.previewUrl).toMatch(/^https?:\/\//);
     // Never a status, a source or the frame it came from (the strict schema would also refuse).
     expect(res.text).not.toMatch(/"status"|"source"|ContentItemId/);
     // The exchange answers the same context.
     const again = guestContextSchema.parse((await exchange(collectionId, link.token, cookie)).body);
-    expect(again.collection.cover).toEqual(ready.collection.cover);
+    expect(again.page.cover).toEqual(ready.page.cover);
   });
 
   test('context counts only non-deleted items, and only with the shared gallery', async () => {

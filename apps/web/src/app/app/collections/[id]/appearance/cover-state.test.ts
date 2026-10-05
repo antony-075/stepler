@@ -6,6 +6,7 @@ const cover = (status: 'PENDING' | 'READY' | 'FAILED'): Collection['cover'] => (
   status,
   thumbnailUrl: status === 'READY' ? 'https://s3.test/t' : null,
   previewUrl: status === 'READY' ? 'https://s3.test/p' : null,
+  largeUrl: null,
   width: status === 'READY' ? 1600 : null,
   height: status === 'READY' ? 1200 : null,
 });

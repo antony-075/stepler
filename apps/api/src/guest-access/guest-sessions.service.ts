@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { canContribute, type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
+import { DEFAULT_TEMPLATE_ID, definitionOf } from '@stepler/templates/core';
 import type { GuestPrincipal } from '../auth/principal.js';
 import { generateToken, hashToken, TOKEN_PATTERN } from '../auth/tokens.js';
 import { type CoverRow, CoverUrls, WITH_COVER } from '../collections/cover-urls.js';
@@ -173,14 +174,23 @@ export class GuestSessionsService {
     session: Pick<GuestSessionRow, 'contributorName' | 'nameAnsweredAt'>,
   ): Promise<GuestContext> {
     const rules = this.limits.fileRules();
+    const cover = await this.covers.forGuest(collection.cover);
+    // Until guest page versions are stored (plan Task 7), every page is the default template.
+    const template = definitionOf(DEFAULT_TEMPLATE_ID)!;
     return {
       collection: {
         id: collection.id,
         title: collection.title,
         description: collection.description,
+      },
+      page: {
+        templateId: template.id,
+        templateVersion: template.version,
+        settings: template.defaults,
         welcomeMessage: collection.welcomeMessage,
         // Only a READY cover, and never its source [A2].
-        cover: await this.covers.forGuest(collection.cover),
+        cover: cover === null ? null : { ...cover, largeUrl: null },
+        background: null,
       },
       permissions: p.link.permissions,
       guest: { name: session.contributorName, nameAnswered: session.nameAnsweredAt !== null },

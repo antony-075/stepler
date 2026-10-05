@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  adminImageSchema,
+  collectionWelcomeMessageSchema,
+  guestImageSchema,
+  imageSlotParamSchema,
+} from './cover.js';
 
 /**
  * The guest page theme vocabulary (plan 2026-10-05, guest page templates): the settings an admin
@@ -73,3 +79,80 @@ export const themeSettingsSchema = z
   })
   .strict();
 export type ThemeSettings = z.infer<typeof themeSettingsSchema>;
+
+const revision = z.number().int().min(1);
+
+/**
+ * One version of a collection's guest page as its owner sees it: the template (as stored), its
+ * settings (resolved: a removed template or invalid settings read as the defaults), the welcome
+ * and the two images. The published version is what guests see; the draft is the editor's.
+ */
+export const guestPageVersionSchema = z
+  .object({
+    templateId: templateIdSchema,
+    templateVersion: z.number().int().min(1),
+    settings: themeSettingsSchema,
+    welcomeMessage: z.string().nullable(),
+    cover: adminImageSchema.nullable(),
+    background: adminImageSchema.nullable(),
+    updatedAt: z.iso.datetime(),
+  })
+  .strict();
+export type GuestPageVersion = z.infer<typeof guestPageVersionSchema>;
+
+/**
+ * `GET /api/v1/collections/:id/guest-page`: the published version and, while the admin edits,
+ * the draft with its `revision` (optimistic concurrency: a save names the revision it started
+ * from). Guests see only the published one.
+ */
+export const guestPageEditorSchema = z
+  .object({
+    published: guestPageVersionSchema,
+    draft: guestPageVersionSchema.extend({ revision }).strict().nullable(),
+  })
+  .strict();
+export type GuestPageEditor = z.infer<typeof guestPageEditorSchema>;
+
+/**
+ * `PUT /api/v1/collections/:id/guest-page/draft`: the whole working copy. `baseRevision` is the
+ * draft revision the editor started from, `null` when there was no draft yet; anything else than
+ * the current one is `409 GUEST_PAGE_DRAFT_CONFLICT`. Images change through their own routes.
+ */
+export const saveGuestPageDraftRequestSchema = z
+  .object({
+    baseRevision: revision.nullable(),
+    templateId: templateIdSchema,
+    settings: themeSettingsSchema,
+    welcomeMessage: collectionWelcomeMessageSchema.nullable(),
+  })
+  .strict();
+export type SaveGuestPageDraftRequest = z.infer<typeof saveGuestPageDraftRequestSchema>;
+
+/** `POST /api/v1/collections/:id/guest-page/publish`: the draft revision being published. */
+export const publishGuestPageRequestSchema = z.object({ revision }).strict();
+export type PublishGuestPageRequest = z.infer<typeof publishGuestPageRequestSchema>;
+
+/**
+ * The published guest page as guests see it (inside the guest context): never the draft, a
+ * revision or an image's status; images only once `READY`.
+ */
+export const guestPageSchema = z
+  .object({
+    templateId: templateIdSchema,
+    templateVersion: z.number().int().min(1),
+    settings: themeSettingsSchema,
+    welcomeMessage: z.string().nullable(),
+    cover: guestImageSchema.nullable(),
+    background: guestImageSchema.nullable(),
+  })
+  .strict();
+export type GuestPage = z.infer<typeof guestPageSchema>;
+
+/** `…/guest-page/draft/:slot` path parameters. */
+export const guestPageImageParamsSchema = z.object({ id: z.uuid(), slot: imageSlotParamSchema });
+/** `…/guest-page/draft/:slot/uploads/:uploadId…` path parameters. */
+export const guestPageImageUploadParamsSchema = z.object({
+  id: z.uuid(),
+  slot: imageSlotParamSchema,
+  uploadId: z.uuid(),
+});

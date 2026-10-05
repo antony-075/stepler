@@ -1056,6 +1056,7 @@ Layout summaries (phone 390 | desktop 1440):
     - merges: «Контраст {r}:1 — акцент зливається з фоном. Кнопки й текст лишаться читабельними, але краще обрати {світліший|темніший} відтінок.»
   - The footnote reads «Текст на кнопках стає білим або чорним — як краще читається.» The ratio uses a decimal comma in uk.
 - **Шрифт:** the trigger reads «Шрифт: {name}. Змінити», the summary «Заголовки — X, текст — Y» (or «Заголовки й текст» when they are the same), and the helper «Усі шрифти зі списку мають кирилицю.»
+  - **Owner decision 2026-10-05 (PR K):** for the four families with a Reserved Font Name (Playfair Display, Lora, Comfortaa, PT Serif), the picker shows the attribution «на основі Lora» (en "based on Lora") beside the name. The internal family names stay «Stepler …» (`apps/templates/fonts/CREDITS.md`).
 - **Розташування:**
   - «Обкладинка»: Зверху / На весь екран / Збоку / Без обкладинки (T5's «Зверху» summary reads «Емблема»);
   - «Вирівнювання тексту»: Ліворуч / По центру;

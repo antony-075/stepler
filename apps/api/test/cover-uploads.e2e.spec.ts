@@ -100,6 +100,7 @@ describe('admin cover upload [A1]', () => {
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,
+      largeUrl: null,
       width: null,
       height: null,
     });

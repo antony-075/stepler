@@ -367,6 +367,7 @@ describe('collections API', () => {
         status: 'PENDING',
         thumbnailUrl: null,
         previewUrl: null,
+        largeUrl: null,
         width: null,
         height: null,
       });

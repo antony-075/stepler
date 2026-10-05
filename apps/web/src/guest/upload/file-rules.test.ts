@@ -7,8 +7,21 @@ const context: GuestContext = {
     id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
     title: 'Весілля',
     description: null,
+  },
+  page: {
+    templateId: 'classic',
+    templateVersion: 1,
+    settings: {
+      background: { kind: 'solid', color: '#F0F1EE' },
+      accent: '#B83E26',
+      headingFont: 'geologica',
+      coverPlacement: 'top',
+      align: 'start',
+      corners: 'soft',
+    },
     welcomeMessage: null,
     cover: null,
+    background: null,
   },
   permissions: {
     canUploadPhotos: true,

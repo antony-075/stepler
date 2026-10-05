@@ -28,19 +28,26 @@ export type CoverStatus = z.infer<typeof coverStatusSchema>;
 const dimension = z.number().int().min(1);
 
 /**
- * The collection cover as its owner sees it [A2]: presigned URLs and the source's upright
- * dimensions once `READY`, `null` before. Never the source (upload or frame) or a frame id.
+ * An admin image (a cover, a background or the collection image) as its owner sees it [A2]:
+ * presigned URLs to the renditions the slot has, and the source's upright dimensions, once
+ * `READY`; `null` before (and `largeUrl` is `null` for slots without a 2400 px rendition). Never
+ * the source (upload or frame) or a frame id.
  */
-export const collectionCoverSchema = z
+export const adminImageSchema = z
   .object({
     status: coverStatusSchema,
     thumbnailUrl: z.url().nullable(),
     previewUrl: z.url().nullable(),
+    largeUrl: z.url().nullable(),
     width: dimension.nullable(),
     height: dimension.nullable(),
   })
   .strict();
-export type CollectionCover = z.infer<typeof collectionCoverSchema>;
+export type AdminImage = z.infer<typeof adminImageSchema>;
+
+/** The collection cover as its owner sees it: an admin image (kept as a name until PR L). */
+export const collectionCoverSchema = adminImageSchema;
+export type CollectionCover = AdminImage;
 
 /**
  * The cover as guests see it: present only when `READY`, so there is never a status, and never
@@ -56,9 +63,17 @@ export const guestCoverSchema = z
   .strict();
 export type GuestCover = z.infer<typeof guestCoverSchema>;
 
+/** A guest page image (cover or background) as guests see it; `largeUrl` for backgrounds. */
+export const guestImageSchema = guestCoverSchema.extend({ largeUrl: z.url().nullable() }).strict();
+export type GuestImage = z.infer<typeof guestImageSchema>;
+
 /** `POST /api/v1/collections/:id/cover/from-frame` [A8]: a PHOTO frame of the same collection. */
 export const setCoverFromFrameRequestSchema = z.object({ contentItemId: z.uuid() }).strict();
 export type SetCoverFromFrameRequest = z.infer<typeof setCoverFromFrameRequestSchema>;
 
 /** `…/collections/:id/cover/uploads/:uploadId/…` path parameters. */
 export const coverUploadParamsSchema = z.object({ id: z.uuid(), uploadId: z.uuid() });
+
+/** The guest page image slots in admin paths: `…/guest-page/draft/{cover|background}…`. */
+export const imageSlotParamSchema = z.enum(['cover', 'background']);
+export type ImageSlotParam = z.infer<typeof imageSlotParamSchema>;

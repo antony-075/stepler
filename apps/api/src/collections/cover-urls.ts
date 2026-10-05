@@ -31,6 +31,8 @@ export class CoverUrls {
       status: cover.status,
       thumbnailUrl: urls?.thumbnailUrl ?? null,
       previewUrl: urls?.previewUrl ?? null,
+      // Covers have no 2400 px rendition (only backgrounds do).
+      largeUrl: null,
       width: cover.width,
       height: cover.height,
     };

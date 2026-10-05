@@ -88,21 +88,38 @@ describe('buildGuestActions', () => {
 });
 
 const COVER = {
+  largeUrl: null,
   thumbnailUrl: 'https://storage.example.com/c/thumbnail.webp?X-Amz-Signature=a',
   previewUrl: 'https://storage.example.com/c/preview.webp?X-Amz-Signature=b',
   width: 4000,
   height: 3000,
 };
 
-function context(collection: Partial<GuestContext['collection']>): GuestContext {
+type Fields = Partial<GuestContext['collection']> &
+  Partial<Pick<GuestContext['page'], 'welcomeMessage' | 'cover'>>;
+
+function context({ welcomeMessage = null, cover = null, ...collection }: Fields): GuestContext {
   return {
     collection: {
       id: '0192f0c4-7d2a-7c4e-9a10-0123456789ab',
       title: 'Весілля Олі та Тараса',
       description: null,
-      welcomeMessage: null,
-      cover: null,
       ...collection,
+    },
+    page: {
+      templateId: 'classic',
+      templateVersion: 1,
+      settings: {
+        background: { kind: 'solid', color: '#F0F1EE' },
+        accent: '#B83E26',
+        headingFont: 'geologica',
+        coverPlacement: 'top',
+        align: 'start',
+        corners: 'soft',
+      },
+      welcomeMessage,
+      cover,
+      background: null,
     },
     permissions: none,
     guest: { name: null, nameAnswered: false },

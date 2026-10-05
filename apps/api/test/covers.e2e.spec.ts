@@ -281,8 +281,8 @@ describe('cover from a frame and cover removal [A8]', () => {
         .get(`/api/v1/guest/collections/${o.collectionId}/context`)
         .set('Cookie', o.guestCookie);
     const before = guestContextSchema.parse((await context().expect(200)).body);
-    expect(before.collection.cover).toMatchObject({ width: 320, height: 240 });
-    expect(before.collection.cover?.previewUrl).toMatch(/^https?:\/\//);
+    expect(before.page.cover).toMatchObject({ width: 320, height: 240 });
+    expect(before.page.cover?.previewUrl).toMatch(/^https?:\/\//);
 
     await o.remove().expect(204);
     expect(await coverRows(o.collectionId)).toEqual([]);
@@ -291,7 +291,7 @@ describe('cover from a frame and cover removal [A8]', () => {
     ]);
     expect((await o.detail().expect(200)).body).toMatchObject({ cover: null });
     const after = guestContextSchema.parse((await context().expect(200)).body);
-    expect(after.collection.cover).toBeNull();
+    expect(after.page.cover).toBeNull();
     await o.remove().expect(204);
     expect(await queuedJobs(prisma, 'cover.purge')).toHaveLength(1);
   });
