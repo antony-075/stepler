@@ -132,12 +132,12 @@ test.describe('guest link page', () => {
   test('the first HTML is already the template’s loading screen: no flash of the app’s look', async ({
     page,
   }) => {
-    const { url } = await setUp(page, 'Весілля Олі та Тараса');
+    const { url } = await setUp(page, 'Хрестини Марійки 2026');
     const html = await (await page.request.get(url)).text();
     expect(html).toContain('data-template="classic"');
     expect(html).toContain('data-screen="loading"');
     // The look only: never the title in the server's HTML.
-    expect(html).not.toContain('Весілля Олі та Тараса');
+    expect(html).not.toContain('Хрестини Марійки 2026');
   });
 
   test('an unknown link is «not found»', async ({ page }) => {
