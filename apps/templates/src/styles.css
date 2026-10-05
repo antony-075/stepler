@@ -23,7 +23,7 @@
  * take over the surface, text, accent, link and focus tokens. `:where()` keeps all of it at zero
  * specificity, so a template's own sheet overrides any of it.
  */
-:where([data-template][data-scheme='light']) {
+:where([data-template][data-scheme='light'], [data-template-surface][data-scheme='light']) {
   color-scheme: light;
   --background: #f0f1ee;
   --foreground: #141614;
@@ -86,7 +86,7 @@
   --shadow-card-hover: 0 1px 2px rgb(20 22 20 / 0.06), 0 4px 14px rgb(20 22 20 / 0.08);
 }
 
-:where([data-template][data-scheme='dark']) {
+:where([data-template][data-scheme='dark'], [data-template-surface][data-scheme='dark']) {
   color-scheme: dark;
   --background: #141615;
   --foreground: #e9ebe6;
@@ -143,7 +143,7 @@
   --shadow-card-hover: none;
 }
 
-:where([data-template]) {
+:where([data-template], [data-template-surface]) {
   --background: var(--tpl-bg);
   --foreground: var(--tpl-text);
   --card-foreground: var(--tpl-text);
@@ -168,6 +168,10 @@
   --radius-control: min(var(--tpl-radius-btn), 24px);
   --radius-sheet: min(var(--tpl-radius-card), 16px);
   --radius-dialog: min(calc(var(--tpl-radius-card) + 4px), 28px);
+}
+
+/* The page root only (an overlay's surface gets the tokens above, never these). */
+:where([data-template]) {
   /* Words wrap only between words (owner, item 87): a hyphen where the page's language has a
      dictionary, and a break inside a word only when that word alone is wider than its whole
      line (a pasted link, a 100-letter string), so nothing scrolls sideways. `anywhere`, not
@@ -193,13 +197,13 @@
 }
 
 /* An overlay in the template's look (`templateSurfaceProps`, remark 112): the template's surface
-   colour for the sheet, none of the page's height or safe-area padding. */
-:where([data-template][data-template-surface]) {
+   colour, fonts and heading face; it is not a template root, so none of the page's layout rules
+   (position, height, padding, background) reach it (owner remark 115). */
+:where([data-template-surface]) {
   --popover: var(--tpl-surface);
   --card: var(--tpl-surface);
-  min-height: auto;
-  padding-inline: 0;
-  padding-top: 0;
+  color: var(--tpl-body);
+  font-family: var(--tpl-font-body);
 }
 
 /* The footer ends above the home indicator (item 96); fixed and sticky bars add the inset
@@ -209,7 +213,7 @@
 }
 
 /* Headings in the template's heading face, the app's slots included («Ваші кадри»). */
-:where([data-template]) :where(h1, h2, h3) {
+:where([data-template], [data-template-surface]) :where(h1, h2, h3) {
   font-family: var(--tpl-font-heading);
   color: var(--tpl-text);
 }

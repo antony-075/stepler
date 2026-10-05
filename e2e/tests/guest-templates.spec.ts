@@ -197,12 +197,31 @@ test.describe('guest page templates at 390px, gallery hidden', () => {
   }
 });
 
-// Owner remark 112: the wish composer is the template's, «Надіслати» in its accent.
+/** In the viewport, with a size, fully opaque (the overlay and its ancestors). */
+async function expectShown(locator: Locator) {
+  await expect(locator).toBeInViewport();
+  const box = (await locator.boundingBox())!;
+  expect(box.width * box.height).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      locator.evaluate((el) => {
+        let opacity = 1;
+        for (let node: Element | null = el; node !== null; node = node.parentElement) {
+          opacity *= Number(getComputedStyle(node).opacity);
+        }
+        return opacity;
+      }),
+    )
+    .toBe(1);
+}
+
+// Owner remarks 112, 115: the name prompt and the wish composer are the template's and show;
+// «Надіслати» in its accent.
 test.describe('the wish composer in the template', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  for (const templateId of ['party', 'journal'] as const) {
-    test(`${templateId}: «Надіслати» is the accent, on the template's surface`, async ({
+  for (const templateId of TEMPLATE_IDS) {
+    test(`${templateId}: the name prompt and the composer show; «Надіслати» is the accent`, async ({
       page: guest,
       browser,
     }) => {
@@ -211,12 +230,14 @@ test.describe('the wish composer in the template', () => {
       await publish(owner.page, guest, owner.id, templateId);
       const accent = await token(guest, '--tpl-accent');
       await shown(guest.getByRole('button', { name: 'Написати побажання' })).click();
+      // Both overlays really show (owner remark 115): in the viewport, sized, opaque.
       const name = guest.getByRole('dialog', { name: 'Як вас звати?' });
-      if (await name.isVisible().catch(() => false)) {
-        await name.getByRole('button', { name: 'Пропустити' }).click();
-      }
+      await expectShown(name.getByRole('button', { name: 'Пропустити' }));
+      await name.getByRole('button', { name: 'Пропустити' }).click();
       const composer = guest.getByRole('dialog', { name: 'Ваше побажання' });
-      await expect(composer).toHaveAttribute('data-template', templateId);
+      await expectShown(composer.getByRole('textbox'));
+      await expectShown(composer.getByRole('button', { name: 'Надіслати' }));
+      await expect(composer).toHaveAttribute('data-template-surface', templateId);
       const send = composer.getByRole('button', { name: 'Надіслати' });
       const rgb = await send.evaluate((el) => getComputedStyle(el).backgroundColor);
       const hex = `#${(rgb.match(/\d+/g) ?? [])
