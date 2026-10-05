@@ -35,6 +35,8 @@ const dimension = z.number().int().min(1);
  */
 export const adminImageSchema = z
   .object({
+    /** The image's id: the editor compares versions and restores a previous image by it. */
+    id: z.uuid(),
     status: coverStatusSchema,
     thumbnailUrl: z.url().nullable(),
     previewUrl: z.url().nullable(),
@@ -69,6 +71,14 @@ export type GuestImage = z.infer<typeof guestImageSchema>;
 
 /** `POST /api/v1/collections/:id/cover/from-frame` [A8]: a PHOTO frame of the same collection. */
 export const setCoverFromFrameRequestSchema = z.object({ contentItemId: z.uuid() }).strict();
+
+/**
+ * `POST …/guest-page/draft/:slot/restore`: points the draft's cover or background back at an
+ * image the collection still has (the editor's undo, owner remark 113). An image nothing
+ * references any more is gone: `404`.
+ */
+export const restoreDraftImageRequestSchema = z.object({ imageId: z.uuid() }).strict();
+export type RestoreDraftImageRequest = z.infer<typeof restoreDraftImageRequestSchema>;
 export type SetCoverFromFrameRequest = z.infer<typeof setCoverFromFrameRequestSchema>;
 
 /** `…/collections/:id/cover/uploads/:uploadId/…` path parameters. */

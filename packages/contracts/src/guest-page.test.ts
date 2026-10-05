@@ -120,6 +120,7 @@ describe('guestPageEditorSchema (the owner)', () => {
   const version = {
     ...page,
     background: {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,

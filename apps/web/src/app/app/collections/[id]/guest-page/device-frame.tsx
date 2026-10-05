@@ -42,7 +42,8 @@ const GEOMETRY: Record<PreviewDevice, Geometry> = {
     bars: { top: 54, bottom: 34 },
     bezel: { x: 11, top: 11, bottom: 11 },
     extra: { x: 6, y: 0, widthFactor: 1 },
-    maxScale: 0.7,
+    // About 10% larger than before (owner remark 116); the fit to the pane still caps it.
+    maxScale: 0.77,
   },
   tablet: {
     screen: { width: 820, height: 1180 },

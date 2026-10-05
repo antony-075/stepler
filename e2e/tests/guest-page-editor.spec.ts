@@ -385,6 +385,44 @@ test.describe('guest page editor', () => {
     expect(Math.abs((await panel.boundingBox())!.width - wider)).toBeLessThan(4);
   });
 
+  test('changed and changed back is saved; undo and redo across a template switch @desktop', async ({
+    page,
+  }) => {
+    const { id } = await setUp(page);
+    await openEditor(page, id);
+    const frame = preview(page);
+    const save = page.getByRole('button', { name: /^Зберегти/ });
+
+    // By value (owner remark 113): back to what guests see reads «Збережено», nothing to save.
+    await openSection(page, 'Акцент');
+    await page.getByRole('radio', { name: 'Акцент: слива' }).click();
+    await expect(status(page)).toContainText('Чернетка');
+    await expect(save).not.toHaveAttribute('aria-disabled', 'true');
+    await page.getByRole('radio', { name: 'Акцент: олівець' }).click();
+    await expect(status(page)).toContainText('Збережено');
+    await expect(save).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByRole('button', { name: 'Скинути зміни' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    // Undo / redo, buttons and shortcuts, across a template switch.
+    await page.locator('[data-template-option="journal"]').click();
+    await expect(frame.locator('[data-template]')).toHaveAttribute('data-template', 'journal');
+    const undo = page.getByRole('button', { name: 'Скасувати дію' });
+    const redo = page.getByRole('button', { name: 'Повторити дію' });
+    await undo.click();
+    await expect(frame.locator('[data-template]')).toHaveAttribute('data-template', 'classic');
+    await redo.click();
+    await expect(frame.locator('[data-template]')).toHaveAttribute('data-template', 'journal');
+    await expect(redo).toHaveAttribute('aria-disabled', 'true');
+    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(frame.locator('[data-template]')).toHaveAttribute('data-template', 'classic');
+    await page.keyboard.press('ControlOrMeta+Shift+z');
+    await expect(frame.locator('[data-template]')).toHaveAttribute('data-template', 'journal');
+  });
+
   test('the four tab labels are never cut at 768, 1024 and 1440 @desktop', async ({ page }) => {
     const { id } = await setUp(page);
     for (const width of [768, 1024, 1440]) {

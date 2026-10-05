@@ -46,10 +46,11 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
     minimumFractionDigits: 1,
   });
 
-  function choose(hex: string) {
+  /** `coalesce`: dragging in the colour picker is one undo step. */
+  function choose(hex: string, coalesce?: string) {
     setCustom(hex);
     setInvalid(false);
-    editor.dispatch({ type: 'settings', patch: { accent: hex } });
+    editor.dispatch({ type: 'settings', patch: { accent: hex } }, coalesce);
   }
 
   return (
@@ -80,7 +81,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
               aria-label={t('picker')}
               value={accent.toLowerCase()}
               disabled={readOnly}
-              onChange={(event) => choose(event.target.value.toUpperCase())}
+              onChange={(event) => choose(event.target.value.toUpperCase(), 'accent-picker')}
               className={cn(
                 'absolute top-1/2 left-2.5 size-7 -translate-y-1/2 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0',
                 '[&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:shadow-[inset_0_0_0_1px_rgb(0_0_0/0.14)] [&::-webkit-color-swatch-wrapper]:p-0',
@@ -109,7 +110,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
                 const hex = `#${match[1]!.toUpperCase()}`;
                 if (!hexColorSchema.safeParse(hex).success) return;
                 setInvalid(false);
-                editor.dispatch({ type: 'settings', patch: { accent: hex } });
+                editor.dispatch({ type: 'settings', patch: { accent: hex } }, 'accent-hex');
               }}
               onBlur={() => {
                 if (!HEX_INPUT.test(custom)) setInvalid(custom !== '');

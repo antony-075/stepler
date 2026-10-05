@@ -46,6 +46,7 @@ import { PREVIEW_POLL_MS } from '@/media/previews';
 import { currentVersion } from './editor-state';
 import { PhoneEditor } from './phone-editor';
 import { PreviewPane } from './preview-pane';
+import { useHistoryShortcuts } from './history-buttons';
 import { SaveBar } from './save-bar';
 import type { SectionProps } from './sections/section-props';
 import { SettingsAccordion } from './sections/settings-accordion';
@@ -126,6 +127,7 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
     links.data?.items.find((link) => link.isDefault && link.status !== 'REVOKED')?.url ?? null;
   const templateName = tTemplates.has(`${def.id}.name`) ? tTemplates(`${def.id}.name`) : def.id;
   const props: SectionProps = { collectionId: collection.id, editor, def, readOnly };
+  useHistoryShortcuts(editor, !readOnly);
 
   return (
     <div className="grid gap-4" data-slot="guest-page-editor">
@@ -153,10 +155,10 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
 /** The settings panel's least width (px); no most (remark 107): only the preview's minimum. */
 const PANEL_MIN = 300;
 /**
- * The panel's first width, a share of the workspace (owner remark 104): ~340px on a 14" laptop,
+ * The panel's first width, a share of the workspace (owner remark 104): ~345px on a 14" laptop,
  * more on a wide screen, so the preview gets the room; never under `PANEL_MIN`.
  */
-const PANEL_INITIAL = '27%';
+const PANEL_INITIAL = '30%';
 /**
  * The preview never gets narrower than this (px): the device scales down to fit, the toolbar
  * folds into «⋯» (remark 107). The library keeps a remembered split within these limits when the
@@ -187,8 +189,8 @@ function DesktopEditor({
   const height = useFillViewport(workspace);
   const me = useQuery({ queryKey: ME_QUERY_KEY, queryFn: fetchMe });
   const layout = useDefaultLayout({
-    // v2: a new first split (remark 104); widths remembered before it start over.
-    id: `stepler:guest-page-editor:v2:${me.data?.id ?? 'anonymous'}`,
+    // v3: a new first split (remarks 104, 113); widths remembered before it start over.
+    id: `stepler:guest-page-editor:v3:${me.data?.id ?? 'anonymous'}`,
     panelIds: ['settings', 'preview'],
     storage: safeStorage,
   });

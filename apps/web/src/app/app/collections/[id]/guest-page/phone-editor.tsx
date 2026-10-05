@@ -31,6 +31,7 @@ import { useState } from 'react';
 import { DEFAULT_PREVIEW_STATE, type PreviewState } from '@/guest-page/preview-state';
 import { PreviewFrame } from './preview-pane';
 import { PreviewStateControls } from './preview-state-controls';
+import { HistoryButtons } from './history-buttons';
 import { SaveBar } from './save-bar';
 import type { SectionProps } from './sections/section-props';
 import { SettingsAccordion } from './sections/settings-accordion';
@@ -101,6 +102,10 @@ export function PhoneEditor(props: SectionProps) {
         <SheetContent side="bottom" aria-describedby={undefined} className={SHEET}>
           <SheetHeader closeLabel={t('phone.close')}>
             <SheetTitle>{t('phone.sheetTitle')}</SheetTitle>
+            {/* Undo and redo in the sheet's header on a phone (owner remark 113). */}
+            <span className="ml-auto">
+              <HistoryButtons editor={editor} touch />
+            </span>
           </SheetHeader>
           <SheetBody>
             {readOnly ? (

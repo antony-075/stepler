@@ -328,7 +328,9 @@ describe('collections API', () => {
       const items = collectionListResponseSchema.parse(list.body).items;
       expect(items.map((item) => item.title)).toEqual(['Ready', 'Pending', 'Plain']);
       expect(items[2]).toMatchObject({ welcomeMessage: null, cover: null });
-      expect(items[1]?.cover).toEqual({
+      const { id: imageId, ...pendingCover } = items[1]?.cover ?? { id: '' };
+      expect(imageId).not.toBe('');
+      expect(pendingCover).toEqual({
         status: 'PENDING',
         thumbnailUrl: null,
         previewUrl: null,

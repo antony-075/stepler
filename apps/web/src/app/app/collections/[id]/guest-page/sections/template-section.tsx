@@ -24,8 +24,9 @@ export function TemplateSection({ editor, readOnly }: SectionProps) {
     <div className="grid gap-3">
       <ul
         aria-label={tSection('label')}
-        // As many columns as the panel's width takes (remark 104): three at ~300px, more wider.
-        className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-3"
+        // Tiles grow with the panel (remarks 104, 114): three columns until a tile reaches 10rem,
+        // then more; never under 4.5rem. Each keeps its 3:4 picture.
+        className="grid grid-cols-[repeat(auto-fill,minmax(clamp(4.5rem,28%,10rem),1fr))] gap-3"
       >
         {ORDER.map((id) => {
           const template = TEMPLATES[id];

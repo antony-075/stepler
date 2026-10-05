@@ -37,8 +37,9 @@ export function BackgroundSection({
     accent: editor.working.settings.accent,
     text: t('sampleText'),
   });
-  const set = (next: ThemeSettings['background']) =>
-    editor.dispatch({ type: 'settings', patch: { background: next } });
+  /** `coalesce`: a dimming drag is one undo step. */
+  const set = (next: ThemeSettings['background'], coalesce?: string) =>
+    editor.dispatch({ type: 'settings', patch: { background: next } }, coalesce);
 
   function switchTo(kind: BackgroundKind) {
     if (kind === background.kind) return;
@@ -148,7 +149,7 @@ export function BackgroundSection({
               thumbLabel={t('dim')}
               getAriaValueText={(value) => t('dimValue', { value })}
               onValueChange={([dim]) => {
-                if (dim !== undefined) set({ kind: 'image', dim });
+                if (dim !== undefined) set({ kind: 'image', dim }, 'dim');
               }}
             />
             <span className="text-right type-data text-sm tabular-nums">

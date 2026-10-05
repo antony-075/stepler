@@ -100,7 +100,8 @@ export function ChoiceGroup<T extends string>({
           variant === 'tiles' && 'grid w-full grid-cols-2 gap-2',
           variant === 'swatches' && 'flex-wrap gap-1.5',
           variant === 'backgrounds' &&
-            'grid w-full auto-rows-fr grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5',
+            // Samples grow with the panel too (remark 114): three per row until 8rem, then more.
+            'grid w-full auto-rows-fr grid-cols-[repeat(auto-fill,minmax(clamp(4.5rem,30%,8rem),1fr))] gap-1.5',
         )}
       >
         {choices.map((choice) => {

@@ -15,6 +15,7 @@ import { cn } from '@stepler/ui/lib/utils';
 import { RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { HistoryButtons } from './history-buttons';
 import type { GuestPageEditorApi } from './use-guest-page-editor';
 
 /**
@@ -67,6 +68,17 @@ export function SaveBar({
     }
   }
 
+  const dot = (
+    <span
+      aria-hidden="true"
+      className={cn('size-2 shrink-0 rounded-full', {
+        'bg-success': status === 'saved',
+        'bg-pencil': status === 'draft',
+        'bg-destructive': status === 'error',
+      })}
+    />
+  );
+
   return (
     <div
       data-slot="save-bar"
@@ -74,7 +86,7 @@ export function SaveBar({
       data-layout={layout}
       className={cn(
         header
-          ? 'sticky top-0 z-(--z-sticky) flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2.5'
+          ? 'sticky top-0 z-(--z-sticky) flex flex-wrap items-center gap-2 border-b bg-card py-2.5 pr-3 pl-4'
           : 'grid gap-3 border-t bg-background px-6 py-4',
         className,
       )}
@@ -102,24 +114,20 @@ export function SaveBar({
         >
           {status === 'saving' ? (
             <Spinner label={t('status.saving')} className="size-4 text-muted-foreground" />
-          ) : (
-            <span
-              aria-hidden="true"
-              className={cn('size-2 shrink-0 rounded-full', {
-                'bg-success': status === 'saved',
-                'bg-pencil': status === 'draft',
-                'bg-destructive': status === 'error',
-              })}
-            />
-          )}
+          ) : null}
+          {status === 'saving' || header ? null : dot}
           {header ? (
             <>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    {/* The word says the state; the sentence is extra (and read in full below). */}
-                    <span aria-hidden="true" className="truncate">
-                      {t(`statusShort.${status}`)}
+                    {/* The dot and the word say the state; the sentence is extra (and read in
+                        full below). In the narrowest panel only the dot shows. */}
+                    <span aria-hidden="true" className="inline-flex min-w-0 items-center gap-2">
+                      {status === 'saving' ? null : dot}
+                      <span className="truncate @max-[21rem]/settings:hidden">
+                        {t(`statusShort.${status}`)}
+                      </span>
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>{t(`status.${status}`)}</TooltipContent>
@@ -140,10 +148,11 @@ export function SaveBar({
       <div
         className={
           header
-            ? 'ml-auto flex shrink-0 gap-2'
+            ? 'ml-auto flex shrink-0 items-center gap-1'
             : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-2'
         }
       >
+        {header ? <HistoryButtons editor={editor} /> : null}
         {header ? (
           <TooltipProvider>
             <Tooltip>
@@ -152,7 +161,7 @@ export function SaveBar({
                   variant="outline"
                   aria-label={t('actions.reset')}
                   aria-disabled={idle || undefined}
-                  className="@max-[26rem]/settings:size-11 @max-[26rem]/settings:px-0"
+                  className="@max-[26rem]/settings:size-9 @max-[26rem]/settings:px-0 pointer-coarse:@max-[26rem]/settings:size-11"
                   onClick={() => {
                     if (!idle) setConfirming(true);
                   }}
@@ -179,7 +188,7 @@ export function SaveBar({
           </Button>
         )}
         <Button
-          className={cn('relative', header && 'min-w-24', touch)}
+          className={cn('relative', header && 'px-3', touch)}
           aria-disabled={idle || publishing || status === 'conflict' || undefined}
           onClick={() => void publish()}
           data-slot="save-button"

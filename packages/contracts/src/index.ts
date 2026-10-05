@@ -88,6 +88,7 @@ export {
   guestCoverSchema,
   guestImageSchema,
   imageSlotParamSchema,
+  restoreDraftImageRequestSchema,
   setCoverFromFrameRequestSchema,
   WELCOME_MESSAGE_MAX_CHARS,
   type AdminImage,
@@ -96,6 +97,7 @@ export {
   type GuestCover,
   type GuestImage,
   type ImageSlotParam,
+  type RestoreDraftImageRequest,
   type SetCoverFromFrameRequest,
 } from './cover.js';
 export {

@@ -39,11 +39,13 @@ export function WelcomeSection({ editor, readOnly }: SectionProps) {
               const next = event.target.value;
               setText(next);
               if (next.trim() === '') {
-                editor.dispatch({ type: 'welcome', value: null });
+                editor.dispatch({ type: 'welcome', value: null }, 'welcome');
                 return;
               }
               const parsed = collectionWelcomeMessageSchema.safeParse(next);
-              if (parsed.success) editor.dispatch({ type: 'welcome', value: parsed.data });
+              // Typing is one undo step per pause (owner remark 113).
+              if (parsed.success)
+                editor.dispatch({ type: 'welcome', value: parsed.data }, 'welcome');
             }}
           />
           <p className="justify-self-end type-data text-sm text-muted-foreground tabular-nums">

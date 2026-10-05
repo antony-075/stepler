@@ -4,11 +4,15 @@ import type { GuestPageEditor, GuestPageVersion } from '@stepler/contracts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useToast } from '@stepler/ui/components/toast';
+import { isApiError } from '@/api/client';
 import {
   discardGuestPageDraft,
   fetchGuestPage,
   guestPageKey,
   publishGuestPage,
+  removeDraftImage,
+  restoreDraftImage,
   saveGuestPageDraft,
   useInvalidateCollections,
 } from '@/api/collections';
@@ -16,15 +20,36 @@ import { useLeaveGuard } from '@/components/use-leave-guard';
 import { Autosaver, type SaveFailure } from './autosave';
 import {
   baseRevisionOf,
+  currentVersion,
+  differsFromPublished,
   editorReducer,
   type EditorAction,
   type EditorState,
   editorStatus,
   type EditorStatus,
   type EditorWorking,
+  imageIdsOf,
   initialEditorState,
   previewPage,
+  sameWorking,
 } from './editor-state';
+import {
+  canRedo,
+  canUndo,
+  dropImage,
+  type History,
+  initHistory,
+  record,
+  redo,
+  type Snapshot,
+  undo,
+} from './history';
+
+/** The undo step of an editor state: its working copy and the draft's images. */
+const snapshotOf = (state: Pick<EditorState, 'editor' | 'working'>): Snapshot => ({
+  working: state.working,
+  images: imageIdsOf(currentVersion(state.editor)),
+});
 
 // The editor's server state and working copy (plan Task 13). TanStack Query holds the server's
 // answer (`guestPageKey`); the working copy is local (`useReducer`) and autosaved into the draft
@@ -36,7 +61,14 @@ export interface GuestPageEditorApi {
   working: EditorWorking;
   /** Changes when the working copy was replaced from the server: local inputs start over. */
   generation: number;
-  dispatch: (action: Extract<EditorAction, { type: 'template' | 'settings' | 'welcome' }>) => void;
+  /**
+   * A change of the working copy. `coalesce` names the control for undo: rapid changes of the
+   * same one (typing the welcome, dragging the dimming) are one step (owner remark 113).
+   */
+  dispatch: (
+    action: Extract<EditorAction, { type: 'template' | 'settings' | 'welcome' }>,
+    coalesce?: string,
+  ) => void;
   status: EditorStatus;
   /** Local changes or a draft on the server: something guests do not see yet. */
   dirty: boolean;
@@ -51,6 +83,11 @@ export interface GuestPageEditorApi {
   reloadLatest: () => Promise<void>;
   /** «Повторити» after a failed save. */
   retry: () => void;
+  /** Undo / redo a step (the working copy and the draft's images). */
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export function useGuestPageQuery(collectionId: string) {
@@ -66,6 +103,7 @@ export function useGuestPageEditor(
   initial: GuestPageEditor,
 ): GuestPageEditorApi {
   const t = useTranslations('guestPage');
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const invalidate = useInvalidateCollections();
   const [state, rawDispatch] = useReducer(
@@ -78,6 +116,11 @@ export function useGuestPageEditor(
     failure: null,
   });
   const [publishing, setPublishing] = useState(false);
+  const [history, setHistory] = useState<History>(() =>
+    initHistory(snapshotOf(initialEditorState(initial))),
+  );
+  const historyRef = useRef(history);
+  const stepping = useRef(false);
   // The editor state the callbacks act on (read in handlers and effects only).
   const latest = useRef(state);
   const putServer = useCallback(
@@ -110,8 +153,9 @@ export function useGuestPageEditor(
   // After every change: what the next save sends, with the draft revision known now.
   useEffect(() => {
     latest.current = state;
+    historyRef.current = history;
     saver.setSnapshot(state.pending ? { version: state.version, working: state.working } : null);
-  }, [saver, state]);
+  }, [history, saver, state]);
 
   // Answers that reach the query from elsewhere (a refetch, another tab's change once loaded).
   const server = useQuery({
@@ -126,8 +170,11 @@ export function useGuestPageEditor(
   }, [know, server.data]);
 
   const dispatch = useCallback<GuestPageEditorApi['dispatch']>(
-    (action) => {
+    (action, coalesce) => {
+      const next = editorReducer(latest.current, action);
+      latest.current = next;
       rawDispatch(action);
+      setHistory((h) => record(h, snapshotOf(next), coalesce ?? null, Date.now()));
       saver.schedule();
     },
     [saver],
@@ -138,8 +185,64 @@ export function useGuestPageEditor(
       know(editor);
       rawDispatch({ type: 'server', editor });
       putServer(editor);
+      // A new or removed image is an undo step too.
+      const working = latest.current.working;
+      setHistory((h) =>
+        record(h, { working, images: imageIdsOf(currentVersion(editor)) }, null, Date.now()),
+      );
     },
     [know, putServer],
+  );
+
+  /** A new history from what the server has now (after a publish, a reset, the latest version). */
+  const restartHistory = useCallback((editor: GuestPageEditor) => {
+    setHistory(initHistory(snapshotOf(initialEditorState(editor))));
+  }, []);
+
+  /**
+   * Applies a step: the draft's images first (restored by id, or removed), then the working copy
+   * (autosaved as any change). An image that is gone (`404`) takes its steps with it and says so;
+   * the history then stays where it was.
+   */
+  const step = useCallback(
+    async (direction: 'undo' | 'redo') => {
+      if (stepping.current) return;
+      const target = (direction === 'undo' ? undo : redo)(historyRef.current);
+      if (target === null) return;
+      stepping.current = true;
+      try {
+        const now = snapshotOf(latest.current);
+        for (const slot of ['cover', 'background'] as const) {
+          const wanted = target.present.images[slot];
+          if (wanted === now.images[slot]) continue;
+          try {
+            const editor =
+              wanted === null
+                ? await removeDraftImage(collectionId, slot)
+                : await restoreDraftImage(collectionId, slot, wanted);
+            know(editor);
+            rawDispatch({ type: 'server', editor });
+            putServer(editor);
+          } catch (error) {
+            if (wanted !== null && isApiError(error) && error.code === 'NOT_FOUND') {
+              setHistory((h) => dropImage(h, wanted));
+              toast({ variant: 'info', title: t('history.imageGone') });
+            } else {
+              toast({ variant: 'error', title: t('history.failed') });
+            }
+            return;
+          }
+        }
+        if (!sameWorking(target.present.working, latest.current.working)) {
+          rawDispatch({ type: 'restore', working: target.present.working });
+          saver.schedule();
+        }
+        setHistory(target);
+      } finally {
+        stepping.current = false;
+      }
+    },
+    [collectionId, know, putServer, saver, t, toast],
   );
 
   const save = useCallback(async () => {
@@ -152,12 +255,13 @@ export function useGuestPageEditor(
       know(editor);
       rawDispatch({ type: 'reset', editor });
       putServer(editor);
+      restartHistory(editor);
       // The dashboard card and the detail show the published cover and welcome.
       await invalidate();
     } finally {
       setPublishing(false);
     }
-  }, [collectionId, invalidate, know, putServer, saver]);
+  }, [collectionId, invalidate, know, putServer, restartHistory, saver]);
 
   const reset = useCallback(async () => {
     saver.dispose();
@@ -166,21 +270,26 @@ export function useGuestPageEditor(
     know(editor);
     rawDispatch({ type: 'reset', editor });
     putServer(editor);
+    restartHistory(editor);
     saver.clearFailure();
-  }, [collectionId, know, putServer, saver]);
+  }, [collectionId, know, putServer, restartHistory, saver]);
 
   const reloadLatest = useCallback(async () => {
     const editor = await fetchGuestPage(collectionId);
     know(editor);
     rawDispatch({ type: 'reset', editor });
     putServer(editor);
+    restartHistory(editor);
     saver.clearFailure();
-  }, [collectionId, know, putServer, saver]);
+  }, [collectionId, know, putServer, restartHistory, saver]);
 
   const retry = useCallback(() => {
     saver.clearFailure();
     saver.schedule();
   }, [saver]);
+
+  const undoStep = useCallback(() => void step('undo'), [step]);
+  const redoStep = useCallback(() => void step('redo'), [step]);
 
   useLeaveGuard(state.pending || request.inFlight || publishing, t('leave'));
 
@@ -195,12 +304,17 @@ export function useGuestPageEditor(
     generation: state.generation,
     dispatch,
     status,
-    dirty: state.pending || state.editor.draft !== null,
+    // By value (owner remark 113): changed and changed back is not dirty, whatever the draft.
+    dirty: differsFromPublished(state),
     previewPage: page,
     adopt,
     save,
     reset,
     reloadLatest,
     retry,
+    undo: undoStep,
+    redo: redoStep,
+    canUndo: canUndo(history),
+    canRedo: canRedo(history),
   };
 }

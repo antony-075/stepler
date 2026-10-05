@@ -1125,6 +1125,12 @@
       "saving": "Saving…",
       "error": "Not saved",
       "conflict": "Conflict"
+    },
+    "history": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "imageGone": "The previous image is gone — that step is skipped.",
+      "failed": "The step could not be undone. Try again."
     }
   },
   "templates": {
