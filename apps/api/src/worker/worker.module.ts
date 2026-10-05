@@ -31,6 +31,7 @@ import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
 import { MediaSlots } from './media/media-slots.js';
+import { OriginalSanitizer } from './media/original-sanitizer.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -74,6 +75,7 @@ export class WorkerModule {
         ExpireUploadsHandler,
         DerivativeStore,
         MediaSlots,
+        OriginalSanitizer,
         ImageDerivativesHandler,
         VideoPosterHandler,
         CollectionImageDerivativesHandler,

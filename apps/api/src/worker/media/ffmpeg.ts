@@ -23,12 +23,12 @@ const FRAME_TIMEOUT_MS = 60_000;
 /** Microseconds: a read that stalls this long fails the run. */
 const RW_TIMEOUT_US = '30000000';
 /** Demuxers for MP4/MOV (one demuxer) and WebM (Matroska), the D3 video types. */
-const FORMAT_WHITELIST = 'mov,mp4,m4a,3gp,3g2,mj2,matroska,webm';
+export const FORMAT_WHITELIST = 'mov,mp4,m4a,3gp,3g2,mj2,matroska,webm';
 /**
  * Video decoders for MP4/MOV/WebM recordings, and the audio decoders stream probing may open
  * (the frame itself never decodes audio).
  */
-const CODEC_WHITELIST = [
+export const CODEC_WHITELIST = [
   'h264',
   'hevc',
   'vp8',

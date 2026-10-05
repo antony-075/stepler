@@ -93,10 +93,17 @@ export interface ObjectStorage {
     parts: readonly Pick<StoredPart, 'partNumber' | 'etag'>[],
   ): Promise<void>;
   /**
-   * Streams the object into the file at `path` (the worker's derivative inputs; never into
-   * memory). Returns `false` when the object does not exist.
+   * Streams the object into the file at `path` (the worker's media inputs; never into memory).
+   * Returns its ETag, or `null` when the object does not exist.
    */
-  downloadToFile(key: string, path: string): Promise<boolean>;
+  downloadToFile(key: string, path: string): Promise<{ etag: string } | null>;
+  /**
+   * Overwrites the object with the file at `path` (streamed) only while it is still the version
+   * with `etag` (a conditional PUT, `If-Match`): the worker's location stripping replaces an
+   * original it downloaded. Returns `false` when the object changed or is gone (it is then left
+   * alone, never re-created).
+   */
+  replaceFromFile(key: string, path: string, contentType: string, etag: string): Promise<boolean>;
   /** Bytes `start`…`endInclusive` (fewer when the object is shorter). Small reads only. */
   readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array>;
   /**
