@@ -192,3 +192,144 @@
   font-family: var(--tpl-font-heading);
   color: var(--tpl-text);
 }
+
+/*
+ * Whole-page screens in the template's look (owner remarks 99, 100; react/screen.tsx): the link
+ * states and the loading page. From the theme tokens, so every template gets its own colours,
+ * fonts and radii; a template may restyle `.tpl-screen-*` in its sheet. A full-height column:
+ * the footer ends at the window's bottom (item 101).
+ */
+:where([data-template]) .tpl-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+:where([data-template]) .tpl-screen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 1120px;
+  min-height: 56px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  box-sizing: border-box;
+}
+
+:where([data-template]) .tpl-screen-main {
+  display: grid;
+  flex: 1 0 auto;
+  place-items: center;
+  padding: 24px 16px 56px;
+}
+
+:where([data-template]) .tpl-screen-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 30rem;
+  text-align: center;
+}
+
+:where([data-template]) .tpl-screen-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--tpl-accent-soft);
+  color: var(--tpl-accent-text);
+}
+
+:where([data-template]) .tpl-screen-icon[data-tone='warning'] {
+  box-shadow: 0 0 0 2px var(--tpl-accent);
+}
+
+:where([data-template]) .tpl-screen-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+:where([data-template]) .tpl-screen-title {
+  margin: 0;
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1.15;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+:where([data-template]) .tpl-screen-text,
+:where([data-template]) .tpl-screen-note {
+  max-width: 40ch;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--tpl-muted);
+  text-wrap: pretty;
+}
+
+:where([data-template]) .tpl-screen-action {
+  margin-top: 8px;
+}
+
+/* Loading: the page's shape in the template's colours; a slow pulse only when motion is fine. */
+:where([data-template]) .tpl-screen-main:has(.tpl-screen-skeleton) {
+  place-items: start center;
+}
+
+:where([data-template]) .tpl-screen-skeleton {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+}
+
+:where([data-template]) .tpl-skeleton {
+  display: block;
+  border-radius: var(--tpl-radius-card, 8px);
+  background: color-mix(in srgb, var(--tpl-text) 10%, transparent);
+}
+
+:where([data-template]) .tpl-skeleton-title {
+  width: 72%;
+  height: 40px;
+}
+
+:where([data-template]) .tpl-skeleton-line {
+  width: 48%;
+  height: 16px;
+}
+
+:where([data-template]) .tpl-skeleton-action {
+  height: 52px;
+  margin-top: 8px;
+  background: color-mix(in srgb, var(--tpl-accent) 35%, transparent);
+}
+
+:where([data-template]) .tpl-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 24px;
+}
+
+:where([data-template]) .tpl-skeleton-frame {
+  aspect-ratio: 1;
+  border-radius: var(--tpl-radius-tile, 8px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where([data-template]) .tpl-skeleton {
+    animation: tpl-skeleton-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes tpl-skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}

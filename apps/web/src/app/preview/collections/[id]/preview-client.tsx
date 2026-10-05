@@ -28,12 +28,11 @@ import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, UserRound } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useState } from 'react';
-import { LinkStatePage } from '@/app/g/[token]/link-state-page';
 import { collectionKey, fetchCollection } from '@/api/collections';
 import { formatBytes } from '@/format/bytes';
 import { primaryContribution } from '@/guest/contribute-actions';
-import { GuestChrome } from '@/guest/guest-chrome';
 import { fromAdminImage } from '@/guest/guest-cover';
+import { GuestStateScreen } from '@/guest/guest-screens';
 import { staticSlots } from '@/guest/static-slots';
 import { fontVariables } from '@/guest/template-fonts';
 import { buildGuestActions } from '@/guest/template-model';
@@ -127,24 +126,15 @@ export function PreviewClient({ collectionId }: { collectionId: string }) {
     return <div aria-busy="true" className="min-h-svh bg-background" />;
   }
   const shape = previewShape(view.state);
-  if (shape.kind === 'link-state') return <PreviewLinkState state={shape.state} />;
+  if (shape.kind === 'link-state') return <PreviewLinkState state={shape.state} page={view.page} />;
   return <PreviewPage collection={collection.data} page={view.page} shape={shape} />;
 }
 
-/** The link or collection state page, as the guest page shows it (inert like the rest). */
-function PreviewLinkState({ state }: { state: 'paused' | 'closed' }) {
-  const t = useTranslations('guestLink');
+/** The link or collection state, in the page's template as the guest page shows it (inert). */
+function PreviewLinkState({ state, page }: { state: 'paused' | 'closed'; page: GuestPageVersion }) {
   return (
     <div inert data-slot="preview-link-state" data-state={state}>
-      <GuestChrome>
-        <div className="mx-auto grid w-full max-w-[720px] gap-4">
-          {state === 'paused' ? (
-            <LinkStatePage tone="warning" title={t('paused.title')} text={t('paused.text')} />
-          ) : (
-            <LinkStatePage title={t('archived.title')} text={t('archived.text')} />
-          )}
-        </div>
-      </GuestChrome>
+      <GuestStateScreen theme={page} state={state === 'paused' ? 'paused' : 'archived'} />
     </div>
   );
 }

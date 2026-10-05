@@ -87,6 +87,12 @@ test.describe('guest link page', () => {
     await page.goto(url);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Посилання призупинене');
     await expect(page.getByText('Ювілей бабусі Галини')).toHaveCount(0);
+    // In the page's template (owner remark 99), the footer at the window's bottom (101).
+    await expect(page.locator('[data-template="classic"] [data-slot="link-state"]')).toBeVisible();
+    const footerBottom = await page
+      .locator('[data-template] footer')
+      .evaluate((footer) => footer.getBoundingClientRect().bottom + window.scrollY);
+    expect(footerBottom).toBeGreaterThanOrEqual(page.viewportSize()!.height - 1);
 
     await page.goto('/app');
     await post(page, `/guest-links/${main.id}/activate`);
@@ -121,6 +127,17 @@ test.describe('guest link page', () => {
     await archiveCollectionViaApi(page, collection.id);
     await page.goto(url);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Колекцію закрито');
+  });
+
+  test('the first HTML is already the template’s loading screen: no flash of the app’s look', async ({
+    page,
+  }) => {
+    const { url } = await setUp(page, 'Весілля Олі та Тараса');
+    const html = await (await page.request.get(url)).text();
+    expect(html).toContain('data-template="classic"');
+    expect(html).toContain('data-screen="loading"');
+    // The look only: never the title in the server's HTML.
+    expect(html).not.toContain('Весілля Олі та Тараса');
   });
 
   test('an unknown link is «not found»', async ({ page }) => {

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { fetchGuestLinkTheme } from '@/api/server';
 import { GuestPage } from '@/guest/guest-page';
 
 // Never the token or the collection's title: the tab title and history stay neutral, and the
@@ -23,5 +24,7 @@ export const viewport: Viewport = { viewportFit: 'cover' };
  */
 export default async function GuestLinkPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  return <GuestPage token={token} />;
+  // The template's look from the first byte (remarks 99, 100); `null` starts neutral.
+  const theme = await fetchGuestLinkTheme(token);
+  return <GuestPage token={token} theme={theme} />;
 }

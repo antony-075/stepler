@@ -639,3 +639,15 @@
     box-shadow: 0 8px 14px -8px rgb(36 48 79 / 0.6);
   }
 }
+
+/* A link state or the loading page (owner, item 99): the message on a card in an airmail border. */
+[data-template='postcard'] .tpl-screen-card {
+  padding: 28px 20px 24px;
+  border: 6px solid transparent;
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--pc-cream), var(--pc-cream)) padding-box,
+    var(--pc-airmail) border-box;
+  box-shadow: 0 22px 40px -24px rgb(36 48 79 / 0.55);
+  box-sizing: border-box;
+}
