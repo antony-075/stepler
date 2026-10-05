@@ -128,8 +128,8 @@ export function FileStage({
   if (failed || detail === undefined) return tile(t('viewer.mediaFailed'));
   if (item.kind === 'DOCUMENT') return tile(t('viewer.documentOpen'), 'doc');
   if (item.kind === 'PHOTO') {
-    // The preview, else the original while the worker is on it, when its type is known to be
-    // one browsers show (not HEIC).
+    // The preview, else the original while the worker is on it (once its location is stripped,
+    // the API links it), when its type is known to be one browsers show (not HEIC).
     const mime = detail.mimeType ?? null;
     const shown =
       detail.previewUrl ??
@@ -150,7 +150,10 @@ export function FileStage({
       />
     );
   }
-  if (detail.originalUrl === null) return tile(t('viewer.mediaFailed'));
+  // No link to the original until the worker has stripped its location (ADR 0008 addendum).
+  if (detail.originalUrl === null) {
+    return tile(t(detail.processingStatus === 'PENDING' ? 'pendingPreview' : 'viewer.mediaFailed'));
+  }
   if (videoFailed) return tile(t('viewer.videoFallback'));
   return (
     // Guests' own recordings come without caption tracks; there is nothing to attach.

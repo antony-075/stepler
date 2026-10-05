@@ -57,6 +57,8 @@ describe('guest media links of other guests’ files', () => {
           originalFilename: name,
           contributorGuestSessionId: sessionA!.id,
           processingStatus: kind === 'PHOTO' ? 'READY' : 'NOT_REQUIRED',
+          // A processed photo: its location has been stripped, so its original is served.
+          ...(kind === 'PHOTO' ? { sanitizedAt: new Date() } : {}),
         },
       });
       const roles =

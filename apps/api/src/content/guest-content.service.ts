@@ -52,7 +52,7 @@ export class GuestContentService {
       row,
       p,
       await this.media.forItem(row),
-      await this.media.original(row, { own: isOwnItem(p, row) }),
+      await this.media.original(row, { viewer: 'guest', own: isOwnItem(p, row) }),
     );
   }
 
