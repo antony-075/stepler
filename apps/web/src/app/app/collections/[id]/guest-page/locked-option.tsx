@@ -13,7 +13,10 @@ import { type ReactNode, useId } from 'react';
 //   dashed and dimmed, focusable and `aria-disabled` (a press does nothing), and the template's
 //   reason is a visible line under the group, linked by `aria-describedby`. Never a hover-only
 //   tooltip (rule 05).
-// - Colours are round swatches: the colour fills the chip (a hairline inside, so white shows on
+// - Page backgrounds (owner remark 94) are small samples: the fill with «Аа» in the colour that
+//   reads on it and an accent stripe, so dark or pale presets are told apart, and the colour's
+//   name under it; the chosen one has a 1px foreground edge around the sample and its name.
+// - Accent colours are round swatches: the colour fills the chip (a hairline inside, so white shows on
 //   white), the chosen one has a 2px foreground ring 2px outside the colour, the focus ring is the
 //   usual violet outline around that. Nothing else in the chip, so it is always centred.
 
@@ -24,6 +27,8 @@ export type Choice<T extends string> = {
   icon?: ReactNode;
   /** A swatch's fill: any CSS background (a colour or a gradient). */
   swatch?: string;
+  /** `backgrounds`: the text colour that reads on the fill, and the accent, for the sample. */
+  sample?: { ink: string; accent: string; text: string };
   /** Not allowed by this template. */
   locked?: boolean;
   /** The accessible name when the item shows no text (a swatch). */
@@ -35,6 +40,8 @@ const ITEM = {
     'h-auto min-h-11 min-w-0 justify-center border-border bg-card px-3 py-2 text-center leading-tight whitespace-normal text-foreground',
   tiles:
     'h-auto min-h-14 min-w-0 justify-start gap-2 border-border bg-card px-2.5 py-2 text-left leading-tight whitespace-normal text-foreground',
+  backgrounds:
+    'h-auto min-w-0 flex-col items-stretch gap-1 border-transparent bg-transparent p-1 text-center text-xs leading-tight font-medium whitespace-normal text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground [&>[data-slot=toggle-group-item-icon]]:block',
   swatches:
     'size-9 min-w-0 gap-0 rounded-full border-2 border-transparent bg-transparent p-[3px] pointer-coarse:size-11 hover:border-border data-[state=on]:border-foreground data-[state=on]:bg-transparent [&>[data-slot=toggle-group-item-icon]]:size-full [&>[data-slot=toggle-group-item-label]]:hidden',
 } as const;
@@ -62,8 +69,11 @@ export function ChoiceGroup<T extends string>({
   /** The template's reason for its locked choices; shown under the group. */
   lockReason?: string;
   readOnly?: boolean;
-  /** `segments`: a row of text tiles; `tiles`: 2 columns with pictograms; `swatches`: colours. */
-  variant?: 'segments' | 'tiles' | 'swatches';
+  /**
+   * `segments`: a row of text tiles; `tiles`: 2 columns with pictograms; `swatches`: colours;
+   * `backgrounds`: page backgrounds as small named samples.
+   */
+  variant?: 'segments' | 'tiles' | 'swatches' | 'backgrounds';
   className?: string;
 }) {
   const labelId = useId();
@@ -87,6 +97,8 @@ export function ChoiceGroup<T extends string>({
           variant === 'segments' && 'grid w-full auto-cols-fr grid-flow-col gap-2',
           variant === 'tiles' && 'grid w-full grid-cols-2 gap-2',
           variant === 'swatches' && 'flex-wrap gap-1.5',
+          variant === 'backgrounds' &&
+            'grid w-full grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5',
         )}
       >
         {choices.map((choice) => {
@@ -103,9 +115,15 @@ export function ChoiceGroup<T extends string>({
                     ...(reason === undefined ? {} : { 'aria-describedby': reasonId }),
                   }
                 : {})}
-              className={cn(ITEM[variant], variant !== 'swatches' && CHOSEN, isLocked && LOCKED)}
+              className={cn(
+                ITEM[variant],
+                (variant === 'segments' || variant === 'tiles') && CHOSEN,
+                isLocked && LOCKED,
+              )}
               icon={
-                variant === 'swatches' ? (
+                variant === 'backgrounds' && choice.sample !== undefined ? (
+                  <BackgroundSample fill={choice.swatch} sample={choice.sample} />
+                ) : variant === 'swatches' ? (
                   <span
                     className="block size-full rounded-full shadow-[inset_0_0_0_1px_rgb(0_0_0/0.14)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.22)]"
                     style={{ background: choice.swatch }}
@@ -130,5 +148,26 @@ export function ChoiceGroup<T extends string>({
         </p>
       )}
     </div>
+  );
+}
+
+/** A page background in miniature: its fill, a line of text and the accent. Decorative. */
+function BackgroundSample({
+  fill,
+  sample,
+}: {
+  fill: string | undefined;
+  sample: { ink: string; accent: string; text: string };
+}) {
+  return (
+    <span
+      className="flex aspect-[4/3] w-full flex-col justify-between rounded-[6px] p-1.5 text-left shadow-[inset_0_0_0_1px_rgb(0_0_0/0.12)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.18)]"
+      style={{ background: fill }}
+    >
+      <span className="text-sm leading-none font-semibold" style={{ color: sample.ink }}>
+        {sample.text}
+      </span>
+      <span className="h-1 w-1/2 rounded-full" style={{ backgroundColor: sample.accent }} />
+    </span>
   );
 }

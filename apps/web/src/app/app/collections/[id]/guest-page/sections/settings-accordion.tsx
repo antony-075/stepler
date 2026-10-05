@@ -28,6 +28,15 @@ export function SettingsAccordion({
 }: SectionProps & { mode: 'single' | 'multiple' }) {
   const [open, setOpen] = useState<ReadonlySet<SectionId>>(() => new Set(['template']));
   const summaries = useSummaries(props);
+  const openSection = (id: SectionId) => {
+    setOpen((current) => (mode === 'single' ? new Set([id]) : new Set([...current, id])));
+    // Once drawn open: its row to the top of the scrolling panel, focus on its header.
+    requestAnimationFrame(() => {
+      const row = document.getElementById(`guest-page-section-${id}`);
+      row?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      row?.querySelector<HTMLButtonElement>('h3 > button')?.focus({ preventScroll: true });
+    });
+  };
   return (
     <>
       {SECTION_IDS.map((id) => (
@@ -49,7 +58,7 @@ export function SettingsAccordion({
             })
           }
         >
-          <SectionBody id={id} {...props} />
+          <SectionBody id={id} {...props} openSection={openSection} />
         </AccordionRow>
       ))}
     </>
@@ -128,11 +137,12 @@ function useSummaries({ editor, def }: SectionProps) {
   const tTemplates = useTranslations('templates');
   const { settings, welcomeMessage } = editor.working;
   const version = currentVersion(editor.editor);
+  // The cover's part of the «Розташування» summary: whether the page has one, or its state.
   const imageLabel = (status: 'READY' | 'PENDING' | 'FAILED' | undefined) =>
     status === undefined
-      ? t('image.none')
+      ? t('layout.withoutCover')
       : status === 'READY'
-        ? t('image.ready')
+        ? t('layout.withCover')
         : status === 'PENDING'
           ? t('image.processing')
           : t('image.failedShort');
@@ -144,9 +154,9 @@ function useSummaries({ editor, def }: SectionProps) {
   const preset = ACCENT_PRESETS.find((p) => p.hex === settings.accent);
   const fontName = t(`font.names.${settings.headingFont}`);
   const welcomeLength = welcomeMessage === null ? 0 : codePointLength(welcomeMessage);
+  const coverLabel = imageLabel(version.cover?.status);
   const summaries: Record<SectionId, ReactNode> = {
     template: tTemplates.has(`${def.id}.name`) ? tTemplates(`${def.id}.name`) : def.id,
-    cover: <span className="truncate">{imageLabel(version.cover?.status)}</span>,
     welcome: (
       <span className="type-data tabular-nums">
         {t('welcome.counter', { count: welcomeLength, max: WELCOME_MESSAGE_MAX_CHARS })}
@@ -170,6 +180,7 @@ function useSummaries({ editor, def }: SectionProps) {
     layout: (
       <span className="truncate">
         {t('phone.layoutSummary', {
+          cover: coverLabel,
           placement: t(`layout.placements.${settings.coverPlacement}`),
           align: settings.align,
         })}
