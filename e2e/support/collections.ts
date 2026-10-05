@@ -49,19 +49,27 @@ export async function guestPageViaApi(page: Page, id: string): Promise<Editor> {
   return (await res.json()) as Editor;
 }
 
-/** Saves the draft as the editor would: the current version with `change` on top. */
+/**
+ * Saves the draft as the editor would: the current version with `change` on top. A new
+ * `templateId` starts from `settings` as given (pass the template's defaults).
+ */
 export async function saveGuestPageDraftViaApi(
   page: Page,
   id: string,
-  change: { settings?: Record<string, unknown>; welcomeMessage?: string | null },
+  change: {
+    templateId?: string;
+    settings?: Record<string, unknown>;
+    welcomeMessage?: string | null;
+  },
 ): Promise<Editor> {
   const editor = await guestPageViaApi(page, id);
   const current = editor.draft ?? editor.published;
+  const switching = change.templateId !== undefined && change.templateId !== current.templateId;
   const res = await page.request.put(`${guestPage(id)}/draft`, {
     data: {
       baseRevision: editor.draft?.revision ?? null,
-      templateId: current.templateId,
-      settings: { ...current.settings, ...change.settings },
+      templateId: change.templateId ?? current.templateId,
+      settings: switching ? change.settings : { ...current.settings, ...change.settings },
       welcomeMessage:
         change.welcomeMessage === undefined ? current.welcomeMessage : change.welcomeMessage,
     },

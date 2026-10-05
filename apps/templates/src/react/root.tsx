@@ -47,15 +47,12 @@ export function GuestTemplateRoot({
       : def.options.backgroundImageSource === 'cover'
         ? model.cover
         : model.background;
-  const style = {
-    ...themeTokens(def, settings),
-    ...(template.followsSystemScheme === true ? {} : { colorScheme: def.scheme }),
-  } as CSSProperties;
+  const style = { ...themeTokens(def, settings), colorScheme: def.scheme } as CSSProperties;
   const { Layout } = template;
   return (
     <div
       data-template={def.id}
-      {...(template.followsSystemScheme === true ? {} : { 'data-scheme': def.scheme })}
+      data-scheme={def.scheme}
       style={style}
       className={fontClassName(settings.headingFont, def.bodyFont) || undefined}
       inert={inert}

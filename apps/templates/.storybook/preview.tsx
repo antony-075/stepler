@@ -7,8 +7,8 @@ type Theme = 'light' | 'dark';
 
 /**
  * Applies the `theme` global to <html data-theme>, as the app does, and restores the previous
- * value on cleanup so one story's theme cannot leak into the next. Only templates that follow
- * the visitor's setting (classic in PR H) change with it.
+ * value on cleanup so one story's theme cannot leak into the next. Templates keep their own
+ * fixed scheme [D5]: the toolbar shows they do not follow it.
  */
 function ThemeRoot({ theme, children }: { theme: Theme; children: ReactNode }) {
   useLayoutEffect(() => {

@@ -33,12 +33,15 @@ describe.each(TEMPLATE_DEFINITIONS.map((def) => [def.id, def] as const))('%s', (
   });
 
   test('the image dimming floor keeps the heading colour readable on any picture', () => {
+    // A cover-as-background (T2) has no text on the veil: its band has its own scrim.
     if (!def.options.backgroundKinds.includes('image')) return;
+    if (def.options.backgroundImageSource === 'cover') return;
     expect(def.options.imageDim.min / 100).toBeGreaterThanOrEqual(
       minVeil(def.palette.text, def.palette.veil),
     );
   });
 
+  // About 1 000–4 000 combinations per template: allow for a busy runner.
   test('every background × accent × corners × align reads at 4.5:1', () => {
     for (const background of backgrounds(def)) {
       for (const accent of ACCENTS) {
@@ -50,5 +53,5 @@ describe.each(TEMPLATE_DEFINITIONS.map((def) => [def.id, def] as const))('%s', (
         }
       }
     }
-  });
+  }, 30_000);
 });

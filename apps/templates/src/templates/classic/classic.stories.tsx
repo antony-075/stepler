@@ -40,13 +40,7 @@ export const LongWelcome360 = at('LongWelcome', 'phone360');
 export const LongWelcome390 = at('LongWelcome', 'phone390');
 export const LongWelcome768 = at('LongWelcome', 'tablet768');
 export const LongWelcome1440 = at('LongWelcome', 'desktop1440');
-
-/** Classic still follows the visitor's light/dark setting in PR H. */
-export const FirstVisitDark390 = {
-  ...at('FirstVisit', 'phone390'),
-  globals: { viewport: { value: 'phone390' }, theme: 'dark' },
-};
-export const ContributedDark1440 = {
-  ...at('Contributed', 'desktop1440'),
-  globals: { viewport: { value: 'desktop1440' }, theme: 'dark' },
-};
+export const ImageBackground360 = at('ImageBackground', 'phone360');
+export const ImageBackground390 = at('ImageBackground', 'phone390');
+export const ImageBackground768 = at('ImageBackground', 'tablet768');
+export const ImageBackground1440 = at('ImageBackground', 'desktop1440');

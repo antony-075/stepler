@@ -54,6 +54,8 @@ export interface TemplateDefinition {
     readonly body: Hex;
     /** Secondary lines (counts, captions). */
     readonly muted: Hex;
+    /** Links and the focus ring (made readable like the text). */
+    readonly link: Hex;
     /** Cards, sheets and bars the text also sits on. */
     readonly surfaces: readonly Hex[];
     /** The colour laid over a background image (and shown while it loads). */

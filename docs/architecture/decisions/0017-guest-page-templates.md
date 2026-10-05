@@ -97,9 +97,11 @@ Three things make this more than styling:
 - The guest page renders the published template client-side after the session exchange, as
   before ([C3], ADR 0007) [D2]. Template components use no hooks, so a later server render
   changes nothing in the package.
-- Each template has a fixed scheme (T2 and T5 dark, the rest light); the guest page stops
-  following the visitor's light/dark setting for redesigned templates [D5]. Until PR K, `classic`
-  is the previous guest page ported unchanged and still follows it.
+- Each template has a fixed scheme (T2 and T5 dark, the rest light); the guest page no longer
+  follows the visitor's light/dark setting [D5]. The root sets `data-scheme` and `color-scheme`, and
+  a zero-specificity bridge in `@stepler/templates/styles.css` sets the app's tokens for that scheme
+  and maps surface, text, accent, link and focus to the template's own tokens, so the app's slots
+  (frames, the notice, the footer) follow the template (PR K; `followsSystemScheme` is gone).
 - The editor's live preview (PR J) is a same-origin iframe (`/preview/collections/[id]`,
   `frame-ancestors 'self'`, noindex) fed by `postMessage`: templates use viewport media queries,
   `svh` and fixed bars that only a real viewport renders faithfully, and their CSS and fonts stay
@@ -199,6 +201,15 @@ Three things make this more than styling:
 - One more workspace package to build, lint and test; its Storybook runs in CI with the others.
 - Adding a template is a folder, two registry lines, messages and stories
   (`apps/templates/README.md`).
+- The six templates (PR K): `classic` T1 «Класика», `fullscreen` T2 «На весь екран»,
+  `journal` T3 «Журнал», `postcard` T4 «Листівка», `party` T5 «Вечірка», `minimal` T6
+  «Мінімалізм»; their definitions and locks are DESIGN-SYSTEM.md §13. The locks of T3, T4 and T6
+  are a proposal the owner confirms at the PR K review. T4 rotates its frames (ADR 0015 amendment).
+- Guest page weight after PR K, first view of a contributing link at 390×844 (production build,
+  Playwright with 1.6 Mbit/s, 150 ms latency and 4× CPU throttling, a fresh cache; not Lighthouse):
+  about 530–610 KB transferred, of which fonts 69 KB (classic: Geologica and Geist Mono) to 151 KB
+  (party: plus Unbounded and Manrope); LCP 3.1–3.3 s. Each template loads only the families it
+  uses.
 - Guest page weight after PR H, first view of a contributing link at 390px (production build,
   transferred bytes): JavaScript 355 415 → 360 509 B (+5.1 KB for the core, the root and
   classic), CSS 18 945 → 20 328 B (+1.4 KB, mostly the `@font-face` declarations), fonts unchanged

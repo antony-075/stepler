@@ -32,7 +32,7 @@ const EMERALD = '#2C7350';
 const origin = (page: Page) => ({ origin: new URL(page.url()).origin });
 const toast = (page: Page) => page.locator('[data-slot="toast-title"]');
 const coverIn = (scope: Locator | Page | FrameLocator) =>
-  scope.locator('[data-slot="collection-cover"]');
+  scope.locator('[data-slot="guest-cover"] img');
 const status = (page: Page) => page.locator('[data-slot="save-status"]');
 const preview = (page: Page) => page.frameLocator('[data-slot="preview-iframe"]');
 
@@ -131,6 +131,8 @@ test.describe('guest page editor', () => {
     page,
     browser,
   }) => {
+    // The worker prepares the cover, then the editor asks again within 10 s: allow for both.
+    test.setTimeout(60_000);
     const { id, path } = await setUp(page);
     const guest = await asGuest(browser, path);
     await uploadViaApi(guest, id, 'photo.jpg');
@@ -147,7 +149,7 @@ test.describe('guest page editor', () => {
     await expect(status(page)).toHaveText('Чернетка — гості бачать попередню версію');
     await waitForImageReady(page, id, 'draft');
     // The editor asks again while the image is prepared; then the preview draws it.
-    await expect(coverIn(preview(page))).toHaveAttribute('data-state', 'image', {
+    await expect(coverIn(preview(page))).toBeVisible({
       timeout: 30_000,
     });
     // Guests: still no hero (Review Focus 1).
@@ -158,7 +160,7 @@ test.describe('guest page editor', () => {
     await page.getByRole('button', { name: /^Зберегти/ }).click();
     await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
     await guest.reload();
-    await expect(coverIn(guest)).toHaveAttribute('data-state', 'image');
+    await expect(coverIn(guest)).toBeVisible();
     await guest.context().close();
   });
 
@@ -206,7 +208,7 @@ test.describe('guest page editor', () => {
     await waitForImageReady(page, id, 'published');
     await guest.reload();
     const hero = coverIn(guest);
-    await expect(hero).toHaveAttribute('data-state', 'image');
+    await expect(hero).toBeVisible();
     const heroBox = (await hero.boundingBox())!;
     const titleBox = (await guest.getByRole('heading', { level: 1 }).boundingBox())!;
     expect(heroBox.y + heroBox.height).toBeLessThanOrEqual(titleBox.y);
@@ -224,7 +226,7 @@ test.describe('guest page editor', () => {
       .click();
     await expect(guest.getByText('Кадр видалено', { exact: true })).toBeVisible();
     await guest.reload();
-    await expect(coverIn(guest)).toHaveAttribute('data-state', 'image');
+    await expect(coverIn(guest)).toBeVisible();
     await guest.context().close();
   });
 

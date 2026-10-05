@@ -52,6 +52,7 @@ const workerEnv = loadWorkerEnv({
   S3_FORCE_PATH_STYLE: 'true',
 });
 const classic = definitionOf('classic')!;
+const fullscreen = definitionOf('fullscreen')!;
 
 async function startApp(apiEnv: ApiEnv) {
   const app = await createApp(apiEnv);
@@ -133,6 +134,13 @@ const draftBody = (baseRevision: number | null, patch: Partial<ThemeSettings> = 
   baseRevision,
   templateId: 'classic',
   settings: settings(patch),
+  welcomeMessage: null,
+});
+/** A T2 draft: its defaults with `patch` on top. */
+const fullscreenBody = (patch: Partial<ThemeSettings>) => ({
+  baseRevision: null,
+  templateId: 'fullscreen',
+  settings: { ...fullscreen.defaults, ...patch },
   welcomeMessage: null,
 });
 const images = (collectionId: string) =>
@@ -472,6 +480,16 @@ describe('guest page editor API', () => {
         [['settings', 'background', 'color']],
       ],
       ['an unknown template', { ...draftBody(null), templateId: 'gone' }, [['templateId']]],
+      [
+        'fullscreen + a solid background',
+        fullscreenBody({ background: { kind: 'solid', color: '#F0F1EE' } }),
+        [['settings', 'background', 'kind']],
+      ],
+      [
+        'fullscreen + coverPlacement top',
+        fullscreenBody({ coverPlacement: 'top' }),
+        [['settings', 'coverPlacement']],
+      ],
     ])('%s → 400 with the path', async (_name, body, paths) => {
       const o = await owner();
       const problem = problemDetailsSchema.parse((await o.save(body).expect(400)).body);

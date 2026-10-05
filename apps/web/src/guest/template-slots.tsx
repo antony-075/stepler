@@ -44,7 +44,7 @@ export function OwnFramesSection({
   const t = useTranslations('guest');
   const { permissions, guest } = context;
   return (
-    <section aria-labelledby="own-title" className="grid gap-4">
+    <section aria-labelledby="own-title" data-slot="guest-own-frames" className="grid gap-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div className="grid gap-1">
           <h2 id="own-title" className="type-h2">
@@ -88,7 +88,7 @@ export function AllFramesSection({
 }) {
   const t = useTranslations('guest');
   return (
-    <section aria-labelledby="all-title" className="grid gap-4">
+    <section aria-labelledby="all-title" data-slot="guest-all-frames" className="grid gap-4">
       <div className="flex items-center justify-between gap-4">
         <h2 id="all-title" className="type-h2">
           {t('allTitle')}

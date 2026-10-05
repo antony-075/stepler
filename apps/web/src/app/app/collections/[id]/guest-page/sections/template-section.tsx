@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useId } from 'react';
 import type { SectionProps } from './section-props';
 
-/** The six templates in the editor's order; only registered ones can be chosen (PR K adds the rest). */
+/** The six templates in the editor's order; only registered ones can be chosen. */
 const ORDER = ['classic', 'fullscreen', 'journal', 'postcard', 'party', 'minimal'] as const;
 
 /**
@@ -19,6 +19,7 @@ export function TemplateSection({ editor, readOnly }: SectionProps) {
   const t = useTranslations('templates');
   const tSection = useTranslations('guestPage.template');
   const hintId = useId();
+  const anySoon = ORDER.some((id) => TEMPLATES[id] === undefined);
   return (
     <div className="grid gap-3">
       <ul aria-label={tSection('label')} className="grid grid-cols-3 gap-3">
@@ -66,9 +67,11 @@ export function TemplateSection({ editor, readOnly }: SectionProps) {
           );
         })}
       </ul>
-      <p id={hintId} className="text-sm text-pretty text-muted-foreground">
-        {tSection('soonHint')}
-      </p>
+      {anySoon ? (
+        <p id={hintId} className="text-sm text-pretty text-muted-foreground">
+          {tSection('soonHint')}
+        </p>
+      ) : null}
     </div>
   );
 }
