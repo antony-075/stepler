@@ -77,8 +77,12 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
 const itemClassName = cn(
   'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
   focusHalo,
-  'data-[state=on]:focus-visible:border-ring',
+  // Selection is read from aria-checked / aria-pressed as well as data-state: a Radix Tooltip
+  // trigger (`asChild`) on the item overwrites its data-state with the tooltip's own.
+  'data-[state=on]:focus-visible:border-ring aria-checked:focus-visible:border-ring aria-pressed:focus-visible:border-ring',
   'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
+  'aria-checked:border-foreground aria-checked:bg-card aria-checked:text-foreground',
+  'aria-pressed:border-foreground aria-pressed:bg-card aria-pressed:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',
   'aria-disabled:cursor-not-allowed aria-disabled:hover:text-muted-foreground',
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -104,7 +108,7 @@ function ToggleGroupItem({
       {count === undefined || count === null ? null : (
         <span
           data-slot="toggle-group-item-count"
-          className="type-data text-muted-foreground group-data-[state=on]/chip:text-foreground"
+          className="type-data text-muted-foreground group-data-[state=on]/chip:text-foreground group-aria-checked/chip:text-foreground group-aria-pressed/chip:text-foreground"
         >
           {count}
         </span>

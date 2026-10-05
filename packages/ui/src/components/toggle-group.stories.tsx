@@ -3,6 +3,7 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { Panel, PanelContent } from './panel';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 // Direction C's filter chips (content type, grid or rows); not used by the app yet.
 const meta = {
@@ -243,5 +244,41 @@ export const Locked: Story = {
     await expect(video).toHaveAttribute('aria-checked', 'false');
     await expect(args.onValueChange).not.toHaveBeenCalled();
     await expect(document.querySelector('[data-slot="tooltip-content"]')).toBeVisible();
+  },
+};
+
+/**
+ * Items wrapped in a Tooltip trigger (`asChild`) still show the selection: the trigger overwrites
+ * the item's `data-state`, so the selected style also follows `aria-checked` (owner bug,
+ * 2026-10-06: the editor's device toggle switched but never highlighted).
+ */
+export const WithTooltips: Story = {
+  render: (args) => (
+    <TooltipProvider>
+      <ToggleGroup {...args}>
+        {(['system', 'light', 'dark'] as const).map((value) => (
+          <Tooltip key={value}>
+            <TooltipTrigger asChild>
+              <ToggleGroupItem value={value}>{value}</ToggleGroupItem>
+            </TooltipTrigger>
+            <TooltipContent>{value}</TooltipContent>
+          </Tooltip>
+        ))}
+      </ToggleGroup>
+    </TooltipProvider>
+  ),
+  play: async ({ canvas }) => {
+    const radios = canvas.getAllByRole('radio');
+    const [system, light] = radios as [HTMLElement, HTMLElement];
+    await expect(system).toHaveAttribute('aria-checked', 'true');
+    // Compared by fill and text colour: the clicked item also gets the violet focus edge.
+    const selected = (el: HTMLElement) =>
+      `${getComputedStyle(el).backgroundColor} ${getComputedStyle(el).color}`;
+    const selectedLook = selected(system);
+    await expect(selectedLook).not.toBe(selected(light));
+    await userEvent.click(light);
+    await waitFor(() => expect(light).toHaveAttribute('aria-checked', 'true'));
+    // The colours transition; wait for them to settle.
+    await waitFor(() => expect(selected(light)).toBe(selectedLook));
   },
 };
