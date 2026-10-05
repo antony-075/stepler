@@ -47,6 +47,11 @@ const MEDIA: JobOptions = {
   retryBackoff: true,
   expireInSeconds: 600,
 };
+/**
+ * Videos (up to 2 GB): location stripping downloads the original and uploads it back
+ * (`MIN_TRANSFER_BYTES_PER_SECOND` allows ≈ 200 s each way) before the poster.
+ */
+const MEDIA_VIDEO: JobOptions = { ...MEDIA, expireInSeconds: 1800 };
 const PURGE: JobOptions = {
   retryLimit: 10,
   retryDelay: 30,
@@ -68,7 +73,7 @@ export const JOB_OPTIONS = {
   'uploads.expire': PERIODIC,
   'maintenance.sweep': PERIODIC,
   'media.image-derivatives': MEDIA,
-  'media.video-poster': MEDIA,
+  'media.video-poster': MEDIA_VIDEO,
   'media.cover-derivatives': MEDIA,
   'cover.purge': PURGE,
   'media.collection-image': MEDIA,

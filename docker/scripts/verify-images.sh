@@ -67,13 +67,18 @@ for codec in hevc h264; do
   docker run --rm --entrypoint sh "$WORKER_IMAGE" -c "ffmpeg -hide_banner -decoders | grep -qE ' $codec '" \
     || fail "$WORKER_IMAGE: ffmpeg has no $codec decoder"
 done
-for tool in ffmpeg ffprobe heif-convert; do
+# exiftool (location stripping, ADR 0008 addendum 2026-10-05) runs as the runtime user.
+docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '[ "$(id -u)" != "0" ] && exiftool -ver' >/dev/null \
+  || fail "$WORKER_IMAGE: exiftool does not run as the runtime user"
+for tool in ffmpeg ffprobe heif-convert exiftool; do
   docker run --rm --entrypoint sh "$API_IMAGE" -c "command -v $tool" >/dev/null && fail "$API_IMAGE contains $tool"
 done
 # The worker's own media code against those tools and the image's sharp: a generated HEIC
 # decoded to WebP previews, and a poster from an MP4 that ffmpeg reads over HTTP (as from a
 # presigned URL), with its duration; tiny files declaring huge images fail cleanly (prlimit,
-# -max_pixels) instead of being OOM-killed.
+# -max_pixels) instead of being OOM-killed; a JPEG and an MP4 with GPS lose it (exiftool under
+# prlimit, the MP4's streams compared by `-f streamhash`), and a PNG whose XMP inflates to 600 MB
+# fails cleanly under exiftool's cap.
 media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
   set -e
   cd /tmp
@@ -83,16 +88,36 @@ media=$(docker run --rm --entrypoint sh "$WORKER_IMAGE" -c '
   ffmpeg -v error -f lavfi -i "color=gray:s=11000x11000" -frames:v 1 huge.png
   heif-enc -q 10 huge.png -o huge.heic >/dev/null
   ffmpeg -v error -f lavfi -i "color=gray:s=7000x7000" -frames:v 1 -c:v libx264 -preset ultrafast -crf 51 -pix_fmt yuv420p huge.mp4
+  ffmpeg -v error -i src.png gps.jpg
+  exiftool -q -overwrite_original -DateTimeOriginal="2026:06:14 15:30:00" -GPSLatitude=50.45 -GPSLatitudeRef=N -GPSLongitude=30.52 -GPSLongitudeRef=E gps.jpg
+  cp clip.mp4 gps.mp4
+  exiftool -q -overwrite_original -UserData:GPSCoordinates="50.45, 30.52" -Keys:GPSCoordinates="50.45, 30.52" gps.mp4
+  mkdir strip-jpg strip-mp4 strip-png
   node --input-type=module -e "
     import { createServer } from \"node:http\";
     import { readFileSync } from \"node:fs\";
     const { decodeHeic } = await import(\"file:///app/dist/worker/media/decode.js\");
     const { renderDerivatives } = await import(\"file:///app/dist/worker/media/images.js\");
     const { probeVideo, extractFrame } = await import(\"file:///app/dist/worker/media/ffmpeg.js\");
+    const { stripLocation, exiftoolLocationTags, ffprobeLocationKeys } = await import(\"file:///app/dist/worker/media/location.js\");
+    const { hasPrlimit } = await import(\"file:///app/dist/worker/media/decode.js\");
+    if (!hasPrlimit()) throw new Error(\"no prlimit\");
+    const jpg = await stripLocation(\"/tmp/gps.jpg\", \"image/jpeg\", \"/tmp/strip-jpg\");
+    if (!jpg.changed || Object.keys(await exiftoolLocationTags(jpg.path)).length !== 0) throw new Error(\"JPEG GPS kept\");
+    const mp4 = await stripLocation(\"/tmp/gps.mp4\", \"video/mp4\", \"/tmp/strip-mp4\");
+    if (!mp4.changed || (await ffprobeLocationKeys(mp4.path)).format.length !== 0) throw new Error(\"MP4 location kept\");
     const photo = await renderDerivatives(await decodeHeic(\"/tmp/photo.heic\", \"/tmp\"), { autoOrient: false });
     if (photo.large.width !== 320 || photo.large.height !== 240) throw new Error(\"HEIC preview size\");
     const permanent = (p) => p.then(() => { throw new Error(\"oversized input accepted\"); }, (e) => { if (e.name !== \"PermanentMediaError\") throw e; });
     await permanent(decodeHeic(\"/tmp/huge.heic\", \"/tmp\"));
+    const zlib = await import(\"node:zlib\");
+    const png = readFileSync(\"/tmp/src.png\");
+    const xmp = Buffer.concat([Buffer.from(\"XML:com.adobe.xmp\\0\\x01\\0\\0\\0\", \"latin1\"), zlib.deflateSync(Buffer.alloc(600 * 1024 * 1024, 97), { level: 1 })]);
+    const body = Buffer.concat([Buffer.from(\"iTXt\", \"latin1\"), xmp]);
+    const len = Buffer.alloc(4); len.writeUInt32BE(xmp.length);
+    const crc = Buffer.alloc(4); crc.writeUInt32BE(zlib.crc32(body));
+    (await import(\"node:fs\")).writeFileSync(\"/tmp/bomb.png\", Buffer.concat([png.subarray(0, 33), len, body, crc, png.subarray(33)]));
+    await permanent(stripLocation(\"/tmp/bomb.png\", \"image/png\", \"/tmp/strip-png\"));
     const server = createServer((req, res) => res.end(readFileSync(\"/tmp\" + req.url)));
     await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));
     const url = \"http://127.0.0.1:\" + server.address().port + \"/clip.mp4\";

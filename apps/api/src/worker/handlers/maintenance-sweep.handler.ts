@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { JobData } from '../../jobs/job-names.js';
+import type { JobData, JobName } from '../../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../../jobs/job-queue.js';
 import { type JobHandler, WORKER_ENV } from '../job-handler.js';
 import type { WorkerEnv } from '../worker-env.js';
@@ -22,6 +22,10 @@ const ENQUEUE_CHUNK = 50;
  * - marks `FAILED` the admin images (covers, backgrounds, collection images) still `PENDING` an
  *   hour after they were set with no rendition job queued, retrying or running for them (for
  *   example a job lost while the worker was down during a deploy); the owner can set them again;
+ * - backfills location stripping (ADR 0008 addendum 2026-10-05): queues the media job of
+ *   `READY` photos, videos and admin images with no outcome yet (uploaded before it existed); the
+ *   job then only sanitises their original. Up to `WORKER_PURGE_BATCH_SIZE` of each per run,
+ *   oldest first; a job already queued for one makes it a no-op, and a sanitised one is skipped;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
  *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
@@ -42,7 +46,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
   async handle(): Promise<void> {
     const staleBefore = new Date(Date.now() - STALE_AFTER_MS);
     const take = this.env.WORKER_PURGE_BATCH_SIZE;
-    const [items, collections] = await Promise.all([
+    const [items, collections, unsanitized, unsanitizedImages] = await Promise.all([
       this.prisma.contentItem.findMany({
         where: { deletedAt: { lt: staleBefore } },
         select: { id: true },
@@ -55,15 +59,53 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
         orderBy: { deletionRequestedAt: 'asc' },
         take,
       }),
+      // "ContentItem_unsanitized_idx"; a collection being deleted is left to its purge.
+      this.prisma.contentItem.findMany({
+        where: {
+          sanitizedAt: null,
+          sanitizeFailedAt: null,
+          deletedAt: null,
+          kind: { in: ['PHOTO', 'VIDEO'] },
+          processingStatus: 'READY',
+          collection: { status: { not: 'DELETING' } },
+        },
+        select: { id: true, kind: true },
+        orderBy: { createdAt: 'asc' },
+        take,
+      }),
+      this.prisma.collectionImage.findMany({
+        where: {
+          sanitizedAt: null,
+          sanitizeFailedAt: null,
+          status: 'READY',
+          collection: { status: { not: 'DELETING' } },
+        },
+        select: { id: true, collectionId: true },
+        orderBy: { createdAt: 'asc' },
+        take,
+      }),
     ]);
     // Short transactions of a few sends each: one big one could hit the interactive-transaction
     // timeout on a backlog. The session cleanup runs even if enqueueing fails.
     let enqueueError: Error | undefined;
     try {
-      await this.enqueueInChunks(items, (id) => ['content.purge', { contentItemId: id }] as const);
+      await this.enqueueInChunks(
+        items,
+        ({ id }) => ['content.purge', { contentItemId: id }] as const,
+      );
       await this.enqueueInChunks(
         collections,
-        (id) => ['collection.purge', { collectionId: id }] as const,
+        ({ id }) => ['collection.purge', { collectionId: id }] as const,
+      );
+      await this.enqueueInChunks(unsanitized, ({ id, kind }) =>
+        kind === 'VIDEO'
+          ? (['media.video-poster', { contentItemId: id }] as const)
+          : (['media.image-derivatives', { contentItemId: id }] as const),
+      );
+      await this.enqueueInChunks(
+        unsanitizedImages,
+        ({ id, collectionId }) =>
+          ['media.collection-image', { collectionId, imageId: id }] as const,
       );
     } catch (error) {
       enqueueError = error instanceof Error ? error : new Error('enqueue failed');
@@ -75,6 +117,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       msg: 'maintenance.sweep done',
       contentPurges: items.length,
       collectionPurges: collections.length,
+      sanitizeBackfill: unsanitized.length + unsanitizedImages.length,
       stalledMediaFailed: stalledMedia,
       stalledImagesFailed: stalledImages,
       idleSessionsDeleted: idleSessions,
@@ -112,15 +155,15 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
             AND job.state IN ('created', 'retry', 'active'))`;
   }
 
-  private async enqueueInChunks<N extends 'content.purge' | 'collection.purge'>(
-    rows: readonly { id: string }[],
-    job: (id: string) => readonly [N, JobData[N]],
+  private async enqueueInChunks<R, N extends JobName>(
+    rows: readonly R[],
+    job: (row: R) => readonly [N, JobData[N]],
   ): Promise<void> {
     for (let start = 0; start < rows.length; start += ENQUEUE_CHUNK) {
       const chunk = rows.slice(start, start + ENQUEUE_CHUNK);
       await this.prisma.$transaction(async (tx) => {
-        for (const { id } of chunk) {
-          const [name, data] = job(id);
+        for (const row of chunk) {
+          const [name, data] = job(row);
           await this.jobs.enqueue(tx, name, data);
         }
       });

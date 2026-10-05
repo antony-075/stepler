@@ -32,8 +32,10 @@ ENV NODE_ENV=production
 # libheif 1.15.1-1+deb12u1, libde265 1.0.11-1+deb12u3. Not pinned: Debian security updates
 # replace them and a pinned version stops resolving; the base image digest is pinned. About
 # +409 MB uncompressed. Debian's ffmpeg is GPL (x264/x265); it runs as a separate CLI process.
+# libimage-exiftool-perl (exiftool 12.57+dfsg-1 on bookworm, Perl Artistic or GPL, run as a CLI
+# process) strips location metadata from originals (ADR 0008 addendum 2026-10-05); about +23 MB.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl ffmpeg libheif-examples \
+ && apt-get install -y --no-install-recommends openssl ffmpeg libheif-examples libimage-exiftool-perl \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 # Root-owned, read-only for the runtime user: the worker cannot modify its own code.

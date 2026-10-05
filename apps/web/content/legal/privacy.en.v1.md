@@ -102,7 +102,7 @@ Stepler does not use collection content for its own advertising purposes. Steple
 
 If you upload content belonging to another person or containing another person's personal data, make sure you have an appropriate legal basis for doing so.
 
-Original files are stored unchanged, including metadata embedded in them by the camera or app, such as EXIF data (device, time and, if location was enabled, the place where a photo was taken). The thumbnails and previews that Stepler generates for viewing contain no such metadata. The original file, with its metadata, is available to the collection administrator and, if the link has a shared gallery, to other guests who can view and download it. If you do not want to share such metadata, remove it before uploading.
+After upload, Stepler removes location data (GPS coordinates and place names) from the original files of photos and videos, without changing the image or video itself. Until that is done, the original is not made available to anyone. Other metadata embedded by the camera or app is kept, such as EXIF data (device, time taken, orientation). Documents are stored unchanged and may contain their own metadata, such as an author's name. The thumbnails and previews that Stepler generates for viewing contain no metadata. The original file, with its remaining metadata, is available to the collection administrator and, if the link has a shared gallery, to other guests who can view and download it. If location data cannot be removed from a file, its original is available only to the collection administrator. If you do not want to share other metadata, remove it before uploading.
 
 ## 6. Cookies and guest sessions
 

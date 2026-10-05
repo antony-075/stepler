@@ -9,13 +9,19 @@ import type { JobHandler } from '../job-handler.js';
 import { decodeHeic, needsHeifDecoder } from '../media/decode.js';
 import { renderRenditions } from '../media/images.js';
 import { MediaSlots } from '../media/media-slots.js';
+import { needsSanitizing, OriginalSanitizer } from '../media/original-sanitizer.js';
 import { PermanentMediaError } from '../media/media-error.js';
 import { withWorkDir } from '../media/work-dir.js';
 
-type ImageSource = Pick<CollectionImage, 'id' | 'collectionId' | 'slot' | 'mimeType'>;
+type ImageSource = Pick<
+  CollectionImage,
+  'id' | 'collectionId' | 'slot' | 'mimeType' | 'status' | 'sanitizedAt' | 'sanitizeFailedAt'
+>;
 
 /**
- * Makes an admin image's renditions for its slot from its copied original (plan Task 8): a cover
+ * Removes location metadata from an admin image's original first (`OriginalSanitizer`, ADR 0008
+ * addendum 2026-10-05; a `READY` image not sanitised yet, the sweep's backfill, is only
+ * sanitised), then makes its renditions for its slot from it (plan Task 8): a cover
  * 480 + 1600 px, a background 480 + 1600 + 2400 px, the collection image 480 px; WebP without
  * metadata, HEIC through the libheif CLI, the original streamed to a temp file. The objects are
  * written first; then one update records them (`READY`, dimensions, derived bytes) only while the
@@ -33,30 +39,58 @@ export class CollectionImageDerivativesHandler implements JobHandler<'media.coll
     private readonly prisma: PrismaService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     private readonly slots: MediaSlots,
+    private readonly sanitizer: OriginalSanitizer,
   ) {}
 
   async handle({ collectionId, imageId }: JobData['media.collection-image']): Promise<void> {
     // Ids as stored (lowercase) for the keys: storage keys are case-sensitive.
     const image = await this.prisma.collectionImage.findFirst({
       where: { id: imageId, collectionId },
-      select: { id: true, collectionId: true, slot: true, mimeType: true },
+      select: {
+        id: true,
+        collectionId: true,
+        slot: true,
+        mimeType: true,
+        status: true,
+        sanitizedAt: true,
+        sanitizeFailedAt: true,
+      },
     });
     if (image === null) return;
+    if (image.status === 'READY' && !needsSanitizing(image)) return;
     try {
       // One media job at a time in the whole worker (memory), whatever its type.
       await this.slots.run(() =>
         withWorkDir(async (dir) => {
           const input = join(dir, 'original');
-          const original = imageKey(image.collectionId, image.slot, image.id, 'original');
-          if (!(await this.storage.downloadToFile(original, input))) {
+          const key = imageKey(image.collectionId, image.slot, image.id, 'original');
+          const downloaded = await this.storage.downloadToFile(key, input);
+          if (downloaded === null) {
             throw new PermanentMediaError('image original is missing from storage');
           }
+          const original = { path: input, etag: downloaded.etag, workDir: dir };
+          const prepared = needsSanitizing(image)
+            ? await this.sanitizer.prepare(original, image.mimeType, () =>
+                this.sanitizer.giveUpImage(image.id),
+              )
+            : null;
+          // Rendered from the sanitised file before it replaces the original (it must decode);
+          // one that cannot be sanitised still gets its renditions (they carry no metadata).
+          const source = prepared?.kind === 'clean' ? prepared.path : input;
           const heic = needsHeifDecoder(image.mimeType);
-          const decoded = heic ? await decodeHeic(input, dir) : input;
+          const decoded = heic ? await decodeHeic(source, dir) : source;
           // A decoded HEIC is already upright (libheif); everything else follows its EXIF tag.
           const result = await renderRenditions(decoded, RENDITIONS[image.slot], {
             autoOrient: !heic,
           });
+          if (
+            prepared?.kind === 'clean' &&
+            !(await this.sanitizer.commitImage(image, key, original, prepared))
+          ) {
+            return;
+          }
+          // A legacy image (backfill) keeps its renditions: they never carried metadata.
+          if (image.status === 'READY') return;
           await this.save(image, result);
         }),
       );
@@ -99,12 +133,16 @@ export class CollectionImageDerivativesHandler implements JobHandler<'media.coll
     }
   }
 
-  /** Only a `PENDING` image changes: a rerun that already succeeded stays `READY`. */
+  /**
+   * Only a `PENDING` image changes: a rerun that already succeeded stays `READY`. An original not
+   * sanitised by now never will be (the backfill stops here).
+   */
   private async markFailed(imageId: string): Promise<void> {
     await this.prisma.collectionImage.updateMany({
       where: { id: imageId, status: 'PENDING' },
       data: { status: 'FAILED' },
     });
+    await this.sanitizer.giveUpImage(imageId);
   }
 }
 

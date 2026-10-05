@@ -1,5 +1,7 @@
+import { writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { join } from 'node:path';
 import type { Readable } from 'node:stream';
 import sharp from 'sharp';
 import { afterAll, beforeEach, describe, expect, test } from 'vitest';
@@ -19,7 +21,11 @@ import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.
 import type { JobHandler } from '../src/worker/job-handler.js';
 import { JobRunner } from '../src/worker/job-runner.js';
 import { DerivativeStore, derivedKey } from '../src/worker/media/derivative-store.js';
+import { run } from '../src/worker/media/exec.js';
+import { exiftoolLocationTags, ffprobeLocationKeys } from '../src/worker/media/location.js';
 import { MediaSlots } from '../src/worker/media/media-slots.js';
+import { OriginalSanitizer } from '../src/worker/media/original-sanitizer.js';
+import { withWorkDir } from '../src/worker/media/work-dir.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
 import { resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
@@ -45,6 +51,7 @@ const prisma = new PrismaService(env);
 const storage = new S3ObjectStorage(env);
 const store = new DerivativeStore(prisma, storage);
 const slots = new MediaSlots({ WORKER_MEDIA_CONCURRENCY: 1 });
+const sanitizer = new OriginalSanitizer(prisma, storage);
 
 let sequence = 0;
 
@@ -95,7 +102,8 @@ beforeEach(async () => {
 });
 
 describe('media.image-derivatives', () => {
-  const handler = (s: ObjectStorage = storage) => new ImageDerivativesHandler(store, s, slots);
+  const handler = (s: ObjectStorage = storage) =>
+    new ImageDerivativesHandler(store, s, slots, new OriginalSanitizer(prisma, s));
 
   test('a JPEG gets a 480 px thumbnail and a 1600 px preview; a rerun changes nothing', async () => {
     const jpeg = await sharp({
@@ -192,6 +200,7 @@ describe('media.image-derivatives', () => {
       new DerivativeStore(prisma, deletingStorage),
       storage,
       slots,
+      sanitizer,
     ).handle({
       contentItemId: itemId,
     });
@@ -211,7 +220,7 @@ describe('media.image-derivatives', () => {
 
 describe('media.collection-image (covers)', () => {
   const images = (s: ObjectStorage = storage) =>
-    new CollectionImageDerivativesHandler(prisma, s, slots);
+    new CollectionImageDerivativesHandler(prisma, s, slots, new OriginalSanitizer(prisma, s));
   /** The image handler, called the way slice 8a queued cover jobs (`coverId`). */
   const handler = (s: ObjectStorage = storage) => {
     const inner = images(s);
@@ -344,7 +353,8 @@ describe('media.collection-image (covers)', () => {
 });
 
 describe('media.video-poster', () => {
-  const handler = (s: ObjectStorage = storage) => new VideoPosterHandler(store, s, slots);
+  const handler = (s: ObjectStorage = storage) =>
+    new VideoPosterHandler(store, s, slots, new OriginalSanitizer(prisma, s));
 
   test.each([
     ['clip.mp4', 'video/mp4'],
@@ -480,7 +490,12 @@ describe('JobRunner', () => {
     const down = Object.assign(Object.create(storage) as ObjectStorage, {
       downloadToFile: () => Promise.reject(new Error('storage unavailable')),
     });
-    const handler = new ImageDerivativesHandler(store, down, slots) as JobHandler;
+    const handler = new ImageDerivativesHandler(
+      store,
+      down,
+      slots,
+      new OriginalSanitizer(prisma, down),
+    ) as JobHandler;
     const runner = runnerWith(handler);
     const attempt = (retryCount: number) =>
       runner.run(handler, {
@@ -497,7 +512,7 @@ describe('JobRunner', () => {
 });
 
 describe('media.collection-image: renditions per slot (plan Task 8)', () => {
-  const handler = () => new CollectionImageDerivativesHandler(prisma, storage, slots);
+  const handler = () => new CollectionImageDerivativesHandler(prisma, storage, slots, sanitizer);
 
   async function addImage(slot: 'BACKGROUND' | 'COLLECTION_IMAGE' | 'COVER', bytes: Buffer) {
     const owner = await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } });
@@ -594,5 +609,229 @@ describe('media.collection-image: renditions per slot (plan Task 8)', () => {
       (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
     ).toBe('READY');
     expect(await allKeys(storage, `collections/${collectionId}/cover/${imageId}/`)).toHaveLength(3);
+  });
+});
+
+describe('location stripping before previews (ADR 0008 addendum 2026-10-05)', () => {
+  const photos = (s: ObjectStorage = storage) =>
+    new ImageDerivativesHandler(store, s, slots, new OriginalSanitizer(prisma, s));
+  const videos = (s: ObjectStorage = storage) =>
+    new VideoPosterHandler(store, s, slots, new OriginalSanitizer(prisma, s));
+  const itemOf = (id: string) => prisma.contentItem.findUniqueOrThrow({ where: { id } });
+  const originalRow = async (id: string) =>
+    (await mediaRows(id)).find((row) => row.role === 'ORIGINAL');
+
+  /** The stored object, saved to a temp file for exiftool/ffprobe. */
+  const stored = async <T>(key: string, inspect: (path: string) => Promise<T>): Promise<T> =>
+    withWorkDir(async (dir) => {
+      const path = join(dir, 'stored');
+      await writeFile(path, await objectBytes(key));
+      return inspect(path);
+    });
+
+  test('a photo: the stored original loses its GPS, keeps date and orientation; usage follows', async () => {
+    const jpeg = fixture('location.jpg');
+    const { itemId, storageKey } = await addMedia('PHOTO', jpeg, 'image/jpeg');
+
+    await photos().handle({ contentItemId: itemId });
+
+    const item = await itemOf(itemId);
+    expect(item.processingStatus).toBe('READY');
+    expect(item.sanitizedAt).not.toBeNull();
+    expect(await stored(storageKey, exiftoolLocationTags)).toEqual({});
+    const kept = await stored(storageKey, (path) =>
+      run('exiftool', ['-j', '-G1', '-n', '-DateTimeOriginal', '-Orientation', '-Make', path], {
+        timeoutMs: 30_000,
+      }),
+    );
+    expect((JSON.parse(kept.toString('utf8')) as Record<string, unknown>[])[0]).toMatchObject({
+      'ExifIFD:DateTimeOriginal': '2026:06:14 15:30:00',
+      'IFD0:Orientation': 6,
+      'IFD0:Make': 'Stepler Test Camera',
+    });
+    // Usage is the sum of stored sizes: the original's row now holds the sanitised size.
+    const size = (await storage.head(storageKey))?.size ?? 0;
+    expect(size).toBeLessThan(jpeg.length);
+    expect((await originalRow(itemId))?.sizeBytes).toBe(BigInt(size));
+    // The previews come from the sanitised original (upright: 240×320).
+    expect((await originalRow(itemId))?.width).toBe(240);
+  });
+
+  test('a HEIC photo loses its GPS', async () => {
+    const { itemId, storageKey } = await addMedia('PHOTO', fixture('location.heic'), 'image/heic');
+    await photos().handle({ contentItemId: itemId });
+    expect(await statusOf(itemId)).toBe('READY');
+    expect(await stored(storageKey, exiftoolLocationTags)).toEqual({});
+  });
+
+  test.each([
+    ['location.mov', 'video/quicktime'],
+    ['location.mp4', 'video/mp4'],
+    ['location.webm', 'video/webm'],
+  ])('%s: the stored original has no location and the same streams', async (name, mime) => {
+    const { itemId, storageKey } = await addMedia('VIDEO', fixture(name), mime);
+
+    await videos().handle({ contentItemId: itemId });
+
+    expect(await statusOf(itemId)).toBe('READY');
+    expect((await itemOf(itemId)).sanitizedAt).not.toBeNull();
+    expect(await stored(storageKey, ffprobeLocationKeys)).toEqual({ format: [], streams: [] });
+    if (mime !== 'video/webm') expect(await stored(storageKey, exiftoolLocationTags)).toEqual({});
+    const md5 = (path: string) =>
+      run('ffmpeg', ['-v', 'error', '-i', path, '-map', '0', '-c', 'copy', '-f', 'md5', '-'], {
+        timeoutMs: 30_000,
+      }).then(String);
+    expect(await stored(storageKey, md5)).toBe(
+      await md5(new URL(`./fixtures/media/${name}`, import.meta.url).pathname),
+    );
+    expect((await originalRow(itemId))?.sizeBytes).toBe(
+      BigInt((await storage.head(storageKey))?.size ?? 0),
+    );
+    expect((await mediaRows(itemId)).map((row) => row.role)).toContain('POSTER');
+  });
+
+  test('retry: a crash after the upload leaves a clean object; the rerun records its size', async () => {
+    const { itemId, storageKey } = await addMedia('PHOTO', fixture('location.jpg'), 'image/jpeg');
+    const crashing = Object.assign(Object.create(storage) as ObjectStorage, {
+      replaceFromFile: async (...args: Parameters<ObjectStorage['replaceFromFile']>) => {
+        await storage.replaceFromFile(...args);
+        throw new Error('worker killed');
+      },
+    });
+    await expect(photos(crashing).handle({ contentItemId: itemId })).rejects.toThrow(
+      'worker killed',
+    );
+    expect(await itemOf(itemId)).toMatchObject({ processingStatus: 'PENDING', sanitizedAt: null });
+
+    await photos().handle({ contentItemId: itemId });
+    const size = BigInt((await storage.head(storageKey))?.size ?? 0);
+    expect((await originalRow(itemId))?.sizeBytes).toBe(size);
+    const first = await itemOf(itemId);
+    expect(first).toMatchObject({ processingStatus: 'READY' });
+
+    // A further rerun (the job retried after it was done) changes nothing.
+    await photos().handle({ contentItemId: itemId });
+    expect((await itemOf(itemId)).sanitizedAt).toEqual(first.sanitizedAt);
+    expect((await originalRow(itemId))?.sizeBytes).toBe(size);
+  });
+
+  test('retry: an original that changed since the download is never overwritten', async () => {
+    const jpeg = fixture('location.jpg');
+    const { itemId, storageKey } = await addMedia('PHOTO', jpeg, 'image/jpeg');
+    const stale = Object.assign(Object.create(storage) as ObjectStorage, {
+      downloadToFile: async (key: string, path: string) =>
+        (await storage.downloadToFile(key, path)) && { etag: '"0123456789abcdef"' },
+    });
+    await expect(photos(stale).handle({ contentItemId: itemId })).rejects.toThrow(
+      'the original changed',
+    );
+    expect((await storage.head(storageKey))?.size).toBe(jpeg.length);
+    expect(await statusOf(itemId)).toBe('PENDING');
+  });
+
+  test('an item deleted while it was sanitised keeps no rewritten original', async () => {
+    const { itemId, storageKey } = await addMedia('PHOTO', fixture('location.jpg'), 'image/jpeg');
+    const deleting = Object.assign(Object.create(storage) as ObjectStorage, {
+      replaceFromFile: async (...args: Parameters<ObjectStorage['replaceFromFile']>) => {
+        await prisma.contentItem.update({ where: { id: itemId }, data: { deletedAt: new Date() } });
+        return storage.replaceFromFile(...args);
+      },
+    });
+    await photos(deleting).handle({ contentItemId: itemId });
+    expect(await storage.head(storageKey)).toBeNull();
+    expect((await itemOf(itemId)).sanitizedAt).toBeNull();
+    expect((await mediaRows(itemId)).map((row) => row.role)).toEqual(['ORIGINAL']);
+  });
+
+  test("a photo that cannot be sanitised still gets its previews; its original stays the admin's", async () => {
+    const pending = await addMedia('PHOTO', fixture('photo.jpg'), 'image/bmp');
+    await photos().handle({ contentItemId: pending.itemId });
+    const item = await itemOf(pending.itemId);
+    expect(item).toMatchObject({ processingStatus: 'READY', sanitizedAt: null });
+    expect(item.sanitizeFailedAt).not.toBeNull();
+    expect((await mediaRows(pending.itemId)).map((row) => row.role)).toEqual([
+      'ORIGINAL',
+      'THUMBNAIL',
+      'PREVIEW',
+    ]);
+
+    // A legacy one keeps READY and is not tried again.
+    const legacy = await addMedia('PHOTO', fixture('photo.jpg'), 'image/bmp');
+    await prisma.contentItem.update({
+      where: { id: legacy.itemId },
+      data: { processingStatus: 'READY' },
+    });
+    await photos().handle({ contentItemId: legacy.itemId });
+    expect(await itemOf(legacy.itemId)).toMatchObject({ processingStatus: 'READY' });
+    expect((await itemOf(legacy.itemId)).sanitizeFailedAt).not.toBeNull();
+  });
+
+  test('a video that cannot be sanitised is FAILED', async () => {
+    const { itemId } = await addMedia('VIDEO', fixture('clip.mp4'), 'video/x-msvideo');
+    await videos().handle({ contentItemId: itemId });
+    const item = await itemOf(itemId);
+    expect(item.processingStatus).toBe('FAILED');
+    expect(item.sanitizeFailedAt).not.toBeNull();
+  });
+
+  test('backfill: the last failed retry of a READY item gives up, so the sweep stops', async () => {
+    const { itemId } = await addMedia('PHOTO', fixture('location.jpg'), 'image/jpeg');
+    await prisma.contentItem.update({ where: { id: itemId }, data: { processingStatus: 'READY' } });
+    const down = Object.assign(Object.create(storage) as ObjectStorage, {
+      downloadToFile: () => Promise.reject(new Error('storage unavailable')),
+    });
+    await expect(photos(down).handle({ contentItemId: itemId })).rejects.toThrow();
+    expect((await itemOf(itemId)).sanitizeFailedAt).toBeNull();
+
+    await photos(down).onFinalFailure({ contentItemId: itemId });
+    const item = await itemOf(itemId);
+    expect(item).toMatchObject({ processingStatus: 'READY', sanitizedAt: null });
+    expect(item.sanitizeFailedAt).not.toBeNull();
+    // A later job (or sweep) leaves it alone.
+    await photos().handle({ contentItemId: itemId });
+    expect((await itemOf(itemId)).sanitizedAt).toBeNull();
+  });
+
+  test('backfill: a READY item from before is only sanitised; its previews stay', async () => {
+    const { itemId, storageKey } = await addMedia('PHOTO', fixture('location.jpg'), 'image/jpeg');
+    await prisma.contentItem.update({ where: { id: itemId }, data: { processingStatus: 'READY' } });
+
+    await photos().handle({ contentItemId: itemId });
+
+    expect(await itemOf(itemId)).toMatchObject({ processingStatus: 'READY' });
+    expect((await itemOf(itemId)).sanitizedAt).not.toBeNull();
+    expect(await stored(storageKey, exiftoolLocationTags)).toEqual({});
+    expect((await mediaRows(itemId)).map((row) => row.role)).toEqual(['ORIGINAL']);
+  });
+
+  test('an admin image (cover) loses its GPS before its renditions; its size follows', async () => {
+    const jpeg = fixture('location.jpg');
+    const owner = await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } });
+    const collection = await prisma.collection.create({
+      data: { ownerId: owner.id, title: 'Весілля' },
+    });
+    const image = await prisma.collectionImage.create({
+      data: {
+        collectionId: collection.id,
+        slot: 'COVER',
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: BigInt(jpeg.length),
+      },
+    });
+    const key = imageKey(collection.id, 'COVER', image.id, 'original');
+    await storage.putObject(key, jpeg, 'image/jpeg', jpeg.length);
+
+    await new CollectionImageDerivativesHandler(prisma, storage, slots, sanitizer).handle({
+      collectionId: collection.id,
+      imageId: image.id,
+    });
+
+    const row = await prisma.collectionImage.findUniqueOrThrow({ where: { id: image.id } });
+    expect(row.status).toBe('READY');
+    expect(row.sanitizedAt).not.toBeNull();
+    expect(await stored(key, exiftoolLocationTags)).toEqual({});
+    expect(row.originalSizeBytes).toBe(BigInt((await storage.head(key))?.size ?? 0));
+    expect(row.originalSizeBytes).toBeLessThan(BigInt(jpeg.length));
   });
 });

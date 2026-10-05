@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs/common';
 import type { Job } from 'pg-boss';
-import { JOB_OPTIONS, type JobData, type JobName } from '../jobs/job-names.js';
+import { JOB_OPTIONS, type JobData, type JobName, singletonKeyFor } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
 import {
   CollectionImageDerivativesHandler,
@@ -88,6 +88,13 @@ export class JobRunner implements OnApplicationBootstrap {
         await boss.schedule(handler.name, cron, {}, { singletonKey: handler.name });
       }
     }
+    // One sweep now, not at the next hour: after a deploy it starts the location-stripping
+    // backfill (ADR 0008 addendum 2026-10-05). Its singleton key dedupes it with a queued one.
+    await boss.send(
+      'maintenance.sweep',
+      {},
+      { singletonKey: singletonKeyFor('maintenance.sweep', {}) },
+    );
     this.logger.log({ msg: 'worker started', jobs: this.handlers.map((handler) => handler.name) });
   }
 

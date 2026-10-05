@@ -60,7 +60,11 @@ export class AdminContentService {
       include: WITH_MEDIA,
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
-    return toAdminContentDetail(row, await this.media.forItem(row), await this.media.original(row));
+    return toAdminContentDetail(
+      row,
+      await this.media.forItem(row),
+      await this.media.original(row, { viewer: 'admin' }),
+    );
   }
 
   /**

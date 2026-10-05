@@ -5,7 +5,7 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
-- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos) and ffmpeg/ffprobe (video posters). macOS: `brew install libheif ffmpeg` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg`. Check with `heif-dec --list-decoders` (lists `libde265`). The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1).
+- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos), ffmpeg/ffprobe (video posters) and exiftool (location stripping, ADR 0008 addendum 2026-10-05). macOS: `brew install libheif ffmpeg exiftool` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg libimage-exiftool-perl`. Check with `heif-dec --list-decoders` (lists `libde265`) and `exiftool -ver`. The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1, exiftool 12.57).
 - Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace
@@ -128,6 +128,7 @@ Run on staging once PR D is on `stage` and the owner actions R1 (R2 bucket CORS)
 | 5 | Revoke the link while a guest is uploading | The completion is refused, no frame appears, the guest sees «Посилання більше не діє» |
 | 6 | In the browser's network panel during an upload | The PUT response exposes `ETag`; no request carries `x-amz-checksum-crc32` |
 | 7 | Render logs of `stepler-staging-worker` while steps 1–2 run | `job done` for `media.video-poster` / `media.image-derivatives`, no OOM restart, no presigned URL in any line |
+| 8 | Location stripping (ADR 0008 addendum 2026-10-05): upload an iPhone photo and a phone video with location on, then a MOV of about 2 GB | Within the job, `original sanitised` with `locationRemoved: true` in the worker log; the downloaded originals have no GPS (`exiftool -gps:all -location:all <file>` prints nothing) and keep their date; the 2 GB MOV finishes with no disk-full error (the worker needs about twice the file on its temp disk) and no `412` from R2 (`If-Match` honoured) |
 
 ## Environment variables
 
