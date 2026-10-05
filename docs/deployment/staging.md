@@ -81,6 +81,7 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
   3. The same test from another network must still get 400, not 429: clients do not share one bucket. On a phone on mobile data, opening `https://<staging-host>/auth/verify?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` must show "link invalid", not "too many attempts".
   4. Remove the override afterwards.
 - The Render logs contain request ids but no cookies, tokens or email addresses.
+- **Location stripping** (ADR 0008 addendum 2026-10-05; after promoting it, with the worker image rebuilt): run step 8 of the staging smoke checklist in `docs/development/README.md`, including a MOV of about 2 GB, which needs about 4 GB of temp disk on the worker. Record the result (disk, time, R2 `If-Match`) in the addendum.
 
 ## 8. Background worker (before promoting Phase 4 PR B to `stage`)
 

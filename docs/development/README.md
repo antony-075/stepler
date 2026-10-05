@@ -128,6 +128,7 @@ Run on staging once PR D is on `stage` and the owner actions R1 (R2 bucket CORS)
 | 5 | Revoke the link while a guest is uploading | The completion is refused, no frame appears, the guest sees «Посилання більше не діє» |
 | 6 | In the browser's network panel during an upload | The PUT response exposes `ETag`; no request carries `x-amz-checksum-crc32` |
 | 7 | Render logs of `stepler-staging-worker` while steps 1–2 run | `job done` for `media.video-poster` / `media.image-derivatives`, no OOM restart, no presigned URL in any line |
+| 8 | Location stripping (ADR 0008 addendum 2026-10-05): upload an iPhone photo and a phone video with location on, then a MOV of about 2 GB | Within the job, `original sanitised` with `locationRemoved: true` in the worker log; the downloaded originals have no GPS (`exiftool -gps:all -location:all <file>` prints nothing) and keep their date; the 2 GB MOV finishes with no disk-full error (the worker needs about twice the file on its temp disk) and no `412` from R2 (`If-Match` honoured) |
 
 ## Environment variables
 
