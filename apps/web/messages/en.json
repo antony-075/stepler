@@ -922,7 +922,11 @@
         "141A22": "deep blue",
         "1C1511": "coffee",
         "0F1713": "dark forest",
-        "1D1020": "aubergine"
+        "1D1020": "aubergine",
+        "F7F7F5": "warm white",
+        "F4F6FA": "cool white",
+        "FAF7F2": "ivory",
+        "F5F5F7": "pearl"
       },
       "gradientNames": {
         "mist": "mist",
@@ -1102,7 +1106,10 @@
       "name": "Party"
     },
     "minimal": {
-      "name": "Minimal"
+      "name": "Minimal",
+      "locks": {
+        "background": "«Minimal» has a solid background only."
+      }
     }
   }
 }
