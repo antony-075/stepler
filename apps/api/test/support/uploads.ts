@@ -61,6 +61,15 @@ export const coverUploadCalls = (
   cookie: string,
 ): UploadCalls => callsAt(server, coverBase(collectionId), cookie);
 
+/** The admin's upload routes of a guest page draft image (`cover` or `background`). */
+export const draftImageUploadCalls = (
+  server: Server,
+  collectionId: string,
+  cookie: string,
+  slot: 'cover' | 'background',
+): UploadCalls =>
+  callsAt(server, `/api/v1/collections/${collectionId}/guest-page/draft/${slot}/uploads`, cookie);
+
 export const asSession = (body: unknown): UploadSessionResponse =>
   uploadSessionResponseSchema.parse(body);
 
