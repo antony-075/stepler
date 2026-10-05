@@ -876,10 +876,12 @@
   "legal": {
     "terms": {
       "title": "Terms of Service",
+      "short": "Terms",
       "description": "The terms of using Stepler."
     },
     "privacy": {
       "title": "Privacy Policy",
+      "short": "Privacy",
       "description": "How Stepler handles personal data."
     },
     "draftBanner": "Draft — the text will be replaced",
@@ -888,6 +890,8 @@
       "title": "Contact",
       "text": "For personal data requests and content complaints, write to <email>{address}</email>."
     },
-    "navLabel": "Legal documents"
+    "navLabel": "Legal documents",
+    "opensInNewTab": "(opens in a new tab)",
+    "newTabName": "{title} (opens in a new tab)"
   }
 }

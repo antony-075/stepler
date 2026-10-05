@@ -16,6 +16,8 @@ test.use({ locale: 'de-DE' });
 
 const TITLES = { terms: 'Умови використання', privacy: 'Політика конфіденційності' } as const;
 const LEGAL_NAV = 'Правові документи';
+/** The screen-reader note on every legal link (they all open in a new tab). */
+const NEW_TAB = '(відкриється в новій вкладці)';
 
 /** The h1, the meta line with the current version, and the draft banner exactly while a draft. */
 async function expectDocument(page: Page, slug: keyof typeof TITLES) {
@@ -57,7 +59,7 @@ test.describe('legal pages', () => {
   });
 
   // Review Focus 4: a document, not an app.
-  test('reads without JavaScript, at 320px, with real headings and working footer links', async ({
+  test('reads without JavaScript, at 320px, with real headings and a footer without a self-link', async ({
     browser,
   }) => {
     const context = await browser.newContext({ locale: 'de-DE', javaScriptEnabled: false });
@@ -67,25 +69,99 @@ test.describe('legal pages', () => {
     await expectDocument(page, 'privacy');
     expect(await page.getByRole('heading', { level: 2 }).count()).toBeGreaterThanOrEqual(3);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
-    await page
-      .getByRole('navigation', { name: LEGAL_NAV })
-      .getByRole('link', { name: TITLES.terms })
-      .click();
-    await expect(page).toHaveURL(/\/legal\/terms$/);
-    await expectDocument(page, 'terms');
+    // The way back is the wordmark (home); the footer offers only the other document.
+    await expect(page.getByRole('banner').getByRole('link', { name: 'stepler' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    const nav = page.getByRole('navigation', { name: LEGAL_NAV });
+    await expect(nav.getByRole('link')).toHaveCount(1);
+    await expect(nav.getByRole('link', { name: TITLES.privacy })).toHaveCount(0);
+    const terms = nav.getByRole('link', { name: `${TITLES.terms} ${NEW_TAB}` });
+    await expect(terms).toHaveAttribute('target', '_blank');
+    const [opened] = await Promise.all([context.waitForEvent('page'), terms.click()]);
+    await opened.waitForLoadState();
+    expect(opened.url()).toMatch(/\/legal\/terms$/);
+    await expectDocument(opened, 'terms');
+    await expect(
+      opened.getByRole('navigation', { name: LEGAL_NAV }).getByRole('link', { name: TITLES.terms }),
+    ).toHaveCount(0);
     await context.close();
   });
 
-  test('the sign-in page footer links to both documents', async ({ page }) => {
+  test('the sign-in page footer links to both documents in new tabs', async ({ page, context }) => {
     await page.goto('/login');
     const nav = page.getByRole('navigation', { name: LEGAL_NAV });
-    await nav.getByRole('link', { name: TITLES.terms }).click();
-    await expect(page).toHaveURL(/\/legal\/terms$/);
-    await expectDocument(page, 'terms');
-    await page.goto('/login');
-    await nav.getByRole('link', { name: TITLES.privacy }).click();
-    await expect(page).toHaveURL(/\/legal\/privacy$/);
-    await expectDocument(page, 'privacy');
+    for (const slug of ['terms', 'privacy'] as const) {
+      const link = nav.getByRole('link', { name: `${TITLES[slug]} ${NEW_TAB}` });
+      await expect(link).toHaveAttribute('target', '_blank');
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      const [opened] = await Promise.all([context.waitForEvent('page'), link.click()]);
+      await opened.waitForLoadState();
+      expect(opened.url()).toMatch(new RegExp(`/legal/${slug}$`));
+      await expectDocument(opened, slug);
+      await opened.close();
+    }
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  // Owner 2026-10-05: short labels on one line in the 240px sidebar and the 360px phone menu; the
+  // accessible name still names the full document.
+  test('the admin sidebar and phone menu link to both documents on one line', async ({
+    page,
+    baseURL,
+    isMobile,
+  }) => {
+    await signIn(page, newEmail());
+    if (isMobile) await page.setViewportSize({ width: 360, height: 740 });
+    const LOCALES = {
+      uk: { label: LEGAL_NAV, menu: 'Відкрити меню', sheet: 'Розділи', newTab: NEW_TAB },
+      en: {
+        label: 'Legal documents',
+        menu: 'Open menu',
+        sheet: 'Sections',
+        newTab: '(opens in a new tab)',
+      },
+    } as const;
+    const LINKS = {
+      uk: [
+        { slug: 'terms', text: 'Умови', name: TITLES.terms },
+        { slug: 'privacy', text: 'Конфіденційність', name: TITLES.privacy },
+      ],
+      en: [
+        { slug: 'terms', text: 'Terms', name: 'Terms of Service' },
+        { slug: 'privacy', text: 'Privacy', name: 'Privacy Policy' },
+      ],
+    } as const;
+    for (const locale of ['uk', 'en'] as const) {
+      const copy = LOCALES[locale];
+      // The profile locale wins over the cookie on /app (ADR 0011).
+      const res = await page.request.patch('/api/v1/me', {
+        data: { locale },
+        headers: { origin: baseURL! },
+      });
+      expect(res.status()).toBe(200);
+      await page.goto('/app');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      let scope = page.locator('#admin-sidebar');
+      if (isMobile) {
+        await page.getByRole('button', { name: copy.menu }).click();
+        scope = page.getByRole('dialog', { name: copy.sheet });
+      }
+      const nav = scope.getByRole('navigation', { name: copy.label });
+      const links = nav.getByRole('link');
+      await expect(links).toHaveText(LINKS[locale].map(({ text }) => text));
+      for (const { slug, name } of LINKS[locale]) {
+        const link = nav.getByRole('link', { name: `${name} ${copy.newTab}`, exact: true });
+        await expect(link).toHaveAttribute('href', `/legal/${slug}`);
+        await expect(link).toHaveAttribute('target', '_blank');
+      }
+      // One line: both links share a row, and neither wraps inside itself.
+      const [first, second] = [await links.nth(0).boundingBox(), await links.nth(1).boundingBox()];
+      expect(Math.abs(first!.y - second!.y)).toBeLessThan(2);
+      expect(Math.abs(first!.height - second!.height)).toBeLessThan(2);
+      expect(first!.height).toBeLessThan(30);
+    }
   });
 
   // Review Focus 5: the guest's link token must not leak through the notice.
@@ -105,7 +181,7 @@ test.describe('legal pages', () => {
     const notice = page.getByText(/Додаючи вміст/).locator('visible=true');
     const [legal] = await Promise.all([
       context.waitForEvent('page'),
-      notice.getByRole('link', { name: 'Умовами використання' }).click(),
+      notice.getByRole('link', { name: `Умовами використання ${NEW_TAB}` }).click(),
     ]);
     await legal.waitForLoadState();
     expect(legal.url()).toMatch(/\/legal\/terms$/);

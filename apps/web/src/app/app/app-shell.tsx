@@ -218,7 +218,7 @@ function MobileNav() {
             <SheetTitle className="sr-only">{t('label')}</SheetTitle>
             <BrandLink />
           </SheetHeader>
-          <SheetBody className="p-3">
+          <SheetBody className="flex flex-col p-3">
             <AdminNav onNavigate={() => setOpen(false)} />
           </SheetBody>
         </SheetContent>

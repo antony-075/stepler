@@ -30,6 +30,7 @@ export function GuestLegalNotice({ className }: { className?: string }) {
 }
 
 function LegalLink({ document, children }: { document: LegalDocumentKey; children: ReactNode }) {
+  const t = useTranslations('legal');
   return (
     <a
       href={legalPath(document)}
@@ -41,6 +42,7 @@ function LegalLink({ document, children }: { document: LegalDocumentKey; childre
       )}
     >
       {children}
+      <span className="sr-only"> {t('opensInNewTab')}</span>
     </a>
   );
 }
