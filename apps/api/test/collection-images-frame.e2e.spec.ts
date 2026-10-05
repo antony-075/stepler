@@ -2,9 +2,9 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import {
   collectionDetailSchema,
-  collectionSchema,
   guestContentItemSchema,
   guestContextSchema,
+  guestPageEditorSchema,
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
@@ -55,12 +55,12 @@ async function startApp(apiEnv: ApiEnv) {
 type Started = Awaited<ReturnType<typeof startApp>>;
 let s: Started;
 
-/** A signed-in owner, their collection, a guest in it and the cover routes as the owner. */
+/** A signed-in owner, their collection, a guest in it and the draft cover routes as the owner. */
 async function owner(started: Started = s) {
   const admin = await signInAs(started.app, prisma, `owner-${randomUUID()}@example.com`);
   const seeded = await seedCollection(prisma, started.tokens, { ownerId: admin.userId });
   const guestCookie = await joinAsGuest(started.server, seeded.collectionId, seeded.link.token);
-  const base = `/api/v1/collections/${seeded.collectionId}/cover`;
+  const base = `/api/v1/collections/${seeded.collectionId}/guest-page/draft/cover`;
   return {
     ...admin,
     ...seeded,
@@ -94,7 +94,7 @@ const coverRows = (collectionId: string) =>
 const coverPrefixKeys = (collectionId: string) =>
   allKeys(storage, `collections/${collectionId}/cover/`);
 
-describe('cover from a frame and cover removal [A8]', () => {
+describe('draft cover from a frame and its removal [A8][D1]', () => {
   beforeAll(async () => {
     s = await startApp(env);
   });
@@ -114,8 +114,10 @@ describe('cover from a frame and cover removal [A8]', () => {
     const photo = fixture('photo.jpg');
     const item = await frame(o, 'IMG_0001.jpg', photo);
     const res = await o.fromFrame(item.id).expect(200);
-    const collection = collectionSchema.parse(res.body);
-    expect(collection.cover).toMatchObject({ status: 'PENDING', thumbnailUrl: null });
+    const editor = guestPageEditorSchema.parse(res.body);
+    expect(editor.draft?.cover).toMatchObject({ status: 'PENDING', thumbnailUrl: null });
+    // Only the draft has it [D1].
+    expect(editor.published.cover).toBeNull();
 
     const rows = await coverRows(o.collectionId);
     expect(rows).toHaveLength(1);
@@ -142,7 +144,7 @@ describe('cover from a frame and cover removal [A8]', () => {
       (await prisma.contentItem.findUniqueOrThrow({ where: { id: item.id } })).deletedAt,
     ).toBeNull();
     // Nothing in the answer names the frame.
-    expect(JSON.stringify(collection.cover)).not.toContain(item.id);
+    expect(JSON.stringify(editor)).not.toContain(item.id);
   });
 
   test('Review Focus 1: the source frame is deleted and purged; the cover stays whole', async () => {
@@ -167,7 +169,11 @@ describe('cover from a frame and cover removal [A8]', () => {
     expect(
       await storage.head(coverKey(o.collectionId, cover?.id ?? '', 'original')),
     ).not.toBeNull();
-    expect((await o.detail().expect(200)).body).toMatchObject({ cover: { status: 'PENDING' } });
+    const page = await request(s.server)
+      .get(`/api/v1/collections/${o.collectionId}/guest-page`)
+      .set('Cookie', o.cookie)
+      .expect(200);
+    expect(page.body).toMatchObject({ draft: { cover: { status: 'PENDING' } } });
   });
 
   test('not a usable source: a text → 422, a FAILED photo → 422, a deleted frame → 404', async () => {
@@ -207,7 +213,7 @@ describe('cover from a frame and cover removal [A8]', () => {
     const res = await a.fromFrame(bFrame.id).expect(404);
     expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
     // A calls B's collection with B's frame, and removes B's cover.
-    const bBase = `/api/v1/collections/${b.collectionId}/cover`;
+    const bBase = `/api/v1/collections/${b.collectionId}/guest-page/draft/cover`;
     await a.fromFrame(bFrame.id, a.cookie, bBase).expect(404);
     await a.remove(a.cookie, bBase).expect(404);
     // A guest's cookie on the admin routes.
@@ -271,7 +277,7 @@ describe('cover from a frame and cover removal [A8]', () => {
     ]);
   });
 
-  test('remove: 204, the row goes, a purge is queued; again 204; the guest sees no cover', async () => {
+  test('remove: 200, the draft lets go, the row goes, a purge is queued; again 200; guests never saw it', async () => {
     const o = await owner();
     const item = await frame(o);
     await o.fromFrame(item.id).expect(200);
@@ -285,19 +291,17 @@ describe('cover from a frame and cover removal [A8]', () => {
       request(s.server)
         .get(`/api/v1/guest/collections/${o.collectionId}/context`)
         .set('Cookie', o.guestCookie);
-    const before = guestContextSchema.parse((await context().expect(200)).body);
-    expect(before.page.cover).toMatchObject({ width: 320, height: 240 });
-    expect(before.page.cover?.previewUrl).toMatch(/^https?:\/\//);
+    // A draft cover, READY: guests still see the published page, with no cover [D1].
+    expect(guestContextSchema.parse((await context().expect(200)).body).page.cover).toBeNull();
 
-    await o.remove().expect(204);
+    const removed = await o.remove().expect(200);
+    expect(guestPageEditorSchema.parse(removed.body).draft?.cover).toBeNull();
     expect(await coverRows(o.collectionId)).toEqual([]);
     expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
       { collectionId: o.collectionId, imageId: cover?.id, slot: 'COVER' },
     ]);
     expect((await o.detail().expect(200)).body).toMatchObject({ cover: null });
-    const after = guestContextSchema.parse((await context().expect(200)).body);
-    expect(after.page.cover).toBeNull();
-    await o.remove().expect(204);
+    await o.remove().expect(200);
     expect(await queuedJobs(prisma, 'collection-image.purge')).toHaveLength(1);
   });
 
@@ -317,122 +321,32 @@ describe('cover from a frame and cover removal [A8]', () => {
     expect(await coverPrefixKeys(o.collectionId)).toHaveLength(1);
   });
 
-  describe('legacy adapter: the cover routes publish now (plan Task 7)', () => {
-    const versions = (collectionId: string) =>
-      prisma.guestPageVersion.findMany({ where: { collectionId }, orderBy: { state: 'asc' } });
-    /** A draft copied from the published version, as the editor (Task 9) will make it. */
-    async function draftOf(collectionId: string) {
-      const published = await prisma.guestPageVersion.findUniqueOrThrow({
-        where: { collectionId_state: { collectionId, state: 'PUBLISHED' } },
-      });
-      // Revision 3 handed out, as the editor's saves would have.
-      await prisma.collection.update({
-        where: { id: collectionId },
-        data: { lastPageRevision: 3 },
-      });
-      return prisma.guestPageVersion.create({
-        data: {
-          collectionId,
-          state: 'DRAFT',
-          templateId: published.templateId,
-          templateVersion: published.templateVersion,
-          settings: published.settings ?? {},
-          welcomeMessage: published.welcomeMessage,
-          coverImageId: published.coverImageId,
-          revision: 3,
-        },
-      });
-    }
-
-    test('a cover is a COVER image the published version references', async () => {
-      const o = await owner();
-      await o.fromFrame((await frame(o)).id).expect(200);
-      const [image] = await coverRows(o.collectionId);
-      const [published] = await versions(o.collectionId);
-      expect(published).toMatchObject({ state: 'PUBLISHED', coverImageId: image?.id });
+  test('garbage collection keeps an image any version still references', async () => {
+    const o = await owner();
+    await o.fromFrame((await frame(o, 'a.jpg')).id).expect(200);
+    const [a] = await coverRows(o.collectionId);
+    const images = s.app.get(CollectionImagesService);
+    const pages = s.app.get(GuestPageRepository);
+    // The published version references A too (as a publish of the draft leaves it).
+    await prisma.$transaction((tx) =>
+      pages.setImageRef(tx, o.collectionId, 'PUBLISHED', 'COVER', a?.id ?? null),
+    );
+    // The published version lets go of A; the draft keeps it.
+    await prisma.$transaction(async (tx) => {
+      await pages.setImageRef(tx, o.collectionId, 'PUBLISHED', 'COVER', null);
+      await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
     });
-
-    test('with a draft, the cover changes in both; the old one is purged once nothing references it', async () => {
-      const o = await owner();
-      await o.fromFrame((await frame(o, 'a.jpg')).id).expect(200);
-      const [a] = await coverRows(o.collectionId);
-      await draftOf(o.collectionId);
-      await o.fromFrame((await frame(o, 'b.jpg')).id).expect(200);
-      const [b] = (await coverRows(o.collectionId)).filter((row) => row.id !== a?.id);
-      const both = await versions(o.collectionId);
-      expect(both.map((v) => [v.state, v.coverImageId])).toEqual([
-        ['PUBLISHED', b?.id],
-        ['DRAFT', b?.id],
-      ]);
-      // Changed outside the editor: the draft moved to a new revision, so a tab saving from
-      // revision 3 gets a conflict instead of undoing the change.
-      expect(both[1]?.revision).toBeGreaterThan(3);
-      expect(await coverRows(o.collectionId)).toHaveLength(1);
-      expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
-        { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },
-      ]);
+    expect(await coverRows(o.collectionId)).toHaveLength(1);
+    expect(await queuedJobs(prisma, 'collection-image.purge')).toEqual([]);
+    // Then the draft lets go too: now it goes.
+    await prisma.$transaction(async (tx) => {
+      await pages.setImageRef(tx, o.collectionId, 'DRAFT', 'COVER', null);
+      await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
     });
-
-    test('garbage collection keeps an image any version still references', async () => {
-      const o = await owner();
-      await o.fromFrame((await frame(o, 'a.jpg')).id).expect(200);
-      const [a] = await coverRows(o.collectionId);
-      await draftOf(o.collectionId);
-      const images = s.app.get(CollectionImagesService);
-      const pages = s.app.get(GuestPageRepository);
-      // The published version lets go of A (as a publish of another cover will); the draft keeps it.
-      await prisma.$transaction(async (tx) => {
-        await pages.setImageRef(tx, o.collectionId, 'PUBLISHED', 'COVER', null);
-        await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
-      });
-      expect(await coverRows(o.collectionId)).toHaveLength(1);
-      expect(await queuedJobs(prisma, 'collection-image.purge')).toEqual([]);
-      // Then the draft lets go too: now it goes.
-      await prisma.$transaction(async (tx) => {
-        await pages.setImageRef(tx, o.collectionId, 'DRAFT', 'COVER', null);
-        await images.collectGarbage(tx, o.collectionId, [a?.id ?? null]);
-      });
-      expect(await coverRows(o.collectionId)).toEqual([]);
-      expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
-        { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },
-      ]);
-    });
-
-    test('remove clears the published and the draft cover', async () => {
-      const o = await owner();
-      await o.fromFrame((await frame(o)).id).expect(200);
-      await draftOf(o.collectionId);
-      await o.remove().expect(204);
-      expect((await versions(o.collectionId)).map((v) => v.coverImageId)).toEqual([null, null]);
-      expect(await coverRows(o.collectionId)).toEqual([]);
-    });
-
-    test('PATCH welcomeMessage writes the published version (and the draft); guests see it', async () => {
-      const o = await owner();
-      await draftOf(o.collectionId);
-      await request(s.server)
-        .patch(`/api/v1/collections/${o.collectionId}`)
-        .set('Cookie', o.cookie)
-        .set('Origin', ORIGIN)
-        .send({ welcomeMessage: 'Дякуємо, що ви з нами!' })
-        .expect(200);
-      expect((await versions(o.collectionId)).map((v) => v.welcomeMessage)).toEqual([
-        'Дякуємо, що ви з нами!',
-        'Дякуємо, що ви з нами!',
-      ]);
-      const context = guestContextSchema.parse(
-        (
-          await request(s.server)
-            .get(`/api/v1/guest/collections/${o.collectionId}/context`)
-            .set('Cookie', o.guestCookie)
-            .expect(200)
-        ).body,
-      );
-      expect(context.page.welcomeMessage).toBe('Дякуємо, що ви з нами!');
-      expect(collectionDetailSchema.parse((await o.detail().expect(200)).body).welcomeMessage).toBe(
-        'Дякуємо, що ви з нами!',
-      );
-    });
+    expect(await coverRows(o.collectionId)).toEqual([]);
+    expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
+      { collectionId: o.collectionId, imageId: a?.id, slot: 'COVER' },
+    ]);
   });
 });
 
@@ -474,7 +388,7 @@ describe('cover from a frame: quota (Review Focus 4)', () => {
     expect(detail.storage.usedBytes).toBe(8 * MB);
     // 8 MB used: a 3 MB guest upload does not fit; once the cover is removed it does.
     await o.guest.initiate({ filename: 'c.jpg', sizeBytes: 3 * MB }).expect(409);
-    await o.remove().expect(204);
+    await o.remove().expect(200);
     expect(
       collectionDetailSchema.parse((await o.detail().expect(200)).body).storage.usedBytes,
     ).toBe(4 * MB);

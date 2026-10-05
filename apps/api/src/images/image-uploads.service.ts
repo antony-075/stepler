@@ -41,10 +41,7 @@ export function uploadTargetOf(target: ImageTarget): {
 } {
   if (target.slot === 'COLLECTION_IMAGE')
     return { purpose: target.slot, imageTarget: 'COLLECTION' };
-  return {
-    purpose: target.slot,
-    imageTarget: target.version === 'BOTH' ? 'LEGACY_COVER' : 'DRAFT',
-  };
+  return { purpose: target.slot, imageTarget: 'DRAFT' };
 }
 
 /** What a short transaction decided; errors are thrown after it commits. */

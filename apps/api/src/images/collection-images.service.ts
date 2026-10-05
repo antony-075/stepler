@@ -14,14 +14,9 @@ import { imageKey } from './image-keys.js';
 /**
  * Where a new image goes (plan Task 7):
  * - the collection image (admin-only, `Collection.imageId`);
- * - a guest page slot of the draft (created if absent; guests see it only after publishing);
- * - the slice 8a cover routes (`BOTH`, PR I only): the published cover and, while a draft exists,
- *   the draft's, so the old «Гостьова сторінка» tab keeps working until PR J replaces it.
+ * - a guest page slot of the draft (created if absent; guests see it only after publishing).
  */
-export type ImageTarget =
-  | { slot: 'COLLECTION_IMAGE' }
-  | { slot: PageImageSlot; version: 'DRAFT' }
-  | { slot: 'COVER'; version: 'BOTH' };
+export type ImageTarget = { slot: 'COLLECTION_IMAGE' } | { slot: PageImageSlot; version: 'DRAFT' };
 
 /** What a new image row needs; the key of its original is `imageKey(cid, slot, id, 'original')`. */
 export interface NewImage {
@@ -197,7 +192,6 @@ export class CollectionImagesService {
       },
     });
     await this.point(tx, collectionId, target, image.id);
-    await this.bumpIfLegacy(tx, collectionId, target);
     await this.jobs.enqueue(tx, 'media.collection-image', { collectionId, imageId: image.id });
     this.logger.log({
       msg: 'image set',
@@ -218,7 +212,6 @@ export class CollectionImagesService {
   ): Promise<void> {
     const replaced = await this.point(tx, collectionId, target, null);
     await this.collectGarbage(tx, collectionId, replaced);
-    if (replaced.length > 0) await this.bumpIfLegacy(tx, collectionId, target);
     if (replaced.length > 0) {
       this.logger.log({
         msg: 'image removed',
@@ -258,20 +251,6 @@ export class CollectionImagesService {
     }
   }
 
-  /**
-   * The slice 8a routes change the draft outside the editor: its revision moves on, so a tab
-   * saving from the revision before gets a 409 instead of silently undoing the change.
-   */
-  private async bumpIfLegacy(
-    tx: Prisma.TransactionClient,
-    collectionId: string,
-    target: ImageTarget,
-  ): Promise<void> {
-    if ('version' in target && target.version === 'BOTH') {
-      await this.pages.bumpDraft(tx, collectionId);
-    }
-  }
-
   /** Points the target at `imageId` (or nothing) and returns the ids it pointed at before. */
   private async point(
     tx: Prisma.TransactionClient,
@@ -289,11 +268,6 @@ export class CollectionImagesService {
         await tx.collection.update({ where: { id: collectionId }, data: { imageId } });
       }
       replaced.push(previous);
-    } else if (target.version === 'BOTH') {
-      await this.pages.ensurePublished(tx, collectionId);
-      for (const state of ['PUBLISHED', 'DRAFT'] as const) {
-        replaced.push(await this.pages.setImageRef(tx, collectionId, state, target.slot, imageId));
-      }
     } else {
       await this.pages.ensureDraft(tx, collectionId);
       replaced.push(await this.pages.setImageRef(tx, collectionId, 'DRAFT', target.slot, imageId));

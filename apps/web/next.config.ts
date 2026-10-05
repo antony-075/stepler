@@ -21,6 +21,16 @@ const config: NextConfig = {
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {
+        // The editor's live preview (ADR 0017): framed by the editor on this origin only.
+        source: '/preview/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
+      {
         // A guest link's token is in the URL (spec §4): no Referer, and never indexed.
         source: '/g/:path*',
         headers: [

@@ -176,15 +176,7 @@ export class CollectionsService {
         if (isRecordNotFound(error)) throw new AppError('NOT_FOUND', 404);
         throw error;
       }
-      if (body.welcomeMessage === undefined) return this.toDto(row, tx);
-      await this.pages.ensurePublished(tx, row.id);
-      await tx.guestPageVersion.updateMany({
-        where: { collectionId: row.id },
-        data: { welcomeMessage: body.welcomeMessage },
-      });
-      // Changed outside the editor: a tab saving from the draft's revision before gets a 409.
-      await this.pages.bumpDraft(tx, row.id);
-      return this.toDto(await this.findOwned(row.id, principal.userId, tx), tx);
+      return this.toDto(row, tx);
     });
   }
 

@@ -1,8 +1,8 @@
-import type { Collection } from '@stepler/contracts';
+import type { AdminImage } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
-import { coverState } from './cover-state';
+import { imageState } from './image-state';
 
-const cover = (status: 'PENDING' | 'READY' | 'FAILED'): Collection['cover'] => ({
+const cover = (status: 'PENDING' | 'READY' | 'FAILED'): AdminImage => ({
   status,
   thumbnailUrl: status === 'READY' ? 'https://s3.test/t' : null,
   previewUrl: status === 'READY' ? 'https://s3.test/p' : null,
@@ -20,6 +20,6 @@ describe('coverState', () => {
     [cover('READY'), { kind: 'uploading', progress: 40 }, 'uploading'],
     [null, { kind: 'failed', code: 'NETWORK', retryable: true }, 'failed-upload'],
   ] as const)('%o + %o → %s', (value, upload, expected) => {
-    expect(coverState(value, upload)).toBe(expected);
+    expect(imageState(value, upload)).toBe(expected);
   });
 });

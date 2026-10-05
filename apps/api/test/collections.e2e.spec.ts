@@ -305,34 +305,6 @@ describe('collections API', () => {
       });
       expect((await prisma.collection.findUniqueOrThrow({ where: { id } })).status).toBe('ACTIVE');
     });
-
-    test('the welcome message [A5]: set, limited to 160 code points, cleared with null', async () => {
-      const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
-      const { id } = await seed(userId);
-      const patch = (body: object) =>
-        request(server())
-          .patch(`/api/v1/collections/${id}`)
-          .set('Cookie', cookie)
-          .set('Origin', ORIGIN)
-          .send(body);
-
-      const set = await patch({ welcomeMessage: ' Вітаємо! ' }).expect(200);
-      expect(collectionSchema.parse(set.body).welcomeMessage).toBe('Вітаємо!');
-      const long = await patch({ welcomeMessage: '😀'.repeat(161) }).expect(400);
-      expect(long.body).toMatchObject({ code: 'VALIDATION_FAILED' });
-      await patch({ welcomeMessage: 'a\nb' }).expect(400);
-      expect((await patch({ welcomeMessage: '😀'.repeat(160) }).expect(200)).body).toMatchObject({
-        welcomeMessage: '😀'.repeat(160),
-      });
-      const cleared = await patch({ welcomeMessage: null }).expect(200);
-      expect(cleared.body).toMatchObject({ welcomeMessage: null });
-      // Editable while archived, like the title (D9).
-      await prisma.collection.update({
-        where: { id },
-        data: { status: 'ARCHIVED', archivedAt: new Date() },
-      });
-      await patch({ welcomeMessage: 'Дякуємо' }).expect(200);
-    });
   });
 
   describe('cover on the collection DTO [A2]', () => {

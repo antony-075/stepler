@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import { Writable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
-import { collectionSchema, guestContentItemSchema } from '@stepler/contracts';
+import { guestContentItemSchema, guestPageEditorSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { imageKey } from '../src/images/image-keys.js';
@@ -23,7 +23,7 @@ import { allKeys } from './support/storage.js';
 import {
   asSession,
   bigBuffer,
-  coverUploadCalls,
+  draftImageUploadCalls,
   fixture,
   putTo,
   uploadCalls,
@@ -60,12 +60,16 @@ let server: Server;
 let tokens: GuestLinkTokens;
 const logs = new CaptureStream();
 
-/** A signed-in owner, their collection and the cover upload routes as them. */
+/** A signed-in owner, their collection and the guest page draft's cover upload routes as them. */
 async function owner(s: Server = server, a: INestApplication = app, t: GuestLinkTokens = tokens) {
   const admin = await signInAs(a, prisma, `owner-${randomUUID()}@example.com`);
   const seeded = await seedCollection(prisma, t, { ownerId: admin.userId });
-  return { ...admin, ...seeded, calls: coverUploadCalls(s, seeded.collectionId, admin.cookie) };
+  return { ...admin, ...seeded, calls: coverCalls(s, seeded.collectionId, admin.cookie) };
 }
+
+/** The draft cover's upload routes (the only cover upload since the slice 8a routes went). */
+const coverCalls = (s: Server, collectionId: string, cookie: string) =>
+  draftImageUploadCalls(s, collectionId, cookie, 'cover');
 
 const coverRows = (collectionId: string) =>
   prisma.collectionImage.findMany({ where: { collectionId, slot: 'COVER' } });
@@ -97,9 +101,10 @@ describe('admin cover upload [A1]', () => {
     expect(session.partCount).toBe(1);
 
     const res = await o.calls.complete(session.uploadId).expect(200);
-    const collection = collectionSchema.parse(res.body);
-    expect(collection.id).toBe(o.collectionId);
-    expect(collection.cover).toEqual({
+    const editor = guestPageEditorSchema.parse(res.body);
+    // The draft gets the cover; guests (the published version) do not see it until a publish.
+    expect(editor.published.cover).toBeNull();
+    expect(editor.draft?.cover).toEqual({
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,
@@ -133,12 +138,18 @@ describe('admin cover upload [A1]', () => {
     // The upload's own key is gone; no content frame was created.
     expect(await storage.head(row.storageKey)).toBeNull();
     expect(await prisma.contentItem.count()).toBe(0);
-    // The collection detail and list show the pending cover.
+    // The editor state shows the pending cover in the draft; the collection's cover (the
+    // published one) stays empty.
+    const page = await request(server)
+      .get(`/api/v1/collections/${o.collectionId}/guest-page`)
+      .set('Cookie', o.cookie)
+      .expect(200);
+    expect(page.body).toMatchObject({ draft: { cover: { status: 'PENDING' } } });
     const detail = await request(server)
       .get(`/api/v1/collections/${o.collectionId}`)
       .set('Cookie', o.cookie)
       .expect(200);
-    expect(detail.body).toMatchObject({ cover: { status: 'PENDING' } });
+    expect(detail.body).toMatchObject({ cover: null });
   });
 
   test('a HEIC with no declared type is accepted as image/heic; completion is idempotent', async () => {
@@ -204,7 +215,7 @@ describe('admin cover upload [A1]', () => {
     const [old] = await coverRows(o.collectionId);
     const second = await uploadFile(o.calls, 'b.png', fixture('photo.png'));
     const res = await o.calls.complete(second.uploadId).expect(200);
-    expect(res.body).toMatchObject({ cover: { status: 'PENDING' } });
+    expect(res.body).toMatchObject({ draft: { cover: { status: 'PENDING' } } });
     const rows = await coverRows(o.collectionId);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).not.toBe(old?.id);
@@ -269,7 +280,7 @@ describe('admin cover upload [A1]', () => {
       .expect(409);
     // The same id for another collection of the same owner: a conflict, not a replay.
     const other = await seedCollection(prisma, tokens, { ownerId: o.userId });
-    const otherCalls = coverUploadCalls(server, other.collectionId, o.cookie);
+    const otherCalls = coverCalls(server, other.collectionId, o.cookie);
     const conflict = await otherCalls
       .initiate({ filename: 'a.jpg', sizeBytes: photo.length, clientUploadId })
       .expect(409);
@@ -384,7 +395,7 @@ describe('admin cover upload [A1]', () => {
         (await a.calls.initiate({ filename: 'a.jpg', sizeBytes: 100 }).expect(201)).body,
       );
       const b = await signInAs(app, prisma, 'b@example.com');
-      const bCalls = coverUploadCalls(server, a.collectionId, b.cookie);
+      const bCalls = coverCalls(server, a.collectionId, b.cookie);
       for (const res of [
         await bCalls.initiate({ filename: 'b.jpg', sizeBytes: 100 }),
         await bCalls.parts(session.uploadId, [1]),
@@ -397,7 +408,7 @@ describe('admin cover upload [A1]', () => {
       }
       // A's upload id under B's own collection: 404 as well.
       const own = await seedCollection(prisma, tokens, { ownerId: b.userId });
-      const ownCalls = coverUploadCalls(server, own.collectionId, b.cookie);
+      const ownCalls = coverCalls(server, own.collectionId, b.cookie);
       await ownCalls.parts(session.uploadId, [1]).expect(404);
       await ownCalls.complete(session.uploadId).expect(404);
       await ownCalls.cancel(session.uploadId).expect(404);
@@ -420,7 +431,7 @@ describe('admin cover upload [A1]', () => {
     test('a guest cookie without an admin session → 401 UNAUTHENTICATED', async () => {
       const o = await owner();
       const guestCookie = await joinAsGuest(server, o.collectionId, o.link.token);
-      const asGuest = coverUploadCalls(server, o.collectionId, guestCookie);
+      const asGuest = coverCalls(server, o.collectionId, guestCookie);
       for (const res of [
         await asGuest.initiate({ filename: 'a.jpg', sizeBytes: 100 }),
         await asGuest.parts(randomUUID(), [1]),
@@ -435,7 +446,7 @@ describe('admin cover upload [A1]', () => {
     test('an unsafe call without the app origin → 403 CSRF_ORIGIN_MISMATCH', async () => {
       const o = await owner();
       const res = await request(server)
-        .post(`/api/v1/collections/${o.collectionId}/cover/uploads`)
+        .post(`/api/v1/collections/${o.collectionId}/guest-page/draft/cover/uploads`)
         .set('Cookie', o.cookie)
         .send({ clientUploadId: randomUUID(), filename: 'a.jpg', mimeType: '', sizeBytes: 10 })
         .expect(403);

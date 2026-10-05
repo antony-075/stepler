@@ -4,16 +4,11 @@ import { CollectionImageController } from '../images/collection-image.controller
 import { ImagesModule } from '../images/images.module.js';
 import { CollectionsController } from './collections.controller.js';
 import { CollectionsService } from './collections.service.js';
-import { CoverController } from './cover.controller.js';
 
-/**
- * The owner's collections, their admin-only image («Картинка колекції»), and the slice 8a cover
- * routes, which now set the published cover through the slot-typed images (plan Task 7;
- * removed in PR J).
- */
+/** The owner's collections and their admin-only image («Картинка колекції»). */
 @Module({
   imports: [GuestAccessModule, ImagesModule],
-  controllers: [CollectionsController, CoverController, CollectionImageController],
+  controllers: [CollectionsController, CollectionImageController],
   providers: [CollectionsService],
   exports: [CollectionsService],
 })

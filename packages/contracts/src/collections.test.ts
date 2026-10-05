@@ -72,18 +72,10 @@ describe('updateCollectionRequestSchema', () => {
     expect(updateCollectionRequestSchema.safeParse({ status: 'ARCHIVED' }).success).toBe(false);
   });
 
-  test('the welcome message: trimmed, one paragraph of up to 160 code points, null clears it', () => {
-    expect(updateCollectionRequestSchema.parse({ welcomeMessage: null })).toEqual({
-      welcomeMessage: null,
-    });
-    expect(updateCollectionRequestSchema.parse({ welcomeMessage: ' Вітаємо! ' })).toEqual({
-      welcomeMessage: 'Вітаємо!',
-    });
-    expect(
-      updateCollectionRequestSchema.safeParse({ welcomeMessage: '😀'.repeat(161) }).success,
-    ).toBe(false);
-    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: 'a\nb' }).success).toBe(false);
-    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: '' }).success).toBe(false);
+  test('the welcome message is not part of it any more (the guest page draft has it)', () => {
+    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: 'Вітаємо!' }).success).toBe(
+      false,
+    );
   });
 });
 

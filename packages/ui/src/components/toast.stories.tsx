@@ -11,6 +11,7 @@ type TriggerProps = {
   variant?: 'info' | 'success' | 'warning' | 'error';
   count?: number;
   durationMs?: number;
+  actionLabel?: string;
 };
 
 function Trigger({
@@ -19,17 +20,33 @@ function Trigger({
   variant,
   count = 1,
   durationMs,
+  actionLabel,
 }: TriggerProps) {
   const { toast } = useToast();
+  const [acted, setActed] = useState(false);
   return (
     <Button
       onClick={() => {
         for (let i = 1; i <= count; i += 1) {
-          toast({ title: count > 1 ? `${title} ${i}` : title, description, variant, durationMs });
+          toast({
+            title: count > 1 ? `${title} ${i}` : title,
+            description,
+            variant,
+            durationMs,
+            ...(actionLabel === undefined
+              ? {}
+              : {
+                  action: {
+                    label: actionLabel,
+                    altText: 'Open it from the tabs',
+                    onSelect: () => setActed(true),
+                  },
+                }),
+          });
         }
       }}
     >
-      Show toast
+      {acted ? 'Acted' : 'Show toast'}
     </Button>
   );
 }
@@ -298,5 +315,23 @@ export const AvoidMountedBar: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Mount bar' }));
     await expect(canvas.getByRole('button', { name: 'Upload photos' })).toBeVisible();
     await expectAboveBar(canvasElement);
+  },
+};
+
+/** One follow-up action: a link-styled button, 44px tall, that also closes the toast. */
+export const WithAction: Story = {
+  args: {
+    variant: 'success',
+    title: 'Cover added to the draft',
+    actionLabel: 'Open the guest page',
+    durationMs: 60_000,
+  },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+    const action = await screen.findByRole('button', { name: 'Open the guest page' });
+    await expect(action.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await userEvent.click(action);
+    await expect(canvas.getByRole('button', { name: 'Acted' })).toBeVisible();
+    await waitFor(() => expect(toasts().filter((t) => t.dataset.state === 'open')).toHaveLength(0));
   },
 };
