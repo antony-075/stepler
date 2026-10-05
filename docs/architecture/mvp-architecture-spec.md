@@ -56,6 +56,8 @@ Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, 
 apps/
   web/        Next.js App Router — guest (/g/[token]) and admin (/app/...) UI
   api/        NestJS REST API
+  templates/  guest page templates (ADR 0017): ./core (definitions, contrast, tokens; built,
+              used by api and web) and ./react (layouts, GuestTemplateRoot; TSX for Next) + Storybook
   (worker)    background jobs (processing, purge, expiry): apps/api/src/worker, a second entrypoint of api (Phase 4 [C2])
 packages/
   contracts/  Zod schemas for API requests/responses, error codes, shared enums
@@ -183,7 +185,26 @@ Collection
   SQL CHECK ((status = 'DELETING') = (deletionRequestedAt IS NOT NULL))
   INDEX (ownerId, status, createdAt DESC, id DESC)
 
-CollectionCover                                     (slice 8a, 2026-10-04; [A2])
+Collection (additions, guest page templates, PR I, 2026-10-05; ADR 0017)
+  imageId? → CollectionImage («Картинка колекції», admin-only; FK (imageId, id) → (id, collectionId), no action)
+  lastPageRevision (≥ 1): the highest guest page revision handed out
+  -- welcomeMessage is kept for the PR L contraction only; the published version holds it now
+
+CollectionImage                                     (PR I, 2026-10-05; ADR 0017)
+  id, collectionId → Collection (cascade), slot (COVER|BACKGROUND|COLLECTION_IMAGE),
+  status (PENDING|READY|FAILED), source (UPLOAD|FRAME), mimeType (verified),
+  originalSizeBytes (bigint), derivedSizeBytes (bigint), width?, height?, createdAt
+  UNIQUE (id, collectionId); INDEX (collectionId, slot)
+  SQL CHECK sizes, CHECK ((status = 'READY') = (width AND height set))
+  -- rows are referenced, not unique per slot; keys collections/{cid}/{cover|background|collection-image}/{id}/…
+
+GuestPageVersion                                    (PR I, 2026-10-05; ADR 0017)
+  id, collectionId → Collection (cascade), state (PUBLISHED|DRAFT) UNIQUE per collection,
+  templateId (slug CHECK), templateVersion (≥ 1), settings (jsonb object, validated by the template),
+  welcomeMessage? (1–160), coverImageId?, backgroundImageId? → CollectionImage (same collection, no action),
+  revision (≥ 1, from Collection.lastPageRevision), savedAt? (the draft was saved), createdAt, updatedAt
+
+CollectionCover                                     (slice 8a, 2026-10-04; [A2]; superseded by CollectionImage in PR I, dropped in PR L)
   id, collectionId → Collection (cascade, UNIQUE: one cover, replaced whole),
   status (PENDING|READY|FAILED), source (UPLOAD|FRAME), mimeType (verified),
   originalSizeBytes (bigint), derivedSizeBytes (bigint, 0 until READY), width?, height?, createdAt
@@ -210,6 +231,8 @@ GuestSession
   UNIQUE (id, collectionId)
   INDEX (collectionId), INDEX (currentLinkId)
 ```
+
+- **Guest page versions and images (PR I, 2026-10-05; ADR 0017):** guests read only the `PUBLISHED` version; the owner edits a `DRAFT` and publishes or resets it. An image row lives while a version or the collection references it; the transaction that drops the last reference deletes it (usage drops at once) and queues `collection-image.purge`. The slice 8a `CollectionCover` rows were copied into `COVER` images with the same ids, and `Collection.welcomeMessage` into the published version; both old structures stay until PR L.
 
 *`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` is implemented in slice 2. *`GuestSession` implemented in slice 3* (PR A, 2026-10-03), as above: the link key is composite with the collection, so PostgreSQL itself refuses a session bound to another collection's link; `NO ACTION` (not `RESTRICT`) lets deleting a collection cascade to its links and sessions in one statement while refusing to delete a link a session points at.
 
@@ -305,8 +328,10 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 | Collection metadata | own only | reported items' collections | public fields via any active link |
 | List gallery | own collections | — | `canViewGallery` → all visible items; otherwise own items only |
 | Get item / signed URL | own collections | reported items | same visibility rule as list |
-| Upload files | the collection cover only (a photo; slice 8a) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
+| Upload files | admin images only (a photo): the guest page draft's cover and background, the collection image (PR I) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
 | Set / remove the cover | own collection (upload, or any live photo frame of it) | — | — |
+| Guest page: read, save the draft, publish, reset | own collection (read also while archived; changes refused while archived) | — | the published version only, inside the guest context |
+| Collection image | own collection; never in any guest response | — | — |
 | Submit text | — (MVP) | — | `canSubmitText` |
 | Delete item | any in own collection | any | `canDeleteOwn` AND contributor = this session |
 | Hide item | own collection | any | — |
@@ -355,7 +380,15 @@ Admin
   POST                /collections/{id}/cover/uploads/{uid}/complete → Collection   under the admin session)
   DELETE              /collections/{id}/cover/uploads/{uid}
   POST                /collections/{id}/cover/from-frame  {contentItemId} → Collection   (slice 8a)
-  DELETE              /collections/{id}/cover                                           (slice 8a)
+  DELETE              /collections/{id}/cover                                           (slice 8a; legacy adapter in PR I, removed in PR J)
+  GET                 /collections/{id}/guest-page            → GuestPageEditor {published, draft+revision}   (PR I)
+  PUT                 /collections/{id}/guest-page/draft      {baseRevision, templateId, settings, welcomeMessage}
+  DELETE              /collections/{id}/guest-page/draft      → 204 (reset)
+  POST                /collections/{id}/guest-page/publish    {revision} → GuestPageEditor
+  POST|DELETE         /collections/{id}/guest-page/draft/{cover|background}/uploads…   (the admin upload protocol)
+  POST                /collections/{id}/guest-page/draft/{cover|background}/from-frame {contentItemId}
+  DELETE              /collections/{id}/guest-page/draft/{cover|background}
+  POST|DELETE         /collections/{id}/image/uploads…, /image/from-frame, DELETE /image → Collection   (PR I)
   GET/POST            /collections/{id}/guest-links
   PATCH/DELETE        /guest-links/{id}                 (label, permissions / delete = revoke + hide)
   POST                /guest-links/{id}/deactivate | /activate | /revoke
@@ -478,15 +511,19 @@ Safety net: R2 lifecycle rule "abort incomplete multipart uploads after 2 days".
 ```text
 collections/{collectionId}/uploads/{uploadSessionId}/original
 collections/{collectionId}/derived/{contentItemId}/{thumbnail|preview|poster}.webp
-collections/{collectionId}/cover/{coverId}/{original|thumbnail.webp|preview.webp}    (slice 8a)
+collections/{collectionId}/cover/{imageId}/{original|thumbnail.webp|preview.webp}             (slice 8a ids kept)
+collections/{collectionId}/background/{imageId}/{original|thumbnail.webp|preview.webp|large.webp}   (PR I)
+collections/{collectionId}/collection-image/{imageId}/{original|thumbnail.webp}                  (PR I)
 ```
 
 - No user-controlled data (filenames) in keys. Keys are immutable; nothing is renamed.
-- Per-collection prefix enables collection purge by prefix; a cover's own prefix lets `cover.purge` remove a replaced cover while the live one stays.
+- Per-collection prefix enables collection purge by prefix; an image's own prefix lets `collection-image.purge` remove an image nothing references while the live ones stay.
 - Downloads: presigned `GET`, TTL 1 h, expiry aligned to fixed windows so URLs are stable within a window and cacheable by the browser. `response-content-type` = verified MIME. `response-content-disposition`: `inline` for images/video, `attachment` for documents.
 - Local development uses an S3-compatible emulator; R2-specific behavior is verified against a real R2 dev bucket and staging (honestly marked as not locally reproducible).
 
-### 10.7 Admin cover upload (slice 8a, 2026-10-04)
+### 10.7 Admin image uploads (slice 8a cover, generalised in PR I, 2026-10-05)
+
+**PR I (ADR 0017, ADR 0008 addendum 2026-10-05).** Every admin image (the guest page draft's cover and background, the collection image, and the slice 8a cover routes until PR J) uses the flow below, with `purpose` = the image slot and `imageTarget` (`DRAFT`, `LEGACY_COVER`, `COLLECTION`) fixed at initiation, so only the route of that target completes it. At most 3 open uploads per collection and purpose. Completion copies the verified original to `collections/{cid}/{slot}/{imageId}/original`, then, in the locked transaction, sets the image on its target: the references it replaces are cleared and the images nothing references any more are collected, the new row is inserted `PENDING` and `media.collection-image` is queued. The slice 8a description follows.
 
 The owner's cover file travels exactly like a guest's (§10.2–§10.5, ADR 0008 addendum 2026-10-04): `POST /collections/{id}/cover/uploads` opens an `UploadSession` with `purpose = COVER` and `uploaderUserId` (photos only, `LIMIT_FILE_BYTES_PHOTO`, idempotent on `(uploaderUserId, clientUploadId)`, at most 3 open cover uploads per collection → `429`), the quota is reserved under the owner lock then the collection lock [C9], part URLs come from `…/parts`, and `…/complete` claims the upload, inspects storage with the same `UploadInspector` (parts, size, content signature), then copies the verified original server-side (`CopyObject`, ≤ 50 MB) to `collections/{cid}/cover/{coverId}/original` and, in a short transaction, replaces the cover row (`PENDING`), marks the upload `COMPLETED` (no content item) and enqueues `media.cover-derivatives`; the upload's own key is deleted best-effort afterwards. «Зробити обкладинкою» (`POST …/cover/from-frame`) copies a live photo frame's ORIGINAL the same way (the frame is untouched; `422 COVER_SOURCE_INVALID` for a text, a frame without an original or one whose processing failed), checking the quota after the old cover's bytes stop counting. Best-effort deletes (a copied object whose transaction failed, the upload key after completion) are backstopped by the collection purge, which removes the whole prefix. The routes are rate limited per IP and per user (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, `LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`).
 
@@ -507,6 +544,9 @@ Decision details: ADR 0009.
   - `maintenance.sweep` — hourly; implemented (see above). It does not yet cover a cover left `PENDING` by a job pg-boss expired on its last attempt (slice 8a follow-up).
   - `media.cover-derivatives` `{collectionId, coverId}` — the cover's thumbnail (480 px) and preview (1600 px) from its copied original, the photo way (HEIC included); one conditional update sets `READY` with the dimensions and derived bytes only while the row still exists, else the two objects just written are deleted. Implemented (slice 8a).
   - `cover.purge` `{collectionId, coverId}` — the prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
+  - `media.collection-image` `{collectionId, imageId}` — an admin image's renditions for its slot: cover 480 + 1600 px, background 480 + 1600 + 2400 px (q 72), collection image 480 px (PR I). The two slice 8a names stay registered until PR L and run the new handlers (covers kept their ids).
+  - `collection-image.purge` `{collectionId, imageId, slot}` — the image's prefix, unless its row is live (PR I).
+  - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I).
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
@@ -557,7 +597,7 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 
 ### 13.2 Usage accounting
 
-"Actual storage" (F1) = sum of `MediaObject.sizeBytes` over **all roles** (originals + derivatives) of non-deleted content + the cover's `originalSizeBytes + derivedSizeBytes` (slice 8a) + `declaredSizeBytes` of `INITIATED` and `COMPLETING` upload sessions (reservations, guest and cover uploads alike).
+"Actual storage" (F1) = sum of `MediaObject.sizeBytes` over **all roles** (originals + derivatives) of non-deleted content + every `CollectionImage`'s `originalSizeBytes + derivedSizeBytes`, all slots (PR I; the slice 8a cover before it) + `declaredSizeBytes` of `INITIATED` and `COMPLETING` upload sessions (reservations, guest and cover uploads alike).
 
 [assumption] Content marked deleted stops counting immediately, even before the purge completes (purge lag is our responsibility; otherwise deleting to free space would not work for the user).
 

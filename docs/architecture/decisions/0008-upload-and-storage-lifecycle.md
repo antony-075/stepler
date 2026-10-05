@@ -150,3 +150,11 @@ Headless Uppy (`@uppy/core` 6.2 + `@uppy/aws-s3` 6.2, 21.9 KB gzip) was measured
 **Ordering: copy, then record.** The copy happens before the recording transaction, so a cover row never exists without its original. The reverse can happen briefly: a copied object whose transaction then failed, and the upload's own key after a completion (deleted best-effort). Both are listed here deliberately; the collection purge, which deletes the whole prefix, is the backstop, and a lost `cover.purge` leaves at most one cover's three objects orphaned until the collection is deleted.
 
 **Consequences.** Cover bytes (original and derivatives) count toward the collection and account usage from the row; a cover upload's reservation counts like a guest's until it completes. Two new per-route rate limits for the admin cover routes (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, `LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`) and a cap of 3 open cover uploads per collection. Alternatives rejected: a separate `CoverUpload` table and mini flow (duplicates expiry, discard, claim and inspection for one file); routing the admin through the guest controller with an admin principal.
+
+## Addendum (2026-10-05): admin image purposes `BACKGROUND` and `COLLECTION_IMAGE`; uploads bound to their target
+
+**Status:** accepted (guest page templates, PR I; ADR 0017).
+
+- `UploadPurpose` gains `BACKGROUND` and `COLLECTION_IMAGE` beside `COVER`; the purpose is the image slot. `UploadSession_purpose_actor` now reads "every purpose but `CONTENT` has its uploader and nothing of a guest", and `UploadSession_admin_image_is_photo` replaces `UploadSession_cover_is_photo`.
+- `UploadSession.imageTarget` (`DRAFT`, `LEGACY_COVER`, `COLLECTION`; CHECK `UploadSession_image_target`: set iff the purpose is not `CONTENT`) records what the upload completes into, fixed at initiation. Every route finds uploads by purpose and target, so a draft cover upload cannot be completed through the legacy cover route, nor a background through the cover route (review M3). Open cover uploads at the upgrade were backfilled `LEGACY_COVER`.
+- The cap of 3 open uploads counts per collection and purpose. The copy-then-record ordering, the shared `UploadInspector`, expiry and discard are unchanged.
