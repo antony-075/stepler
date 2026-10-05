@@ -80,3 +80,45 @@ export async function renderDerivatives(
     );
   }
 }
+
+/** The longest side of a background's large rendition (≥ 1024 px screens), and its quality. */
+export const LARGE_PX = 2400;
+export const LARGE_QUALITY = 72;
+
+export type RenditionRole = 'thumbnail' | 'preview' | 'large';
+
+const RENDITION_SIZE: Record<RenditionRole, { px: number; quality: number }> = {
+  thumbnail: { px: THUMBNAIL_PX, quality: THUMBNAIL_QUALITY },
+  preview: { px: PREVIEW_PX, quality: PREVIEW_QUALITY },
+  large: { px: LARGE_PX, quality: LARGE_QUALITY },
+};
+
+/**
+ * The WebP renditions `roles` of an admin image (plan Task 8): the same decoding, limits and
+ * metadata stripping as `renderDerivatives`, never enlarged. `source` is the upright size.
+ */
+export async function renderRenditions<R extends RenditionRole>(
+  input: string | Buffer,
+  roles: readonly R[],
+  options: RenderOptions,
+): Promise<{ renditions: Record<R, Rendition>; source: { width: number; height: number } }> {
+  try {
+    const metadata = await sharp(input).metadata();
+    const limit = SHRINK_ON_LOAD.has(metadata.format) ? MAX_INPUT_PIXELS : MAX_DECODED_PIXELS;
+    const base = sharp(input, { limitInputPixels: limit, failOn: 'error' });
+    const oriented = options.autoOrient ? base.autoOrient() : base;
+    const source = options.autoOrient
+      ? { width: metadata.autoOrient.width, height: metadata.autoOrient.height }
+      : { width: metadata.width, height: metadata.height };
+    const renditions = {} as Record<R, Rendition>;
+    for (const role of roles) {
+      const { px, quality } = RENDITION_SIZE[role];
+      renditions[role] = await webp(oriented.clone(), px, quality);
+    }
+    return { renditions, source };
+  } catch (error) {
+    throw new PermanentMediaError(
+      `image could not be processed: ${error instanceof Error ? error.message : 'unknown'}`,
+    );
+  }
+}
