@@ -25,13 +25,17 @@ export function CollectionHeader({ collection }: { collection: Collection }) {
       <header data-slot="page-header" className="grid grid-cols-[minmax(0,1fr)] gap-1">
         <CollectionBreadcrumbs collection={collection} />
         <EditableTitle collection={collection} />
-        <EditableDescription collection={collection} />
-        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
-          <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-            {status}
-          </Badge>
-          <span className="text-sm tabular-nums">{dated}</span>
-        </p>
+        {/* On a laptop (short screen) the description and the status share one line, so the
+            page's tools get the height (owner remark 104). */}
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 laptop:flex laptop:flex-wrap laptop:items-center laptop:gap-x-5">
+          <EditableDescription collection={collection} />
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
+            <Badge variant={archived ? 'neutral' : 'success'} title={status}>
+              {status}
+            </Badge>
+            <span className="text-sm tabular-nums">{dated}</span>
+          </p>
+        </div>
       </header>
     </div>
   );

@@ -1,11 +1,19 @@
 'use client';
 
 import type { GuestPageVersion } from '@stepler/contracts';
+import { Button } from '@stepler/ui/components/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@stepler/ui/components/popover';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@stepler/ui/components/tooltip';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { bestTextOn, resolveTheme, themeTokens } from '@stepler/templates/core';
-import { ExternalLink, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { ExternalLink, Monitor, MoreHorizontal, Smartphone, Tablet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { isPreviewReady, previewMessage } from '@/guest-page/preview-protocol';
@@ -112,86 +120,149 @@ const DEVICES = [
   { value: 'desktop', Icon: Monitor },
 ] as const;
 
+/** A tooltip on a control whose visible name may be hidden in a narrow pane. */
+function Tip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+type ToolbarProps = {
+  state: PreviewState;
+  onState: (state: PreviewState) => void;
+  device: PreviewDevice;
+  onDevice: (device: PreviewDevice) => void;
+  guestUrl: string | null;
+  /** In the «⋯» popover: stacked, every name shown. */
+  stacked?: boolean;
+};
+
+/** The device toggle and «Відкрити як гість». */
+function DeviceControls({ device, onDevice, guestUrl, stacked = false }: ToolbarProps) {
+  const t = useTranslations('guestPage.preview');
+  const deviceLabelId = useId();
+  // In the toolbar the names give way to icons as the pane narrows; in the popover they show.
+  const name = cn({ '@max-[64rem]/pane:sr-only': !stacked });
+  return (
+    <div className={cn('flex shrink-0 items-center gap-1.5', stacked && 'flex-wrap')}>
+      <span id={deviceLabelId} className="sr-only">
+        {t('device')}
+      </span>
+      <ToggleGroup
+        aria-labelledby={deviceLabelId}
+        value={device}
+        onValueChange={(next) => onDevice(next as PreviewDevice)}
+        className="rounded-control bg-muted p-1"
+      >
+        {DEVICES.map(({ value, Icon }) => (
+          <Tip key={value} label={t(value)}>
+            <ToggleGroupItem
+              value={value}
+              icon={<Icon />}
+              className={cn({ 'px-2': stacked, '@max-[64rem]/pane:px-2.5': !stacked })}
+            >
+              <span className={name}>{t(value)}</span>
+            </ToggleGroupItem>
+          </Tip>
+        ))}
+      </ToggleGroup>
+      {guestUrl === null ? null : (
+        <Tip label={t('openAsGuest')}>
+          <a
+            href={guestUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-control px-1 text-sm font-semibold text-link underline underline-offset-4 hover:text-link-hover',
+              focusRing,
+            )}
+          >
+            <span className={cn({ '@max-[50rem]/pane:sr-only': !stacked })}>
+              {t('openAsGuest')}
+            </span>
+            <span className="sr-only">{t('newTab')}</span>
+            <ExternalLink aria-hidden="true" className="size-4" />
+          </a>
+        </Tip>
+      )}
+    </div>
+  );
+}
+
 /**
- * The desktop preview pane (owner remarks 66, 67, 70, 71, 77). Its header is the editor's fixed
- * place for what matters at any moment: the draft status, «Скинути зміни» and «Зберегти»
- * (`actions`, the save bar), in view whatever the settings panel scrolls to. Under it, on the
- * light table, one quiet toolbar: the page state (access and content), the device toggle (Телефон / Планшет /
- * Комп’ютер) and «Відкрити як гість»; then the device, as large as the pane allows. The pane never
- * scrolls; on a narrow pane the toggle shows its icons only (the names stay accessible names).
+ * The desktop preview pane (owner remarks 66, 67, 70, 77, 104–107). One header row on the sheet:
+ * the page state (access and content), the device toggle (Телефон / Планшет / Комп’ютер) and
+ * «Відкрити як гість»; then the device, as large as the pane allows (the frame is scaled to the
+ * pane's width and height, never cut). The save bar is the settings panel's own top bar. As the
+ * pane narrows the toggle shows icons (~64rem) and «Відкрити як гість» an icon (~50rem), each with
+ * a tooltip and its accessible name; below ~30rem the whole toolbar folds into one «⋯» popover.
+ * The pane never scrolls.
  */
 export function PreviewPane({
   collectionId,
   page,
   templateName,
   guestUrl,
-  actions,
 }: {
   collectionId: string;
   page: GuestPageVersion;
   templateName: string;
   guestUrl: string | null;
-  actions: ReactNode;
 }) {
   const t = useTranslations('guestPage.preview');
-  const deviceLabelId = useId();
   const [device, setDevice] = useState<PreviewDevice>('phone');
   const [state, setState] = useState<PreviewState>(DEFAULT_PREVIEW_STATE);
+  const toolbar: ToolbarProps = {
+    state,
+    onState: setState,
+    device,
+    onDevice: setDevice,
+    guestUrl,
+  };
   return (
     <div
       data-slot="preview-pane"
-      className="@container/pane grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] bg-muted"
+      className="@container/pane grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-muted"
     >
-      {actions}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
-        {/* The template's name is in the panel's first row; here only for screen readers. */}
-        <h2 className="sr-only">{t('title')}</h2>
-        <p className="sr-only">{t('subtitle', { name: templateName })}</p>
-        <PreviewStateControls value={state} onChange={setState} />
-        <div className="flex flex-wrap items-center gap-2">
-          <span id={deviceLabelId} className="sr-only">
-            {t('device')}
-          </span>
-          <ToggleGroup
-            aria-labelledby={deviceLabelId}
-            value={device}
-            onValueChange={(next) => setDevice(next as PreviewDevice)}
-            className="rounded-control bg-background p-1"
-          >
-            {DEVICES.map(({ value, Icon }) => (
-              <ToggleGroupItem
-                key={value}
-                value={value}
-                icon={<Icon />}
-                className="@max-[46rem]/pane:px-2.5"
-              >
-                <span className="@max-[46rem]/pane:sr-only">{t(value)}</span>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-          {guestUrl === null ? null : (
-            <a
-              href={guestUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-sm font-semibold text-link underline underline-offset-4 hover:text-link-hover',
-                focusRing,
-              )}
-            >
-              <span className="@max-[34rem]/pane:sr-only">{t('openAsGuest')}</span>
-              <span className="sr-only">{t('newTab')}</span>
-              <ExternalLink aria-hidden="true" className="size-4" />
-            </a>
-          )}
+      <TooltipProvider>
+        <div
+          data-slot="preview-toolbar"
+          className="flex min-h-15 items-center justify-between gap-2 border-b bg-card px-3 py-2.5"
+        >
+          {/* The template's name is in the panel's first row; here only for screen readers. */}
+          <h2 className="sr-only">{t('title')}</h2>
+          <p className="sr-only">{t('subtitle', { name: templateName })}</p>
+          <div className="contents @max-[30rem]/pane:hidden">
+            <PreviewStateControls value={state} onChange={setState} className="flex-nowrap" />
+            <DeviceControls {...toolbar} />
+          </div>
+          {/* A very narrow pane (remark 107): everything behind one «⋯». */}
+          <div className="hidden w-full justify-end @max-[30rem]/pane:flex">
+            <Popover>
+              <Tip label={t('more')}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="icon" aria-label={t('more')}>
+                    <MoreHorizontal aria-hidden="true" />
+                  </Button>
+                </PopoverTrigger>
+              </Tip>
+              <PopoverContent className="grid w-[min(23rem,calc(100vw-2rem))] gap-3">
+                <PreviewStateControls value={state} onChange={setState} className="grid" />
+                <DeviceControls {...toolbar} stacked />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-      </div>
+      </TooltipProvider>
       <PreviewFrame
         collectionId={collectionId}
         page={page}
         state={state}
         device={device}
-        className="px-5 pt-4 pb-5"
+        className="p-4"
       />
     </div>
   );

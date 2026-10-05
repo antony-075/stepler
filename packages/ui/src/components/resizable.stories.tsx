@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor } from 'storybook/test';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from './resizable';
 
 /** A settings panel beside a preview, as in the guest page editor: the split is draggable. */
@@ -33,7 +33,7 @@ function Gap() {
             Налаштування
           </div>
         </ResizablePanel>
-        <ResizableHandle withHandle gap aria-label="Ширина панелі налаштувань" />
+        <ResizableHandle gap aria-label="Ширина панелі налаштувань" />
         <ResizablePanel id="preview" minSize="240px">
           <div className="grid h-full place-items-center rounded-sheet border bg-muted p-4 text-sm font-semibold">
             Попередній перегляд
@@ -57,7 +57,14 @@ export const WithGap: Story = {
   play: async ({ canvas }) => {
     const handle = canvas.getByRole('separator', { name: 'Ширина панелі налаштувань' });
     await expect(getComputedStyle(handle).cursor).toBe('col-resize');
-    await expect(handle.getBoundingClientRect().width).toBe(14);
+    // The whole 16px gap is the hit area; no grip in it.
+    await expect(handle.getBoundingClientRect().width).toBe(16);
+    await expect(handle.childElementCount).toBe(0);
+    // The line is hidden at rest and shows on keyboard focus.
+    await expect(getComputedStyle(handle, '::after').opacity).toBe('0');
+    handle.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() => expect(getComputedStyle(handle, '::after').opacity).toBe('1'));
   },
 };
 

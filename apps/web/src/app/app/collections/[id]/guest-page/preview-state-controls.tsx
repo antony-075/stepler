@@ -83,7 +83,7 @@ export function PreviewStateControls({
         <SelectTrigger
           aria-label={t('access.trigger', { name: t(`access.${value.access}`) })}
           data-slot="preview-access"
-          className="h-11 w-auto min-w-0 gap-2 bg-background"
+          className="h-10 w-auto max-w-[15rem] min-w-0 shrink gap-2 bg-background px-3"
         >
           {/* The chosen option's icon and words (Radix renders the item's text here). */}
           <span className="min-w-0 truncate">
@@ -113,7 +113,7 @@ export function PreviewStateControls({
         <SelectTrigger
           aria-label={t('content.trigger', { name: t(`content.${value.content}`) })}
           data-slot="preview-content"
-          className="h-11 w-auto min-w-0 gap-2 bg-background disabled:opacity-60"
+          className="h-10 w-auto max-w-[15rem] min-w-0 shrink gap-2 bg-background px-3 disabled:opacity-60"
         >
           <span className="min-w-0 truncate">
             <SelectValue />

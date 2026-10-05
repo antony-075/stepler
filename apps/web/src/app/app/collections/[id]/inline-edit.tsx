@@ -212,7 +212,7 @@ export function EditableTitle({ collection }: { collection: Collection }) {
     <div className="flex min-w-0 items-start gap-1">
       <h1
         data-slot="page-header-title"
-        className="type-h1 min-w-0 [overflow-wrap:anywhere] xl:text-[2rem]"
+        className="type-h1 min-w-0 [overflow-wrap:anywhere] xl:text-[2rem] laptop:text-[1.625rem]"
       >
         {collection.title}
       </h1>

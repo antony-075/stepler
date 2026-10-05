@@ -133,13 +133,13 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
       {desktop ? (
         <DesktopEditor
           props={props}
+          saveBar={<SaveBar editor={editor} readOnly={readOnly} layout="panel" />}
           preview={
             <PreviewPane
               collectionId={collection.id}
               page={editor.previewPage}
               templateName={templateName}
               guestUrl={guestUrl}
-              actions={<SaveBar editor={editor} readOnly={readOnly} layout="header" />}
             />
           }
         />
@@ -150,12 +150,21 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
   );
 }
 
-/** The settings panel's width limits (px) and its first width. */
-const PANEL = { min: 300, initial: 400, max: 600 } as const;
-/** The preview never gets narrower than this (px): a phone frame and its toolbar fit. */
-const PREVIEW_MIN = 380;
+/** The settings panel's least width (px); no most (remark 107): only the preview's minimum. */
+const PANEL_MIN = 300;
+/**
+ * The panel's first width, a share of the workspace (owner remark 104): ~340px on a 14" laptop,
+ * more on a wide screen, so the preview gets the room; never under `PANEL_MIN`.
+ */
+const PANEL_INITIAL = '27%';
+/**
+ * The preview never gets narrower than this (px): the device scales down to fit, the toolbar
+ * folds into «⋯» (remark 107). The library keeps a remembered split within these limits when the
+ * window is resized.
+ */
+const PREVIEW_MIN = 300;
 /** Below this the workspace stops shrinking and the page scrolls instead (short windows). */
-const WORKSPACE_MIN = 560;
+const WORKSPACE_MIN = 460;
 
 /**
  * The editor on a computer (owner remarks 66, 67): one fixed-height workspace from under the
@@ -164,13 +173,22 @@ const WORKSPACE_MIN = 560;
  * them, and the gap is the splitter (shadcn/ui Resizable, owner remark 90): arrows resize it from the keyboard; the width is remembered per account in this
  * browser (localStorage, ignored when storage is not available).
  */
-function DesktopEditor({ props, preview }: { props: SectionProps; preview: ReactNode }) {
+function DesktopEditor({
+  props,
+  saveBar,
+  preview,
+}: {
+  props: SectionProps;
+  saveBar: ReactNode;
+  preview: ReactNode;
+}) {
   const t = useTranslations('guestPage');
   const workspace = useRef<HTMLDivElement>(null);
   const height = useFillViewport(workspace);
   const me = useQuery({ queryKey: ME_QUERY_KEY, queryFn: fetchMe });
   const layout = useDefaultLayout({
-    id: `stepler:guest-page-editor:${me.data?.id ?? 'anonymous'}`,
+    // v2: a new first split (remark 104); widths remembered before it start over.
+    id: `stepler:guest-page-editor:v2:${me.data?.id ?? 'anonymous'}`,
     panelIds: ['settings', 'preview'],
     storage: safeStorage,
   });
@@ -189,23 +207,20 @@ function DesktopEditor({ props, preview }: { props: SectionProps; preview: React
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
-        <ResizablePanel
-          id="settings"
-          defaultSize={`${PANEL.initial}px`}
-          minSize={`${PANEL.min}px`}
-          maxSize={`${PANEL.max}px`}
-        >
+        <ResizablePanel id="settings" defaultSize={PANEL_INITIAL} minSize={`${PANEL_MIN}px`}>
           <div
             role="region"
             aria-label={t('panelLabel')}
             data-slot="settings-panel"
             // Positioned, so screen-reader-only text inside is clipped here too.
-            className="relative h-full overflow-y-auto overscroll-contain rounded-sheet border bg-card"
+            className="@container/settings relative h-full overflow-y-auto overscroll-contain rounded-sheet border bg-card"
           >
+            {/* The save bar: the panel's sticky top bar (owner remark 105). */}
+            {saveBar}
             <SettingsAccordion mode="multiple" {...props} />
           </div>
         </ResizablePanel>
-        <ResizableHandle withHandle gap aria-label={t('splitLabel')} />
+        <ResizableHandle gap aria-label={t('splitLabel')} />
         <ResizablePanel id="preview" minSize={`${PREVIEW_MIN}px`}>
           <div className="h-full overflow-hidden rounded-sheet border">{preview}</div>
         </ResizablePanel>

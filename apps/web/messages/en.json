@@ -868,7 +868,8 @@
           "view-only": "Nothing can be added on this link",
           "stopped": "The guest sees only a message"
         }
-      }
+      },
+      "more": "Preview options"
     },
     "leave": "Your changes are still being saved. Leave the page?",
     "panelLabel": "Guest page settings",
@@ -1117,7 +1118,14 @@
       "open": "Open the guest page",
       "openAlt": "Open the «Guest page» tab to save the changes."
     },
-    "splitLabel": "Settings panel width"
+    "splitLabel": "Settings panel width",
+    "statusShort": {
+      "draft": "Draft",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "error": "Not saved",
+      "conflict": "Conflict"
+    }
   },
   "templates": {
     "classic": {

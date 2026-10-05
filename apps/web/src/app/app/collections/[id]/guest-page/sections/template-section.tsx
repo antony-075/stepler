@@ -22,7 +22,11 @@ export function TemplateSection({ editor, readOnly }: SectionProps) {
   const anySoon = ORDER.some((id) => TEMPLATES[id] === undefined);
   return (
     <div className="grid gap-3">
-      <ul aria-label={tSection('label')} className="grid grid-cols-3 gap-3">
+      <ul
+        aria-label={tSection('label')}
+        // As many columns as the panel's width takes (remark 104): three at ~300px, more wider.
+        className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-3"
+      >
         {ORDER.map((id) => {
           const template = TEMPLATES[id];
           const selected = editor.working.templateId === id;

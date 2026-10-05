@@ -5,6 +5,12 @@ import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { Spinner } from '@stepler/ui/components/spinner';
 import { useToast } from '@stepler/ui/components/toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@stepler/ui/components/tooltip';
 import { cn } from '@stepler/ui/lib/utils';
 import { RotateCcw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -17,8 +23,11 @@ import type { GuestPageEditorApi } from './use-guest-page-editor';
  * guests do not see; the dot is said as «, є незбережені зміни»). Both wait (`aria-disabled`)
  * while nothing differs from what guests see. A failed save offers «Повторити»; a conflict is an
  * alert with «Показати останню версію». `size="touch"` gives the phone sheet its 48px buttons.
- * `layout="header"` is the desktop preview pane's header (owner remark 71): one row, the status on
- * the left and the two buttons on the right, always in view; `stacked` is the phone sheet's foot.
+ * `layout="panel"` is the desktop settings panel's sticky top bar (owner remarks 71, 105): one
+ * row in the panel's 300–600px, always in view while the settings scroll. The status is a dot and
+ * one word («Чернетка», «Збережено») with the full sentence in a tooltip (and for screen readers);
+ * «Скинути зміни» becomes an icon button with a tooltip in a narrow panel; «Зберегти» stays the
+ * full primary with its unsaved dot. `stacked` is the phone sheet's foot.
  */
 export function SaveBar({
   editor,
@@ -30,10 +39,10 @@ export function SaveBar({
   editor: GuestPageEditorApi;
   readOnly: boolean;
   size?: 'default' | 'touch';
-  layout?: 'stacked' | 'header';
+  layout?: 'stacked' | 'panel';
   className?: string;
 }) {
-  const header = layout === 'header';
+  const header = layout === 'panel';
   const t = useTranslations('guestPage');
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
@@ -65,7 +74,7 @@ export function SaveBar({
       data-layout={layout}
       className={cn(
         header
-          ? 'flex flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-5 py-3'
+          ? 'sticky top-0 z-(--z-sticky) flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2.5'
           : 'grid gap-3 border-t bg-background px-6 py-4',
         className,
       )}
@@ -87,7 +96,7 @@ export function SaveBar({
         <p
           role="status"
           className={cn('flex min-h-6 items-center gap-2 text-sm', {
-            'min-w-0 flex-1 basis-48': header,
+            'min-w-0 flex-1 font-semibold': header,
           })}
           data-slot="save-status"
         >
@@ -103,7 +112,24 @@ export function SaveBar({
               })}
             />
           )}
-          <span aria-hidden={status === 'saving' || undefined}>{t(`status.${status}`)}</span>
+          {header ? (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {/* The word says the state; the sentence is extra (and read in full below). */}
+                    <span aria-hidden="true" className="truncate">
+                      {t(`statusShort.${status}`)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>{t(`status.${status}`)}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <span className="sr-only">{t(`status.${status}`)}</span>
+            </>
+          ) : (
+            <span aria-hidden={status === 'saving' || undefined}>{t(`status.${status}`)}</span>
+          )}
           {status === 'error' ? (
             <Button variant="ghost" size="sm" className="ml-auto text-link" onClick={editor.retry}>
               {t('actions.retry')}
@@ -118,20 +144,42 @@ export function SaveBar({
             : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-2'
         }
       >
+        {header ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  aria-label={t('actions.reset')}
+                  aria-disabled={idle || undefined}
+                  className="@max-[26rem]/settings:size-11 @max-[26rem]/settings:px-0"
+                  onClick={() => {
+                    if (!idle) setConfirming(true);
+                  }}
+                >
+                  <RotateCcw aria-hidden="true" />
+                  {/* In a narrow panel only the icon shows (the tooltip and the name say it). */}
+                  <span className="@max-[26rem]/settings:sr-only">{t('actions.reset')}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('actions.reset')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <Button
+            variant="outline"
+            className={touch}
+            aria-disabled={idle || undefined}
+            onClick={() => {
+              if (!idle) setConfirming(true);
+            }}
+          >
+            <RotateCcw aria-hidden="true" />
+            {t('actions.reset')}
+          </Button>
+        )}
         <Button
-          variant="outline"
-          className={touch}
-          aria-disabled={idle || undefined}
-          onClick={() => {
-            if (!idle) setConfirming(true);
-          }}
-        >
-          <RotateCcw aria-hidden="true" />
-          {/* On a narrow preview pane only the icon shows; the name stays the accessible name. */}
-          <span className={cn({ '@max-[32rem]/pane:sr-only': header })}>{t('actions.reset')}</span>
-        </Button>
-        <Button
-          className={cn('relative', header && 'min-w-28', touch)}
+          className={cn('relative', header && 'min-w-24', touch)}
           aria-disabled={idle || publishing || status === 'conflict' || undefined}
           onClick={() => void publish()}
           data-slot="save-button"

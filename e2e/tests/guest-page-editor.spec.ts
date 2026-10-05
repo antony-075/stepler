@@ -99,14 +99,14 @@ test.describe('guest page editor', () => {
     expect(await accentOf(guest.locator('[data-template]'))).toBe(PENCIL);
 
     await openEditor(page, id);
-    await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await expect(status(page)).toContainText('Збережено — гості бачать цю версію');
     await openSection(page, 'Акцент');
     await page.getByRole('radio', { name: 'Акцент: слива' }).click();
     // The working copy reaches the preview by postMessage, not by a save.
     await expect
       .poll(() => accentOf(preview(page).locator('[data-template]')), { timeout: 1000 })
       .toBe(PLUM);
-    await expect(status(page)).toHaveText('Чернетка — гості бачать попередню версію');
+    await expect(status(page)).toContainText('Чернетка — гості бачать попередню версію');
     // The autosave stores the draft; guests still see the published page.
     await expect
       .poll(async () => (await guestPageViaApi(page, id)).draft?.settings.accent)
@@ -118,7 +118,7 @@ test.describe('guest page editor', () => {
     await expect(
       toast(page).filter({ hasText: 'Збережено — гості бачать нову сторінку' }),
     ).toBeVisible();
-    await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await expect(status(page)).toContainText('Збережено — гості бачать цю версію');
     await guest.reload();
     expect(await accentOf(guest.locator('[data-template]'))).toBe(PLUM);
 
@@ -131,7 +131,7 @@ test.describe('guest page editor', () => {
       .getByRole('button', { name: 'Скинути' })
       .click();
     await expect.poll(() => accentOf(preview(page).locator('[data-template]'))).toBe(PLUM);
-    await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await expect(status(page)).toContainText('Збережено — гості бачать цю версію');
     await guest.reload();
     expect(await accentOf(guest.locator('[data-template]'))).toBe(PLUM);
     await guest.context().close();
@@ -156,7 +156,7 @@ test.describe('guest page editor', () => {
     await expect(action).toHaveText('Відкрити гостьову сторінку');
     await action.click();
     await expect(page).toHaveURL(/tab=appearance/);
-    await expect(status(page)).toHaveText('Чернетка — гості бачать попередню версію');
+    await expect(status(page)).toContainText('Чернетка — гості бачать попередню версію');
     await waitForImageReady(page, id, 'draft');
     // The editor asks again while the image is prepared; then the preview draws it.
     await expect(coverIn(preview(page))).toBeVisible({
@@ -168,7 +168,7 @@ test.describe('guest page editor', () => {
     await expect(coverIn(guest)).toHaveCount(0);
 
     await page.getByRole('button', { name: /^Зберегти/ }).click();
-    await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await expect(status(page)).toContainText('Збережено — гості бачать цю версію');
     await guest.reload();
     await expect(coverIn(guest)).toBeVisible();
     await guest.context().close();
@@ -196,7 +196,7 @@ test.describe('guest page editor', () => {
     });
     await other.getByRole('button', { name: 'Показати останню версію' }).click();
     await expect.poll(() => accentOf(preview(other).locator('[data-template]'))).toBe(PLUM);
-    await expect(status(other)).toHaveText('Чернетка — гості бачать попередню версію');
+    await expect(status(other)).toContainText('Чернетка — гості бачать попередню версію');
     await other.close();
   });
 
@@ -278,9 +278,9 @@ test.describe('guest page editor', () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 
     await sheet.getByRole('radio', { name: 'Акцент: слива' }).click();
-    await expect(status(page)).toHaveText('Чернетка — гості бачать попередню версію');
+    await expect(status(page)).toContainText('Чернетка — гості бачать попередню версію');
     await sheet.getByRole('button', { name: /^Зберегти/ }).click();
-    await expect(status(page)).toHaveText('Збережено — гості бачать цю версію');
+    await expect(status(page)).toContainText('Збережено — гості бачать цю версію');
     const guest = await asGuest(browser, path);
     expect(await accentOf(guest.locator('[data-template]'))).toBe(PLUM);
     await guest.context().close();
@@ -360,9 +360,14 @@ test.describe('guest page editor', () => {
     expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
     // The cover lives in «Розташування» with its placement (remark 89), once.
     await expect(panel.locator('[data-slot="image-control"][data-image="cover"]')).toHaveCount(1);
-    // «Зберегти» stays in view in the preview pane's header (remark 71).
+    // The save bar is the settings panel's sticky top bar (remark 105): in view at any scroll.
     await panel.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect(panel.locator('[data-slot="save-bar"]')).toBeInViewport();
     await expect(page.getByRole('button', { name: /^Зберегти/ })).toBeInViewport();
+    // The preview's toolbar is one row (remark 104).
+    expect(
+      (await page.locator('[data-slot="preview-toolbar"]').boundingBox())!.height,
+    ).toBeLessThan(80);
 
     // The splitter, from the keyboard (remark 67).
     const before = (await panel.boundingBox())!.width;

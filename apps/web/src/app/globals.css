@@ -3,6 +3,10 @@
 @import '@stepler/templates/styles.css';
 @source '../../../templates/src';
 
+/* A laptop (owner remark 104): wide enough for the desktop layout, short enough that the page
+   header must not eat the editor's height. 1280×800, 1366×768, 1440×900, 1512×982… */
+@custom-variant laptop (@media (min-width: 64rem) and (max-height: 62.5rem));
+
 /* The landing's page column (DESIGN-SYSTEM.md §7.1: up to 1600px of content from 1920px), wider
    than `stepler-container` so the photos fill a 1440px screen; the same gutters. */
 @utility landing-container {
