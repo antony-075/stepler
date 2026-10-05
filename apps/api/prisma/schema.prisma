@@ -65,11 +65,41 @@ enum CoverSource {
   FRAME
 }
 
-/// What an upload becomes: a guest's content frame, or the admin's collection cover [A1]
-/// (CHECKs "UploadSession_purpose_actor", "UploadSession_cover_is_photo").
+/// What an upload becomes: a guest's content frame, or one of the admin's images: the guest page
+/// cover, its background, or the admin-only collection image [A1]
+/// (CHECKs "UploadSession_purpose_actor", "UploadSession_admin_image_is_photo").
 enum UploadPurpose {
   CONTENT
   COVER
+  BACKGROUND
+  COLLECTION_IMAGE
+}
+
+/// Which admin image an image row is (plan 2026-10-05, ADR 0017). The slot decides its storage
+/// prefix and its renditions; rows are referenced by guest page versions or the collection.
+enum ImageSlot {
+  COVER
+  BACKGROUND
+  COLLECTION_IMAGE
+}
+
+/// PENDING until the worker made its renditions (CHECK "CollectionImage_ready_dimensions").
+enum ImageStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+/// Where an image's original came from: the admin's own upload, or a copy of a guest photo frame.
+enum ImageSource {
+  UPLOAD
+  FRAME
+}
+
+/// A collection has one PUBLISHED guest page (what guests see) and at most one DRAFT (the editor's).
+enum GuestPageVersionState {
+  PUBLISHED
+  DRAFT
 }
 
 enum UploadStatus {
@@ -191,8 +221,8 @@ model MagicLinkToken {
 }
 
 model Collection {
-  id                  String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  ownerId             String           @db.Uuid
+  id                  String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerId             String             @db.Uuid
   /// 1 to 100 characters (CHECK "Collection_title_length").
   title               String
   /// 1 to 1000 characters when set (CHECK "Collection_description_length").
@@ -202,22 +232,89 @@ model Collection {
   welcomeMessage      String?
   /// ARCHIVED iff archivedAt is set, DELETING iff deletionRequestedAt is set
   /// (CHECKs "Collection_archived_consistent", "Collection_deleting_consistent").
-  status              CollectionStatus @default(ACTIVE)
-  archivedAt          DateTime?        @db.Timestamptz(3)
-  deletionRequestedAt DateTime?        @db.Timestamptz(3)
+  status              CollectionStatus   @default(ACTIVE)
+  archivedAt          DateTime?          @db.Timestamptz(3)
+  deletionRequestedAt DateTime?          @db.Timestamptz(3)
   /// The next frame number (ADR 0015); taken and incremented in the transaction that creates an
   /// item. Gaps are never filled. At least 1 (CHECK "Collection_next_frame_positive").
-  nextFrameNo         Int              @default(1)
-  createdAt           DateTime         @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime         @updatedAt @db.Timestamptz(3)
-  owner               User             @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  nextFrameNo         Int                @default(1)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  owner               User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   guestLinks          GuestLink[]
   guestSessions       GuestSession[]
   contentItems        ContentItem[]
   uploadSessions      UploadSession[]
   cover               CollectionCover?
+  /// «Картинка колекції»: the owner's own image of the collection (dashboard, share dialog);
+  /// never in a guest response. An image of this collection (composite key), NO ACTION so
+  /// deleting the collection still cascades in one statement.
+  imageId             String?            @db.Uuid
+  image               CollectionImage?   @relation("CollectionImageOfCollection", fields: [imageId, id], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "Collection_image_same_collection_fkey")
+  images              CollectionImage[]  @relation("CollectionImages")
+  guestPageVersions   GuestPageVersion[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
+}
+
+/// An admin image of a collection (plan 2026-10-05, ADR 0017): a guest page cover or background,
+/// or the collection image. Rows are immutable apart from the worker's READY/FAILED; a replaced
+/// image is a new row. A row lives while a guest page version or the collection references it;
+/// the transaction that drops the last reference deletes it and queues `collection-image.purge`.
+/// Keys come from ids only: `imageKey(collectionId, slot, id, role)`. Rules live as named CHECKs:
+/// "CollectionImage_sizes", "CollectionImage_ready_dimensions".
+model CollectionImage {
+  id                String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String             @db.Uuid
+  slot              ImageSlot
+  status            ImageStatus        @default(PENDING)
+  source            ImageSource
+  /// The verified type of the original (content signature), never the browser's claim.
+  mimeType          String
+  originalSizeBytes BigInt
+  /// Every rendition of the slot; 0 until READY. They count toward usage with the original.
+  derivedSizeBytes  BigInt             @default(0)
+  /// The source's upright dimensions, set with READY.
+  width             Int?
+  height            Int?
+  createdAt         DateTime           @default(now()) @db.Timestamptz(3)
+  collection        Collection         @relation("CollectionImages", fields: [collectionId], references: [id], onDelete: Cascade)
+  asCollectionImage Collection[]       @relation("CollectionImageOfCollection")
+  asCover           GuestPageVersion[] @relation("GuestPageCover")
+  asBackground      GuestPageVersion[] @relation("GuestPageBackground")
+
+  @@unique([id, collectionId])
+  @@index([collectionId, slot])
+}
+
+/// One version of a collection's guest page (plan 2026-10-05, ADR 0017): the PUBLISHED one guests
+/// see and, while the admin edits, one DRAFT ("GuestPageVersion_collectionId_state_key"). Settings
+/// are validated by the template's definition before they are stored, and resolved again on read.
+/// The images belong to the same collection (composite keys, NO ACTION). `revision` is the
+/// draft's optimistic-concurrency counter. Rules live as named CHECKs:
+/// "GuestPageVersion_template_id", "GuestPageVersion_numbers",
+/// "GuestPageVersion_settings_object", "GuestPageVersion_welcome_length".
+model GuestPageVersion {
+  id                String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId      String                @db.Uuid
+  state             GuestPageVersionState
+  templateId        String
+  templateVersion   Int
+  settings          Json
+  /// Shown to guests above their main action; 1 to 160 code points when set [A5].
+  welcomeMessage    String?
+  coverImageId      String?               @db.Uuid
+  backgroundImageId String?               @db.Uuid
+  revision          Int                   @default(1)
+  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime              @updatedAt @db.Timestamptz(3)
+  collection        Collection            @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  coverImage        CollectionImage?      @relation("GuestPageCover", fields: [coverImageId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "GuestPageVersion_cover_same_collection_fkey")
+  backgroundImage   CollectionImage?      @relation("GuestPageBackground", fields: [backgroundImageId, collectionId], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "GuestPageVersion_background_same_collection_fkey")
+
+  @@unique([collectionId, state])
+  @@index([coverImageId])
+  @@index([backgroundImageId])
 }
 
 /// The collection's cover [A2]: one row per collection, replaced whole (a replaced or removed
@@ -371,7 +468,7 @@ model MediaObject {
 /// (`purpose = COVER`, with `uploaderUserId`) [A1]. Rules live as named CHECKs:
 /// "UploadSession_kind_is_file", "UploadSession_size_positive", "UploadSession_parts_positive",
 /// "UploadSession_completed_consistent", "UploadSession_claim_consistent",
-/// "UploadSession_reject_reason", "UploadSession_purpose_actor", "UploadSession_cover_is_photo";
+/// "UploadSession_reject_reason", "UploadSession_purpose_actor", "UploadSession_admin_image_is_photo";
 /// open uploads per guest session use the partial index "UploadSession_active_idx". The guest
 /// session and link belong to the row's own collection (composite keys). `INITIATED` rows
 /// reserve `declaredSizeBytes` of quota (ADR 0010).
@@ -386,7 +483,8 @@ model UploadSession {
   /// CONTENT only: the link the upload came through. NO ACTION (links are never deleted while
   /// referenced), so deleting the collection still cascades in one statement.
   guestLinkId       String?       @db.Uuid
-  /// COVER only: the admin who uploads. Deleting the user deletes their cover uploads.
+  /// Admin images only (every purpose but CONTENT): the admin who uploads. Deleting the user
+  /// deletes their image uploads.
   uploaderUserId    String?       @db.Uuid
   /// Chosen by the browser per file; initiation is idempotent on (guestSessionId, clientUploadId)
   /// for guests and (uploaderUserId, clientUploadId) for admins.
@@ -408,7 +506,7 @@ model UploadSession {
   completedAt       DateTime?     @db.Timestamptz(3)
   /// Set while COMPLETING (CHECK "UploadSession_claim_consistent").
   claimedAt         DateTime?     @db.Timestamptz(3)
-  /// The item it became (CONTENT); NULL once that item is purged, and always for a COVER.
+  /// The item it became (CONTENT); NULL once that item is purged, and always for an admin image.
   contentItemId     String?       @unique @db.Uuid
   createdAt         DateTime      @default(now()) @db.Timestamptz(3)
   collection        Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
