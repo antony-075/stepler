@@ -1,6 +1,7 @@
 // Fixture models, actions and stand-in slots for the templates gallery (stories only). The real
 // slots come from apps/web (frames, the legal notice, the language switch, the footer); these
 // imitate their markup closely enough to judge a layout, with no app code.
+import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
 import { focusRing } from '@stepler/ui/lib/focus';
@@ -123,9 +124,25 @@ const ownFull = (
   </FramesSection>
 );
 
-const allFrames = (
+function allOf(count: number) {
+  return (
+    <FramesSection id="all-title" slot="guest-all-frames" title="Усі кадри">
+      <FrameGrid ariaLabel="Усі кадри">{frames(count, false)}</FrameGrid>
+    </FramesSection>
+  );
+}
+
+const allFrames = allOf(12);
+
+/** «Усі кадри» before anyone added a frame, as the app draws it (EmptyState, `#001`). */
+const allEmpty = (
   <FramesSection id="all-title" slot="guest-all-frames" title="Усі кадри">
-    <FrameGrid ariaLabel="Усі кадри">{frames(12, false)}</FrameGrid>
+    <EmptyState
+      frameNumber={1}
+      headingLevel={3}
+      title="Ви будете першим"
+      description="Тут з’являться фото, відео й побажання гостей."
+    />
   </FramesSection>
 );
 
@@ -227,6 +244,32 @@ export const FIXTURES = {
     },
     actions: filesActions,
     slots: slots(ownEmpty),
+  },
+  /** A brand-new collection: a short title, no cover, no welcome, nobody's frames yet. */
+  EmptyFrames: {
+    model: {
+      ...base,
+      title: 'День народження',
+      description: null,
+      welcomeMessage: null,
+      countsLabel: '0 кадрів',
+      lastAddedLabel: null,
+      cover: null,
+    },
+    actions: filesActions,
+    slots: slots(ownEmpty, allEmpty),
+  },
+  /** Real long Ukrainian words: they wrap only between words, never mid-word. */
+  LongUkrainianTitle: {
+    model: { ...base, title: 'День народження нашої улюбленої бабусі Галини' },
+    actions: filesActions,
+    slots: slots(ownEmpty),
+  },
+  /** A busy evening: the guest's own frames and a long shared gallery. */
+  ManyFrames: {
+    model: { ...base, phase: 'contributed', countsLabel: '248 кадрів' },
+    actions: { ...filesActions, primary: { ...filesActions.primary, label: 'Додати ще' } },
+    slots: slots(ownFull, allOf(48)),
   },
   ImageBackground: {
     model: { ...base, background: sampleImage(260, 1600, 1200) },

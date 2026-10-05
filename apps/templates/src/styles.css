@@ -157,6 +157,15 @@
   --link: var(--tpl-link);
   --link-hover: var(--tpl-text);
   --ring: var(--tpl-link);
+  /* Words wrap only between words (owner, item 87): a hyphen where the page's language has a
+     dictionary, and a break inside a word only when that word alone is wider than its whole
+     line (a pasted link, a 100-letter string), so nothing scrolls sideways. `anywhere`, not
+     `normal`, for that last case; it breaks a word no sooner than `break-word` does, and it
+     keeps shrink-to-fit boxes (centred columns) within the page. Inherited, so the template's
+     text and the app's slots follow it; titles are sized so real long words fit whole. */
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
   position: relative;
   isolation: isolate;
   min-height: 100svh;
