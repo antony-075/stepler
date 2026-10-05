@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { SessionService } from '../src/auth/session.service.js';
 import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -20,7 +21,7 @@ describe('auth core', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ OPERATOR_EMAILS: 'op@stepler.test' }));
-    await app.init();
+    await listenOnLoopback(app);
     sessions = app.get(SessionService);
   });
 

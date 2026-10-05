@@ -5,7 +5,7 @@
 - **Node.js 24 LTS** (`.nvmrc`). With nvm: `nvm install && nvm use`.
 - **pnpm 11.28.2** via corepack: `corepack enable`. The version comes from `packageManager` in `package.json`. pnpm 12 is not used, because corepack cannot run its native binary.
 - **Docker** (Docker Desktop or compatible) for local infrastructure and image checks.
-- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos) and ffmpeg/ffprobe (video posters). macOS: `brew install libheif ffmpeg` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg`. Check with `heif-dec --list-decoders` (lists `libde265`). The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1).
+- **Media tools** for the worker's previews and its tests (spike S5): libheif's CLI with the libde265 HEVC decoder (HEIC photos), ffmpeg/ffprobe (video posters) and exiftool (location stripping, ADR 0008 addendum 2026-10-05). macOS: `brew install libheif ffmpeg exiftool` (`heif-dec`, libheif 1.23, includes libde265); Ubuntu 24.04: `sudo apt-get install libheif-examples libheif-plugin-libde265 ffmpeg libimage-exiftool-perl`. Check with `heif-dec --list-decoders` (lists `libde265`) and `exiftool -ver`. The worker image installs its own (Debian 12: `heif-convert`, ffmpeg 5.1, exiftool 12.57).
 - Playwright browsers for UI and E2E tests: `pnpm --filter @stepler/ui exec playwright install chromium` and `pnpm --filter @stepler/e2e exec playwright install chromium webkit`.
 
 ## Workspace
@@ -50,6 +50,7 @@ pnpm infra:down   # docker compose -f docker/compose.yaml --env-file docker/.env
 | S3 emulator API | http://127.0.0.1:8333 | `pnpm infra:up`, then `pnpm storage:bootstrap` |
 | Bucket browser (SeaweedFS filer UI; no auth, localhost only) | http://127.0.0.1:8888/buckets/ | `pnpm infra:up` |
 | Storybook | http://localhost:6006 | `pnpm storybook` |
+| Guest page templates gallery (Storybook) | http://localhost:6007 | `pnpm templates:dev` |
 | e2e servers | web :3100, api :4100 | `pnpm e2e` |
 
 Staging and provider consoles: https://stepler-staging.onrender.com (site), https://dashboard.render.com (deploys, logs, env), https://dash.cloudflare.com (R2, Turnstile), https://app.brevo.com (staging email), https://console.cloud.google.com/apis/credentials (OAuth clients).
@@ -58,8 +59,8 @@ Staging and provider consoles: https://stepler-staging.onrender.com (site), http
 - On first start, `docker/postgres/init/` creates `stepler_test` (API integration tests), `stepler_e2e` (Playwright) and `stepler_shadow` (Prisma's shadow database for the drift check; Prisma resets it). Init scripts run only on an empty volume. For a volume created before Phase 2, either run `docker compose -f docker/compose.yaml --env-file docker/.env down -v` (this deletes local data) or create the three databases by hand.
 - API tests read the PostgreSQL credentials from `docker/.env` (or `docker/.env.example` when it is absent). `TEST_DATABASE_URL` / `TEST_SHADOW_DATABASE_URL` override them.
 - `signInAs(app, prisma, email)` in API tests creates a user who has accepted the current legal documents (ADR 0016); pass `legal = false` (fifth argument) for an account the acceptance gate stops. In Playwright, `requestLink`/`signIn` tick the sign-in card's checkbox.
-- A second e2e stack can run alongside the first: `E2E_DATABASE_URL`, `E2E_SMTP_URL`, `E2E_MAILPIT_URL`, `E2E_S3_ENDPOINT` point at other services, and `E2E_WEB_PORT` / `E2E_API_PORT` (default 3100/4100) move the servers (upload journeys then need that web origin in the bucket's CORS).
-- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins, and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
+- A second e2e stack can run alongside the first: `E2E_DATABASE_URL`, `E2E_SMTP_URL`, `E2E_MAILPIT_URL`, `E2E_S3_ENDPOINT` point at other services, and `E2E_WEB_PORT` / `E2E_API_PORT` (default 3100/4100) move the servers. Upload journeys need that web origin in the bucket's CORS: rerun `E2E_WEB_PORT=<port> pnpm storage:bootstrap` (or set `STORAGE_CORS_ORIGINS`).
+- The S3 emulator is SeaweedFS (ADR 0008, spike S4). After the first start, run `pnpm storage:bootstrap`: it creates the `stepler-dev` and `stepler-test` buckets with CORS for the local web origins (`STORAGE_CORS_ORIGINS`, plus the `E2E_WEB_PORT` origin when set), and is safe to rerun. The API's `S3_*` values must match `docker/.env`.
 - `pnpm worker:dev` runs the background worker (ADR 0009) against the same `apps/api/.env`. Without it deleted content and deleted collections are not purged (they stay hidden), and photo and video frames stay «Готується прев’ю». It needs the media tools from Prerequisites (`heif-dec`/`heif-convert`, `ffmpeg`, `ffprobe` on `PATH`). It serves no page; it logs `worker started` once it polls.
 
 ## Commands
@@ -77,11 +78,12 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm release:check`                            | Full pre-release check before a manual staging deploy: format, lint, typecheck, tests, builds, Storybook, three-browser e2e, Docker image checks (needs `pnpm infra:up`) |
 | `pnpm build`                                    | Build all packages and apps                                   |
-| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion) |
+| `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion). In `@stepler/templates`, `test` runs the core's unit tests in Node and every template story (each fixture at 360/390/768/1440, with axe) in headless Chromium |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm e2e -- --shard=1/2`                       | Run one half of the Playwright tests (CI runs shards `1/2` and `2/2` in parallel); any Playwright flag works after `--`, e.g. `-- --grep @desktop` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
+| `pnpm templates:dev`     | The guest page templates gallery (`apps/templates` Storybook) on 6007: every template against fixture models at 360/390/768/1440 |
 | `pnpm format` / `pnpm format:check`             | Prettier (Markdown, docs and `.claude/` are not formatted)    |
 | `bash docker/scripts/verify-images.sh`          | Build the api, worker and web images and check non-root, no `.env`, no dev deps, health, proxy, and that the worker starts and stops on SIGTERM |
 | `pnpm db:migrate`         | Create/apply migrations against `DATABASE_URL` (`prisma migrate dev`; raw SQL rules in ADR 0005) |
@@ -126,6 +128,7 @@ Run on staging once PR D is on `stage` and the owner actions R1 (R2 bucket CORS)
 | 5 | Revoke the link while a guest is uploading | The completion is refused, no frame appears, the guest sees «Посилання більше не діє» |
 | 6 | In the browser's network panel during an upload | The PUT response exposes `ETag`; no request carries `x-amz-checksum-crc32` |
 | 7 | Render logs of `stepler-staging-worker` while steps 1–2 run | `job done` for `media.video-poster` / `media.image-derivatives`, no OOM restart, no presigned URL in any line |
+| 8 | Location stripping (ADR 0008 addendum 2026-10-05): upload an iPhone photo and a phone video with location on, then a MOV of about 2 GB | Within the job, `original sanitised` with `locationRemoved: true` in the worker log; the downloaded originals have no GPS (`exiftool -gps:all -location:all <file>` prints nothing) and keep their date; the 2 GB MOV finishes with no disk-full error (the worker needs about twice the file on its temp disk) and no `412` from R2 (`If-Match` honoured) |
 
 ## Environment variables
 
@@ -157,6 +160,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `S3_ACCESS_KEY_ID` | api | yes | Bucket-scoped access key |
 | `S3_SECRET_ACCESS_KEY` | api | yes | Bucket-scoped secret key |
 | `S3_FORCE_PATH_STYLE` | api | no | `true` for the emulator; default `false` |
+| `STORAGE_CORS_ORIGINS` | `storage:bootstrap` | no | Dev/CI only: comma-separated browser origins for the local buckets' CORS rule; default `http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:3100`. `E2E_WEB_PORT`, when set, adds `http://127.0.0.1:<port>` |
 | `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
 | `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
 | `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |

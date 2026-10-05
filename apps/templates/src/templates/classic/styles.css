@@ -1,0 +1,336 @@
+/*
+ * T1 «Класика» (classic), to the T1 artboards (plan Appendix A). Colours come from the theme
+ * tokens (--tpl-*), so every tweak shows; every rule starts with [data-template='classic']
+ * (src/styles.test.ts). Phones first; the aside layout from 1024px.
+ */
+
+[data-template='classic'] {
+  /* The app's frames: the wish tile in the accent's soft pink, its quote mark in the accent. */
+  --tint-sand: #fbece8;
+  --tint-sand-ink: var(--tpl-accent-text);
+  --input: #83877f;
+  --card: var(--tpl-surface);
+}
+
+[data-template='classic'] .classic-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+[data-template='classic'] .classic-aside {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 752px;
+  margin-inline: auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+[data-template='classic'] .classic-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+}
+
+[data-template='classic'] .classic-lang-desktop {
+  display: none;
+}
+
+[data-template='classic'] .classic-identity {
+  display: grid;
+  gap: 0;
+  text-align: var(--tpl-align);
+  padding-top: 4px;
+}
+
+[data-template='classic'] .classic-cover {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: var(--tpl-radius-tile);
+  background: var(--tpl-veil);
+  margin-bottom: 20px;
+}
+
+[data-template='classic'] .classic-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-template='classic'] .classic-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.12;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+[data-template='classic'] .classic-description {
+  margin: 8px 0 0;
+  color: var(--tpl-muted);
+  white-space: pre-line;
+}
+
+[data-template='classic'] .classic-welcome {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--tpl-body);
+  text-wrap: pretty;
+}
+
+[data-template='classic'] .classic-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  justify-content: var(--tpl-align);
+  margin: 10px 0 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--tpl-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-template='classic'] .classic-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+[data-template='classic'] .classic-primary,
+[data-template='classic'] .classic-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border-radius: var(--tpl-radius-btn);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+[data-template='classic'] .classic-primary {
+  min-height: 56px;
+  border: 0;
+  background: var(--tpl-accent);
+  color: var(--tpl-on-accent);
+  font-size: 17px;
+}
+
+[data-template='classic'] .classic-secondary {
+  min-height: 52px;
+  border: 1px solid var(--input);
+  background: var(--tpl-surface);
+  color: var(--tpl-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+[data-template='classic'] .classic-primary svg,
+[data-template='classic'] .classic-secondary svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+[data-template='classic'] .classic-primary:focus-visible,
+[data-template='classic'] .classic-secondary:focus-visible {
+  outline: 2px solid var(--tpl-link);
+  outline-offset: 2px;
+}
+
+[data-template='classic'] .classic-actions [data-slot='guest-legal-notice'] {
+  text-align: start;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+[data-template='classic'] .classic-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tpl-muted);
+}
+
+[data-template='classic'] .classic-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+[data-template='classic'] .classic-sections {
+  display: grid;
+  align-content: start;
+  gap: 40px;
+  flex: 1;
+  width: 100%;
+  max-width: 752px;
+  margin-inline: auto;
+  padding: 40px 16px 48px;
+  box-sizing: border-box;
+}
+
+[data-template='classic'] .classic-sections h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+/* The app's frame grids: 3 columns with 4px gaps on phones, 4 with 6px from 640px. */
+[data-template='classic'] [data-slot='frame-grid'] > ul {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+[data-template='classic'] [data-slot='frame-media'],
+[data-template='classic'] [data-slot='frame'] > button {
+  border-radius: var(--tpl-radius-tile);
+}
+
+[data-template='classic'] footer {
+  background: transparent;
+}
+
+@media (min-width: 640px) {
+  [data-template='classic'] .classic-aside,
+  [data-template='classic'] .classic-sections {
+    padding-inline: 16px;
+  }
+
+  [data-template='classic'] .classic-cover {
+    aspect-ratio: 2 / 1;
+  }
+
+  [data-template='classic'] .classic-title {
+    font-size: 34px;
+  }
+
+  [data-template='classic'] .classic-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-template='classic'] .classic-actions > :not(button) {
+    grid-column: 1 / -1;
+  }
+
+  [data-template='classic'] [data-slot='frame-grid'] > ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-template='classic'] .classic-page {
+    display: grid;
+    grid-template-columns: 472px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  [data-template='classic'] .classic-aside {
+    position: sticky;
+    top: 0;
+    max-width: none;
+    height: 100svh;
+    margin: 0;
+    padding: 24px 40px 28px;
+    overflow-y: auto;
+    background: var(--tpl-surface);
+    border-right: 1px solid var(--border);
+  }
+
+  [data-template='classic'] .classic-bar {
+    min-height: 44px;
+  }
+
+  [data-template='classic'] .classic-lang-phone {
+    display: none;
+  }
+
+  [data-template='classic'] .classic-lang-desktop {
+    display: flex;
+    justify-content: flex-end;
+    padding: 24px 48px 0;
+  }
+
+  [data-template='classic'] .classic-identity {
+    padding-top: 18px;
+  }
+
+  [data-template='classic'] .classic-cover {
+    aspect-ratio: 4 / 3;
+    margin-bottom: 22px;
+  }
+
+  [data-template='classic'] .classic-title {
+    font-size: 34px;
+    line-height: 1.1;
+  }
+
+  [data-template='classic'] .classic-welcome {
+    margin-top: 12px;
+    font-size: 17px;
+  }
+
+  /* The actions follow the identity (owner, item 82): never pinned to the bottom of a tall,
+     empty aside when there is no cover or a short title. */
+  [data-template='classic'] .classic-actions {
+    grid-template-columns: none;
+    margin-top: 28px;
+  }
+
+  [data-template='classic'] .classic-main {
+    min-height: 100dvh;
+  }
+
+  [data-template='classic'] .classic-sections {
+    max-width: none;
+    margin: 0;
+    padding: 4px 48px 48px;
+  }
+
+  [data-template='classic'] .classic-sections h2 {
+    font-size: 21px;
+  }
+
+  [data-template='classic'] [data-slot='frame-grid'] > ul {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  [data-template='classic'] footer > div {
+    padding-inline: 48px;
+    max-width: none;
+  }
+}
+
+/* Wide screens: 8 columns once tiles would pass ~170px. */
+@media (min-width: 1680px) {
+  [data-template='classic'] [data-slot='frame-grid'] > ul {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-template='classic'] .classic-primary,
+  [data-template='classic'] .classic-secondary {
+    transition: background-color 120ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+}
+
+@media (hover: hover) {
+  [data-template='classic'] .classic-primary:hover {
+    background: var(--pencil-hover);
+  }
+
+  [data-template='classic'] .classic-secondary:hover {
+    background: var(--hover-card);
+  }
+}

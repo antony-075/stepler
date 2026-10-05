@@ -39,6 +39,8 @@ export const ERROR_CODES = [
   'COVER_SOURCE_INVALID',
   'LEGAL_ACCEPTANCE_REQUIRED',
   'LEGAL_VERSION_OUTDATED',
+  'GUEST_PAGE_DRAFT_CONFLICT',
+  'THEME_CONTRAST_TOO_LOW',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

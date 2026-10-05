@@ -692,6 +692,7 @@ describe('upload session and media object schema', () => {
         data: {
           collectionId: ids.collectionId,
           purpose: 'COVER',
+          imageTarget: 'LEGACY_COVER',
           uploaderUserId: ownerId,
           clientUploadId: `0199a000-0000-7000-8000-${String(n).padStart(12, '0')}`,
           kind: 'PHOTO',
@@ -727,11 +728,35 @@ describe('upload session and media object schema', () => {
       await coverUpload(ids);
     });
 
-    test('a cover is always a photo', async () => {
+    test('an admin image upload names its target; a guest upload never does', async () => {
       const ids = await setup();
-      expect(await violation(coverUpload(ids, { kind: 'VIDEO' }))).toEqual(
-        check('UploadSession_cover_is_photo'),
-      );
+      const rule = check('UploadSession_image_target');
+      expect(await violation(coverUpload(ids, { imageTarget: null }))).toEqual(rule);
+      expect(await violation(upload(ids, { imageTarget: 'DRAFT' }))).toEqual(rule);
+      await coverUpload(ids, { purpose: 'BACKGROUND', imageTarget: 'DRAFT' });
+      await coverUpload(ids, { purpose: 'COLLECTION_IMAGE', imageTarget: 'COLLECTION' });
+    });
+
+    test('an admin image is always a photo', async () => {
+      const ids = await setup();
+      const rule = check('UploadSession_admin_image_is_photo');
+      for (const purpose of ['COVER', 'BACKGROUND', 'COLLECTION_IMAGE'] as const) {
+        expect(await violation(coverUpload(ids, { purpose, kind: 'VIDEO' }))).toEqual(rule);
+      }
+    });
+
+    test('a BACKGROUND or COLLECTION_IMAGE upload has its uploader, never a guest', async () => {
+      const ids = await setup();
+      const rule = check('UploadSession_purpose_actor');
+      for (const purpose of ['BACKGROUND', 'COLLECTION_IMAGE'] as const) {
+        expect(await violation(coverUpload(ids, { purpose, uploaderUserId: null }))).toEqual(rule);
+        expect(
+          await violation(
+            coverUpload(ids, { purpose, guestSessionId: ids.sessionId, guestLinkId: ids.linkId }),
+          ),
+        ).toEqual(rule);
+        await coverUpload(ids, { purpose });
+      }
     });
 
     test('clientUploadId is unique per uploader; deleting the user deletes their cover uploads', async () => {
@@ -820,5 +845,140 @@ describe('collection cover schema [A2]', () => {
     await cover(await collection());
     await prisma.collection.delete({ where: { id } });
     expect(await prisma.collectionCover.count()).toBe(1);
+  });
+});
+
+describe('collection images and guest page versions (plan 2026-10-05)', () => {
+  beforeEach(async () => {
+    await resetDatabase(prisma);
+  });
+
+  let sequence = 0;
+  const check = (constraint: string) => ({ kind: 'check', constraint });
+  const SETTINGS = {
+    background: { kind: 'solid', color: '#F0F1EE' },
+    accent: '#B83E26',
+    headingFont: 'geologica',
+    coverPlacement: 'top',
+    align: 'start',
+    corners: 'soft',
+  };
+
+  async function collection(): Promise<string> {
+    const ownerId = (await prisma.user.create({ data: { email: `g${sequence++}@x.io` } })).id;
+    return (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
+  }
+
+  /** A valid pending image; tests override one field to break one rule. */
+  const image = (collectionId: string, overrides: Record<string, unknown> = {}) =>
+    prisma.collectionImage.create({
+      data: {
+        collectionId,
+        slot: 'COVER',
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: 1000n,
+        ...overrides,
+      },
+    });
+
+  /** A valid PUBLISHED version; tests override one field to break one rule. */
+  const version = (collectionId: string, overrides: Record<string, unknown> = {}) =>
+    prisma.guestPageVersion.create({
+      data: {
+        collectionId,
+        state: 'PUBLISHED',
+        templateId: 'classic',
+        templateVersion: 1,
+        settings: SETTINGS,
+        ...overrides,
+      },
+    });
+
+  test('image sizes and READY iff both dimensions are recorded', async () => {
+    const id = await collection();
+    expect(await violation(image(id, { originalSizeBytes: 0n }))).toEqual(
+      check('CollectionImage_sizes'),
+    );
+    expect(await violation(image(id, { derivedSizeBytes: -1n }))).toEqual(
+      check('CollectionImage_sizes'),
+    );
+    const ready = check('CollectionImage_ready_dimensions');
+    expect(await violation(image(id, { status: 'READY', width: 10 }))).toEqual(ready);
+    expect(await violation(image(id, { width: 10, height: 10 }))).toEqual(ready);
+    await image(id, { status: 'READY', width: 10, height: 10, slot: 'BACKGROUND' });
+    // Rows are referenced, not unique per slot: two covers may exist (a published and a draft).
+    await image(id);
+    await image(id);
+  });
+
+  test('a version: slug template id, positive numbers, an object of settings, a short welcome', async () => {
+    const id = await collection();
+    expect(await violation(version(id, { templateId: 'Classic' }))).toEqual(
+      check('GuestPageVersion_template_id'),
+    );
+    expect(await violation(version(id, { templateVersion: 0 }))).toEqual(
+      check('GuestPageVersion_numbers'),
+    );
+    expect(await violation(version(id, { revision: 0 }))).toEqual(
+      check('GuestPageVersion_numbers'),
+    );
+    expect(await violation(version(id, { settings: ['x'] }))).toEqual(
+      check('GuestPageVersion_settings_object'),
+    );
+    const welcome = check('GuestPageVersion_welcome_length');
+    expect(await violation(version(id, { welcomeMessage: '' }))).toEqual(welcome);
+    expect(await violation(version(id, { welcomeMessage: '😀'.repeat(161) }))).toEqual(welcome);
+    await version(id, { welcomeMessage: '😀'.repeat(160) });
+  });
+
+  test('the collection’s page revision counter is at least 1', async () => {
+    const id = await collection();
+    expect(
+      await violation(prisma.collection.update({ where: { id }, data: { lastPageRevision: 0 } })),
+    ).toEqual(check('Collection_page_revision_positive'));
+  });
+
+  test('one PUBLISHED and at most one DRAFT per collection', async () => {
+    const id = await collection();
+    await version(id);
+    await version(id, { state: 'DRAFT' });
+    const unique = { kind: 'unique', constraint: 'GuestPageVersion_collectionId_state_key' };
+    expect(await violation(version(id))).toEqual(unique);
+    expect(await violation(version(id, { state: 'DRAFT' }))).toEqual(unique);
+  });
+
+  test('a version or the collection can only reference an image of the same collection', async () => {
+    const a = await collection();
+    const b = await collection();
+    const imageOfB = await image(b);
+    await expect(version(a, { coverImageId: imageOfB.id })).rejects.toThrow(
+      /GuestPageVersion_cover_same_collection_fkey/,
+    );
+    await expect(version(a, { backgroundImageId: imageOfB.id })).rejects.toThrow(
+      /GuestPageVersion_background_same_collection_fkey/,
+    );
+    await expect(
+      prisma.collection.update({ where: { id: a }, data: { imageId: imageOfB.id } }),
+    ).rejects.toThrow(/Collection_image_same_collection_fkey/);
+    // A referenced image cannot be deleted on its own (NO ACTION).
+    const own = await image(a);
+    await version(a, { coverImageId: own.id });
+    await expect(prisma.collectionImage.delete({ where: { id: own.id } })).rejects.toThrow();
+  });
+
+  test('deleting a collection with images, both versions and an image of its own cascades', async () => {
+    const id = await collection();
+    const cover = await image(id);
+    const background = await image(id, { slot: 'BACKGROUND' });
+    const mark = await image(id, { slot: 'COLLECTION_IMAGE' });
+    await version(id, { coverImageId: cover.id });
+    await version(id, { state: 'DRAFT', coverImageId: cover.id, backgroundImageId: background.id });
+    await prisma.collection.update({ where: { id }, data: { imageId: mark.id } });
+    const other = await collection();
+    await version(other);
+    await prisma.collection.delete({ where: { id } });
+    expect(await prisma.collectionImage.count()).toBe(0);
+    expect(await prisma.guestPageVersion.count()).toBe(1);
   });
 });

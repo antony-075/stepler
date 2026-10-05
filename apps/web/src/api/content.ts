@@ -28,9 +28,10 @@ export const contentCountsKey = (collectionId: string) =>
 
 export function listContent(
   collectionId: string,
-  query: { kind?: ContentKind; sort: AdminContentSort; cursor?: string },
+  query: { kind?: ContentKind; sort: AdminContentSort; cursor?: string; limit?: number },
 ) {
   const params = new URLSearchParams();
+  if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.kind !== undefined) params.set('kind', query.kind);
   if (query.sort !== 'newest') params.set('sort', query.sort);
   if (query.cursor !== undefined) params.set('cursor', query.cursor);

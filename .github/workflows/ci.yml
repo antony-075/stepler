@@ -61,8 +61,9 @@ jobs:
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
       - run: pnpm format:check
-      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video.
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg
+      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video,
+      # exiftool for location stripping (ADR 0008 addendum 2026-10-05).
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg libimage-exiftool-perl
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap
@@ -103,8 +104,9 @@ jobs:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-${{ matrix.shard }}-
-      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video.
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg
+      # The worker's media tools (spike S5): heif-dec + the libde265 plugin for HEIC, ffmpeg for video,
+      # exiftool for location stripping (ADR 0008 addendum 2026-10-05).
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg libimage-exiftool-perl
       # Integration services from docker/compose.yaml with the committed local-only credentials.
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap
@@ -140,7 +142,7 @@ jobs:
           path: .turbo/cache
           key: turbo-${{ runner.os }}-${{ github.job }}-${{ github.sha }}
           restore-keys: turbo-${{ runner.os }}-${{ github.job }}-
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libheif-examples libheif-plugin-libde265 ffmpeg libimage-exiftool-perl
       - run: docker compose -f docker/compose.yaml --env-file docker/.env.example up -d --wait
       - run: pnpm --filter @stepler/api storage:bootstrap
       - run: pnpm --filter @stepler/e2e exec playwright install --with-deps chromium

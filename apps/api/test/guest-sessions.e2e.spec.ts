@@ -1,3 +1,4 @@
+import { definitionOf } from '@stepler/templates/core';
 import type { Server } from 'node:http';
 import { Writable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
@@ -7,6 +8,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { hashToken } from '../src/auth/tokens.js';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
+import { seedPublishedCover, setPublishedPage } from './support/guest-page.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import {
@@ -37,7 +40,7 @@ describe('guest sessions [C3]', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LOG_LEVEL: 'info' }), { logDestination: logs });
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -88,8 +91,14 @@ describe('guest sessions [C3]', () => {
         id: collectionId,
         title: 'Весілля',
         description: 'Опис',
+      },
+      page: {
+        templateId: 'classic',
+        templateVersion: 1,
+        settings: definitionOf('classic')!.defaults,
         welcomeMessage: null,
         cover: null,
+        background: null,
       },
       permissions: CONTRIBUTE_ONLY,
       guest: { name: null, nameAnswered: false },
@@ -232,36 +241,31 @@ describe('guest sessions [C3]', () => {
 
   test('context carries the welcome message and the cover only once it is READY', async () => {
     const { collectionId, link } = await seedCollection(prisma, tokens);
-    await prisma.collection.update({
-      where: { id: collectionId },
-      data: { welcomeMessage: 'Дякуємо, що ви з нами!' },
-    });
-    const cover = await prisma.collectionCover.create({
-      data: { collectionId, source: 'FRAME', mimeType: 'image/jpeg', originalSizeBytes: 1000n },
-    });
+    await setPublishedPage(prisma, collectionId, { welcomeMessage: 'Дякуємо, що ви з нами!' });
+    const cover = await seedPublishedCover(prisma, collectionId);
     const cookie = await joinAsGuest(server(), collectionId, link.token);
     const pending = guestContextSchema.parse(
       (await context(collectionId, cookie).expect(200)).body,
     );
-    expect(pending.collection).toMatchObject({
+    expect(pending.page).toMatchObject({
       welcomeMessage: 'Дякуємо, що ви з нами!',
       cover: null,
     });
 
-    await prisma.collectionCover.update({
+    await prisma.collectionImage.update({
       where: { id: cover.id },
       data: { status: 'READY', width: 4000, height: 3000, derivedSizeBytes: 500n },
     });
     const res = await context(collectionId, cookie).expect(200);
     const ready = guestContextSchema.parse(res.body);
-    expect(ready.collection.cover).toMatchObject({ width: 4000, height: 3000 });
-    expect(ready.collection.cover?.thumbnailUrl).toMatch(/^https?:\/\//);
-    expect(ready.collection.cover?.previewUrl).toMatch(/^https?:\/\//);
+    expect(ready.page.cover).toMatchObject({ width: 4000, height: 3000 });
+    expect(ready.page.cover?.thumbnailUrl).toMatch(/^https?:\/\//);
+    expect(ready.page.cover?.previewUrl).toMatch(/^https?:\/\//);
     // Never a status, a source or the frame it came from (the strict schema would also refuse).
     expect(res.text).not.toMatch(/"status"|"source"|ContentItemId/);
     // The exchange answers the same context.
     const again = guestContextSchema.parse((await exchange(collectionId, link.token, cookie)).body);
-    expect(again.collection.cover).toEqual(ready.collection.cover);
+    expect(again.page.cover).toEqual(ready.page.cover);
   });
 
   test('context counts only non-deleted items, and only with the shared gallery', async () => {
@@ -333,7 +337,7 @@ describe('guest session exchange rate limit', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '2' }));
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 

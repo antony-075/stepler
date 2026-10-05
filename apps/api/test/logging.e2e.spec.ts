@@ -4,6 +4,7 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
+import { listenOnLoopback } from './support/app.js';
 import { testEnv } from './support/env.js';
 
 /** Collects everything pino writes so tests can assert on the raw log output. */
@@ -22,7 +23,7 @@ describe('request logging', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LOG_LEVEL: 'info' }), { logDestination: logs });
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

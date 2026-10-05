@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { extensionOf, FILE_TYPES } from '@stepler/contracts';
-import type { ContentKind, MediaRole } from '../generated/prisma/client.js';
+import type { ContentKind, MediaRole, ProcessingStatus } from '../generated/prisma/client.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../storage/object-storage.js';
 import type { ContentMediaUrls, OriginalUrls } from './content-dto.js';
@@ -27,7 +27,28 @@ export interface ItemWithMedia {
   kind: ContentKind;
   frameNo: number;
   originalFilename: string | null;
+  processingStatus: ProcessingStatus;
+  sanitizedAt: Date | null;
+  sanitizeFailedAt: Date | null;
   mediaObjects?: readonly MediaRow[];
+}
+
+/** Who asks for an original: the collection's admin, or a guest. */
+export type OriginalViewer = 'admin' | 'guest';
+
+/**
+ * Whether the original may be handed out (ADR 0008 addendum 2026-10-05). Documents always.
+ * A photo or video only once the worker has removed its location metadata (`sanitizedAt`):
+ * before that nobody gets it. One the worker gave up on (`sanitizeFailedAt`, or `FAILED` from
+ * before stripping existed) stays the admin's: they own the collection and may need the file;
+ * guests never get it.
+ */
+export function canServeOriginal(item: ItemWithMedia, viewer: OriginalViewer): boolean {
+  if (item.kind !== 'PHOTO' && item.kind !== 'VIDEO') return true;
+  if (item.sanitizedAt !== null) return true;
+  return (
+    viewer === 'admin' && (item.sanitizeFailedAt !== null || item.processingStatus === 'FAILED')
+  );
 }
 
 /** The `include` that brings the media rows with content rows. */
@@ -88,7 +109,10 @@ const EXT_BY_MIME = new Map<string, string>([
  * `stepler-087.jpg`: the frame number and the extension of the verified type (a JPEG named
  * `.png` downloads as `.jpg`), else of the name, else `bin`.
  */
-export function fallbackFilename(item: ItemWithMedia, mimeType: string): string {
+export function fallbackFilename(
+  item: Pick<ItemWithMedia, 'frameNo' | 'originalFilename'>,
+  mimeType: string,
+): string {
   const fromName = extensionOf(item.originalFilename ?? '');
   const known = FILE_TYPES.some((type) => type.ext === fromName);
   const ext = EXT_BY_MIME.get(mimeType) ?? (known ? fromName : 'bin');
@@ -124,17 +148,19 @@ export class MediaUrls {
 
   /**
    * The original, to view (photos and videos only: a document is never opened inline from our
-   * storage origin) and to download (an attachment for every file). The download carries the
-   * original name and frame number only for the admin and the guest who added it (`own`, the
-   * default); for anyone else's file it is a neutral `stepler.<ext>` (the disposition is part of
-   * the signed URL, which the guest can read).
+   * storage origin) and to download (an attachment for every file), only when `canServeOriginal`
+   * allows it for `viewer`. The download carries the original name and frame number only for the
+   * admin and the guest who added it (`own`, the default); for anyone else's file it is a neutral
+   * `stepler.<ext>` (the disposition is part of the signed URL, which the guest can read).
    */
   async original(
     item: ItemWithMedia,
-    { own = true, now = new Date() }: { own?: boolean; now?: Date } = {},
+    { viewer, own = true, now = new Date() }: { viewer: OriginalViewer; own?: boolean; now?: Date },
   ): Promise<OriginalUrls> {
     const original = mediaOf(item, 'ORIGINAL');
-    if (original === undefined) return { originalUrl: null, downloadUrl: null };
+    if (original === undefined || !canServeOriginal(item, viewer)) {
+      return { originalUrl: null, downloadUrl: null };
+    }
     const viewable = item.kind === 'PHOTO' || item.kind === 'VIDEO';
     const [originalUrl, downloadUrl] = await Promise.all([
       viewable ? this.inline(item, 'ORIGINAL', now) : Promise.resolve(null),

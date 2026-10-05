@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { GUEST_NAME_MAX_CHARS, codePointLength, guestNameSchema } from '@stepler/contracts';
+import type { TemplateSurfaceProps } from '@stepler/templates/react';
 import { Button } from '@stepler/ui/components/button';
 import { Field } from '@stepler/ui/components/field';
 import { Input } from '@stepler/ui/components/input';
@@ -42,7 +43,10 @@ export function NamePrompt({
   defaultName,
   mode,
   onDone,
+  surface,
 }: {
+  /** The page's template on the sheet (owner remark 112). */
+  surface?: TemplateSurfaceProps;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultName: string | null;
@@ -58,7 +62,7 @@ export function NamePrompt({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom">
+      <SheetContent side="bottom" {...surface}>
         <SheetHeader closeLabel={t('close')} className="bg-popover">
           <SheetTitle>{mode === 'first' ? t('title') : t('editTitle')}</SheetTitle>
         </SheetHeader>

@@ -14,16 +14,22 @@ import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
-import { PurgeCoverHandler } from '../src/worker/handlers/purge-cover.handler.js';
-import { coverKey, coverPrefix } from '../src/collections/cover-keys.js';
+import {
+  LegacyPurgeCoverHandler,
+  PurgeCollectionImageHandler,
+} from '../src/worker/handlers/purge-collection-image.handler.js';
+import { imageKey, imagePrefix } from '../src/images/image-keys.js';
 import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys, putObject } from './support/storage.js';
+
+const coverPrefix = (collectionId: string, id: string) => imagePrefix(collectionId, 'COVER', id);
 
 const apiEnv = testEnv();
 const workerEnv = (overrides: Record<string, string> = {}): WorkerEnv =>
@@ -100,7 +106,7 @@ async function addSession(collectionId: string, linkId: string, lastSeenAt = new
 describe('worker handlers', () => {
   beforeAll(async () => {
     app = await createApp(apiEnv);
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
     await boss.start();
   });
@@ -165,14 +171,19 @@ describe('worker handlers', () => {
     });
   });
 
-  describe('cover.purge', () => {
-    const handler = () => new PurgeCoverHandler(prisma, storage, env);
+  describe('collection-image.purge', () => {
+    const handler = () => new PurgeCollectionImageHandler(prisma, storage, env);
 
-    /** A READY cover with its three objects; `live: false` deletes the row as a replace would. */
-    async function cover(collectionId: string, live: boolean) {
-      const row = await prisma.collectionCover.create({
+    /** A READY image with its objects; `live: false` deletes the row as garbage collection would. */
+    async function image(
+      collectionId: string,
+      live: boolean,
+      slot: 'COVER' | 'BACKGROUND' | 'COLLECTION_IMAGE' = 'COVER',
+    ) {
+      const row = await prisma.collectionImage.create({
         data: {
           collectionId,
+          slot,
           status: 'READY',
           source: 'UPLOAD',
           mimeType: 'image/jpeg',
@@ -183,48 +194,71 @@ describe('worker handlers', () => {
         },
       });
       for (const role of ['original', 'thumbnail', 'preview'] as const) {
-        await putObject(storage, coverKey(collectionId, row.id, role));
+        await putObject(storage, imageKey(collectionId, slot, row.id, role));
       }
-      if (!live) await prisma.collectionCover.delete({ where: { id: row.id } });
+      if (!live) await prisma.collectionImage.delete({ where: { id: row.id } });
       return row.id;
     }
 
-    test('removes the prefix of a cover whose row is gone; a second run succeeds', async () => {
+    test('removes the prefix of an image whose row is gone; a second run succeeds', async () => {
       const { collectionId } = await seed();
-      const gone = await cover(collectionId, false);
-      const live = await cover(collectionId, true);
-      await handler().handle({ collectionId, coverId: gone });
-      expect(await allKeys(storage, coverPrefix(collectionId, gone))).toEqual([]);
-      expect(await allKeys(storage, coverPrefix(collectionId, live))).toHaveLength(3);
-      await handler().handle({ collectionId, coverId: gone });
+      const gone = await image(collectionId, false, 'BACKGROUND');
+      const live = await image(collectionId, true, 'BACKGROUND');
+      await handler().handle({ collectionId, imageId: gone, slot: 'BACKGROUND' });
+      expect(await allKeys(storage, imagePrefix(collectionId, 'BACKGROUND', gone))).toEqual([]);
+      expect(await allKeys(storage, imagePrefix(collectionId, 'BACKGROUND', live))).toHaveLength(3);
+      await handler().handle({ collectionId, imageId: gone, slot: 'BACKGROUND' });
     });
 
-    test('never purges a live cover', async () => {
+    test('Review Focus 1: never purges an image a version still references (its row lives)', async () => {
       const { collectionId } = await seed();
-      const live = await cover(collectionId, true);
-      await handler().handle({ collectionId, coverId: live });
-      expect(await allKeys(storage, coverPrefix(collectionId, live))).toHaveLength(3);
-      expect(await prisma.collectionCover.count({ where: { id: live } })).toBe(1);
+      const kept = await image(collectionId, true);
+      await prisma.guestPageVersion.create({
+        data: {
+          collectionId,
+          state: 'DRAFT',
+          templateId: 'classic',
+          templateVersion: 1,
+          settings: {},
+          coverImageId: kept,
+        },
+      });
+      await handler().handle({ collectionId, imageId: kept, slot: 'COVER' });
+      expect(await allKeys(storage, coverPrefix(collectionId, kept))).toHaveLength(3);
+      expect(await prisma.collectionImage.count({ where: { id: kept } })).toBe(1);
     });
 
     test('upper-case ids in the payload still delete the (lowercase) keys', async () => {
       const { collectionId } = await seed();
-      const gone = await cover(collectionId, false);
+      const gone = await image(collectionId, false, 'COLLECTION_IMAGE');
       await handler().handle({
         collectionId: collectionId.toUpperCase(),
-        coverId: gone.toUpperCase(),
+        imageId: gone.toUpperCase(),
+        slot: 'COLLECTION_IMAGE',
       });
+      expect(await allKeys(storage, imagePrefix(collectionId, 'COLLECTION_IMAGE', gone))).toEqual(
+        [],
+      );
+    });
+
+    test('a legacy cover.purge job ({ coverId }) purges a COVER image', async () => {
+      const { collectionId } = await seed();
+      const gone = await image(collectionId, false);
+      const legacy = new LegacyPurgeCoverHandler(handler());
+      expect(legacy.name).toBe('cover.purge');
+      await legacy.handle({ collectionId, coverId: gone });
       expect(await allKeys(storage, coverPrefix(collectionId, gone))).toEqual([]);
     });
 
-    test('Review Focus 1: the collection purge removes the cover with everything else', async () => {
+    test('Review Focus 1: the collection purge removes the images with everything else', async () => {
       const { collectionId } = await seed({ status: 'DELETING' });
-      await cover(collectionId, true);
+      await image(collectionId, true);
+      await image(collectionId, true, 'BACKGROUND');
       await putObject(storage, `collections/${collectionId}/uploads/u1/original`);
       await new PurgeCollectionHandler(prisma, storage, env).handle({ collectionId });
       expect(await allKeys(storage, `collections/${collectionId}/`)).toEqual([]);
       expect(await prisma.collection.count({ where: { id: collectionId } })).toBe(0);
-      expect(await prisma.collectionCover.count({ where: { collectionId } })).toBe(0);
+      expect(await prisma.collectionImage.count({ where: { collectionId } })).toBe(0);
     });
   });
 
@@ -321,6 +355,106 @@ describe('worker handlers', () => {
       expect(await status(stuck.id)).toBe('FAILED');
       expect(await status(queued.id)).toBe('PENDING');
       expect(await status(recent.id)).toBe('PENDING');
+    });
+
+    test('fails admin images stuck PENDING for an hour with no rendition job left (deploy window)', async () => {
+      const { collectionId } = await seed();
+      const hourAgo = new Date(Date.now() - 2 * 3600_000);
+      const image = (createdAt: Date, slot: 'COVER' | 'BACKGROUND' = 'COVER') =>
+        prisma.collectionImage.create({
+          data: {
+            collectionId,
+            slot,
+            source: 'UPLOAD',
+            mimeType: 'image/jpeg',
+            originalSizeBytes: 1000n,
+            createdAt,
+          },
+        });
+      const lost = await image(hourAgo, 'BACKGROUND');
+      const queued = await image(hourAgo);
+      const legacyQueued = await image(hourAgo);
+      const recent = await image(new Date());
+      await prisma.$transaction(async (tx) => {
+        await queue.enqueue(tx, 'media.collection-image', { collectionId, imageId: queued.id });
+        await queue.enqueue(tx, 'media.cover-derivatives', {
+          collectionId,
+          coverId: legacyQueued.id,
+        });
+      });
+      await sweep().handle();
+      const status = async (id: string) =>
+        (await prisma.collectionImage.findUniqueOrThrow({ where: { id } })).status;
+      expect(await status(lost.id)).toBe('FAILED');
+      expect(await status(queued.id)).toBe('PENDING');
+      expect(await status(legacyQueued.id)).toBe('PENDING');
+      expect(await status(recent.id)).toBe('PENDING');
+    });
+
+    test('backfill: queues the media job of READY photos, videos and images not sanitised yet', async () => {
+      const { collectionId } = await seed();
+      const deleting = await seed({ status: 'DELETING' });
+      const media = (
+        frameNo: number,
+        kind: 'PHOTO' | 'VIDEO' | 'DOCUMENT',
+        data: {
+          sanitizedAt?: Date;
+          sanitizeFailedAt?: Date;
+          processingStatus?: 'PENDING' | 'READY' | 'FAILED';
+        } = {},
+        inCollection = collectionId,
+      ) =>
+        prisma.contentItem.create({
+          data: {
+            collectionId: inCollection,
+            frameNo,
+            kind,
+            processingStatus: kind === 'DOCUMENT' ? 'NOT_REQUIRED' : 'READY',
+            ...data,
+          },
+        });
+      const oldPhoto = await media(1, 'PHOTO');
+      const oldVideo = await media(2, 'VIDEO');
+      await media(3, 'PHOTO', { sanitizedAt: new Date() });
+      await media(8, 'VIDEO', { sanitizeFailedAt: new Date() }); // given up: admin-only
+      await media(4, 'PHOTO', { processingStatus: 'PENDING' }); // its own job sanitises it
+      await media(5, 'PHOTO', { processingStatus: 'FAILED' }); // admin-only, never retried
+      await media(6, 'DOCUMENT');
+      await media(1, 'PHOTO', {}, deleting.collectionId);
+      await prisma.contentItem.update({
+        where: { id: (await media(7, 'PHOTO')).id },
+        data: { deletedAt: new Date() },
+      });
+      const image = (
+        data: { sanitizedAt?: Date; sanitizeFailedAt?: Date; status?: 'READY' | 'PENDING' } = {},
+      ) =>
+        prisma.collectionImage.create({
+          data: {
+            collectionId,
+            slot: 'COVER',
+            source: 'UPLOAD',
+            mimeType: 'image/jpeg',
+            originalSizeBytes: 1000n,
+            status: 'READY',
+            width: 10,
+            height: 10,
+            ...data,
+          },
+        });
+      const oldImage = await image();
+      await image({ sanitizedAt: new Date() });
+      await image({ sanitizeFailedAt: new Date() });
+
+      await sweep().handle();
+      await sweep().handle();
+
+      const data = async (name: Parameters<typeof queuedJobs>[1]) =>
+        (await queuedJobs(prisma, name)).map((job) => job.data);
+      expect(await data('media.image-derivatives')).toEqual([{ contentItemId: oldPhoto.id }]);
+      expect(await data('media.video-poster')).toEqual([{ contentItemId: oldVideo.id }]);
+      expect(await data('media.collection-image')).toEqual([
+        { collectionId, imageId: oldImage.id },
+      ]);
     });
 
     test('re-enqueues purges for old DELETING collections and old deleted items only', async () => {

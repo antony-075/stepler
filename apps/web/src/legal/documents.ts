@@ -22,6 +22,23 @@ export function legalDocumentFile(document: LegalDocumentKey, locale: Locale): s
   return path.join(LEGAL_CONTENT_DIR, `${LEGAL_SLUGS[document]}.${locale}.${version}.md`);
 }
 
+/** Written by the owner/lawyer in the texts; filled from `LEGAL_CONTACT_EMAIL` at render time. */
+export const CONTACT_EMAIL_PLACEHOLDER = '[LEGAL_CONTACT_EMAIL]';
+
+/**
+ * Fills the deployment-specific placeholders of a text. An unset address leaves the placeholder
+ * as written, so a draft visibly lacks it (production cannot start without it, `readiness.ts`).
+ * The address is the env's validated e-mail, so it adds no Markdown or HTML of its own; GFM turns
+ * it into a `mailto:` link.
+ */
+export function fillLegalPlaceholders(
+  markdown: string,
+  { contactEmail }: { contactEmail: string | undefined },
+): string {
+  if (contactEmail === undefined) return markdown;
+  return markdown.replaceAll(CONTACT_EMAIL_PLACEHOLDER, contactEmail);
+}
+
 /**
  * The current version of a document in a locale, rendered to HTML. The files are repo-controlled
  * content (a unit test rejects raw HTML in them), so the page may inject the result as is.
@@ -29,10 +46,14 @@ export function legalDocumentFile(document: LegalDocumentKey, locale: Locale): s
 export async function loadLegalDocument(
   document: LegalDocumentKey,
   locale: Locale,
+  contactEmail?: string,
 ): Promise<{ meta: LegalDocumentVersion; html: string }> {
   const markdown = await readFile(legalDocumentFile(document, locale), 'utf8');
   return {
     meta: currentLegalVersion(document),
-    html: marked.parse(markdown, { gfm: true, async: false }),
+    html: marked.parse(fillLegalPlaceholders(markdown, { contactEmail }), {
+      gfm: true,
+      async: false,
+    }),
   };
 }

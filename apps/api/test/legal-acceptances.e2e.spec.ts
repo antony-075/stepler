@@ -5,6 +5,7 @@ import { currentLegalVersion, LEGAL_DOCUMENTS, meResponseSchema } from '@stepler
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -27,7 +28,7 @@ describe('legal acceptance (ADR 0016)', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ OPERATOR_EMAILS: OPERATOR }));
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

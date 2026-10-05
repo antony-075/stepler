@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { themeSettingsSchema } from './guest-page.js';
 import { NO_CONTROL_CHARACTERS } from './text.js';
 
 /** `REVOKED` is terminal: a revoked link never works again and its token is no longer stored. */
@@ -122,3 +123,18 @@ export const resolveGuestLinkResponseSchema = z
   })
   .strict();
 export type ResolveGuestLinkResponse = z.infer<typeof resolveGuestLinkResponseSchema>;
+
+/**
+ * `POST /api/v1/guest/links/theme`: the look of a link's published guest page, so the page can be
+ * drawn in its template from the first byte (loading, and the paused, closed and revoked states;
+ * owner remarks 99, 100). The look only: no title, no ids, no permissions. Answered for a link in
+ * any state while its collection exists; `404` for an unknown token or a collection gone.
+ */
+export const guestLinkThemeResponseSchema = z
+  .object({
+    templateId: z.string().min(1),
+    templateVersion: z.number().int().min(1),
+    settings: themeSettingsSchema,
+  })
+  .strict();
+export type GuestLinkThemeResponse = z.infer<typeof guestLinkThemeResponseSchema>;

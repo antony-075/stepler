@@ -26,6 +26,11 @@ import { legalDocumentFromSlug } from '@/legal/slugs';
 //   soft fills vanish on paper. Header, language switch and footer are hidden in print.
 // - «Контакти» closes the document under a hairline: the one mailto: for privacy requests and
 //   complaints, omitted when LEGAL_CONTACT_EMAIL is unset (possible only with drafts allowed).
+//   The same address fills the texts' `[LEGAL_CONTACT_EMAIL]` placeholders (left as written
+//   when unset).
+// - The way back (owner 2026-10-05): every legal link opens in a new tab, and the wordmark leads
+//   to `/`, which sends a signed-in admin on to `/app`. The footer leaves the current document
+//   out rather than link to itself.
 
 const TITLE_KEY = { TERMS: 'terms.title', PRIVACY: 'privacy.title' } as const;
 const DESCRIPTION_KEY = { TERMS: 'terms.description', PRIVACY: 'privacy.description' } as const;
@@ -49,11 +54,11 @@ export default async function LegalDocumentPage({ params }: { params: Params }) 
   const document = resolveDocument((await params).document);
   const rawLocale = await getLocale();
   const locale = isLocale(rawLocale) ? rawLocale : DEFAULT_LOCALE;
+  const contactEmail = getWebEnv().LEGAL_CONTACT_EMAIL;
   const [{ meta, html }, t] = await Promise.all([
-    loadLegalDocument(document, locale),
+    loadLegalDocument(document, locale, contactEmail),
     getTranslations('legal'),
   ]);
-  const contactEmail = getWebEnv().LEGAL_CONTACT_EMAIL;
   return (
     <div className="flex min-h-dvh flex-col bg-background print:bg-white">
       <SiteHeader>
@@ -73,7 +78,7 @@ export default async function LegalDocumentPage({ params }: { params: Params }) 
         </div>
       </main>
       <div className="print:hidden">
-        <SiteFooter />
+        <SiteFooter currentDocument={document} />
       </div>
     </div>
   );

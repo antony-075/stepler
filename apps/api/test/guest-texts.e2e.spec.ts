@@ -7,6 +7,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import {
@@ -38,7 +39,7 @@ describe('guest names and texts', () => {
       testEnv({ LOG_LEVEL: 'info', LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR: '30' }),
       { logDestination: logs },
     );
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -282,7 +283,7 @@ describe('guest text rate limit', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR: '2' }));
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -319,7 +320,7 @@ describe('guest text and read limits per IP', () => {
     app = await createApp(
       testEnv({ LIMIT_TEXTS_PER_IP_PER_MINUTE: '2', LIMIT_GUEST_READS_PER_IP_PER_MINUTE: '2' }),
     );
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 

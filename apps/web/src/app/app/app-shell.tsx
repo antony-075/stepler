@@ -138,7 +138,7 @@ export function AppShell({
         </aside>
         <div className="flex min-h-dvh min-w-0 flex-col">
           <header className="sticky top-0 z-(--z-sticky) border-b bg-background">
-            <div className="stepler-container flex h-14 items-center gap-2">
+            <div className="admin-container flex h-14 items-center gap-2">
               <MobileNav />
               <div className="ml-auto flex min-w-0 justify-end">
                 <AccountBlock email={me.data.email} displayName={me.data.displayName} />
@@ -218,7 +218,7 @@ function MobileNav() {
             <SheetTitle className="sr-only">{t('label')}</SheetTitle>
             <BrandLink />
           </SheetHeader>
-          <SheetBody className="p-3">
+          <SheetBody className="flex flex-col p-3">
             <AdminNav onNavigate={() => setOpen(false)} />
           </SheetBody>
         </SheetContent>

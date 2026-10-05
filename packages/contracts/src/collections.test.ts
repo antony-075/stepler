@@ -72,18 +72,10 @@ describe('updateCollectionRequestSchema', () => {
     expect(updateCollectionRequestSchema.safeParse({ status: 'ARCHIVED' }).success).toBe(false);
   });
 
-  test('the welcome message: trimmed, one paragraph of up to 160 code points, null clears it', () => {
-    expect(updateCollectionRequestSchema.parse({ welcomeMessage: null })).toEqual({
-      welcomeMessage: null,
-    });
-    expect(updateCollectionRequestSchema.parse({ welcomeMessage: ' Вітаємо! ' })).toEqual({
-      welcomeMessage: 'Вітаємо!',
-    });
-    expect(
-      updateCollectionRequestSchema.safeParse({ welcomeMessage: '😀'.repeat(161) }).success,
-    ).toBe(false);
-    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: 'a\nb' }).success).toBe(false);
-    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: '' }).success).toBe(false);
+  test('the welcome message is not part of it any more (the guest page draft has it)', () => {
+    expect(updateCollectionRequestSchema.safeParse({ welcomeMessage: 'Вітаємо!' }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -122,6 +114,7 @@ describe('collectionSchema', () => {
     lastContentAt: null,
     welcomeMessage: null,
     cover: null,
+    image: null,
   };
 
   test('accepts a collection', () => {
@@ -133,14 +126,19 @@ describe('collectionSchema', () => {
       ...collection,
       welcomeMessage: 'Вітаємо!',
       cover: {
+        id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
         status: 'READY',
         thumbnailUrl: 'https://storage.example.com/t.webp',
         previewUrl: 'https://storage.example.com/p.webp',
+        largeUrl: null,
         width: 4000,
         height: 3000,
       },
     };
     expect(collectionSchema.parse(withCover)).toEqual(withCover);
+    const withoutImage: Partial<typeof collection> = { ...collection };
+    delete withoutImage.image;
+    expect(collectionSchema.safeParse(withoutImage).success).toBe(false);
     const withoutCover: Partial<typeof collection> = { ...collection };
     delete withoutCover.cover;
     expect(collectionSchema.safeParse(withoutCover).success).toBe(false);

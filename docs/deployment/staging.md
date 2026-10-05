@@ -65,6 +65,8 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
 
 ### Release notes
 
+- **Guest page templates storage (PR I, ADR 0017).** The migration `20261005072838_guest_page_templates` copies every cover into `CollectionImage` (same ids) and every collection's welcome into a published `GuestPageVersion`, and the API and worker read only the new tables from this release. A worker of the old version would process cover jobs against the old table while the new API writes the new one, so for this release: **suspend `stepler-staging-worker`** (Render → the service → Suspend), then deploy `stepler-staging-api` (its pre-deploy applies the migration), then **resume and deploy** `stepler-staging-worker`, then `stepler-staging` (web). Jobs queued meanwhile wait in PostgreSQL and run once the new worker starts (the slice 8a job names stay served). An image whose job was lost anyway is marked `FAILED` by the hourly sweep after an hour, and the owner can set it again. Check afterwards: a collection with a cover still shows it on the dashboard and the guest page, and a new cover set in «Гостьова сторінка» becomes ready.
+
 - **Legal acceptance (slice 10, PR F2, ADR 0016).** From this release `GET /auth/methods` returns `legal`, `POST /auth/magic-link` requires it and `GET /auth/google/start` requires `terms`/`privacy`. Render deploys `stepler-staging` (web) and `stepler-staging-api` independently, and both sides read `/auth/methods` with a strict schema, so **in either order** the sign-in card shows «Вхід тимчасово недоступний. Спробуйте пізніше.» until both services run the new version (old web: the new `legal` field is unknown; new web: the field is missing). Nothing is written in that window. Deploy them back to back (Render → each service → Manual Deploy if needed) and check `/login` afterwards; on staging the short window is acceptable. Accounts created before this release see `/accept-terms` once after signing in.
 
 ## 7. Verify staging
@@ -79,6 +81,7 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
   3. The same test from another network must still get 400, not 429: clients do not share one bucket. On a phone on mobile data, opening `https://<staging-host>/auth/verify?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` must show "link invalid", not "too many attempts".
   4. Remove the override afterwards.
 - The Render logs contain request ids but no cookies, tokens or email addresses.
+- **Location stripping** (ADR 0008 addendum 2026-10-05; after promoting it, with the worker image rebuilt): run step 8 of the staging smoke checklist in `docs/development/README.md`, including a MOV of about 2 GB, which needs about 4 GB of temp disk on the worker. Record the result (disk, time, R2 `If-Match`) in the addendum.
 
 ## 8. Background worker (before promoting Phase 4 PR B to `stage`)
 

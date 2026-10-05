@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
-import type { ContentKind, MediaRole } from '../../generated/prisma/client.js';
+import type { ContentKind, MediaRole, ProcessingStatus } from '../../generated/prisma/client.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../../storage/object-storage.js';
 import { derivedPrefix } from '../storage-purge.js';
 import type { Rendition } from './images.js';
@@ -22,6 +22,10 @@ export interface MediaSource {
   collectionId: string;
   storageKey: string;
   mimeType: string;
+  /** `READY` when the job only sanitises a legacy original (backfill): its previews exist. */
+  processingStatus: ProcessingStatus;
+  sanitizedAt: Date | null;
+  sanitizeFailedAt: Date | null;
 }
 
 export interface OriginalFacts {
@@ -50,12 +54,22 @@ export class DerivativeStore {
       select: {
         id: true,
         collectionId: true,
+        processingStatus: true,
+        sanitizedAt: true,
+        sanitizeFailedAt: true,
         mediaObjects: { where: { role: 'ORIGINAL' }, select: { storageKey: true, mimeType: true } },
       },
     });
     const original = item?.mediaObjects[0];
     if (item === null || original === undefined) return null;
-    return { id: item.id, collectionId: item.collectionId, ...original };
+    return {
+      id: item.id,
+      collectionId: item.collectionId,
+      processingStatus: item.processingStatus,
+      sanitizedAt: item.sanitizedAt,
+      sanitizeFailedAt: item.sanitizeFailedAt,
+      ...original,
+    };
   }
 
   /** Returns `false` when the item was deleted meanwhile (nothing recorded, objects removed). */

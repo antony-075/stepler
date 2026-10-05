@@ -13,6 +13,8 @@ describe('job names', () => {
       'media.video-poster': true,
       'media.cover-derivatives': true,
       'cover.purge': true,
+      'media.collection-image': true,
+      'collection-image.purge': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>T3 · Журнал, телефон</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400..700;1,400..700&amp;family=Lora:ital,wght@0,400..700;1,400..700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7A2E3A}a:hover{color:#2A211B}
+.t3-btn:hover{background:#65242F}
+.t3-out:hover{background:rgba(122,46,58,0.07)}
+.t3-lang:hover{background:rgba(42,33,27,0.06)}
+.t3-demo:hover{color:#FFFFFF}
+.t3-btn:focus-visible,.t3-out:focus-visible,.t3-lang:focus-visible,.t3-demo:focus-visible,a:focus-visible{outline:2px solid #7A2E3A;outline-offset:2px}
+.t3-demo:focus-visible{outline-color:#F1EADF}
+.ph{position:relative;overflow:hidden}
+.ph::after{content:"";position:absolute;inset:0;background:radial-gradient(110% 70% at 22% 12%,rgba(255,255,255,0.3),rgba(255,255,255,0) 62%);pointer-events:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F1EADF; color: #2A211B; font-family: 'Lora', 'PT Serif', Georgia, 'Times New Roman', serif; display: flex; flex-direction: column">
+
+  <div role="group" aria-label="Стан макета" style="flex-shrink: 0; height: 40px; background: #2A211B; display: flex; align-items: center; justify-content: center; gap: 4px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px">
+    <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ true }}">
+      <button type="button" class="t3-demo" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #F1EADF; color: #2A211B; font: inherit; font-weight: 600; cursor: pointer">Перший візит</button>
+      <button type="button" class="t3-demo" aria-pressed="false" onClick="{{ showAfter }}" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #CFC4B6; font: inherit; cursor: pointer">Після завантаження</button>
+    </sc-if>
+    <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}">
+      <button type="button" class="t3-demo" aria-pressed="false" onClick="{{ showFirst }}" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: #CFC4B6; font: inherit; cursor: pointer">Перший візит</button>
+      <button type="button" class="t3-demo" aria-pressed="true" style="height: 30px; padding: 0 12px; border: 0; border-radius: 999px; background: #F1EADF; color: #2A211B; font: inherit; font-weight: 600; cursor: pointer">Після завантаження</button>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ true }}">
+    <main style="flex-grow: 1; min-height: 0; padding: 0 20px; display: flex; flex-direction: column; align-items: center; text-align: center">
+      <header style="align-self: stretch; height: 52px; display: flex; align-items: center; justify-content: flex-end">
+        <button type="button" class="t3-lang" aria-label="Мова: українська. Змінити мову" style="height: 44px; padding: 0 10px; margin-right: -10px; border: 0; border-radius: 4px; background: transparent; color: #2A211B; font: inherit; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer">
+          <svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><rect width="18" height="6" rx="1" fill="#0057B7"></rect><rect y="6" width="18" height="6" rx="1" fill="#FFD700"></rect></svg>
+          Українська
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </header>
+
+      <h1 style="margin: 4px 0 0; font-family: 'Cormorant', 'Playfair Display', Georgia, serif; font-size: 42px; line-height: 1.02; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance">Весілля Олі<br>та&#160;Тараса</h1>
+      <div aria-hidden="true" style="margin-top: 14px; display: flex; align-items: center; gap: 8px">
+        <span style="width: 40px; height: 1px; background: #B9A894"></span>
+        <span style="width: 5px; height: 5px; background: #7A2E3A; transform: rotate(45deg)"></span>
+        <span style="width: 40px; height: 1px; background: #B9A894"></span>
+      </div>
+      <p style="margin: 14px 0 0; max-width: 300px; font-size: 16px; line-height: 1.55; font-style: italic; color: #3D3129; text-wrap: pretty">Дякуємо, що ви з нами! Додайте свої фото й відео з цього вечора.</p>
+      <p style="margin: 6px 0 0; font-size: 13px; color: #6A5A4E; font-variant-numeric: oldstyle-nums">12 кадрів</p>
+
+      <figure style="margin: 16px 0 0; padding: 10px; background: #FAF6EF; box-shadow: 0 0 0 1px #DCCFBE, 0 14px 28px -18px rgba(42, 33, 27, 0.45)">
+        <div class="ph" role="img" aria-label="Обкладинка" style="width: 210px; height: 280px; background: linear-gradient(176deg, #C7AE98 0%, #9B7966 52%, #64493B 100%)">
+          <span aria-hidden="true" style="position: absolute; z-index: 1; right: 8px; bottom: 6px; font-size: 10px; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.72)">IMG_2041</span>
+        </div>
+      </figure>
+
+      <div style="align-self: stretch; margin-top: 20px; display: flex; flex-direction: column; gap: 8px">
+        <button type="button" class="t3-btn" onClick="{{ showAfter }}" style="height: 52px; border: 0; border-radius: 2px; background: #7A2E3A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Додати фото й відео
+        </button>
+        <button type="button" class="t3-out" style="height: 48px; border: 1px solid #7A2E3A; border-radius: 2px; background: transparent; color: #7A2E3A; font: inherit; font-size: 16px; font-style: italic; display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>Написати побажання
+        </button>
+      </div>
+      <p style="margin: 10px 0 0; max-width: 330px; font-size: 12.5px; line-height: 1.45; color: #6A5A4E">Додаючи вміст, ви погоджуєтеся з <a href="#">Умовами використання</a> і <a href="#">Політикою конфіденційності</a>.</p>
+    </main>
+  </sc-if>
+
+  <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}">
+    <main style="flex-grow: 1; min-height: 0; padding: 0 16px; display: flex; flex-direction: column">
+      <header style="height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #CDBFAE">
+        <span aria-hidden="true" style="flex-grow: 1; height: 1px"></span>
+        <p style="margin: 0; font-family: 'Cormorant', Georgia, serif; font-size: 19px; font-style: italic; font-weight: 500; white-space: nowrap">Весілля Олі та Тараса</p>
+        <span aria-hidden="true" style="flex-grow: 1; height: 1px"></span>
+      </header>
+
+      <p role="status" style="margin: 14px 0 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: #3D3129">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F6B4A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+        Додано 6 кадрів. Дякуємо!
+      </p>
+
+      <section aria-labelledby="t3p-mine" style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: baseline; gap: 10px">
+          <h2 id="t3p-mine" style="margin: 0; font-family: 'Cormorant', Georgia, serif; font-size: 30px; line-height: 1.1; font-weight: 600">Ваші кадри</h2>
+          <span aria-hidden="true" style="flex-grow: 1; height: 1px; background: #CDBFAE; transform: translateY(-6px)"></span>
+          <span style="font-size: 13px; color: #6A5A4E">6 кадрів</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <div class="ph" role="img" aria-label="Ваше фото, кадр 18" style="grid-column: 1 / -1; aspect-ratio: 4 / 3; border-radius: 8px; background: linear-gradient(165deg, #CDB9A3 0%, #A88E76 60%, #8A6F5A 100%)">
+            <span aria-hidden="true" style="position: absolute; z-index: 1; left: 10px; top: 8px; font-size: 10px; letter-spacing: 0.04em; color: rgba(255, 255, 255, 0.75)">IMG_2088</span>
+            <span style="position: absolute; z-index: 1; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#018</span>
+          </div>
+          <div class="ph" role="img" aria-label="Ваше відео, кадр 17, 12 секунд" style="aspect-ratio: 1 / 1; border-radius: 8px; background: linear-gradient(160deg, #9F8A86 0%, #6F5B57 100%)">
+            <span style="position: absolute; z-index: 1; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#017</span>
+            <span style="position: absolute; z-index: 1; right: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: lining-nums tabular-nums"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 3 21 12 6 21 6 3"></polygon></svg>0:12</span>
+          </div>
+          <figure style="margin: 0; position: relative; aspect-ratio: 1 / 1; border-radius: 8px; background: #EAD9D3; padding: 12px 14px 36px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden">
+            <span aria-hidden="true" style="font-family: 'Cormorant', Georgia, serif; font-size: 54px; line-height: 0.7; height: 26px; color: #7A2E3A">&#8220;</span>
+            <blockquote style="margin: 4px 0 0; font-size: 13px; line-height: 1.45; font-style: italic; color: #2A211B">Олю, Тарасе, нехай кожен ваш день буде таким теплим, як цей вечір.</blockquote>
+            <figcaption style="position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 8px"><span style="padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#016</span><span style="font-size: 12px; color: #5C4A44">Побажання</span></figcaption>
+          </figure>
+          <div class="ph" role="img" aria-label="Ваше фото, кадр 15" style="aspect-ratio: 1 / 1; border-radius: 8px; background: linear-gradient(160deg, #AEB3A0 0%, #868C77 100%)">
+            <span style="position: absolute; z-index: 1; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#015</span>
+          </div>
+          <div class="ph" role="img" aria-label="Ваше фото, кадр 14" style="aspect-ratio: 1 / 1; border-radius: 8px; background: linear-gradient(170deg, #D4BFA9 0%, #B49577 100%)">
+            <span style="position: absolute; z-index: 1; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#014</span>
+          </div>
+          <div class="ph" role="img" aria-label="Ваше фото, кадр 13" style="aspect-ratio: 1 / 1; border-radius: 8px; background: linear-gradient(165deg, #C4AFA8 0%, #A48A82 100%)">
+            <span style="position: absolute; z-index: 1; left: 8px; bottom: 8px; padding: 3px 8px; border-radius: 999px; background: rgba(42, 33, 27, 0.86); color: #FAF6EF; font-size: 12px; font-weight: 600; font-variant-numeric: lining-nums tabular-nums">#013</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 14px; background: #F1EADF; border-top: 1px solid #CDBFAE; display: flex; gap: 8px">
+      <button type="button" class="t3-btn" style="flex-grow: 1; height: 52px; border: 0; border-radius: 2px; background: #7A2E3A; color: #FFFFFF; font: inherit; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>Додати фото й відео
+      </button>
+      <button type="button" class="t3-out" aria-label="Написати побажання" style="width: 52px; height: 52px; flex-shrink: 0; border: 1px solid #7A2E3A; border-radius: 2px; background: transparent; color: #7A2E3A; display: inline-flex; align-items: center; justify-content: center; cursor: pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+      </button>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const after = s.view === 'after';
+    return {
+      isFirst: !after,
+      isAfter: after,
+      showFirst: function () { self.setState({ view: 'first' }); },
+      showAfter: function () { self.setState({ view: 'after' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

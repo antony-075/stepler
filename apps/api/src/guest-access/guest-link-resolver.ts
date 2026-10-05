@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { type CoverRow, WITH_COVER } from '../collections/cover-urls.js';
+import type { GuestLinkThemeResponse } from '@stepler/contracts';
+import { resolveTheme } from '@stepler/templates/core';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type {
@@ -8,17 +9,13 @@ import type {
   GuestLinkStatus,
   UserStatus,
 } from '../generated/prisma/client.js';
+import { CONTEXT_COLLECTION, type ContextCollection } from './guest-context-select.js';
 import { GuestLinkTokens } from './guest-link-tokens.js';
 
 export interface ResolvedGuestLink {
   link: GuestLinkRow;
-  collection: {
-    id: string;
-    title: string;
-    description: string | null;
-    welcomeMessage: string | null;
-    cover: CoverRow | null;
-  };
+  /** What the guest context needs: the published guest page, never the draft. */
+  collection: ContextCollection;
 }
 
 /** The states that decide whether a guest may use a link right now. */
@@ -53,6 +50,49 @@ export class GuestLinkResolver {
     private readonly tokens: GuestLinkTokens,
   ) {}
 
+  /**
+   * The published page's look for a link in any state (live, paused, revoked, its collection
+   * archived): the guest page draws its loading and state screens in it (owner remarks 99, 100).
+   * Unknown token, or the collection gone (deleting, owner blocked) → 404. Never the title.
+   */
+  async themeOf(rawToken: string): Promise<GuestLinkThemeResponse> {
+    const tokenHash = this.tokens.hashForLookup(rawToken);
+    const row =
+      tokenHash === null
+        ? null
+        : await this.prisma.guestLink.findUnique({
+            where: { tokenHash },
+            select: {
+              collection: {
+                select: {
+                  status: true,
+                  owner: { select: { status: true } },
+                  guestPageVersions: {
+                    where: { state: 'PUBLISHED' },
+                    select: { templateId: true, templateVersion: true, settings: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          });
+    if (
+      row === null ||
+      row.collection.status === 'DELETING' ||
+      row.collection.owner.status === 'BLOCKED'
+    ) {
+      throw new AppError('NOT_FOUND', 404);
+    }
+    const published = row.collection.guestPageVersions[0];
+    // As the guest context reads it: a removed template or stale settings are the defaults.
+    const { def, settings } = resolveTheme(
+      published?.templateId ?? '',
+      published?.templateVersion ?? 1,
+      published?.settings,
+    );
+    return { templateId: def.id, templateVersion: def.version, settings };
+  }
+
   /** Unknown → 404, then the [G5] states of `assertLinkUsable`. */
   async resolveActive(rawToken: string): Promise<ResolvedGuestLink> {
     const tokenHash = this.tokens.hashForLookup(rawToken);
@@ -64,11 +104,7 @@ export class GuestLinkResolver {
             include: {
               collection: {
                 select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  welcomeMessage: true,
-                  ...WITH_COVER,
+                  ...CONTEXT_COLLECTION,
                   status: true,
                   owner: { select: { status: true } },
                 },
@@ -84,8 +120,7 @@ export class GuestLinkResolver {
         id: collection.id,
         title: collection.title,
         description: collection.description,
-        welcomeMessage: collection.welcomeMessage,
-        cover: collection.cover,
+        guestPageVersions: collection.guestPageVersions,
       },
     };
   }

@@ -28,8 +28,9 @@ const buttonVariants = cva(
         pencil: 'bg-pencil text-pencil-foreground hover:bg-pencil-hover active:bg-pencil-active',
         destructive:
           'bg-destructive text-destructive-foreground hover:bg-destructive-hover active:bg-destructive-active',
+        // Bordered: focus turns the border violet with a soft halo, not a second line (§2.5).
         outline:
-          'border border-input bg-card text-foreground hover:border-foreground data-[state=open]:border-foreground',
+          'border border-input bg-card text-foreground hover:border-foreground data-[state=open]:border-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/25 focus-visible:outline-none',
         ghost: 'text-foreground hover:bg-hover active:bg-hover data-[state=open]:bg-hover',
       },
       size: {

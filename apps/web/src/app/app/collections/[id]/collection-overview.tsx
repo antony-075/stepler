@@ -24,7 +24,7 @@ import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { BackLink } from '@/components/back-link';
 import { errorMessageKey } from '@/errors/error-message';
 import { CollectionNotFound } from '../collection-not-found';
-import { AppearanceTab } from './appearance/appearance-tab';
+import { GuestPageTab } from './guest-page/guest-page-tab';
 import { CollectionHeader } from './collection-header';
 import { tabOf } from './collection-tab';
 import { ContentTab } from './content/content-tab';
@@ -37,7 +37,7 @@ import { useCollection } from '../use-collection';
  * The collection's page (DESIGN-SYSTEM.md §6.6; owner reviews 2026-10-02). The header (title,
  * status, date, «Дії»), the description, the archive state with its one action, then a
  * segmented control between «Вміст» (the frames, `ContentTab`, with their count), «Посилання»
- * (`?tab=links` in the URL), «Гостьова сторінка» (`?tab=appearance`: cover and welcome message) and
+ * (`?tab=links` in the URL), «Гостьова сторінка» (`?tab=appearance`: the guest page editor) and
  * «Параметри колекції» (`?tab=settings`).
  * A link's settings open in a sheet (`?link=`).
  */
@@ -116,10 +116,11 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <CollectionHeader collection={collection} />
       {/* On «Параметри колекції» the archiving card says the same with its own button: never two. */}
       {archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null}
-      <Tabs value={tab} onValueChange={selectTab} className="gap-6">
+      {/* Slimmer on a laptop (short screen), on every tab alike (owner remark 104). */}
+      <Tabs value={tab} onValueChange={selectTab} className="gap-6 laptop:gap-4">
         {/* Phones show icon + count only (owner 2026-10-03), and so does 640–767 since the longer
             names (owner 2026-10-04) do not fit there; the label stays as the accessible name. */}
-        <TabsList variant="segmented" aria-label={t('tabs.label')}>
+        <TabsList variant="segmented" aria-label={t('tabs.label')} className="laptop:*:min-h-9">
           <TabsTrigger value="content">
             <Images aria-hidden="true" className="max-md:size-5" />
             <span className="min-w-0 truncate max-md:sr-only">{t('tabs.content')}</span>
@@ -173,9 +174,10 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           )}
         </TabsContent>
         <TabsContent value="appearance">
-          <AppearanceTab collection={collection} />
+          <GuestPageTab collection={collection} />
         </TabsContent>
-        <TabsContent value="settings">
+        {/* A form tab: a readable column inside the fluid admin frame (DESIGN-SYSTEM.md §6.0). */}
+        <TabsContent value="settings" className="max-w-[1240px]">
           <CollectionSettingsPanel collection={collection} onDeleted={onDeleted} />
         </TabsContent>
       </Tabs>

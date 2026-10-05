@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { collectionCoverSchema, collectionWelcomeMessageSchema } from './cover.js';
+import { adminImageSchema, collectionCoverSchema } from './cover.js';
 import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
@@ -54,6 +54,8 @@ export const collectionSchema = z
     welcomeMessage: z.string().nullable(),
     /** The cover (an upload or a guest photo frame); `null` = the initials tile [A2]. */
     cover: collectionCoverSchema.nullable(),
+    /** «Картинка колекції»: the owner's own image of it, for the dashboard; never shown to guests. */
+    image: adminImageSchema.nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;
@@ -74,14 +76,13 @@ export const createCollectionRequestSchema = z
 export type CreateCollectionRequest = z.infer<typeof createCollectionRequestSchema>;
 
 /**
- * `PATCH /api/v1/collections/:id`. `description: null` and `welcomeMessage: null` clear them;
- * omitted fields are unchanged.
+ * `PATCH /api/v1/collections/:id`. `description: null` clears it; omitted fields are unchanged.
+ * The welcome message is part of the guest page (`PUT …/guest-page/draft`), not of this.
  */
 export const updateCollectionRequestSchema = z
   .object({
     title: collectionTitleSchema.optional(),
     description: collectionDescriptionSchema.nullable().optional(),
-    welcomeMessage: collectionWelcomeMessageSchema.nullable().optional(),
   })
   .strict();
 export type UpdateCollectionRequest = z.infer<typeof updateCollectionRequestSchema>;

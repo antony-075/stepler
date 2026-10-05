@@ -1,0 +1,377 @@
+/*
+ * T6 «Мінімалізм» (minimal), to the T6 artboards (plan Appendix A). Light only; colours from the
+ * theme tokens (--tpl-*). Every rule starts with [data-template='minimal'] (src/styles.test.ts).
+ * Phones first; the two columns from 1024px.
+ */
+
+[data-template='minimal'] {
+  --card: #ffffff;
+  --muted: #f1f2f4;
+  --border: #e6e7e9;
+  --input: #b7babe;
+  --hover-card: #f7f7f8;
+  --tint-sand: #eef1fc;
+  --tint-sand-ink: var(--tpl-accent-text);
+  --mn-rule: #e6e7e9;
+}
+
+[data-template='minimal'] .mn-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+[data-template='minimal'] .mn-aside {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 720px;
+  margin-inline: auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+[data-template='minimal'] .mn-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+  margin-right: -10px;
+}
+
+[data-template='minimal'] .mn-bar button {
+  border: 0;
+  background: transparent;
+}
+
+[data-template='minimal'] .mn-identity {
+  padding-top: 72px;
+  text-align: var(--tpl-align);
+}
+
+[data-template='minimal'] .mn-identity[data-placement='top'] {
+  padding-top: 32px;
+}
+
+[data-template='minimal'] .mn-cover {
+  overflow: hidden;
+  border-radius: var(--tpl-radius-card);
+  background: #f1f2f4;
+}
+
+[data-template='minimal'] .mn-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+[data-template='minimal'] .mn-identity[data-placement='top'] .mn-cover {
+  aspect-ratio: 16 / 10;
+  margin-bottom: 32px;
+}
+
+/* Beside the title: a 4:5 picture 40% wide. */
+[data-template='minimal'] .mn-identity[data-placement='side'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40%;
+  align-items: start;
+  gap: 16px;
+  padding-top: 40px;
+}
+
+[data-template='minimal'] .mn-identity[data-placement='side'] .mn-cover {
+  grid-column: 2;
+  grid-row: 1;
+  aspect-ratio: 4 / 5;
+}
+
+[data-template='minimal'] .mn-identity[data-placement='side'] .mn-text {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+[data-template='minimal'] .mn-identity[data-placement='side'] .mn-title {
+  font-size: 32px;
+}
+
+/* Sized so a long Ukrainian word («народження», «найулюбленішої») fits the column whole. */
+[data-template='minimal'] .mn-title {
+  margin: 0;
+  font-size: clamp(36px, 11.5vw, 46px);
+  line-height: 1.04;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+[data-template='minimal'] .mn-description {
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: var(--tpl-muted);
+  white-space: pre-line;
+}
+
+[data-template='minimal'] .mn-welcome {
+  max-width: 34rem;
+  margin: 20px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--tpl-body);
+  text-wrap: pretty;
+}
+
+[data-template='minimal'] .mn-identity[data-placement='side'] .mn-welcome {
+  font-size: 16px;
+}
+
+[data-template='minimal'] .mn-count {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: var(--tpl-align);
+  gap: 4px 12px;
+  margin: 28px 0 0;
+  font-size: 14px;
+  color: var(--tpl-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-template='minimal'] .mn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mn-rule);
+}
+
+[data-template='minimal'] .mn-actions > :not(button) {
+  flex-basis: 100%;
+}
+
+[data-template='minimal'] .mn-primary,
+[data-template='minimal'] .mn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--tpl-radius-btn);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+[data-template='minimal'] .mn-primary {
+  flex: 1 1 auto;
+  padding: 0 14px;
+  background: var(--tpl-accent);
+  color: var(--tpl-on-accent);
+}
+
+[data-template='minimal'] .mn-primary svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+[data-template='minimal'] .mn-secondary {
+  flex: 0 1 auto;
+  padding: 0 10px;
+  background: transparent;
+  color: var(--tpl-text);
+  text-decoration: underline;
+  text-decoration-color: #b7babe;
+  text-underline-offset: 5px;
+}
+
+[data-template='minimal'] .mn-primary:focus-visible,
+[data-template='minimal'] .mn-secondary:focus-visible {
+  outline: 2px solid var(--tpl-text);
+  outline-offset: 2px;
+}
+
+/* The bottom rule of the action row sits above the notice. */
+[data-template='minimal'] .mn-actions [data-slot='guest-legal-notice'] {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mn-rule);
+  text-align: start;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+[data-template='minimal'] .mn-actions [data-slot='guest-legal-notice'] a {
+  color: var(--tpl-text);
+}
+
+[data-template='minimal'] .mn-note {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--tpl-muted);
+}
+
+[data-template='minimal'] .mn-aside-footer {
+  display: none;
+}
+
+[data-template='minimal'] .mn-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+[data-template='minimal'] .mn-sections {
+  display: grid;
+  /* The sections take the room left, so the footer ends at the window's bottom (item 95). */
+  flex: 1 0 auto;
+  align-content: start;
+  gap: 72px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 72px 16px 72px;
+  box-sizing: border-box;
+}
+
+[data-template='minimal'] .mn-sections h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+[data-template='minimal'] [data-slot='frame-grid'] > ul {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+[data-template='minimal'] [data-slot='frame-media'],
+[data-template='minimal'] [data-slot='frame'] > button {
+  border-radius: var(--tpl-radius-tile);
+}
+
+[data-template='minimal'] footer {
+  border-color: var(--mn-rule);
+}
+
+@media (min-width: 640px) {
+  [data-template='minimal'] .mn-title {
+    font-size: 60px;
+  }
+
+  [data-template='minimal'] .mn-identity[data-placement='side'] .mn-title {
+    font-size: 44px;
+  }
+
+  [data-template='minimal'] .mn-actions {
+    max-width: 480px;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-template='minimal'] .mn-page {
+    display: grid;
+    grid-template-columns: 576px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  [data-template='minimal'] .mn-aside {
+    position: sticky;
+    top: 0;
+    max-width: none;
+    height: 100svh;
+    margin: 0;
+    padding: 40px 64px 16px 72px;
+    overflow-y: auto;
+    border-right: 1px solid var(--mn-rule);
+  }
+
+  [data-template='minimal'] .mn-identity {
+    margin-top: auto;
+    padding-top: 40px;
+  }
+
+  [data-template='minimal'] .mn-title {
+    font-size: 64px;
+    line-height: 1.02;
+  }
+
+  [data-template='minimal'] .mn-identity[data-placement='side'] {
+    grid-template-columns: minmax(0, 1fr) 180px;
+  }
+
+  [data-template='minimal'] .mn-identity[data-placement='side'] .mn-title {
+    font-size: 48px;
+  }
+
+  [data-template='minimal'] .mn-identity[data-placement='top'] .mn-cover {
+    margin-bottom: 40px;
+  }
+
+  [data-template='minimal'] .mn-welcome {
+    margin-top: 32px;
+    font-size: 19px;
+  }
+
+  [data-template='minimal'] .mn-actions {
+    max-width: none;
+    margin-top: 20px;
+  }
+
+  [data-template='minimal'] .mn-aside-footer {
+    display: block;
+    margin-top: auto;
+    padding-top: 32px;
+  }
+
+  [data-template='minimal'] .mn-aside-footer footer {
+    border-top: 0;
+  }
+
+  [data-template='minimal'] .mn-aside-footer footer > div {
+    padding-inline: 0;
+  }
+
+  [data-template='minimal'] .mn-main-footer {
+    display: none;
+  }
+
+  [data-template='minimal'] .mn-sections {
+    max-width: none;
+    gap: 88px;
+    padding: 104px 80px;
+  }
+
+  [data-template='minimal'] [data-slot='frame-grid'] > ul {
+    gap: 28px;
+  }
+}
+
+@media (min-width: 1680px) {
+  [data-template='minimal'] [data-slot='frame-grid'] > ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-template='minimal'] .mn-primary,
+  [data-template='minimal'] .mn-secondary {
+    transition: background-color 120ms ease-out;
+  }
+}
+
+@media (hover: hover) {
+  [data-template='minimal'] .mn-primary:hover {
+    background: var(--pencil-hover);
+  }
+
+  [data-template='minimal'] .mn-secondary:hover {
+    background: var(--hover-card);
+  }
+}

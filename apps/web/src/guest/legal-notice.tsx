@@ -17,7 +17,10 @@ import { legalPath } from '@/legal/slugs';
 export function GuestLegalNotice({ className }: { className?: string }) {
   const t = useTranslations('guest');
   return (
-    <p className={cn('text-center type-caption text-pretty text-muted-foreground', className)}>
+    <p
+      data-slot="guest-legal-notice"
+      className={cn('text-center type-caption text-pretty text-muted-foreground', className)}
+    >
       {t.rich('legalNotice', {
         terms: (chunks) => <LegalLink document="TERMS">{chunks}</LegalLink>,
         privacy: (chunks) => <LegalLink document="PRIVACY">{chunks}</LegalLink>,
@@ -27,6 +30,7 @@ export function GuestLegalNotice({ className }: { className?: string }) {
 }
 
 function LegalLink({ document, children }: { document: LegalDocumentKey; children: ReactNode }) {
+  const t = useTranslations('legal');
   return (
     <a
       href={legalPath(document)}
@@ -38,6 +42,7 @@ function LegalLink({ document, children }: { document: LegalDocumentKey; childre
       )}
     >
       {children}
+      <span className="sr-only"> {t('opensInNewTab')}</span>
     </a>
   );
 }

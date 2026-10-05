@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
 import { mainLinkPath, openGuestLink } from '../support/guest.js';
-import { uploadViaApi } from '../support/media.js';
+import { uploadViaApi, waitForProcessed } from '../support/media.js';
 
 // The admin's side of uploads (PR C): file frames in «Вміст», the viewer, download, delete.
 // Admin management journeys run on desktop Chrome only (@desktop).
@@ -18,6 +18,7 @@ async function withFiles(page: Page, browser: Parameters<typeof openGuestLink>[0
   await uploadViaApi(guest, id, 'doc.pdf');
   await uploadViaApi(guest, id, 'clip.mp4');
   await guest.context().close();
+  await waitForProcessed(page, id);
   await page.goto(`/app/collections/${id}`);
   await expect(page.getByRole('list', { name: 'Кадри колекції' })).toBeVisible();
   return id;
@@ -33,7 +34,7 @@ test.describe('collection files', () => {
     await expect(grid.locator('img[src*="/uploads/"]')).toHaveCount(0);
     await expect(grid.getByText('doc.pdf')).toBeVisible();
 
-    // The photo: its original in the viewer, with the details.
+    // The photo in the viewer, with the details.
     await grid.getByRole('button', { name: /^Кадр 1,/ }).click();
     const viewer = page.getByRole('dialog', { name: /#001/ });
     await expect(viewer.getByRole('img', { name: 'Кадр 1' })).toBeVisible();

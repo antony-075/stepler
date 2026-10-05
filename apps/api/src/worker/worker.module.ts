@@ -12,19 +12,26 @@ import {
 import { LoggingModule } from '../logging/logging.module.js';
 import { OBJECT_STORAGE } from '../storage/object-storage.js';
 import { S3ObjectStorage } from '../storage/s3-object-storage.js';
-import { CoverDerivativesHandler } from './handlers/cover-derivatives.handler.js';
+import {
+  CollectionImageDerivativesHandler,
+  LegacyCoverDerivativesHandler,
+} from './handlers/collection-image-derivatives.handler.js';
 import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
 import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
-import { PurgeCoverHandler } from './handlers/purge-cover.handler.js';
+import {
+  LegacyPurgeCoverHandler,
+  PurgeCollectionImageHandler,
+} from './handlers/purge-collection-image.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
 import { MediaSlots } from './media/media-slots.js';
+import { OriginalSanitizer } from './media/original-sanitizer.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -68,10 +75,13 @@ export class WorkerModule {
         ExpireUploadsHandler,
         DerivativeStore,
         MediaSlots,
+        OriginalSanitizer,
         ImageDerivativesHandler,
         VideoPosterHandler,
-        CoverDerivativesHandler,
-        PurgeCoverHandler,
+        CollectionImageDerivativesHandler,
+        PurgeCollectionImageHandler,
+        LegacyCoverDerivativesHandler,
+        LegacyPurgeCoverHandler,
         JobRunner,
       ],
     };

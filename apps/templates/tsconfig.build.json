@@ -1,0 +1,11 @@
+{
+  "extends": "@stepler/config/tsconfig/library.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": [],
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/core/**/*.ts", "src/templates/*/definition.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/test-*.ts"]
+}

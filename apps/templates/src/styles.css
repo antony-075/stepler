@@ -1,0 +1,360 @@
+/*
+ * @stepler/templates/styles.css: imported once by apps/web (globals.css) and by Storybook.
+ * Each template's stylesheet is imported here; every rule in one is scoped under
+ * [data-template='<id>'] (src/styles.test.ts), so templates never style each other or the app.
+ */
+@import './templates/classic/styles.css';
+@import './templates/fullscreen/styles.css';
+@import './templates/journal/styles.css';
+@import './templates/postcard/styles.css';
+@import './templates/party/styles.css';
+@import './templates/minimal/styles.css';
+
+/* Geologica is the interface font (apps/web/src/app/fonts.ts sets --font-geologica on <html>),
+   so templates that use it need no font of their own. */
+:root {
+  --font-tpl-geologica: var(--font-geologica, 'Geologica'), sans-serif;
+}
+
+/*
+ * The bridge between a template and the app's pieces it places (frames, buttons, the notice, the
+ * footer): a template has a fixed scheme [D5], so the app's tokens are set for that scheme on
+ * the root whatever the visitor's own setting is, then the template's own colours (themeTokens)
+ * take over the surface, text, accent, link and focus tokens. `:where()` keeps all of it at zero
+ * specificity, so a template's own sheet overrides any of it.
+ */
+:where([data-template][data-scheme='light'], [data-template-surface][data-scheme='light']) {
+  color-scheme: light;
+  --background: #f0f1ee;
+  --foreground: #141614;
+  --card: #ffffff;
+  --card-foreground: #141614;
+  --popover: #ffffff;
+  --popover-foreground: #141614;
+  --muted: #e4e6e1;
+  --muted-foreground: #5a5d58;
+  --border: #d6d8d2;
+  --input: #83877f;
+  --primary: #141614;
+  --primary-hover: #2e312d;
+  --primary-active: #454944;
+  --primary-foreground: #ffffff;
+  --pencil: #b83e26;
+  --pencil-hover: #a33520;
+  --pencil-active: #8e2d1b;
+  --pencil-foreground: #ffffff;
+  --pencil-soft: #fbece8;
+  --link: #5a4a8c;
+  --link-hover: #463870;
+  --info-soft: #eeebf5;
+  --destructive: #a3203a;
+  --destructive-hover: #8a1a31;
+  --destructive-active: #731429;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #f8e7ea;
+  --success: #2c7350;
+  --success-soft: #e5f1ea;
+  --warning: #8a6100;
+  --warning-soft: #f7eeda;
+  --tint-sage: #d8eadf;
+  --tint-sage-edge: #b1d0bd;
+  --tint-sage-ink: #2b5f46;
+  --tint-lavender: #e5dff6;
+  --tint-lavender-edge: #c5bbe8;
+  --tint-lavender-ink: #52438a;
+  --tint-sand: #f2e4ca;
+  --tint-sand-edge: #d9c39b;
+  --tint-sand-ink: #71501a;
+  --tint-sky: #d9e7f3;
+  --tint-sky-edge: #b2cbe1;
+  --tint-sky-ink: #2a5876;
+  --hover: #e7e8e5;
+  --hover-card: #f6f6f6;
+  --hover-popover: #f6f6f6;
+  --ring: var(--link);
+  --overlay: rgb(20 22 20 / 0.48);
+  --scrim: linear-gradient(to top, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 70%);
+  --veil: rgb(255 255 255 / 0.68);
+  --viewer: #0f110f;
+  --viewer-foreground: #e9ebe6;
+  --viewer-ring: #b6a8e8;
+  --viewer-muted: #9ca099;
+  --shadow-popover: 0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06);
+  --shadow-dialog: 0 24px 48px -16px rgb(20 22 20 / 0.32);
+  --shadow-print: 0 1px 1px rgb(20 22 20 / 0.1), 0 8px 18px -8px rgb(20 22 20 / 0.28);
+  --shadow-card: 0 1px 2px rgb(20 22 20 / 0.04), 0 2px 8px rgb(20 22 20 / 0.05);
+  --shadow-card-hover: 0 1px 2px rgb(20 22 20 / 0.06), 0 4px 14px rgb(20 22 20 / 0.08);
+}
+
+:where([data-template][data-scheme='dark'], [data-template-surface][data-scheme='dark']) {
+  color-scheme: dark;
+  --background: #141615;
+  --foreground: #e9ebe6;
+  --card: #1c1f1d;
+  --card-foreground: #e9ebe6;
+  --popover: #232724;
+  --popover-foreground: #e9ebe6;
+  --muted: #262a27;
+  --muted-foreground: #9ca099;
+  --border: #2d312e;
+  --input: #6c716b;
+  --primary: #e9ebe6;
+  --primary-hover: #ffffff;
+  --primary-active: #cdd0ca;
+  --primary-foreground: #141615;
+  --pencil: #f08766;
+  --pencil-hover: #f59b7e;
+  --pencil-active: #dd7556;
+  --pencil-foreground: #141615;
+  --pencil-soft: #33201a;
+  --link: #b6a8e8;
+  --link-hover: #cabff0;
+  --info-soft: #242036;
+  --destructive: #ff8da0;
+  --destructive-hover: #ffa3b3;
+  --destructive-active: #f07a8e;
+  --destructive-foreground: #141615;
+  --destructive-soft: #33191e;
+  --success: #77c79c;
+  --success-soft: #172a20;
+  --warning: #e2b550;
+  --warning-soft: #2b2414;
+  --hover: #1f211f;
+  --hover-card: #262927;
+  --hover-popover: #2d312e;
+  --tint-sage: #22352b;
+  --tint-sage-edge: #355544;
+  --tint-sage-ink: #9ad3b2;
+  --tint-lavender: #2d2746;
+  --tint-lavender-edge: #463d6c;
+  --tint-lavender-ink: #c4b8f0;
+  --tint-sand: #352e1e;
+  --tint-sand-edge: #55492e;
+  --tint-sand-ink: #e2c688;
+  --tint-sky: #20303c;
+  --tint-sky-edge: #35505f;
+  --tint-sky-ink: #9cc6e3;
+  --overlay: rgb(0 0 0 / 0.64);
+  --veil: rgb(20 22 21 / 0.68);
+  --shadow-popover: none;
+  --shadow-dialog: none;
+  --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+  --shadow-card: none;
+  --shadow-card-hover: none;
+}
+
+:where([data-template], [data-template-surface]) {
+  --background: var(--tpl-bg);
+  --foreground: var(--tpl-text);
+  --card-foreground: var(--tpl-text);
+  --popover-foreground: var(--tpl-text);
+  --muted-foreground: var(--tpl-muted);
+  --pencil: var(--tpl-accent);
+  --pencil-hover: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 12%);
+  --pencil-active: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 22%);
+  --pencil-foreground: var(--tpl-on-accent);
+  --pencil-soft: var(--tpl-accent-soft);
+  --link: var(--tpl-link);
+  --link-hover: var(--tpl-text);
+  --ring: var(--tpl-link);
+  /* The app's buttons inside a template follow it (owner remark 112): the primary is the
+     accent with its auto-contrasted text; corners follow the template's (fields stop short of
+     a pill), so «Написати побажання», «Оновити», «Показати ще», «Змінити ім’я», «Скасувати»,
+     «Повторити» and the dialogs' buttons all read as the page's. */
+  --primary: var(--tpl-accent);
+  --primary-hover: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 12%);
+  --primary-active: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 22%);
+  --primary-foreground: var(--tpl-on-accent);
+  --radius-control: min(var(--tpl-radius-btn), 24px);
+  --radius-sheet: min(var(--tpl-radius-card), 16px);
+  --radius-dialog: min(calc(var(--tpl-radius-card) + 4px), 28px);
+}
+
+/* The page root only (an overlay's surface gets the tokens above, never these). */
+:where([data-template]) {
+  /* Words wrap only between words (owner, item 87): a hyphen where the page's language has a
+     dictionary, and a break inside a word only when that word alone is wider than its whole
+     line (a pasted link, a 100-letter string), so nothing scrolls sideways. `anywhere`, not
+     `normal`, for that last case; it breaks a word no sooner than `break-word` does, and it
+     keeps shrink-to-fit boxes (centred columns) within the page. Inherited, so the template's
+     text and the app's slots follow it; titles are sized so real long words fit whole. */
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: auto;
+  position: relative;
+  isolation: isolate;
+  /* The dynamic viewport: the page always reaches the window's bottom edge, whatever the
+     browser's bars do (owner, items 95, 96). */
+  min-height: 100dvh;
+  /* The guest page is `viewport-fit=cover` (items 96): keep content off the notch and the
+     rounded corners; the background still runs edge to edge. */
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  padding-top: env(safe-area-inset-top);
+  background-color: var(--tpl-bg);
+  background-image: var(--tpl-gradient);
+  color: var(--tpl-body);
+  font-family: var(--tpl-font-body);
+}
+
+/* An overlay in the template's look (`templateSurfaceProps`, remark 112): the template's surface
+   colour, fonts and heading face; it is not a template root, so none of the page's layout rules
+   (position, height, padding, background) reach it (owner remark 115). */
+:where([data-template-surface]) {
+  --popover: var(--tpl-surface);
+  --card: var(--tpl-surface);
+  color: var(--tpl-body);
+  font-family: var(--tpl-font-body);
+}
+
+/* The footer ends above the home indicator (item 96); fixed and sticky bars add the inset
+   themselves. */
+[data-template] footer {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+/* Headings in the template's heading face, the app's slots included («Ваші кадри»). */
+:where([data-template], [data-template-surface]) :where(h1, h2, h3) {
+  font-family: var(--tpl-font-heading);
+  color: var(--tpl-text);
+}
+
+/*
+ * Whole-page screens in the template's look (owner remarks 99, 100; react/screen.tsx): the link
+ * states and the loading page. From the theme tokens, so every template gets its own colours,
+ * fonts and radii; a template may restyle `.tpl-screen-*` in its sheet. A full-height column:
+ * the footer ends at the window's bottom (item 101).
+ */
+:where([data-template]) .tpl-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+:where([data-template]) .tpl-screen-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  max-width: 1120px;
+  min-height: 56px;
+  margin: 0 auto;
+  padding: 8px 16px;
+  box-sizing: border-box;
+}
+
+:where([data-template]) .tpl-screen-main {
+  display: grid;
+  flex: 1 0 auto;
+  place-items: center;
+  padding: 24px 16px 56px;
+}
+
+:where([data-template]) .tpl-screen-card {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 30rem;
+  text-align: center;
+}
+
+:where([data-template]) .tpl-screen-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 4px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--tpl-accent-soft);
+  color: var(--tpl-accent-text);
+}
+
+:where([data-template]) .tpl-screen-icon[data-tone='warning'] {
+  box-shadow: 0 0 0 2px var(--tpl-accent);
+}
+
+:where([data-template]) .tpl-screen-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+:where([data-template]) .tpl-screen-title {
+  margin: 0;
+  font-size: clamp(26px, 7vw, 36px);
+  line-height: 1.15;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+:where([data-template]) .tpl-screen-text,
+:where([data-template]) .tpl-screen-note {
+  max-width: 40ch;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--tpl-muted);
+  text-wrap: pretty;
+}
+
+:where([data-template]) .tpl-screen-action {
+  margin-top: 8px;
+}
+
+/* Loading: the page's shape in the template's colours; a slow pulse only when motion is fine. */
+:where([data-template]) .tpl-screen-main:has(.tpl-screen-skeleton) {
+  place-items: start center;
+}
+
+:where([data-template]) .tpl-screen-skeleton {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 720px;
+}
+
+:where([data-template]) .tpl-skeleton {
+  display: block;
+  border-radius: var(--tpl-radius-card, 8px);
+  background: color-mix(in srgb, var(--tpl-text) 10%, transparent);
+}
+
+:where([data-template]) .tpl-skeleton-title {
+  width: 72%;
+  height: 40px;
+}
+
+:where([data-template]) .tpl-skeleton-line {
+  width: 48%;
+  height: 16px;
+}
+
+:where([data-template]) .tpl-skeleton-action {
+  height: 52px;
+  margin-top: 8px;
+  background: color-mix(in srgb, var(--tpl-accent) 35%, transparent);
+}
+
+:where([data-template]) .tpl-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 24px;
+}
+
+:where([data-template]) .tpl-skeleton-frame {
+  aspect-ratio: 1;
+  border-radius: var(--tpl-radius-tile, 8px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :where([data-template]) .tpl-skeleton {
+    animation: tpl-skeleton-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes tpl-skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}

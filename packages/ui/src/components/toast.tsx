@@ -23,15 +23,24 @@ import { closeButtonClassName } from './button';
  */
 type ToastVariant = 'info' | 'success' | 'warning' | 'error';
 
+type ToastAction = {
+  label: string;
+  /** What a screen reader says to do instead (Radix: the action may be out of reach in time). */
+  altText: string;
+  onSelect: () => void;
+};
+
 type ToastInput = {
   title: string;
   description?: string;
   variant?: ToastVariant;
   durationMs?: number;
+  /** One follow-up (e.g. «Відкрити гостьову сторінку»); never the only way to get there. */
+  action?: ToastAction;
 };
 
 type ToastItem = Required<Pick<ToastInput, 'title' | 'variant' | 'durationMs'>> &
-  Pick<ToastInput, 'description'> & { id: number; open: boolean };
+  Pick<ToastInput, 'description' | 'action'> & { id: number; open: boolean };
 
 const MAX_VISIBLE = 3;
 const DEFAULT_DURATION_MS = 5000;
@@ -63,6 +72,7 @@ function ToastProvider({ announcementLabel, children }: ToastProviderProps) {
       id: nextId.current++,
       title: input.title,
       description: input.description,
+      action: input.action,
       variant,
       durationMs:
         input.durationMs ?? (variant === 'error' ? ERROR_DURATION_MS : DEFAULT_DURATION_MS),
@@ -200,7 +210,7 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
 
   return (
     <>
-      {toasts.map(({ id, title, description, variant, durationMs, open }) => {
+      {toasts.map(({ id, title, description, action, variant, durationMs, open }) => {
         const { icon: Icon, className: iconClassName } = ICONS[variant];
         return (
           <ToastPrimitive.Root
@@ -237,6 +247,19 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
                   {description}
                 </ToastPrimitive.Description>
               ) : null}
+              {action === undefined ? null : (
+                <ToastPrimitive.Action
+                  data-slot="toast-action"
+                  altText={action.altText}
+                  onClick={action.onSelect}
+                  className={cn(
+                    '-ml-1 inline-flex min-h-11 items-center justify-self-start rounded-control px-1 font-semibold text-link underline underline-offset-4 hover:text-link-hover',
+                    focusRing,
+                  )}
+                >
+                  {action.label}
+                </ToastPrimitive.Action>
+              )}
             </div>
             <ToastPrimitive.Close
               aria-label={closeLabel}

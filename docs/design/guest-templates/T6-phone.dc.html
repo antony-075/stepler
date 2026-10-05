@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>T6 · Мінімалізм · телефон</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#2443D0}a:hover{color:#15171A}
+.t6-btn:focus-visible,.t6-ghost:focus-visible,.t6-seg:focus-visible,.t6-link:focus-visible{outline:2px solid #2443D0;outline-offset:3px}
+.t6-btn:hover{background:#1B35AE}
+.t6-ghost:hover{background:#F2F3F5}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; background: #FFFFFF; color: #15171A; font-family: 'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <div style="height: 100%; overflow-y: auto; overflow-x: hidden">
+    <div role="group" aria-label="Стан макета" style="display: flex; gap: 4px; padding: 6px 16px 0">
+      <button type="button" class="t6-seg" aria-pressed="{{ firstPressed }}" onClick="{{ showFirst }}" style="{{ segFirst }}">Перший візит</button>
+      <button type="button" class="t6-seg" aria-pressed="{{ afterPressed }}" onClick="{{ showAfter }}" style="{{ segAfter }}">Після завантаження</button>
+    </div>
+
+    <header style="display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px">
+      <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.02em">stepler</span>
+      <button type="button" class="t6-ghost" aria-label="Мова: українська. Змінити мову" style="height: 44px; padding: 0 10px; margin-right: -10px; border: 0; border-radius: 6px; background: transparent; color: #15171A; font: inherit; font-size: 14px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer">
+        <span aria-hidden="true" style="width: 18px; height: 12px; border-radius: 2px; overflow: hidden; display: inline-flex; flex-direction: column; box-shadow: 0 0 0 1px rgba(21,23,26,0.08)"><span style="flex: 1; background: #3A75C4"></span><span style="flex: 1; background: #F9D648"></span></span>
+        Українська
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+      </button>
+    </header>
+
+    <section style="padding: 72px 16px 0">
+      <h1 style="margin: 0; font-size: 46px; line-height: 1.04; font-weight: 500; letter-spacing: -0.035em; text-wrap: balance">Весілля Олі та&#160;Тараса</h1>
+      <p style="margin: 20px 0 0; max-width: 320px; font-size: 17px; line-height: 1.55; color: #3D4146">Дякуємо, що ви з нами! Додайте свої фото й відео з цього вечора.</p>
+      <p style="margin: 28px 0 0; font-size: 14px; color: #63676C; font-variant-numeric: tabular-nums">{{ countLabel }}</p>
+    </section>
+
+    <section aria-label="Дії" style="padding: 16px 16px 0">
+      <div style="display: flex; align-items: center; gap: 4px; border-top: 1px solid #E6E7E9; border-bottom: 1px solid #E6E7E9; padding: 12px 0">
+        <button type="button" class="t6-btn" onClick="{{ showAfter }}" style="flex: 1 1 auto; height: 48px; padding: 0 14px; border: 0; border-radius: 6px; background: #2443D0; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer">Додати фото й відео</button>
+        <button type="button" class="t6-ghost" style="flex: 0 0 auto; height: 48px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: #15171A; font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; text-decoration: underline; text-decoration-color: #B7BABE; text-underline-offset: 5px; cursor: pointer">Написати побажання</button>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 12px; line-height: 1.55; color: #63676C">Додаючи вміст, ви погоджуєтеся з <a class="t6-link" href="#terms" style="color: #15171A">Умовами використання</a> та <a class="t6-link" href="#privacy" style="color: #15171A">Політикою конфіденційності</a>.</p>
+    </section>
+
+    <section aria-labelledby="t6-mine" style="padding: 72px 16px 0">
+      <div style="display: flex; align-items: baseline; justify-content: space-between">
+        <h2 id="t6-mine" style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.02em">Ваші кадри</h2>
+        <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #63676C">6</span></sc-if>
+      </div>
+      <sc-if value="{{ isFirst }}" hint-placeholder-val="{{ true }}">
+        <p style="margin: 16px 0 0; padding-top: 16px; border-top: 1px solid #E6E7E9; font-size: 15px; line-height: 1.55; color: #3D4146">Тут будуть ваші фото, відео й побажання. Їх бачите ви та організатори.</p>
+      </sc-if>
+      <sc-if value="{{ isAfter }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+          <div role="img" aria-label="Ваше фото, кадр 92" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E7E4DF, #D5D1CA)"><span aria-hidden="true" style="position: absolute; top: 6px; right: 8px; font-size: 10px; color: rgba(21,23,26,0.5)">IMG_2041</span><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#092</span></div>
+          <div role="img" aria-label="Ваше фото, кадр 91" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #DDE2E6, #C9CFD5)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#091</span></div>
+          <figure style="margin: 0; position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: #EEF1FC; padding: 8px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between">
+            <span aria-hidden="true" style="font-size: 26px; line-height: 0.8; font-weight: 600; color: #2443D0">“</span>
+            <blockquote style="margin: 0; font-size: 12px; line-height: 1.35; color: #15171A">Кохайте одне одного!</blockquote>
+            <figcaption><span style="display: inline-block; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500">#090</span><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Побажання</span></figcaption>
+          </figure>
+          <div role="img" aria-label="Ваше відео, кадр 89, 12 секунд" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E3E1E8, #D0CDD8)"><span style="position: absolute; right: 6px; top: 6px; height: 22px; padding: 0 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>0:12</span><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#089</span></div>
+          <div role="img" aria-label="Ваше фото, кадр 88" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E0E4DD, #CDD3C8)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#088</span></div>
+          <div role="img" aria-label="Ваше фото, кадр 87" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E9E2DC, #D8CDC3)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#087</span></div>
+        </div>
+      </sc-if>
+    </section>
+
+    <section aria-labelledby="t6-all" style="padding: 64px 16px 0">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <h2 id="t6-all" style="margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.02em">Усі кадри</h2>
+        <a class="t6-link" href="#all" style="min-height: 44px; display: inline-flex; align-items: center; font-size: 14px; color: #2443D0">Дивитися всі</a>
+      </div>
+      <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px">
+        <div role="img" aria-label="Фото гостя, кадр 86" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #D9DCE0, #C3C8CE)"><span aria-hidden="true" style="position: absolute; top: 6px; right: 8px; font-size: 10px; color: rgba(21,23,26,0.5)">IMG_1993</span><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#086</span></div>
+        <div role="img" aria-label="Фото гостя, кадр 85" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E9E2DC, #D8CDC3)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#085</span></div>
+        <div role="img" aria-label="Відео гостя, кадр 84, 27 секунд" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #DDE2E6, #C9CFD5)"><span style="position: absolute; right: 6px; top: 6px; height: 22px; padding: 0 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>0:27</span><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#084</span></div>
+        <div role="img" aria-label="Фото гостя, кадр 83" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E0E4DD, #CDD3C8)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#083</span></div>
+        <div role="img" aria-label="Фото гостя, кадр 82" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E7E4DF, #D5D1CA)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#082</span></div>
+        <div role="img" aria-label="Фото гостя, кадр 81" style="position: relative; aspect-ratio: 1 / 1; border-radius: 8px; overflow: hidden; background: linear-gradient(165deg, #E3E1E8, #D0CDD8)"><span style="position: absolute; left: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px; background: rgba(21,23,26,0.82); color: #FFFFFF; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums">#081</span></div>
+      </div>
+    </section>
+
+    <footer style="margin-top: 72px; padding: 20px 16px 28px; border-top: 1px solid #E6E7E9; font-size: 12px; line-height: 1.6; color: #63676C">© Stepler · <a class="t6-link" href="#terms" style="color: #63676C">Умови використання</a> · <a class="t6-link" href="#privacy" style="color: #63676C">Політика конфіденційності</a></footer>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const after = s.mode === 'after';
+    const base = 'height: 44px; padding: 0 8px; border: 0; background: transparent; font: inherit; font-size: 13px; cursor: pointer; border-bottom: 2px solid ';
+    const on = base + '#15171A; color: #15171A; font-weight: 500;';
+    const off = base + 'transparent; color: #63676C;';
+    return {
+      isFirst: !after,
+      isAfter: after,
+      firstPressed: after ? 'false' : 'true',
+      afterPressed: after ? 'true' : 'false',
+      segFirst: after ? off : on,
+      segAfter: after ? on : off,
+      countLabel: after ? '92 кадри' : '86 кадрів',
+      showFirst: function () { self.setState({ mode: 'first' }); },
+      showAfter: function () { self.setState({ mode: 'after' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

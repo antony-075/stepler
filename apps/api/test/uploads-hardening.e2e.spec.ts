@@ -10,6 +10,7 @@ import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { ExpireUploadsHandler } from '../src/worker/handlers/expire-uploads.handler.js';
+import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { joinAsGuest, seedCollection } from './support/guests.js';
@@ -35,7 +36,7 @@ const MINUTE_MS = 60_000;
 
 async function start(env: ApiEnv, logs?: Writable) {
   const app = await createApp(env, logs === undefined ? {} : { logDestination: logs });
-  await app.init();
+  await listenOnLoopback(app);
   const server = app.getHttpServer() as Server;
   const tokens = app.get(GuestLinkTokens);
   const guest = async (options: { ownerId?: string } = {}) => {

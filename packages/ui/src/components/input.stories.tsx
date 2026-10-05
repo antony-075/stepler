@@ -42,16 +42,22 @@ export const Disabled: Story = {
   },
 };
 
-/** Focus turns the edge violet and adds the 2px violet ring: never the pencil (reads as an error). */
+/**
+ * Focus (any, a click too) turns the edge violet with a soft violet halo: one indicator, no
+ * outline and no gap (owner remark 103); never the pencil (reads as an error).
+ */
 export const Focused: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByLabelText('Email');
     await userEvent.click(input);
     const style = getComputedStyle(input);
-    await expect(style.outlineStyle).toBe('solid');
-    await expect(style.outlineColor).toBe('rgb(90, 74, 140)'); // --link
-    // The edge colour transitions (120ms).
+    await expect(style.outlineStyle).toBe('none');
+    // The edge colour and the halo transition (120ms).
     await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(90, 74, 140)'));
+    await waitFor(() => expect(getComputedStyle(input).boxShadow).toContain('3px'));
+    await expect(getComputedStyle(input).boxShadow).toMatch(
+      /rgba\(90, 74, 140, 0\.25\)|oklab|color\(/,
+    );
   },
 };
 
@@ -70,7 +76,8 @@ export const InvalidFocused: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByLabelText('Email');
     await userEvent.click(input);
-    await expect(getComputedStyle(input).outlineColor).toBe('rgb(163, 32, 58)'); // --destructive
+    // An invalid field keeps its destructive edge while focused, with a destructive halo.
+    await expect(getComputedStyle(input).outlineStyle).toBe('none');
     await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(163, 32, 58)'));
   },
 };

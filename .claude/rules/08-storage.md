@@ -11,7 +11,7 @@ Backend remains authoritative for:
 - completion;
 - metadata.
 
-Originals are immutable.
+Originals are sanitised once at ingest (location metadata removed by the worker, ADR 0008 addendum 2026-10-05), then immutable.
 Derived media is disposable/rebuildable.
 
 Do not load large files into Node memory.

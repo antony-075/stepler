@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import { Writable } from 'node:stream';
 import type { INestApplication } from '@nestjs/common';
-import { resolveGuestLinkResponseSchema } from '@stepler/contracts';
+import { guestLinkThemeResponseSchema, resolveGuestLinkResponseSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { generateToken } from '../src/auth/tokens.js';
@@ -12,6 +12,7 @@ import type {
   UserStatus,
 } from '../src/generated/prisma/client.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -86,7 +87,7 @@ describe('guest link resolution', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LOG_LEVEL: 'info' }), { logDestination: logs });
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -284,6 +285,41 @@ describe('guest link resolution', () => {
     expect(logs.output).toContain('/api/v1/guest/links/resolve');
     for (const secret of [token, invalid]) expect(logs.output).not.toContain(secret);
   });
+
+  describe('the link’s theme (owner remarks 99, 100)', () => {
+    // The web server asks while rendering the page: no Origin (read-only, cookie-free).
+    const theme = (linkToken: string) =>
+      request(server()).post('/api/v1/guest/links/theme').send({ linkToken });
+
+    test.each([
+      { link: 'ACTIVE', collection: 'ACTIVE' },
+      { link: 'INACTIVE', collection: 'ACTIVE' },
+      { link: 'REVOKED', collection: 'ACTIVE' },
+      { link: 'ACTIVE', collection: 'ARCHIVED' },
+    ] as const)(
+      'link $link, collection $collection → the published look, never the title',
+      async ({ link, collection }) => {
+        const { token } = await seed(tokens, { link, collection });
+        const res = await theme(token).expect(200);
+        // No page published yet: the default template with its defaults.
+        expect(guestLinkThemeResponseSchema.parse(res.body).templateId).toBe('classic');
+        expect(JSON.stringify(res.body)).not.toContain('Весілля');
+        expect(Object.keys(res.body as object).sort()).toEqual([
+          'settings',
+          'templateId',
+          'templateVersion',
+        ]);
+      },
+    );
+
+    test('a collection gone, an owner blocked or an unknown token → 404', async () => {
+      const deleting = await seed(tokens, { collection: 'DELETING' });
+      await theme(deleting.token).expect(404);
+      const blocked = await seed(tokens, { owner: 'BLOCKED' });
+      await theme(blocked.token).expect(404);
+      await theme(tokens.generate().token).expect(404);
+    });
+  });
 });
 
 describe('guest link resolution rate limit', () => {
@@ -292,7 +328,7 @@ describe('guest link resolution rate limit', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv({ LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '2' }));
-    await app.init();
+    await listenOnLoopback(app);
   });
 
   afterAll(async () => {

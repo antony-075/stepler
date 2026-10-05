@@ -35,6 +35,20 @@ export const Default: Story = {
   },
 };
 
+export const WithHint: Story = {
+  args: { hint: 'Guests see this name when they open the link.' },
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText('Collection name');
+    // The hint is a description of the control, and the tip's button is not part of its name.
+    await expect(input).toHaveAccessibleDescription(
+      'Guests see this name when they open the link.',
+    );
+    await expect(
+      canvas.getByRole('button', { name: 'Guests see this name when they open the link.' }),
+    ).toBeVisible();
+  },
+};
+
 export const WithDescription: Story = {
   args: { description: 'Guests see this name when they open the link.' },
   play: async ({ canvas }) => {

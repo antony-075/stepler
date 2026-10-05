@@ -1,4 +1,5 @@
-import { createWriteStream } from 'node:fs';
+import { createReadStream, createWriteStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import {
@@ -47,6 +48,9 @@ type StorageEnv = Pick<
   | 'S3_REQUEST_TIMEOUT_MS'
   | 'S3_COMPLETE_TIMEOUT_MS'
 >;
+
+/** Slowest worker ↔ storage throughput a transfer may have before it is abandoned (retried). */
+const MIN_TRANSFER_BYTES_PER_SECOND = 10 * 1024 * 1024;
 
 /** Without this the SDK leaves Content-Type unsigned and any type can be uploaded (spike S4). */
 const SIGNED_PUT_HEADERS = new Set(['content-type']);
@@ -257,22 +261,72 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
     );
   }
 
-  async downloadToFile(key: string, path: string): Promise<boolean> {
-    let body: unknown;
+  async downloadToFile(key: string, path: string): Promise<{ etag: string } | null> {
+    // One deadline for the response headers, then one for the whole transfer by its size.
+    const controller = new AbortController();
+    const abort = () => controller.abort(new Error('storage download timed out'));
+    let timer = setTimeout(abort, this.completeTimeoutMs);
     try {
-      const res = await this.client.send(
-        new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-        // Covers the whole transfer, not only the response headers.
-        this.deadline(this.completeTimeoutMs),
+      let body: unknown;
+      let etag: string | undefined;
+      let length: number | undefined;
+      try {
+        const res = await this.client.send(
+          new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+          {
+            abortSignal: controller.signal,
+          },
+        );
+        body = res.Body;
+        etag = res.ETag;
+        length = res.ContentLength;
+        clearTimeout(timer);
+        timer = setTimeout(abort, this.transferTimeoutMs(res.ContentLength ?? 0));
+      } catch (error) {
+        if (error instanceof NoSuchKey) return null;
+        throw error;
+      }
+      if (!(body instanceof Readable)) throw new Error('GetObject returned no stream');
+      if (etag === undefined) throw new Error('GetObject returned no ETag');
+      await pipeline(body, createWriteStream(path), { signal: controller.signal });
+      // A cut-short body must never become the "original" the worker rewrites and puts back.
+      const { size } = await stat(path);
+      if (length !== undefined && size !== length) {
+        throw new Error(`download incomplete: ${size} of ${length} bytes`);
+      }
+      return { etag };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async replaceFromFile(
+    key: string,
+    path: string,
+    contentType: string,
+    etag: string,
+  ): Promise<boolean> {
+    const { size } = await stat(path);
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: createReadStream(path),
+          ContentType: contentType,
+          ContentLength: size,
+          IfMatch: etag,
+        }),
+        this.deadline(this.transferTimeoutMs(size)),
       );
-      body = res.Body;
+      return true;
     } catch (error) {
-      if (error instanceof NoSuchKey) return false;
+      // 412: another version is there now; 404: it is gone (R2 answers a missing object either way).
+      const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata
+        ?.httpStatusCode;
+      if (status === 412 || status === 404) return false;
       throw error;
     }
-    if (!(body instanceof Readable)) throw new Error('GetObject returned no stream');
-    await pipeline(body, createWriteStream(path));
-    return true;
   }
 
   async readRange(key: string, start: number, endInclusive: number): Promise<Uint8Array> {
@@ -320,6 +374,14 @@ export class S3ObjectStorage implements ObjectStorage, OnModuleDestroy {
       }),
       this.deadline(this.completeTimeoutMs),
     );
+  }
+
+  /**
+   * A whole-object transfer by the worker (up to a 2 GB video): the request deadline plus the
+   * time the bytes take at `MIN_TRANSFER_BYTES_PER_SECOND`.
+   */
+  private transferTimeoutMs(bytes: number): number {
+    return this.completeTimeoutMs + Math.ceil((bytes / MIN_TRANSFER_BYTES_PER_SECOND) * 1000);
   }
 
   /**

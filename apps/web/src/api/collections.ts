@@ -1,6 +1,10 @@
 import {
   type Collection,
   collectionDetailSchema,
+  type GuestPageEditor,
+  guestPageEditorSchema,
+  type ImageSlotParam,
+  type SaveGuestPageDraftRequest,
   collectionListResponseSchema,
   collectionSchema,
   type CollectionStatus,
@@ -73,15 +77,37 @@ export const deleteCollection = (id: string): Promise<void> =>
 export const isCollectionNotFound = (error: unknown): boolean =>
   isApiError(error, 'NOT_FOUND') || isApiError(error, 'VALIDATION_FAILED');
 
-// The collection cover [A1][A8]. The admin's file goes browser → storage like a guest's (the
-// same multipart protocol and transport), under the admin session; completion answers with the
-// collection, its cover `PENDING` until the worker made the derivatives.
+// The guest page editor (plan Task 13, ADR 0017): the published version and the draft. Every
+// answer is the whole editor state; image routes create the draft if there is none and never
+// change its revision.
 
-const coverBase = (id: string) => `/collections/${encodeURIComponent(id)}/cover`;
+export const guestPageKey = (id: string) => ['collections', 'guest-page', id] as const;
 
-/** The cover upload calls for one collection, in the shape the upload transport takes. */
-export function coverUploadApi(collectionId: string): UploadApi<Collection> {
-  const uploads = `${coverBase(collectionId)}/uploads`;
+const guestPageBase = (id: string) => `/collections/${encodeURIComponent(id)}/guest-page`;
+
+export const fetchGuestPage = (id: string): Promise<GuestPageEditor> =>
+  apiRequest(guestPageBase(id), { schema: guestPageEditorSchema });
+
+export const saveGuestPageDraft = (
+  id: string,
+  body: SaveGuestPageDraftRequest,
+): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/draft`, { method: 'PUT', body, schema: guestPageEditorSchema });
+
+export const publishGuestPage = (id: string, revision: number): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/publish`, {
+    method: 'POST',
+    body: { revision },
+    schema: guestPageEditorSchema,
+  });
+
+/** «Скинути зміни»: deletes the draft. Idempotent. */
+export const discardGuestPageDraft = (id: string): Promise<void> =>
+  apiRequest(`${guestPageBase(id)}/draft`, { method: 'DELETE' });
+
+/** The draft's cover or background upload calls, in the shape the upload transport takes. */
+export function draftImageApi(id: string, slot: ImageSlotParam): UploadApi<GuestPageEditor> {
+  const uploads = `${guestPageBase(id)}/draft/${slot}/uploads`;
   const one = (uploadId: string) => `${uploads}/${encodeURIComponent(uploadId)}`;
   return {
     initiate: (body) =>
@@ -94,19 +120,42 @@ export function coverUploadApi(collectionId: string): UploadApi<Collection> {
         signal,
       }),
     complete: (uploadId, signal) =>
-      apiRequest(`${one(uploadId)}/complete`, { method: 'POST', schema: collectionSchema, signal }),
+      apiRequest(`${one(uploadId)}/complete`, {
+        method: 'POST',
+        schema: guestPageEditorSchema,
+        signal,
+      }),
     cancel: (uploadId) => apiRequest(one(uploadId), { method: 'DELETE' }),
   };
 }
 
-/** Makes a guest's PHOTO frame the cover (a copy: deleting the frame later keeps the cover). */
-export const setCoverFromFrame = (id: string, contentItemId: string): Promise<Collection> =>
-  apiRequest(`${coverBase(id)}/from-frame`, {
+/** Copies a guest's PHOTO frame into the draft's cover or background. */
+export const setDraftImageFromFrame = (
+  id: string,
+  slot: ImageSlotParam,
+  contentItemId: string,
+): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/draft/${slot}/from-frame`, {
     method: 'POST',
     body: { contentItemId },
-    schema: collectionSchema,
+    schema: guestPageEditorSchema,
   });
 
-/** Back to the initials tile. Idempotent. */
-export const removeCover = (id: string): Promise<void> =>
-  apiRequest(coverBase(id), { method: 'DELETE' });
+/** Points the draft's cover or background back at an image the collection still has (undo). */
+export const restoreDraftImage = (
+  id: string,
+  slot: ImageSlotParam,
+  imageId: string,
+): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/draft/${slot}/restore`, {
+    method: 'POST',
+    body: { imageId },
+    schema: guestPageEditorSchema,
+  });
+
+/** Removes the draft's cover or background (the published one stays). */
+export const removeDraftImage = (id: string, slot: ImageSlotParam): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/draft/${slot}`, {
+    method: 'DELETE',
+    schema: guestPageEditorSchema,
+  });

@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { CoverUrls } from '../collections/cover-urls.js';
+import { ImageUrls } from '../images/image-urls.js';
 import { MediaUrls } from './media-urls.js';
 
 /**
@@ -8,5 +8,5 @@ import { MediaUrls } from './media-urls.js';
  * access module cannot import the collections module without a cycle).
  */
 @Global()
-@Module({ providers: [MediaUrls, CoverUrls], exports: [MediaUrls, CoverUrls] })
+@Module({ providers: [MediaUrls, ImageUrls], exports: [MediaUrls, ImageUrls] })
 export class MediaLinksModule {}

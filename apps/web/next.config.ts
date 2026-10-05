@@ -9,8 +9,8 @@ const config: NextConfig = {
   // Monorepo root, so the standalone output traces workspace packages.
   outputFileTracingRoot: fileURLToPath(new URL('../../', import.meta.url)),
   poweredByHeader: false,
-  // packages/ui ships TypeScript sources.
-  transpilePackages: ['@stepler/ui'],
+  // packages/ui and the templates' React entry ship TypeScript sources.
+  transpilePackages: ['@stepler/ui', '@stepler/templates'],
   // The landing's photos (static imports): AVIF first, WebP as the fallback.
   images: { formats: ['image/avif', 'image/webp'] },
   headers() {
@@ -19,6 +19,16 @@ const config: NextConfig = {
         // The magic-link token is in this page's URL; never leak it as a Referer.
         source: '/auth/verify',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        // The editor's live preview (ADR 0017): framed by the editor on this origin only.
+        source: '/preview/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
       },
       {
         // A guest link's token is in the URL (spec §4): no Referer, and never indexed.

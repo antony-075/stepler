@@ -6,6 +6,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
+import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection, SHARED_GALLERY } from './support/guests.js';
@@ -25,7 +26,7 @@ describe('guest media links of other guests’ files', () => {
 
   beforeAll(async () => {
     app = await createApp(testEnv());
-    await app.init();
+    await listenOnLoopback(app);
     tokens = app.get(GuestLinkTokens);
   });
 
@@ -56,6 +57,8 @@ describe('guest media links of other guests’ files', () => {
           originalFilename: name,
           contributorGuestSessionId: sessionA!.id,
           processingStatus: kind === 'PHOTO' ? 'READY' : 'NOT_REQUIRED',
+          // A processed photo: its location has been stripped, so its original is served.
+          ...(kind === 'PHOTO' ? { sanitizedAt: new Date() } : {}),
         },
       });
       const roles =

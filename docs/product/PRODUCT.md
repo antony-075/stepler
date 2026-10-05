@@ -180,7 +180,7 @@ Minimum configuration:
 
 - title/name;
 - optional description;
-- optional cover image and welcome message (set afterwards on the collection's «Гостьова сторінка» tab; moved into MVP by owner decision 2026-10-04).
+- the guest page starts as the «Класика» template with its defaults, no cover and no welcome message; the admin shapes it afterwards on the collection's «Гостьова сторінка» tab (§5.4; cover and welcome moved into MVP by owner decision 2026-10-04, templates and their tweaks on 2026-10-05).
 
 Creating a collection automatically creates its default guest link.
 
@@ -191,7 +191,7 @@ Creating a collection automatically creates its default guest link.
 Admin can:
 
 - edit collection metadata;
-- set the cover (upload an image, or make any guest photo the cover; replace; remove) and the welcome message (one paragraph up to 160 characters; clear it);
+- shape the guest page on the «Гостьова сторінка» tab: a template, then tweaks on top of it — the cover (upload an image, or make any guest photo the cover; replace; remove), the welcome message (one paragraph up to 160 characters), the background (a colour, a gradient or an image with a dimming veil), the accent colour (presets or any colour, with a contrast hint), the heading font, the cover placement, the text alignment and the corners. A template may lock a tweak; the editor says why in visible text. Changes go into a draft, autosaved, and a live preview shows them at once; guests keep seeing the published page until the admin presses «Зберегти». «Скинути зміни» discards the draft. Two tabs editing at once never overwrite each other silently: the later save is refused and offers the latest version. Archived collections show the editor read-only. Six templates: «Класика», «На весь екран», «Журнал», «Листівка», «Вечірка», «Мінімалізм» (each with a fixed light or dark scheme);
 - view collected content;
 - delete content;
 - manage guest links;
@@ -216,7 +216,7 @@ Do not use an email/password account as a prerequisite for MVP guest participati
 
 After opening a guest link, the guest sees:
 
-- collection identity (the cover above the title once the admin set one; a welcome message above the main action when there is one);
+- collection identity, as the admin's published guest page draws it (template and tweaks; the cover above the title once there is one; a welcome message above the main action when there is one). Drafts are never shown to guests;
 - what they can do;
 - upload/add-content action;
 - previously uploaded content if the link allows it.
@@ -649,13 +649,10 @@ QR remains compatible with ordinary scanning.
 
 Potential:
 
-- themes;
-- custom colors;
-- typography;
 - guest-side branding;
 - custom upload instructions.
 
-The cover image and the custom welcome message moved into MVP by owner decision 2026-10-04 (§5.3, §5.4, §6.2).
+The cover image and the custom welcome message moved into MVP by owner decision 2026-10-04; themes (guest page templates), custom colours and typography moved into MVP by owner decision 2026-10-05 (§5.3, §5.4, §6.2; ADR 0017).
 
 ---
 

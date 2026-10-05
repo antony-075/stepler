@@ -33,17 +33,21 @@ describe('collectionWelcomeMessageSchema', () => {
 describe('collectionCoverSchema', () => {
   test('a READY cover has URLs and dimensions; a PENDING one has nulls', () => {
     const ready = {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
       status: 'READY',
       thumbnailUrl: URL_A,
       previewUrl: URL_B,
+      largeUrl: null,
       width: 4000,
       height: 3000,
     };
     expect(collectionCoverSchema.parse(ready)).toEqual(ready);
     const pending = {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,
+      largeUrl: null,
       width: null,
       height: null,
     };

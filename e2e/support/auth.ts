@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import { latestMagicLink } from './mailpit.js';
 
+/** The acceptance sentence; each document link carries a screen-reader new-tab note. */
+const NEW_TAB_UK = '(відкриється в новій вкладці)';
+const LEGAL_SENTENCE_UK = `Я приймаю Умови використання ${NEW_TAB_UK} та Політику конфіденційності ${NEW_TAB_UK}`;
+
 /** Ukrainian sign-in copy: callers run with an unsupported browser language (`de-DE`). */
 export const SIGN_IN_UK = {
   title: 'Увійдіть або створіть акаунт',
@@ -10,13 +14,13 @@ export const SIGN_IN_UK = {
   sent: 'Перевірте пошту',
   signIn: 'Увійти',
   /** The required checkbox on the card (ADR 0016); its name is the whole sentence. */
-  legal: 'Я приймаю Умови використання та Політику конфіденційності',
+  legal: LEGAL_SENTENCE_UK,
 };
 
 /** The fallback page (`/accept-terms`), for accounts without an acceptance. */
 export const ACCEPT_TERMS_UK = {
   title: 'Прийміть умови, щоб продовжити',
-  checkbox: 'Я приймаю Умови використання та Політику конфіденційності',
+  checkbox: LEGAL_SENTENCE_UK,
   submit: 'Прийняти і продовжити',
 };
 
