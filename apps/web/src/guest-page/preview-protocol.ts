@@ -1,31 +1,16 @@
 import { guestPageVersionSchema, type GuestPageVersion } from '@stepler/contracts';
 import { z } from 'zod';
+import { DEFAULT_PREVIEW_STATE, type PreviewState, previewStateSchema } from './preview-state';
 
 // The editor ↔ preview protocol (plan Task 12, ADR 0017). The editor's iframe is the same-origin
 // route /preview/collections/{id}; the editor posts the working copy as one guest page version,
 // the preview answers once that it is ready to receive. Both sides check the origin, the window
 // the message came from and the shape, so no other page or frame can drive the preview. The
-// message also says which guest page state to show (owner remark 77): the page as a guest sees
-// it on a first visit, with their own frames, others' frames, on a view-only link, and so on.
+// message also says which guest page state to show (owner remarks 77, 92; `preview-state.ts`):
+// what the link allows, and what is on the page.
 
 export const PREVIEW_MESSAGE = 'stepler:guest-page-preview';
 export const PREVIEW_READY = 'stepler:guest-page-preview-ready';
-
-/** The guest page states the preview can show; `mixed` (mine + others') is the default. */
-export const PREVIEW_STATES = [
-  'first-visit',
-  'mine',
-  'others',
-  'mixed',
-  'own-only',
-  'view-only',
-  'uploading',
-  'paused',
-  'closed',
-] as const;
-export const previewStateSchema = z.enum(PREVIEW_STATES);
-export type PreviewState = z.infer<typeof previewStateSchema>;
-export const DEFAULT_PREVIEW_STATE: PreviewState = 'mixed';
 
 export const previewMessageSchema = z
   .object({

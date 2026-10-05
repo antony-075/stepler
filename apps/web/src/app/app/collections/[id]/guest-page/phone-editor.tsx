@@ -5,7 +5,7 @@
 // - The preview is the page: a 390px guest page scaled to the width (at most 0.7) in the ink
 //   phone frame, centred, with a chip «Чернетка» / «Збережено» over its top edge, so the state is
 //   in view without opening anything. No device toggle: on a phone the phone view is the one to
-//   judge. «Стан сторінки» under it switches the guest page state the preview shows (remark 77).
+//   judge. Under it the page state (access and content, remark 92).
 // - «Налаштувати» is a 52px ink pill fixed in the thumb zone, with the apricot dot while there are
 //   changes guests do not see (said as «, є незбережені зміни»). The page leaves room under it.
 // - It opens a bottom sheet (at most 544px and 85svh, the preview still showing above it on a
@@ -28,8 +28,9 @@ import { cn } from '@stepler/ui/lib/utils';
 import { SlidersHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
-import { DEFAULT_PREVIEW_STATE, type PreviewState } from '@/guest-page/preview-protocol';
-import { PreviewFrame, PreviewStateSelect } from './preview-pane';
+import { DEFAULT_PREVIEW_STATE, type PreviewState } from '@/guest-page/preview-state';
+import { PreviewFrame } from './preview-pane';
+import { PreviewStateControls } from './preview-state-controls';
 import { SaveBar } from './save-bar';
 import type { SectionProps } from './sections/section-props';
 import { SettingsAccordion } from './sections/settings-accordion';
@@ -72,11 +73,7 @@ export function PhoneEditor(props: SectionProps) {
             device="phone"
           />
         </div>
-        <PreviewStateSelect
-          value={state}
-          onChange={setState}
-          className="mt-4 h-12 justify-self-center"
-        />
+        <PreviewStateControls value={state} onChange={setState} className="mt-4 justify-center" />
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>

@@ -1,28 +1,17 @@
 'use client';
 
 import type { GuestPageVersion } from '@stepler/contracts';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@stepler/ui/components/select';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { bestTextOn, resolveTheme, themeTokens } from '@stepler/templates/core';
-import { ExternalLink, Layers, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { ExternalLink, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  DEFAULT_PREVIEW_STATE,
-  isPreviewReady,
-  PREVIEW_STATES,
-  type PreviewState,
-  previewMessage,
-} from '@/guest-page/preview-protocol';
+import { isPreviewReady, previewMessage } from '@/guest-page/preview-protocol';
+import { DEFAULT_PREVIEW_STATE, type PreviewState } from '@/guest-page/preview-state';
 import { DeviceFrame, type PreviewDevice, viewportOf } from './device-frame';
+import { PreviewStateControls } from './preview-state-controls';
 
 export type { PreviewDevice } from './device-frame';
 
@@ -117,40 +106,6 @@ export function PreviewFrame({
   );
 }
 
-/** «Стан сторінки»: which guest page state the preview shows (owner remark 77). */
-export function PreviewStateSelect({
-  value,
-  onChange,
-  className,
-}: {
-  value: PreviewState;
-  onChange: (state: PreviewState) => void;
-  className?: string;
-}) {
-  const t = useTranslations('guestPage.preview');
-  return (
-    <Select value={value} onValueChange={(next) => onChange(next as PreviewState)}>
-      <SelectTrigger
-        aria-label={t('stateTrigger', { name: t(`states.${value}`) })}
-        data-slot="preview-state"
-        className={cn('h-11 w-auto max-w-full min-w-0 gap-2 bg-background', className)}
-      >
-        <Layers aria-hidden="true" />
-        <span className="min-w-0 truncate">
-          <SelectValue />
-        </span>
-      </SelectTrigger>
-      <SelectContent align="end">
-        {PREVIEW_STATES.map((state) => (
-          <SelectItem key={state} value={state}>
-            {t(`states.${state}`)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-
 const DEVICES = [
   { value: 'phone', Icon: Smartphone },
   { value: 'tablet', Icon: Tablet },
@@ -161,7 +116,7 @@ const DEVICES = [
  * The desktop preview pane (owner remarks 66, 67, 70, 71, 77). Its header is the editor's fixed
  * place for what matters at any moment: the draft status, «Скинути зміни» and «Зберегти»
  * (`actions`, the save bar), in view whatever the settings panel scrolls to. Under it, on the
- * light table, one quiet toolbar: «Стан сторінки», the device toggle (Телефон / Планшет /
+ * light table, one quiet toolbar: the page state (access and content), the device toggle (Телефон / Планшет /
  * Комп’ютер) and «Відкрити як гість»; then the device, as large as the pane allows. The pane never
  * scrolls; on a narrow pane the toggle shows its icons only (the names stay accessible names).
  */
@@ -192,7 +147,7 @@ export function PreviewPane({
         {/* The template's name is in the panel's first row; here only for screen readers. */}
         <h2 className="sr-only">{t('title')}</h2>
         <p className="sr-only">{t('subtitle', { name: templateName })}</p>
-        <PreviewStateSelect value={state} onChange={setState} className="max-w-[18rem]" />
+        <PreviewStateControls value={state} onChange={setState} />
         <div className="flex flex-wrap items-center gap-2">
           <span id={deviceLabelId} className="sr-only">
             {t('device')}

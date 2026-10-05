@@ -8,10 +8,10 @@
 //   welcome and cover. The frames are built-in samples (owner remark 76: generated pictures, a
 //   video, wishes, a document; never a guest's real photo), so a new collection shows how the
 //   page looks with content.
-// - The page state comes from the editor's «Стан сторінки» (owner remark 77): a first visit, only
-//   my frames, only others', mine + others' (the default), the gallery hidden by the link, a
-//   view-only link, uploads in progress, the link paused, the collection closed. Each is drawn
-//   with the same pieces the guest page uses; the actions carry the default link's real labels
+// - The page state comes from the editor's two controls (owner remarks 77, 92): «Доступ за
+//   посиланням» (everything, only their own, view-only, paused, closed) and «Вміст» (empty, mine,
+//   others', both, uploading). A link that hides the gallery never draws «Усі кадри», as on the
+//   real page. Each state is drawn with the same pieces the guest page uses; the actions carry the default link's real labels
 //   and do nothing; the whole page is `inert`.
 // - Admin endpoints only: no guest session is created and no guest API is called (lint and a
 //   test check the imports).
@@ -39,10 +39,10 @@ import { fontVariables } from '@/guest/template-fonts';
 import { buildGuestActions } from '@/guest/template-model';
 import {
   acceptPreviewMessage,
-  type PreviewState,
   type PreviewView,
   previewReadyMessage,
 } from '@/guest-page/preview-protocol';
+import { type PreviewShape, previewShape } from '@/guest-page/preview-state';
 import { samplePhoto } from '@/guest-page/sample-photos';
 
 /** A link that takes everything: the preview's labels when the default link takes nothing. */
@@ -81,21 +81,8 @@ const OTHERS: readonly Sample[] = [
   { kind: 'photo', picture: 7 },
 ];
 
-/** What each state shows, as the guest page would. */
-type Shape = {
-  own: 'none' | 'empty' | 'items' | 'uploading';
-  all: 'none' | 'empty' | 'own' | 'others' | 'both';
-  actions: boolean;
-};
-const SHAPES: Record<Exclude<PreviewState, 'paused' | 'closed'>, Shape> = {
-  'first-visit': { own: 'empty', all: 'empty', actions: true },
-  mine: { own: 'items', all: 'own', actions: true },
-  others: { own: 'empty', all: 'others', actions: true },
-  mixed: { own: 'items', all: 'both', actions: true },
-  'own-only': { own: 'items', all: 'none', actions: true },
-  'view-only': { own: 'none', all: 'others', actions: false },
-  uploading: { own: 'uploading', all: 'both', actions: true },
-};
+/** What a page state draws (`preview-state.ts`). */
+type Shape = Extract<PreviewShape, { kind: 'page' }>;
 
 const ITEMS: Record<Shape['all'], readonly Sample[]> = {
   none: [],
@@ -139,10 +126,9 @@ export function PreviewClient({ collectionId }: { collectionId: string }) {
     // Neutral, so a dark template does not flash over a light page.
     return <div aria-busy="true" className="min-h-svh bg-background" />;
   }
-  if (view.state === 'paused' || view.state === 'closed') {
-    return <PreviewLinkState state={view.state} />;
-  }
-  return <PreviewPage collection={collection.data} page={view.page} shape={SHAPES[view.state]} />;
+  const shape = previewShape(view.state);
+  if (shape.kind === 'link-state') return <PreviewLinkState state={shape.state} />;
+  return <PreviewPage collection={collection.data} page={view.page} shape={shape} />;
 }
 
 /** The link or collection state page, as the guest page shows it (inert like the rest). */

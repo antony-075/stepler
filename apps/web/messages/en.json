@@ -839,24 +839,35 @@
       "newTab": "(new tab, saved version)",
       "frameTitle": "Guest page preview",
       "tablet": "Tablet",
-      "stateTrigger": "Page state: {name}. Change",
-      "states": {
-        "first-visit": "First visit, no frames yet",
-        "mine": "Only my frames",
-        "others": "Only other guests’ frames",
-        "mixed": "Mine and other guests’",
-        "own-only": "The link hides others’ frames",
-        "view-only": "A view-only link",
-        "uploading": "Frames uploading",
-        "paused": "The link is paused",
-        "closed": "The collection is closed"
-      },
       "sample": {
         "guestName": "Olena",
         "wishOwn": "Thank you for a wonderful evening! The best people around.",
         "wishOther": "Happiness, love and many more evenings like this!",
         "wishOther2": "Warmest wishes from the whole family.",
         "docTitle": "Evening programme.pdf"
+      },
+      "access": {
+        "label": "Link access",
+        "trigger": "Link access: {name}. Change",
+        "all": "Sees everything",
+        "own": "Own only",
+        "view": "View only",
+        "paused": "Paused",
+        "closed": "Closed"
+      },
+      "content": {
+        "label": "Content",
+        "trigger": "Content: {name}. Change",
+        "empty": "Empty",
+        "mine": "Mine only",
+        "others": "Others’ only",
+        "both": "Mine and others’",
+        "uploading": "Uploading",
+        "refusal": {
+          "hidden-gallery": "The link does not show others’ frames",
+          "view-only": "Nothing can be added on this link",
+          "stopped": "The guest sees only a message"
+        }
       }
     },
     "leave": "Your changes are still being saved. Leave the page?",
@@ -867,7 +878,6 @@
     "archived": "An archived collection cannot be changed. Restore it from the archive to change its guest page.",
     "sections": {
       "template": "Template",
-      "cover": "Cover",
       "welcome": "Welcome",
       "background": "Background",
       "accent": "Accent",
@@ -946,14 +956,14 @@
         "EAD7D7": "powder",
         "D8D3E6": "lavender",
         "110F15": "night",
-        "141A22": "deep blue",
-        "1C1511": "coffee",
-        "0F1713": "dark forest",
-        "1D1020": "aubergine",
-        "F7F7F5": "warm white",
-        "F4F6FA": "cool white",
-        "FAF7F2": "ivory",
-        "F5F5F7": "pearl"
+        "15233B": "deep blue",
+        "2B1C14": "coffee",
+        "0E2A20": "dark forest",
+        "2D1236": "aubergine",
+        "F2F1EC": "warm white",
+        "EBF0F7": "cool white",
+        "F8F1E4": "ivory",
+        "F0EEF5": "pearl"
       },
       "gradientNames": {
         "mist": "mist",
@@ -969,7 +979,10 @@
       "dim": "Dimming",
       "dimValue": "{value}%",
       "remove": "Remove image",
-      "noImage": "Add an image for the background."
+      "noImage": "Add an image for the background.",
+      "coverInLayout": "The cover is changed in «Layout».",
+      "openLayout": "Open «Layout»",
+      "sampleText": "Aa"
     },
     "accent": {
       "swatch": "Accent: {name}",
@@ -1035,7 +1048,10 @@
         "sharp": "Sharp",
         "soft": "Soft",
         "round": "Round"
-      }
+      },
+      "placement": "Placement",
+      "withCover": "with a cover",
+      "withoutCover": "no cover"
     },
     "status": {
       "draft": "Draft — guests see the previous version",
@@ -1070,7 +1086,7 @@
       "dirty": "there are unsaved changes",
       "fromFrame": "Picked from frames",
       "imageSummary": "Image, {dim}%",
-      "layoutSummary": "{placement}, {align, select, start {left} other {centred}}",
+      "layoutSummary": "{placement} · {cover}",
       "sectionsLabel": "Guest page settings",
       "previewLabel": "Guest page preview"
     },
