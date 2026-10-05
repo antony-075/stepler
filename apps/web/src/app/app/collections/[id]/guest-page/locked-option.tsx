@@ -40,8 +40,10 @@ const ITEM = {
     'h-auto min-h-11 min-w-0 justify-center border-border bg-card px-3 py-2 text-center leading-tight whitespace-normal text-foreground',
   tiles:
     'h-auto min-h-14 min-w-0 justify-start gap-2 border-border bg-card px-2.5 py-2 text-left leading-tight whitespace-normal text-foreground',
+  // One size for every sample (owner remark 108): the tile fills its column, the name has two
+  // lines reserved and is clamped, and the choice is the 1px edge every item already has.
   backgrounds:
-    'h-auto min-w-0 flex-col items-stretch gap-1 border-transparent bg-transparent p-1 text-center text-xs leading-tight font-medium whitespace-normal text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground [&>[data-slot=toggle-group-item-icon]]:block',
+    'h-full min-w-0 flex-col items-stretch justify-start gap-1 border-transparent bg-transparent p-1 text-center text-xs leading-tight font-medium whitespace-normal text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground [&>[data-slot=toggle-group-item-icon]]:block [&>[data-slot=toggle-group-item-label]]:line-clamp-2 [&>[data-slot=toggle-group-item-label]]:min-h-[2.5em] [&>[data-slot=toggle-group-item-label]]:[overflow-wrap:normal]',
   swatches:
     'size-9 min-w-0 gap-0 rounded-full border-2 border-transparent bg-transparent p-[3px] pointer-coarse:size-11 hover:border-border data-[state=on]:border-foreground data-[state=on]:bg-transparent [&>[data-slot=toggle-group-item-icon]]:size-full [&>[data-slot=toggle-group-item-label]]:hidden',
 } as const;
@@ -98,7 +100,7 @@ export function ChoiceGroup<T extends string>({
           variant === 'tiles' && 'grid w-full grid-cols-2 gap-2',
           variant === 'swatches' && 'flex-wrap gap-1.5',
           variant === 'backgrounds' &&
-            'grid w-full grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5',
+            'grid w-full auto-rows-fr grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1.5',
         )}
       >
         {choices.map((choice) => {
