@@ -1,5 +1,6 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { fetchGuestLinkTheme } from '@/api/server';
 import { GuestPage } from '@/guest/guest-page';
 
 // Never the token or the collection's title: the tab title and history stay neutral, and the
@@ -10,11 +11,20 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
+ * Edge to edge on phones with a notch or a home indicator (owner, item 96): the template's
+ * background fills the screen, and the page keeps its content inside the safe area itself
+ * (`env(safe-area-inset-*)` in @stepler/templates' styles and on the guest chrome).
+ */
+export const viewport: Viewport = { viewportFit: 'cover' };
+
+/**
  * A guest link (`/g/{token}`, spec §4): the session starts in the browser ([C3], G6). The whole
  * page, header and footer included, is `GuestPage`: once the collection is known it renders the
  * guest page template, which places them itself.
  */
 export default async function GuestLinkPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  return <GuestPage token={token} />;
+  // The template's look from the first byte (remarks 99, 100); `null` starts neutral.
+  const theme = await fetchGuestLinkTheme(token);
+  return <GuestPage token={token} theme={theme} />;
 }

@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 import { Checkbox as CheckboxPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
-import { focusRing } from '../lib/focus';
+import { focusHalo } from '../lib/focus';
 import { cn } from '../lib/utils';
 
 // Based on shadcn/ui (new-york). The box is 20px with a 2px radius; checked is an ink fill with a
@@ -13,11 +13,12 @@ function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimiti
       data-slot="checkbox"
       className={cn(
         'peer size-5 shrink-0 rounded-frame border border-input bg-card transition-[background-color,border-color] duration-(--duration-fast) motion-reduce:transition-none',
-        focusRing,
+        focusHalo,
+        'data-[state=checked]:focus-visible:border-ring',
         'hover:border-foreground',
         'data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground',
         'disabled:cursor-not-allowed disabled:bg-muted data-[state=checked]:disabled:border-muted-foreground data-[state=checked]:disabled:bg-muted-foreground',
-        'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
+        'aria-invalid:border-destructive aria-invalid:focus-visible:border-destructive aria-invalid:focus-visible:ring-destructive/25',
         className,
       )}
       {...props}

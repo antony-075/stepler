@@ -3,6 +3,10 @@
 @import '@stepler/templates/styles.css';
 @source '../../../templates/src';
 
+/* A laptop (owner remark 104): wide enough for the desktop layout, short enough that the page
+   header must not eat the editor's height. 1280×800, 1366×768, 1440×900, 1512×982… */
+@custom-variant laptop (@media (min-width: 64rem) and (max-height: 62.5rem));
+
 /* The landing's page column (DESIGN-SYSTEM.md §7.1: up to 1600px of content from 1920px), wider
    than `stepler-container` so the photos fill a 1440px screen; the same gutters. */
 @utility landing-container {
@@ -20,6 +24,18 @@
   @variant 2xl {
     --stepler-gutter: 2.5rem;
   }
+}
+
+/* The admin page column (DESIGN-SYSTEM.md §6.0; owner remark 102, 2026-10-05): fluid, the full
+   width right of the sidebar with gutters that grow with the screen (16px on a phone, 48px from
+   1600px), capped only on very wide screens. One column for every admin page and the top bar;
+   text-heavy pages cap their own form columns inside it. */
+@utility admin-container {
+  width: 100%;
+  max-width: 2200px;
+  margin-inline: auto;
+  padding-inline: clamp(16px, 3vw, 48px);
+  box-sizing: border-box;
 }
 
 /* Legal documents (DESIGN-SYSTEM.md §6.11): the Markdown body of /legal/*, read as a document.

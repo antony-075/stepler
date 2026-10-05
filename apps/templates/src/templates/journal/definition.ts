@@ -29,8 +29,8 @@ export const journal: TemplateDefinition = {
     imageDim: { min: 0, max: 0 },
     backgroundImageSource: 'own',
     coverPlacements: ['top', 'none'],
-    aligns: ['center'],
-    corners: ['sharp'],
+    aligns: ['start', 'center'],
+    corners: ['sharp', 'soft', 'round'],
   },
   palette: {
     text: '#2A211B',

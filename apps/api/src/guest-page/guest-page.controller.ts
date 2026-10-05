@@ -19,6 +19,7 @@ import {
   guestPageImageUploadParamsSchema,
   publishGuestPageRequestSchema,
   saveGuestPageDraftRequestSchema,
+  restoreDraftImageRequestSchema,
   setCoverFromFrameRequestSchema,
   uploadPartsRequestSchema,
   uploadPartsResponseSchema,
@@ -27,6 +28,7 @@ import {
   type GuestPageEditor,
   type PublishGuestPageRequest,
   type SaveGuestPageDraftRequest,
+  type RestoreDraftImageRequest,
   type SetCoverFromFrameRequest,
   type UploadPartsRequest,
   type UploadPartsResponse,
@@ -165,6 +167,26 @@ export class GuestPageController {
       draftTarget(params.slot),
       body.contentItemId,
     );
+    return this.pages.read(principal, params.id);
+  }
+
+  /** Points the draft's cover or background back at an image the collection still has (undo). */
+  @Post('draft/:slot/restore')
+  @RateLimit('admin-cover', 'admin-cover-user')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: guestPageEditorSchema })
+  @ApiResponse({
+    status: 404,
+    description: `${NOT_FOUND}, or the image is gone (nothing referenced it)`,
+  })
+  @ApiResponse({ status: 409, description: 'COLLECTION_ARCHIVED' })
+  @ApiResponse({ status: 429, description: RATE_LIMITED })
+  async restoreImage(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: guestPageImageParamsSchema }) params: ImageParams,
+    @Body({ schema: restoreDraftImageRequestSchema }) body: RestoreDraftImageRequest,
+  ): Promise<GuestPageEditor> {
+    await this.images.restore(principal, params.id, draftTarget(params.slot), body.imageId);
     return this.pages.read(principal, params.id);
   }
 

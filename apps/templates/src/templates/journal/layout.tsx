@@ -13,7 +13,8 @@
 // - From 1024px: a 560px aside that stays in view (title 54, the 252×336 print, the two
 //   buttons side by side 50px, the notice, the footer at its bottom) beside the frames in 6
 //   columns, the first own frame 2×2.
-// - Locked: alignment (centre) and corners (the template's own radii). Light only [D5].
+// - Alignment and corners follow the settings (owner, item 111): centred by default, the radii
+//   from the tokens on the buttons, the print and the frames. Light only [D5].
 
 import { ImagePlus, PenLine } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -31,7 +32,10 @@ export function JournalLayout({ model, actions, slots }: TemplateLayoutProps) {
       data-actions={actions === null ? undefined : ''}
     >
       <aside className="jr-aside">
-        <header className="jr-bar">{slots.languageSwitch}</header>
+        <header className="jr-bar">
+          {slots.brand}
+          {slots.languageSwitch}
+        </header>
         <div className="jr-identity">
           <h1 className="jr-title">{model.title}</h1>
           <div aria-hidden="true" className="jr-ornament">
@@ -68,8 +72,16 @@ export function JournalLayout({ model, actions, slots }: TemplateLayoutProps) {
       </aside>
       <div className="jr-main">
         {contributed ? (
-          // Phones and tablets after an upload: the title as a compact bar (the hero is hidden).
-          <h1 className="jr-compact-title">{model.title}</h1>
+          // Phones and tablets after an upload: the title as a compact bar (the hero is hidden),
+          // the welcome still under it (owner, item 109).
+          <div className="jr-compact">
+            <h1 className="jr-compact-title">{model.title}</h1>
+            {model.welcomeMessage === null ? null : (
+              <p data-slot="guest-welcome" className="jr-compact-welcome">
+                {model.welcomeMessage}
+              </p>
+            )}
+          </div>
         ) : null}
         <main className="jr-sections">
           {slots.ownFrames}

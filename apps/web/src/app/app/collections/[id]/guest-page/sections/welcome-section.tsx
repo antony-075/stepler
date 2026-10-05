@@ -27,7 +27,7 @@ export function WelcomeSection({ editor, readOnly }: SectionProps) {
         ? t('lineBreaks')
         : undefined;
   return (
-    <Field id="guest-page-welcome" label={t('label')} description={t('helper')} error={error}>
+    <Field id="guest-page-welcome" label={t('label')} hint={t('helper')} error={error}>
       {(control) => (
         <div className="grid gap-1">
           <Textarea
@@ -39,11 +39,13 @@ export function WelcomeSection({ editor, readOnly }: SectionProps) {
               const next = event.target.value;
               setText(next);
               if (next.trim() === '') {
-                editor.dispatch({ type: 'welcome', value: null });
+                editor.dispatch({ type: 'welcome', value: null }, 'welcome');
                 return;
               }
               const parsed = collectionWelcomeMessageSchema.safeParse(next);
-              if (parsed.success) editor.dispatch({ type: 'welcome', value: parsed.data });
+              // Typing is one undo step per pause (owner remark 113).
+              if (parsed.success)
+                editor.dispatch({ type: 'welcome', value: parsed.data }, 'welcome');
             }}
           />
           <p className="justify-self-end type-data text-sm text-muted-foreground tabular-nums">

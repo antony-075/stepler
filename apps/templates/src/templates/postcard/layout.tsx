@@ -13,10 +13,14 @@
 // - After an upload on phones and tablets: a compact airmail strip (the cover thumbnail, the
 //   title, the count) instead of the card, and a sticky cream bar with a 5px airmail stripe,
 //   the two stamps at 50px and the notice. The footer is always there.
-// - From 1024px: a 1120px card `284 | 1fr | 1px | 262`: the polaroid, the title with the welcome
-//   on lined paper and the notice, a rule, the stamps at 120px with a 96px postmark; then
-//   polaroid grids in 8 columns.
-// - The card sets its own alignment and radii (locked). Light only [D5].
+// - From 1024px: a 1120px card `284 | 1fr | 1px | 300`: the polaroid, the title with the welcome
+//   on lined paper, a rule, the stamps and the notice, a 96px postmark stamped across the card's
+//   bottom edge; then polaroid grids in 8 columns.
+// - The primary stamp is the page's one clear button (owner, item 85): full width of its column,
+//   icon and label side by side, lifted; the wish stamp under it is lower and quieter.
+// - Alignment and corners follow the settings (owner, item 111): the card's text block takes
+//   the alignment; the radii go on the card, the polaroids and the stamps' faces (the
+//   perforated edge stays). Light only [D5].
 
 import { ImagePlus, PenLine } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -89,6 +93,12 @@ export function PostcardLayout({ model, actions, slots }: TemplateLayoutProps) {
               <h1 className="pc-strip-title">{model.title}</h1>
               {model.countsLabel === null ? null : (
                 <p className="pc-strip-count">{model.countsLabel}</p>
+              )}
+              {/* The welcome stays with the title after an upload (owner, item 109). */}
+              {model.welcomeMessage === null ? null : (
+                <p data-slot="guest-welcome" className="pc-strip-welcome">
+                  {model.welcomeMessage}
+                </p>
               )}
             </div>
           </div>

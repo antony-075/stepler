@@ -47,8 +47,11 @@ test.afterAll(async () => {
   workerAdmin = null;
 });
 
-/** A collection of the worker's admin whose main link takes every kind. */
-async function admin(browser: Browser, title = 'Весілля Олі та Тараса') {
+/**
+ * A collection of the worker's admin whose main link takes every kind; `gallery: false` hides
+ * the shared gallery (guests see only their own frames).
+ */
+async function admin(browser: Browser, title = 'Весілля Олі та Тараса', gallery = true) {
   const page = await signedInAdmin(browser);
   const { id } = await createCollectionViaApi(page, title);
   const main = (await guestLinks(page, id)).find((link) => link.isDefault)!;
@@ -59,7 +62,7 @@ async function admin(browser: Browser, title = 'Весілля Олі та Та�
         canUploadVideos: true,
         canUploadDocuments: true,
         canSubmitText: true,
-        canViewGallery: true,
+        canViewGallery: gallery,
         canDeleteOwn: true,
       },
     },
@@ -157,6 +160,91 @@ test.describe('guest page templates at 360px', () => {
       await join(guest, owner.path);
       await publish(owner.page, guest, owner.id, templateId);
       await checkPage(guest);
+      await owner.done();
+    });
+  }
+});
+
+// Owner remarks 91, 93, 95, 97: a phone at 390 on a link that shows only the guest's own frames.
+// No template draws «Усі кадри» then; the page still fits, reaches the bottom of the window, and
+// keeps the header clear of the content.
+test.describe('guest page templates at 390px, gallery hidden', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const templateId of TEMPLATE_IDS) {
+    test(`${templateId}: only «Ваші кадри», no «Усі кадри»; the page fills the window`, async ({
+      page: guest,
+      browser,
+    }) => {
+      const owner = await admin(browser, 'Весілля Олі та Тараса', false);
+      await join(guest, owner.path);
+      await publish(owner.page, guest, owner.id, templateId);
+      await expect(guest.locator('[data-slot="guest-all-frames"]')).toHaveCount(0);
+      await expect(guest.getByRole('heading', { name: 'Усі кадри' })).toHaveCount(0);
+      await expect(shown(guest.getByText('Ваші кадри побачить лише організатор'))).toBeVisible();
+      // The footer ends at or below the window's bottom edge: no empty band under it.
+      const gap = await guest.evaluate(() => {
+        const footers = [...document.querySelectorAll('[data-template] footer')].filter(
+          (footer) => (footer as HTMLElement).offsetParent !== null,
+        );
+        const bottom = Math.max(...footers.map((f) => f.getBoundingClientRect().bottom));
+        return window.innerHeight - (bottom + window.scrollY);
+      });
+      expect(gap).toBeLessThanOrEqual(1);
+      await checkPage(guest);
+      await owner.done();
+    });
+  }
+});
+
+/** In the viewport, with a size, fully opaque (the overlay and its ancestors). */
+async function expectShown(locator: Locator) {
+  await expect(locator).toBeInViewport();
+  const box = (await locator.boundingBox())!;
+  expect(box.width * box.height).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      locator.evaluate((el) => {
+        let opacity = 1;
+        for (let node: Element | null = el; node !== null; node = node.parentElement) {
+          opacity *= Number(getComputedStyle(node).opacity);
+        }
+        return opacity;
+      }),
+    )
+    .toBe(1);
+}
+
+// Owner remarks 112, 115: the name prompt and the wish composer are the template's and show;
+// «Надіслати» in its accent.
+test.describe('the wish composer in the template', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const templateId of TEMPLATE_IDS) {
+    test(`${templateId}: the name prompt and the composer show; «Надіслати» is the accent`, async ({
+      page: guest,
+      browser,
+    }) => {
+      const owner = await admin(browser);
+      await join(guest, owner.path);
+      await publish(owner.page, guest, owner.id, templateId);
+      const accent = await token(guest, '--tpl-accent');
+      await shown(guest.getByRole('button', { name: 'Написати побажання' })).click();
+      // Both overlays really show (owner remark 115): in the viewport, sized, opaque.
+      const name = guest.getByRole('dialog', { name: 'Як вас звати?' });
+      await expectShown(name.getByRole('button', { name: 'Пропустити' }));
+      await name.getByRole('button', { name: 'Пропустити' }).click();
+      const composer = guest.getByRole('dialog', { name: 'Ваше побажання' });
+      await expectShown(composer.getByRole('textbox'));
+      await expectShown(composer.getByRole('button', { name: 'Надіслати' }));
+      await expect(composer).toHaveAttribute('data-template-surface', templateId);
+      const send = composer.getByRole('button', { name: 'Надіслати' });
+      const rgb = await send.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const hex = `#${(rgb.match(/\d+/g) ?? [])
+        .slice(0, 3)
+        .map((n) => Number(n).toString(16).padStart(2, '0'))
+        .join('')}`.toUpperCase();
+      expect(hex).toBe(accent);
       await owner.done();
     });
   }

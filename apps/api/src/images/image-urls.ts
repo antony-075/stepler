@@ -41,6 +41,7 @@ export class ImageUrls {
     if (image === null) return null;
     const links = await this.links(image, now);
     return {
+      id: image.id,
       status: image.status,
       thumbnailUrl: links?.thumbnailUrl ?? null,
       previewUrl: links?.previewUrl ?? null,

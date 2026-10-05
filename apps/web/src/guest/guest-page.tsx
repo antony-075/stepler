@@ -14,24 +14,18 @@
 //   with the actions while files are on their way.
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.
 // - Any call that meets a link or collection state switches the whole page to that state; the
-//   loading and state pages keep the plain Stepler header and footer.
+//   loading and state screens are drawn in the link's template when its look is known (the
+//   server fetched it, owner remarks 99, 100), else in the plain Stepler header and footer.
 
 import type { GuestContext } from '@stepler/contracts';
-import { Alert } from '@stepler/ui/components/alert';
-import { Button } from '@stepler/ui/components/button';
-import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
-import { GuestTemplateRoot } from '@stepler/templates/react';
+import { GuestTemplateRoot, templateSurfaceProps } from '@stepler/templates/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { LinkStatePage } from '@/app/g/[token]/link-state-page';
-import { SiteFooter } from '@/components/site-footer';
-import { SiteHeader } from '@/components/site-header';
-import { LanguageSwitch } from '@/i18n/language-switch';
+import { useEffect, useMemo, useState } from 'react';
 import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution } from './contribute-actions';
-import type { GuestPageState } from './guest-state';
+import { type GuestTheme, GuestLoadingScreen, GuestStateScreen } from './guest-screens';
 import { NamePrompt } from './name-prompt';
 import { guestContentKey, useFrameTime } from './own-frames';
 import { fontVariables } from './template-fonts';
@@ -46,22 +40,14 @@ import { useGuestSession } from './use-guest-session';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
 
-export function GuestPage({ token }: { token: string }) {
+export function GuestPage({ token, theme }: { token: string; theme: GuestTheme | null }) {
   const session = useGuestSession(token);
   // Files this visit added, so a link closed mid-batch can still say how many arrived.
   const [added, setAdded] = useState(0);
-  if (session.status === 'loading') {
-    return (
-      <GuestChrome>
-        <GuestLoading />
-      </GuestChrome>
-    );
-  }
+  if (session.status === 'loading') return <GuestLoadingScreen theme={theme} />;
   if (session.status !== 'ready') {
     return (
-      <GuestChrome>
-        <GuestStatePage state={session.status} retry={session.retry} added={added} />
-      </GuestChrome>
+      <GuestStateScreen theme={theme} state={session.status} retry={session.retry} added={added} />
     );
   }
   return (
@@ -72,83 +58,6 @@ export function GuestPage({ token }: { token: string }) {
       setContext={session.setContext}
       onAdded={setAdded}
     />
-  );
-}
-
-/** The plain Stepler header, page column and footer around the loading and link states. */
-function GuestChrome({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader>
-        <LanguageSwitch variant="header" />
-      </SiteHeader>
-      <main className="stepler-container flex-1 pt-6 pb-16 sm:pt-10 lg:pt-12">{children}</main>
-      <SiteFooter />
-    </div>
-  );
-}
-
-function GuestLoading() {
-  const t = useTranslations('guestLink');
-  return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-label={t('loading')}
-      className="mx-auto grid w-full max-w-[720px] gap-4 lg:max-w-none"
-    >
-      <Skeleton className="h-10 w-4/5" />
-      <Skeleton className="h-5 w-3/5" />
-    </div>
-  );
-}
-
-function GuestStatePage({
-  state,
-  retry,
-  added = 0,
-}: {
-  state: GuestPageState;
-  retry: () => void;
-  added?: number;
-}) {
-  const t = useTranslations('guestLink');
-  const again = (
-    <Button variant="outline" className="w-full sm:w-auto" onClick={retry}>
-      {t('retry')}
-    </Button>
-  );
-  const page = (() => {
-    switch (state) {
-      case 'paused':
-        return <LinkStatePage tone="warning" title={t('paused.title')} text={t('paused.text')} />;
-      case 'revoked':
-        return <LinkStatePage title={t('revoked.title')} text={t('revoked.text')} />;
-      case 'archived':
-        return <LinkStatePage title={t('archived.title')} text={t('archived.text')} />;
-      case 'unavailable':
-        return <LinkStatePage title={t('unavailable.title')} text={t('unavailable.text')} />;
-      case 'not-found':
-        return <LinkStatePage title={t('notFound.title')} text={t('notFound.text')} />;
-      case 'quota-full':
-        return <LinkStatePage title={t('quotaFull.title')} text={t('quotaFull.text')} />;
-      case 'rate-limited':
-        return <LinkStatePage title={t('rateLimited.title')} action={again} />;
-      case 'failed':
-        return (
-          <Alert variant="error" action={again}>
-            {t('failed')}
-          </Alert>
-        );
-    }
-  })();
-  return (
-    <div className="mx-auto grid w-full max-w-[720px] gap-4">
-      {page}
-      {added > 0 ? (
-        <p className="text-muted-foreground">{t('addedBeforeClosed', { count: added })}</p>
-      ) : null}
-    </div>
   );
 }
 
@@ -258,6 +167,13 @@ function GuestCollection({
     refreshContext();
   }
 
+  // The composer and the name prompt in the page's template (owner remark 112).
+  const surface = templateSurfaceProps(
+    context.page.templateId,
+    context.page.templateVersion,
+    context.page.settings,
+    fontVariables,
+  );
   const model = buildGuestPageModel(context, {
     countsLabel: counts === null ? null : t('counts', { count: counts.total }),
     lastAddedLabel:
@@ -327,8 +243,14 @@ function GuestCollection({
         mode={namePrompt?.mode ?? 'first'}
         defaultName={guest.name}
         onDone={nameDone}
+        surface={surface}
       />
-      <TextComposer open={composerOpen} onOpenChange={setComposerOpen} onSend={sendText} />
+      <TextComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        onSend={sendText}
+        surface={surface}
+      />
     </>
   );
 }

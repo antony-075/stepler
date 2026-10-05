@@ -116,10 +116,11 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <CollectionHeader collection={collection} />
       {/* On «Параметри колекції» the archiving card says the same with its own button: never two. */}
       {archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null}
-      <Tabs value={tab} onValueChange={selectTab} className="gap-6">
+      {/* Slimmer on a laptop (short screen), on every tab alike (owner remark 104). */}
+      <Tabs value={tab} onValueChange={selectTab} className="gap-6 laptop:gap-4">
         {/* Phones show icon + count only (owner 2026-10-03), and so does 640–767 since the longer
             names (owner 2026-10-04) do not fit there; the label stays as the accessible name. */}
-        <TabsList variant="segmented" aria-label={t('tabs.label')}>
+        <TabsList variant="segmented" aria-label={t('tabs.label')} className="laptop:*:min-h-9">
           <TabsTrigger value="content">
             <Images aria-hidden="true" className="max-md:size-5" />
             <span className="min-w-0 truncate max-md:sr-only">{t('tabs.content')}</span>
@@ -175,7 +176,8 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
         <TabsContent value="appearance">
           <GuestPageTab collection={collection} />
         </TabsContent>
-        <TabsContent value="settings">
+        {/* A form tab: a readable column inside the fluid admin frame (DESIGN-SYSTEM.md §6.0). */}
+        <TabsContent value="settings" className="max-w-[1240px]">
           <CollectionSettingsPanel collection={collection} onDeleted={onDeleted} />
         </TabsContent>
       </Tabs>

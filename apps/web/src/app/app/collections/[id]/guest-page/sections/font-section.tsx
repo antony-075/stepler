@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@stepler/ui/components/select';
+import { InfoTip } from '@stepler/ui/components/info-tip';
 import { useTranslations } from 'next-intl';
 import { fontVariables } from '@/guest/template-fonts';
 import type { SectionProps } from './section-props';
@@ -63,12 +64,14 @@ export function FontSection({ editor, def, readOnly }: SectionProps) {
           ))}
         </SelectContent>
       </Select>
-      <p className="text-sm">
-        {heading === def.bodyFont
-          ? t('same', { name: name(heading) })
-          : t('summary', { heading: name(heading), body: name(def.bodyFont) })}
+      <p className="flex items-center gap-1 text-sm">
+        <span className="min-w-0">
+          {heading === def.bodyFont
+            ? t('same', { name: name(heading) })
+            : t('summary', { heading: name(heading), body: name(def.bodyFont) })}
+        </span>
+        <InfoTip text={t('helper')} />
       </p>
-      <p className="text-sm text-muted-foreground">{t('helper')}</p>
     </div>
   );
 }

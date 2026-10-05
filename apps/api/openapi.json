@@ -559,6 +559,11 @@
                                 "nullable": true,
                                 "type": "integer"
                               },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "largeUrl": {
                                 "format": "uri",
                                 "nullable": true,
@@ -590,6 +595,7 @@
                               }
                             },
                             "required": [
+                              "id",
                               "status",
                               "thumbnailUrl",
                               "previewUrl",
@@ -664,6 +670,11 @@
                                 "nullable": true,
                                 "type": "integer"
                               },
+                              "id": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "largeUrl": {
                                 "format": "uri",
                                 "nullable": true,
@@ -695,6 +706,7 @@
                               }
                             },
                             "required": [
+                              "id",
                               "status",
                               "thumbnailUrl",
                               "previewUrl",
@@ -845,6 +857,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -876,6 +893,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -950,6 +968,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -981,6 +1004,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1146,6 +1170,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1177,6 +1206,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1251,6 +1281,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1282,6 +1317,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1448,6 +1484,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1479,6 +1520,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1553,6 +1595,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1584,6 +1631,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1705,6 +1753,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1736,6 +1789,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -1810,6 +1864,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -1841,6 +1900,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -2882,6 +2942,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -2913,6 +2978,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -2932,6 +2998,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -2963,6 +3034,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3145,6 +3217,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -3176,6 +3253,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3195,6 +3273,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -3226,6 +3309,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3662,6 +3746,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -3693,6 +3782,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3712,6 +3802,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -3743,6 +3838,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3925,6 +4021,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -3956,6 +4057,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -3975,6 +4077,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4006,6 +4113,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4261,6 +4369,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4292,6 +4405,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4311,6 +4425,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4342,6 +4461,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4524,6 +4644,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4555,6 +4680,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4574,6 +4700,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4605,6 +4736,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4878,6 +5010,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4909,6 +5046,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -4928,6 +5066,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -4959,6 +5102,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -5141,6 +5285,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -5172,6 +5321,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -5191,6 +5341,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -5222,6 +5377,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -5410,6 +5566,647 @@
           },
           "503": {
             "description": "DEPENDENCY_UNAVAILABLE: storage; retryable"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Guest page"
+        ]
+      }
+    },
+    "/api/v1/collections/{id}/guest-page/draft/{slot}/restore": {
+      "post": {
+        "operationId": "GuestPageController_restoreImage_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "slot",
+            "required": true,
+            "schema": {
+              "enum": [
+                "cover",
+                "background"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "imageId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "imageId"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "draft": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "background": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "PENDING",
+                                "READY",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "largeUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "PENDING",
+                                "READY",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "largeUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
+                        "revision": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "settings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "accent": {
+                              "pattern": "^#[0-9A-F]{6}$",
+                              "type": "string"
+                            },
+                            "align": {
+                              "enum": [
+                                "start",
+                                "center"
+                              ],
+                              "type": "string"
+                            },
+                            "background": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "color": {
+                                      "pattern": "^#[0-9A-F]{6}$",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "solid"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "color"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "gradient"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "preset": {
+                                      "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "preset"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "dim": {
+                                      "maximum": 90,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "image"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "dim"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "corners": {
+                              "enum": [
+                                "sharp",
+                                "soft",
+                                "round"
+                              ],
+                              "type": "string"
+                            },
+                            "coverPlacement": {
+                              "enum": [
+                                "top",
+                                "full",
+                                "side",
+                                "none"
+                              ],
+                              "type": "string"
+                            },
+                            "headingFont": {
+                              "enum": [
+                                "geologica",
+                                "manrope",
+                                "unbounded",
+                                "playfair-display",
+                                "cormorant",
+                                "lora",
+                                "nunito",
+                                "rubik",
+                                "montserrat-alternates",
+                                "comfortaa",
+                                "pt-serif",
+                                "golos-text"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "background",
+                            "accent",
+                            "headingFont",
+                            "coverPlacement",
+                            "align",
+                            "corners"
+                          ],
+                          "type": "object"
+                        },
+                        "templateId": {
+                          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                          "type": "string"
+                        },
+                        "templateVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "templateVersion",
+                        "settings",
+                        "welcomeMessage",
+                        "cover",
+                        "background",
+                        "updatedAt",
+                        "revision"
+                      ],
+                      "type": "object"
+                    },
+                    "published": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "background": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "PENDING",
+                                "READY",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "largeUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
+                        "cover": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "height": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
+                            "largeUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "previewUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "PENDING",
+                                "READY",
+                                "FAILED"
+                              ],
+                              "type": "string"
+                            },
+                            "thumbnailUrl": {
+                              "format": "uri",
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "width": {
+                              "maximum": 9007199254740991,
+                              "minimum": 1,
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "status",
+                            "thumbnailUrl",
+                            "previewUrl",
+                            "largeUrl",
+                            "width",
+                            "height"
+                          ],
+                          "type": "object"
+                        },
+                        "settings": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "accent": {
+                              "pattern": "^#[0-9A-F]{6}$",
+                              "type": "string"
+                            },
+                            "align": {
+                              "enum": [
+                                "start",
+                                "center"
+                              ],
+                              "type": "string"
+                            },
+                            "background": {
+                              "oneOf": [
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "color": {
+                                      "pattern": "^#[0-9A-F]{6}$",
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "solid"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "color"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "kind": {
+                                      "enum": [
+                                        "gradient"
+                                      ],
+                                      "type": "string"
+                                    },
+                                    "preset": {
+                                      "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "preset"
+                                  ],
+                                  "type": "object"
+                                },
+                                {
+                                  "additionalProperties": false,
+                                  "properties": {
+                                    "dim": {
+                                      "maximum": 90,
+                                      "minimum": 0,
+                                      "type": "integer"
+                                    },
+                                    "kind": {
+                                      "enum": [
+                                        "image"
+                                      ],
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "kind",
+                                    "dim"
+                                  ],
+                                  "type": "object"
+                                }
+                              ]
+                            },
+                            "corners": {
+                              "enum": [
+                                "sharp",
+                                "soft",
+                                "round"
+                              ],
+                              "type": "string"
+                            },
+                            "coverPlacement": {
+                              "enum": [
+                                "top",
+                                "full",
+                                "side",
+                                "none"
+                              ],
+                              "type": "string"
+                            },
+                            "headingFont": {
+                              "enum": [
+                                "geologica",
+                                "manrope",
+                                "unbounded",
+                                "playfair-display",
+                                "cormorant",
+                                "lora",
+                                "nunito",
+                                "rubik",
+                                "montserrat-alternates",
+                                "comfortaa",
+                                "pt-serif",
+                                "golos-text"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "background",
+                            "accent",
+                            "headingFont",
+                            "coverPlacement",
+                            "align",
+                            "corners"
+                          ],
+                          "type": "object"
+                        },
+                        "templateId": {
+                          "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                          "type": "string"
+                        },
+                        "templateVersion": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "updatedAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "welcomeMessage": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "templateId",
+                        "templateVersion",
+                        "settings",
+                        "welcomeMessage",
+                        "cover",
+                        "background",
+                        "updatedAt"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "published",
+                    "draft"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted), or the image is gone (nothing referenced it)"
+          },
+          "409": {
+            "description": "COLLECTION_ARCHIVED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
           },
           "default": {
             "content": {
@@ -5706,6 +6503,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -5737,6 +6539,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -5756,6 +6559,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -5787,6 +6595,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -5969,6 +6778,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6000,6 +6814,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -6019,6 +6834,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6050,6 +6870,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -6467,6 +7288,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6498,6 +7324,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -6517,6 +7344,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6548,6 +7380,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -6730,6 +7563,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6761,6 +7599,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -6780,6 +7619,11 @@
                               "nullable": true,
                               "type": "integer"
                             },
+                            "id": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
+                            },
                             "largeUrl": {
                               "format": "uri",
                               "nullable": true,
@@ -6811,6 +7655,7 @@
                             }
                           },
                           "required": [
+                            "id",
                             "status",
                             "thumbnailUrl",
                             "previewUrl",
@@ -7125,6 +7970,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -7156,6 +8006,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -7230,6 +8081,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -7261,6 +8117,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -7599,6 +8456,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -7630,6 +8492,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -7704,6 +8567,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -7735,6 +8603,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -8009,6 +8878,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -8040,6 +8914,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -8114,6 +8989,11 @@
                           "nullable": true,
                           "type": "integer"
                         },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "largeUrl": {
                           "format": "uri",
                           "nullable": true,
@@ -8145,6 +9025,7 @@
                         }
                       },
                       "required": [
+                        "id",
                         "status",
                         "thumbnailUrl",
                         "previewUrl",
@@ -11673,6 +12554,205 @@
           },
           "410": {
             "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Guest"
+        ]
+      }
+    },
+    "/api/v1/guest/links/theme": {
+      "post": {
+        "operationId": "GuestController_theme_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "linkToken": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "linkToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "settings": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "accent": {
+                          "pattern": "^#[0-9A-F]{6}$",
+                          "type": "string"
+                        },
+                        "align": {
+                          "enum": [
+                            "start",
+                            "center"
+                          ],
+                          "type": "string"
+                        },
+                        "background": {
+                          "oneOf": [
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "color": {
+                                  "pattern": "^#[0-9A-F]{6}$",
+                                  "type": "string"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "solid"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "color"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "kind": {
+                                  "enum": [
+                                    "gradient"
+                                  ],
+                                  "type": "string"
+                                },
+                                "preset": {
+                                  "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "preset"
+                              ],
+                              "type": "object"
+                            },
+                            {
+                              "additionalProperties": false,
+                              "properties": {
+                                "dim": {
+                                  "maximum": 90,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "kind": {
+                                  "enum": [
+                                    "image"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "dim"
+                              ],
+                              "type": "object"
+                            }
+                          ]
+                        },
+                        "corners": {
+                          "enum": [
+                            "sharp",
+                            "soft",
+                            "round"
+                          ],
+                          "type": "string"
+                        },
+                        "coverPlacement": {
+                          "enum": [
+                            "top",
+                            "full",
+                            "side",
+                            "none"
+                          ],
+                          "type": "string"
+                        },
+                        "headingFont": {
+                          "enum": [
+                            "geologica",
+                            "manrope",
+                            "unbounded",
+                            "playfair-display",
+                            "cormorant",
+                            "lora",
+                            "nunito",
+                            "rubik",
+                            "montserrat-alternates",
+                            "comfortaa",
+                            "pt-serif",
+                            "golos-text"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "accent",
+                        "headingFont",
+                        "coverPlacement",
+                        "align",
+                        "corners"
+                      ],
+                      "type": "object"
+                    },
+                    "templateId": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "templateVersion": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "templateId",
+                    "templateVersion",
+                    "settings"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: unknown token, or the collection is gone"
           },
           "429": {
             "description": "RATE_LIMITED: per-IP limit; see Retry-After"

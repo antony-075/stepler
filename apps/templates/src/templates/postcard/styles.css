@@ -28,7 +28,7 @@
 [data-template='postcard'] .pc-page {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 [data-template='postcard'] .pc-bar {
@@ -49,7 +49,7 @@
 
 [data-template='postcard'] .pc-airmail {
   padding: 6px;
-  border-radius: 10px;
+  border-radius: calc(var(--tpl-radius-card) + 4px);
   background: var(--pc-airmail);
   box-shadow: 0 22px 40px -24px rgb(36 48 79 / 0.55);
 }
@@ -57,29 +57,31 @@
 [data-template='postcard'] .pc-card-frame {
   width: calc(100% - 32px);
   max-width: 560px;
-  margin: 0 auto;
+  /* Clear of the header (owner, item 97): 16px on phones, 24px from tablets. */
+  margin: 16px auto 0;
   box-sizing: border-box;
 }
 
 [data-template='postcard'] .pc-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: var(--tpl-align);
   padding: 22px 18px 18px;
-  border-radius: 6px;
+  border-radius: var(--tpl-radius-card);
   background: var(--pc-cream);
-  text-align: center;
+  text-align: var(--tpl-align);
 }
 
 [data-template='postcard'] .pc-cover-cell {
   display: flex;
-  justify-content: center;
+  justify-content: var(--tpl-align);
   width: 100%;
   padding-top: 14px;
 }
 
 [data-template='postcard'] .pc-polaroid {
   position: relative;
+  border-radius: min(var(--tpl-radius-card), 12px);
   width: 216px;
   margin: 0;
   padding: 10px 10px 36px;
@@ -112,7 +114,7 @@
 
 [data-template='postcard'] .pc-text {
   display: grid;
-  justify-items: center;
+  justify-items: var(--tpl-align);
 }
 
 [data-template='postcard'] .pc-title {
@@ -122,7 +124,6 @@
   font-weight: 700;
   letter-spacing: -0.01em;
   text-wrap: balance;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-description {
@@ -130,7 +131,6 @@
   font-size: 14px;
   color: var(--tpl-muted);
   white-space: pre-line;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-welcome {
@@ -140,7 +140,6 @@
   line-height: 1.5;
   color: var(--tpl-body);
   text-wrap: pretty;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-rule {
@@ -150,7 +149,7 @@
 [data-template='postcard'] .pc-side {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: var(--tpl-align);
   width: 100%;
 }
 
@@ -175,7 +174,7 @@
 }
 
 /* Phones and tablets: the postmark sits on the polaroid's corner; without a cover, after the
-   stamps. From 1024px it is always under the stamps. */
+   stamps. From 1024px it is stamped across the card's bottom edge. */
 [data-template='postcard'] .pc-cover-cell {
   position: relative;
 }
@@ -193,7 +192,6 @@
 
 [data-template='postcard'] .pc-postmark span {
   padding: 4px;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-actions {
@@ -204,8 +202,43 @@
   margin-top: 20px;
 }
 
-[data-template='postcard'] .pc-actions > :not(button) {
+[data-template='postcard'] .pc-actions > :not(button),
+[data-template='postcard'] .pc-actions > button:only-of-type {
   grid-column: 1 / -1;
+}
+
+/*
+ * In the card the primary stamp is the page's one clear button (owner, item 85): the full
+ * width of the column, the icon and the label side by side at 17px, a lifted shadow, still a
+ * perforated, slightly tilted stamp. The wish stamp under it is lower and quieter.
+ */
+[data-template='postcard'] .pc-actions:not([data-compact]) > .pc-stamp {
+  grid-column: 1 / -1;
+}
+
+[data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-face {
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 8px 14px;
+}
+
+[data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-red {
+  box-shadow: 0 10px 18px -10px rgb(36 48 79 / 0.7);
+  transform: rotate(-1deg);
+}
+
+[data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-red .pc-stamp-face {
+  min-height: 64px;
+}
+
+[data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-red .pc-stamp-label {
+  font-size: 17px;
+}
+
+[data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-navy {
+  transform: rotate(0.75deg);
 }
 
 /* A stamp: a perforated edge (cream dots on the colour) around the face. */
@@ -214,7 +247,7 @@
   padding: 5px;
   border: 0;
   font: inherit;
-  text-align: start;
+  text-align: center;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -234,6 +267,8 @@
 }
 
 [data-template='postcard'] .pc-stamp-face {
+  /* The corners go on the stamp's face; the perforated edge stays a stamp's (remark 111). */
+  border-radius: min(var(--tpl-radius-btn), 14px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -265,7 +300,6 @@
   font-size: 15px;
   line-height: 1.2;
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-stamp:focus-visible {
@@ -290,7 +324,7 @@
   display: none;
   width: calc(100% - 32px);
   max-width: 560px;
-  margin: 0 auto;
+  margin: 16px auto 0;
   box-sizing: border-box;
 }
 
@@ -299,7 +333,7 @@
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border-radius: 6px;
+  border-radius: var(--tpl-radius-card);
   background: var(--pc-cream);
 }
 
@@ -323,13 +357,20 @@
   font-size: 19px;
   line-height: 1.2;
   font-weight: 700;
-  overflow-wrap: anywhere;
 }
 
 [data-template='postcard'] .pc-strip-count {
   margin: 2px 0 0;
   font-size: 14px;
   color: var(--tpl-muted);
+}
+
+[data-template='postcard'] .pc-strip-welcome {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--tpl-body);
+  text-wrap: pretty;
 }
 
 @media (max-width: 1023.98px) {
@@ -344,6 +385,9 @@
 
 [data-template='postcard'] .pc-sections {
   display: grid;
+  /* The sections take the room left, so the footer ends at the window's bottom (item 95). */
+  flex: 1 0 auto;
+  align-content: start;
   gap: 40px;
   width: 100%;
   max-width: 720px;
@@ -365,6 +409,7 @@
 }
 
 [data-template='postcard'] [data-slot='frame-grid'] li {
+  border-radius: min(var(--tpl-radius-tile), 10px);
   padding: 6px 6px 18px;
   background: #ffffff;
   box-shadow:
@@ -460,6 +505,11 @@
   [data-template='postcard'] [data-slot='frame-grid'] > ul {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  [data-template='postcard'] .pc-card-frame,
+  [data-template='postcard'] .pc-strip {
+    margin-top: 24px;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -470,20 +520,23 @@
   [data-template='postcard'] .pc-card-frame {
     width: calc(100% - 80px);
     max-width: 1120px;
-    margin-top: 12px;
+    margin-top: 24px;
   }
 
   [data-template='postcard'] .pc-card {
     display: grid;
-    grid-template-columns: 284px minmax(0, 1fr) 1px 262px;
+    grid-template-columns: 284px minmax(0, 1fr) 1px 300px;
     align-items: start;
     gap: 0 32px;
+    position: relative;
     padding: 36px 32px 32px;
-    text-align: start;
+    text-align: var(--tpl-align);
   }
 
+  /* No cover: the title and welcome sit level with the stamps, not at the top of a blank. */
   [data-template='postcard'] .pc-card:not(:has(.pc-cover-cell)) {
-    grid-template-columns: minmax(0, 1fr) 1px 262px;
+    grid-template-columns: minmax(0, 1fr) 1px 300px;
+    align-items: center;
   }
 
   [data-template='postcard'] .pc-cover-cell {
@@ -496,12 +549,13 @@
   }
 
   [data-template='postcard'] .pc-text {
-    justify-items: start;
+    justify-items: var(--tpl-align);
   }
 
   [data-template='postcard'] .pc-title {
     margin-top: 6px;
-    font-size: 40px;
+    /* The card's text column is narrow at 1024: long words fit it whole (owner, item 87). */
+    font-size: clamp(32px, 3.4vw, 40px);
     line-height: 1.15;
   }
 
@@ -529,12 +583,12 @@
     margin-top: 0;
   }
 
-  [data-template='postcard'] .pc-stamp-face {
-    min-height: 120px;
+  [data-template='postcard'] .pc-actions:not([data-compact]) .pc-stamp-red .pc-stamp-face {
+    min-height: 72px;
   }
 
   [data-template='postcard'] .pc-actions [data-slot='guest-legal-notice'] {
-    text-align: start;
+    text-align: var(--tpl-align);
   }
 
   [data-template='postcard'] .pc-postmark-cover,
@@ -546,16 +600,24 @@
     display: grid;
   }
 
+  /* The postmark is stamped across the card's bottom edge, not stacked under the stamps: the
+     card is no taller than its text and actions (owner, item 85). */
   [data-template='postcard'] .pc-postmark {
     width: 96px;
     height: 96px;
-    margin: 22px 0 0 8px;
+    margin: 0;
     font-size: 15px;
+  }
+
+  [data-template='postcard'] .pc-postmark-side {
+    position: absolute;
+    right: 40px;
+    bottom: -40px;
   }
 
   [data-template='postcard'] .pc-sections {
     max-width: 1120px;
-    padding: 40px 40px 56px;
+    padding: 56px 40px 56px;
   }
 
   [data-template='postcard'] .pc-sections h2 {
@@ -588,4 +650,16 @@
   [data-template='postcard'] .pc-stamp:hover {
     box-shadow: 0 8px 14px -8px rgb(36 48 79 / 0.6);
   }
+}
+
+/* A link state or the loading page (owner, item 99): the message on a card in an airmail border. */
+[data-template='postcard'] .tpl-screen-card {
+  padding: 28px 20px 24px;
+  border: 6px solid transparent;
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--pc-cream), var(--pc-cream)) padding-box,
+    var(--pc-airmail) border-box;
+  box-shadow: 0 22px 40px -24px rgb(36 48 79 / 0.55);
+  box-sizing: border-box;
 }

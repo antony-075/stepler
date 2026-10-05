@@ -90,6 +90,12 @@ async function owner(started: Started = s) {
         .set('Cookie', cookie)
         .set('Origin', ORIGIN)
         .send({ contentItemId }),
+    restoreImage: (slot: 'cover' | 'background', imageId: string) =>
+      request(started.server)
+        .post(`${root}/draft/${slot}/restore`)
+        .set('Cookie', cookie)
+        .set('Origin', ORIGIN)
+        .send({ imageId }),
     removeImage: (slot: 'cover' | 'background') =>
       request(started.server)
         .delete(`${root}/draft/${slot}`)
@@ -227,6 +233,40 @@ describe('guest page editor API', () => {
     expect(editor((await o.publish(2).expect(200)).body)).toEqual(published);
     await o.reset().expect(204);
     expect(editor((await o.get().expect(200)).body).published.settings.accent).toBe('#5A4A8C');
+  });
+
+  describe('undo: restoring a draft image (owner remark 113)', () => {
+    test('published A, draft B, restore A: B goes and is purged, the draft points at A', async () => {
+      const o = await owner();
+      await o.publishedCover((await frame(o, 'a.jpg')).id);
+      const [a] = await images(o.collectionId);
+      const withB = editor(
+        (await o.fromFrame('cover', (await frame(o, 'b.jpg')).id).expect(200)).body,
+      );
+      const b = (await images(o.collectionId)).find((row) => row.id !== a?.id);
+      expect(withB.draft?.cover?.id).toBe(b?.id);
+      const restored = editor((await o.restoreImage('cover', a!.id).expect(200)).body);
+      expect(restored.draft?.cover?.id).toBe(a?.id);
+      expect(restored.published.cover?.id).toBe(a?.id);
+      expect((await images(o.collectionId)).map((row) => row.id)).toEqual([a?.id]);
+      expect(await purges()).toEqual([
+        { collectionId: o.collectionId, imageId: b?.id, slot: 'COVER' },
+      ]);
+    });
+
+    test('an image nothing references any more, another slot or another collection → 404', async () => {
+      const o = await owner();
+      await o.fromFrame('cover', (await frame(o, 'a.jpg')).id).expect(200);
+      const [a] = await images(o.collectionId);
+      await o.fromFrame('cover', (await frame(o, 'b.jpg')).id).expect(200);
+      // A was the draft's only reference: collected when B replaced it.
+      await o.restoreImage('cover', a!.id).expect(404);
+      const [b] = await images(o.collectionId);
+      await o.restoreImage('background', b!.id).expect(404);
+      const other = await owner();
+      await other.restoreImage('cover', b!.id).expect(404);
+      await other.as(o.cookie).restoreImage('cover', b!.id).expect(404);
+    });
   });
 
   describe('Review Focus 1: images and garbage collection', () => {

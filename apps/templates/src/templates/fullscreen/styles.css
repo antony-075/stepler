@@ -27,7 +27,9 @@
 [data-template='fullscreen'] .fs-hero {
   position: relative;
   display: flex;
-  min-height: 100svh;
+  /* Phones and tablets (owner, item 98): about 70% of the screen, so the frames
+     sheet peeks above the fold; the whole height again from 1024px. */
+  min-height: min(70svh, 720px);
   overflow: hidden;
   background: #1b1917;
   color: var(--tpl-on-image);
@@ -64,8 +66,55 @@
     rgb(14 11 9 / max(0, calc((var(--tpl-bg-image-veil) - 0.2) * 0.8)));
 }
 
+/*
+ * No cover (owner, item 83): the accent's glow from the top corner and a soft one low on the
+ * other side over the sheet colour, a dot pattern fading towards the title (the scrim's layer),
+ * and a shorter hero. The title sits on the dark part: white stays well above 4.5:1 for any
+ * accent (the strong glow stays in the top corner, away from the text).
+ */
+[data-template='fullscreen'] .fs-hero:not([data-cover]) {
+  min-height: min(46svh, 420px);
+  background:
+    radial-gradient(
+      120% 90% at 100% 0%,
+      color-mix(in srgb, var(--tpl-accent) 58%, transparent),
+      transparent 64%
+    ),
+    radial-gradient(
+      80% 70% at 0% 100%,
+      color-mix(in srgb, var(--tpl-accent) 20%, transparent),
+      transparent 70%
+    ),
+    #1b1917;
+}
+
 [data-template='fullscreen'] .fs-hero:not([data-cover]) .fs-scrim {
+  background: radial-gradient(rgb(255 255 255 / 0.16) 1px, transparent 1.6px) 0 0 / 22px 22px;
+  -webkit-mask-image: linear-gradient(200deg, #000 0%, transparent 70%);
+  mask-image: linear-gradient(200deg, #000 0%, transparent 70%);
+}
+
+[data-template='fullscreen'] .fs-page:not([data-cover]) .fs-hero .fs-hero-content {
+  padding-bottom: 56px;
+}
+
+/* No cover: the action card opens the sheet on phones too, and there is no fixed bar. */
+[data-template='fullscreen'] .fs-page:not([data-cover]) {
+  --fs-bar-room: 0px;
+}
+
+[data-template='fullscreen'] .fs-page:not([data-cover]) .fs-glass {
   display: none;
+}
+
+[data-template='fullscreen'] .fs-page:not([data-cover]) .fs-card {
+  display: block;
+  max-width: 720px;
+  margin: 0 auto 36px;
+  padding: 16px;
+  border: 1px solid #34302c;
+  border-radius: calc(var(--tpl-radius-card) + 12px);
+  background: #24211e;
 }
 
 [data-template='fullscreen'] .fs-hero-content {
@@ -77,9 +126,9 @@
   box-sizing: border-box;
 }
 
-[data-template='fullscreen'] .fs-page[data-actions] .fs-hero-content {
-  /* The glass bar overlaps the bottom of the hero on phones; keep the welcome above it. */
-  padding-bottom: 236px;
+[data-template='fullscreen'] .fs-hero-content {
+  /* The title block in the lower third, clear of the sheet's rounded top. */
+  padding-bottom: 72px;
 }
 
 [data-template='fullscreen'] .fs-bar {
@@ -136,7 +185,6 @@
   color: var(--tpl-on-image);
   text-shadow: 0 1px 18px rgb(0 0 0 / 0.35);
   text-wrap: balance;
-  overflow-wrap: anywhere;
 }
 
 [data-template='fullscreen'] .fs-description,
@@ -147,7 +195,6 @@
   line-height: 1.5;
   color: rgb(255 255 255 / 0.9);
   text-wrap: pretty;
-  overflow-wrap: anywhere;
 }
 
 [data-template='fullscreen'] .fs-description {
@@ -155,7 +202,16 @@
   white-space: pre-line;
 }
 
+[data-template='fullscreen'] .fs-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
 [data-template='fullscreen'] .fs-sheet {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
   position: relative;
   margin-top: -28px;
   padding: 10px 16px var(--fs-bar-room);
@@ -178,7 +234,10 @@
 
 [data-template='fullscreen'] .fs-sections {
   display: grid;
+  flex: 1 0 auto;
+  align-content: start;
   gap: 40px;
+  width: 100%;
   max-width: 720px;
   margin: 0 auto;
   padding-bottom: 40px;
@@ -201,6 +260,7 @@
 }
 
 [data-template='fullscreen'] footer {
+  width: 100%;
   max-width: 720px;
   margin: 0 auto;
   border-color: #34302c;
@@ -215,7 +275,7 @@
   z-index: var(--z-dock);
   max-width: 560px;
   margin: 0 auto;
-  padding: 10px 10px 12px;
+  padding: 10px 10px 14px;
   border: 1px solid rgb(255 255 255 / 0.18);
   border-radius: calc(var(--tpl-radius-bar) + 6px);
   background: rgb(30 25 22 / 0.5);
@@ -281,7 +341,7 @@
 }
 
 [data-template='fullscreen'] .fs-actions [data-slot='guest-legal-notice'] {
-  padding: 2px 8px 0;
+  padding: 4px 8px 0;
   font-size: 12px;
   line-height: 1.5;
   color: var(--tpl-body);
@@ -345,7 +405,8 @@
   [data-template='fullscreen'] .fs-title {
     max-width: 720px;
     margin-top: 10px;
-    font-size: 80px;
+    /* Long words fit the narrower hero at 1024 whole (owner, item 87). */
+    font-size: clamp(60px, 6.5vw, 80px);
     line-height: 1;
     letter-spacing: -0.025em;
   }
@@ -356,7 +417,7 @@
   }
 
   [data-template='fullscreen'] .fs-sheet {
-    min-height: 100svh;
+    min-height: 100dvh;
     margin: 0;
     padding: 28px 48px 0;
     border-radius: 0;
@@ -411,6 +472,77 @@
 
   [data-template='fullscreen'] footer > div {
     padding-inline: 0;
+  }
+}
+
+/*
+ * No cover on desktop (owner, item 83): no tall empty panel. The designed hero becomes a band
+ * across the page at a reduced height, and the sheet slides over it as on phones, with the
+ * action card in a sticky column beside the sections.
+ */
+@media (min-width: 1024px) {
+  [data-template='fullscreen'] .fs-page:not([data-cover]) {
+    display: block;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-hero {
+    position: relative;
+    height: auto;
+    min-height: min(44svh, 440px);
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-hero .fs-hero-content {
+    padding: 32px max(56px, calc((100% - 1152px) / 2)) 76px;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-lang-phone {
+    display: block;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-title {
+    max-width: 960px;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-sheet {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    align-items: start;
+    gap: 0 48px;
+    min-height: 0;
+    margin-top: -28px;
+    padding: 36px max(48px, calc((100% - 1152px) / 2)) 0;
+    border-radius: 28px 28px 0 0;
+    box-shadow: 0 -12px 32px rgb(0 0 0 / 0.28);
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-lang-desktop {
+    display: none;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-card {
+    position: sticky;
+    top: 24px;
+    max-width: none;
+    margin: 0;
+    padding: 20px;
+  }
+
+  /* Grid items: auto margins would shrink them to their content. */
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-sections,
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-sheet > footer {
+    margin: 0;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-sheet:not(:has(.fs-card)) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) .fs-sheet > footer {
+    grid-column: 1 / -1;
+  }
+
+  [data-template='fullscreen'] .fs-page:not([data-cover]) [data-slot='frame-grid'] > ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

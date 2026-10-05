@@ -141,6 +141,18 @@ export const setDraftImageFromFrame = (
     schema: guestPageEditorSchema,
   });
 
+/** Points the draft's cover or background back at an image the collection still has (undo). */
+export const restoreDraftImage = (
+  id: string,
+  slot: ImageSlotParam,
+  imageId: string,
+): Promise<GuestPageEditor> =>
+  apiRequest(`${guestPageBase(id)}/draft/${slot}/restore`, {
+    method: 'POST',
+    body: { imageId },
+    schema: guestPageEditorSchema,
+  });
+
 /** Removes the draft's cover or background (the published one stays). */
 export const removeDraftImage = (id: string, slot: ImageSlotParam): Promise<GuestPageEditor> =>
   apiRequest(`${guestPageBase(id)}/draft/${slot}`, {

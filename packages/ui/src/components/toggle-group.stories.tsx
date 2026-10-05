@@ -190,6 +190,8 @@ export const OnPanelDark: Story = {
   play: async ({ canvas, canvasElement }) => {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await userEvent.click(canvas.getByRole('radio', { name: 'Videos 21' }));
+    // Focus would show as the violet edge (owner remark 103); the resting look is what is read.
+    (document.activeElement as HTMLElement | null)?.blur();
     // The edge and text colour fade between chips (120ms): check once settled.
     await waitFor(() => expectReadsOnPanel(canvasElement));
   },

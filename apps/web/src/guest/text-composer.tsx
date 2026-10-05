@@ -1,5 +1,6 @@
 'use client';
 
+import type { TemplateSurfaceProps } from '@stepler/templates/react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TEXT_MAX_CHARS, codePointLength, textBodySchema } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
@@ -43,7 +44,10 @@ export function TextComposer({
   open,
   onOpenChange,
   onSend,
+  surface,
 }: {
+  /** The page's template on the sheet: its accent on «Надіслати», its corners and fonts (remark 112). */
+  surface?: TemplateSurfaceProps;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Resolves when the wish is stored; rejects with the API error otherwise. */
@@ -89,7 +93,7 @@ export function TextComposer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" aria-describedby={undefined}>
+      <SheetContent side="bottom" aria-describedby={undefined} {...surface}>
         <SheetHeader closeLabel={t('close')} className="bg-popover">
           <SheetTitle>{t('title')}</SheetTitle>
         </SheetHeader>

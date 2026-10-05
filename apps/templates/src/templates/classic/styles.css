@@ -15,7 +15,7 @@
 [data-template='classic'] .classic-page {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  min-height: 100dvh;
 }
 
 [data-template='classic'] .classic-aside {
@@ -69,14 +69,12 @@
   font-weight: 600;
   letter-spacing: -0.015em;
   text-wrap: balance;
-  overflow-wrap: anywhere;
 }
 
 [data-template='classic'] .classic-description {
   margin: 8px 0 0;
   color: var(--tpl-muted);
   white-space: pre-line;
-  overflow-wrap: anywhere;
 }
 
 [data-template='classic'] .classic-welcome {
@@ -85,7 +83,6 @@
   line-height: 1.5;
   color: var(--tpl-body);
   text-wrap: pretty;
-  overflow-wrap: anywhere;
 }
 
 [data-template='classic'] .classic-count {
@@ -282,14 +279,15 @@
     font-size: 17px;
   }
 
+  /* The actions follow the identity (owner, item 82): never pinned to the bottom of a tall,
+     empty aside when there is no cover or a short title. */
   [data-template='classic'] .classic-actions {
     grid-template-columns: none;
-    margin-top: auto;
-    padding-top: 28px;
+    margin-top: 28px;
   }
 
   [data-template='classic'] .classic-main {
-    min-height: 100svh;
+    min-height: 100dvh;
   }
 
   [data-template='classic'] .classic-sections {
