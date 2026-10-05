@@ -19,7 +19,7 @@ Priority is intentionally not fixed here.
 - ordering/fulfillment.
 
 ### Branding
-- themes;
+- ~~themes~~ (guest page templates, custom colours and typography moved into MVP by owner decision 2026-10-05: ADR 0017, PR H–K);
 - ~~cover images~~ (moved into MVP by owner decision 2026-10-04: slice 8a);
 - ~~custom welcome screens~~ (a welcome message moved into MVP on 2026-10-04: slice 8a; full custom screens stay here);
 - branded guest experience.
