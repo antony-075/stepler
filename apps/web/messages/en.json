@@ -900,8 +900,236 @@
     "preview": {
       "unavailable": "This collection’s preview could not be shown.",
       "placeholder": "Guests’ frames will be here",
-      "frame": "A guest’s frame"
+      "frame": "A guest’s frame",
+      "title": "Preview",
+      "subtitle": "The «{name}» template with your settings",
+      "device": "Preview device",
+      "phone": "Phone",
+      "desktop": "Computer",
+      "openAsGuest": "Open as a guest",
+      "newTab": "(new tab, saved version)",
+      "caption": "Scroll the preview to see guests’ frames",
+      "frameTitle": "Guest page preview"
     },
-    "leave": "Your changes are still being saved. Leave the page?"
+    "leave": "Your changes are still being saved. Leave the page?",
+    "panelLabel": "Guest page settings",
+    "loading": "Loading the guest page",
+    "loadFailed": "The guest page could not be loaded.",
+    "retry": "Try again",
+    "archived": "An archived collection cannot be changed. Restore it from the archive to change its guest page.",
+    "sections": {
+      "template": "Template",
+      "cover": "Cover",
+      "welcome": "Welcome",
+      "background": "Background",
+      "accent": "Accent",
+      "font": "Font",
+      "layout": "Layout"
+    },
+    "template": {
+      "soon": "Soon",
+      "soonHint": "More templates are coming soon. «Classic» is available now.",
+      "label": "Templates"
+    },
+    "image": {
+      "upload": "Upload",
+      "pickFrame": "Pick from frames",
+      "helper": "JPEG, PNG, WebP, HEIC or GIF up to 50 MB.",
+      "uploading": "Uploading…",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "uploadFailed": "The image could not be uploaded",
+      "processing": "Preparing…",
+      "failed": "The image could not be prepared. Try another one.",
+      "ready": "Ready",
+      "none": "None",
+      "setFailed": "The image could not be chosen",
+      "leave": "An image is still uploading. Leave the page and cancel the upload?",
+      "reason": {
+        "NETWORK": "The connection dropped. Check your internet and retry.",
+        "STORAGE_403": "Storage refused the file. Try again."
+      },
+      "archivedRefused": "The collection is archived — its images cannot be changed now.",
+      "frameGone": "The frame has been deleted."
+    },
+    "cover": {
+      "remove": "Remove cover",
+      "none": "No cover. Guests will see the title without a picture.",
+      "alt": "Cover"
+    },
+    "welcome": {
+      "label": "Welcome text",
+      "helper": "Guests see it under the collection’s title.",
+      "counter": "{count}/{max}",
+      "tooLong": "At most {max} characters.",
+      "lineBreaks": "One paragraph only, no line breaks."
+    },
+    "background": {
+      "kind": "Background type",
+      "solid": "Colour",
+      "gradient": "Gradient",
+      "image": "Image",
+      "swatch": "Background: {name}",
+      "swatches": "Background colours",
+      "gradients": "Background gradients",
+      "colors": {
+        "F0F1EE": "light grey",
+        "FFFFFF": "white",
+        "EFE8DD": "sand",
+        "E4EAEE": "blue-grey",
+        "ECE6F0": "lilac"
+      },
+      "gradientNames": {
+        "mist": "mist",
+        "sand": "sand",
+        "lilac": "lilac"
+      },
+      "dim": "Dimming",
+      "dimValue": "{value}%",
+      "remove": "Remove image",
+      "coverAsBackground": "In this template the cover is the background. Dimming keeps the white text readable.",
+      "noImage": "Add an image for the background."
+    },
+    "accent": {
+      "swatch": "Accent: {name}",
+      "swatches": "Accent colours",
+      "names": {
+        "pencil": "pencil",
+        "apricot": "apricot",
+        "plum": "plum",
+        "emerald": "emerald",
+        "electric": "electric",
+        "lime": "lime"
+      },
+      "custom": "Your colour",
+      "customInvalid": "Enter a colour as #RRGGBB, for example #5A4A8C.",
+      "good": "Contrast {ratio}:1 — reads well on the template’s background",
+      "smallText": "Contrast {ratio}:1 — small accent text becomes a little {direction, select, darker {darker} other {lighter}} so it reads.",
+      "merges": "Contrast {ratio}:1 — the accent blends into the background. Buttons and text stay readable, but a {direction, select, darker {darker} other {lighter}} shade would be better.",
+      "footnote": "Button labels turn white or black, whichever reads better."
+    },
+    "font": {
+      "trigger": "Font: {name}. Change",
+      "summary": "Headings — {heading}, text — {body}",
+      "same": "Headings and text — {name}",
+      "helper": "Every font in the list has Cyrillic.",
+      "basedOn": "based on {name}",
+      "names": {
+        "geologica": "Geologica",
+        "manrope": "Manrope",
+        "unbounded": "Unbounded",
+        "playfair-display": "Stepler Display Serif",
+        "cormorant": "Cormorant",
+        "lora": "Stepler Book Serif",
+        "nunito": "Nunito",
+        "rubik": "Rubik",
+        "montserrat-alternates": "Montserrat Alternates",
+        "comfortaa": "Stepler Rounded",
+        "pt-serif": "Stepler Text Serif",
+        "golos-text": "Golos Text"
+      },
+      "upstream": {
+        "playfair-display": "Playfair Display",
+        "lora": "Lora",
+        "comfortaa": "Comfortaa",
+        "pt-serif": "PT Serif"
+      }
+    },
+    "layout": {
+      "cover": "Cover",
+      "align": "Text alignment",
+      "corners": "Corners",
+      "placements": {
+        "top": "On top",
+        "full": "Full screen",
+        "side": "At the side",
+        "none": "No cover"
+      },
+      "aligns": {
+        "start": "Left",
+        "center": "Centre"
+      },
+      "cornerNames": {
+        "sharp": "Sharp",
+        "soft": "Soft",
+        "round": "Round"
+      }
+    },
+    "status": {
+      "draft": "Draft — guests see the previous version",
+      "saved": "Saved — guests see this version",
+      "saving": "Saving…",
+      "error": "Could not save",
+      "conflict": "The page was changed in another tab"
+    },
+    "actions": {
+      "reset": "Discard changes",
+      "save": "Save",
+      "saveDirty": ", there are unsaved changes",
+      "retry": "Retry",
+      "showLatest": "Show the latest version",
+      "resetTitle": "Discard all changes?",
+      "resetText": "Guests keep seeing the saved version.",
+      "resetConfirm": "Discard",
+      "resetCancel": "Cancel",
+      "resetPending": "Discarding…",
+      "resetFailed": "The changes could not be discarded.",
+      "published": "Saved — guests see the new page",
+      "resetDone": "Changes discarded",
+      "saveFailed": "The page could not be saved"
+    },
+    "conflictText": "Someone changed this page in another tab or on another device. We will show the latest version — unsaved changes from this tab will not be kept.",
+    "phone": {
+      "open": "Customise",
+      "sheetTitle": "Guest page",
+      "close": "Close settings",
+      "chipDraft": "Draft",
+      "chipSaved": "Saved",
+      "dirty": "there are unsaved changes",
+      "fromFrame": "Picked from frames",
+      "imageSummary": "Image, {dim}%"
+    },
+    "picker": {
+      "title": "Choose a photo",
+      "description": "The photo is copied: if the guest deletes it, your page does not change.",
+      "close": "Close",
+      "listLabel": "Guests’ photos",
+      "loading": "Loading photos",
+      "loadFailed": "The photos could not be loaded.",
+      "retry": "Try again",
+      "empty": "Guests have not added photos yet",
+      "emptyText": "Once the first photo arrives, you can choose it.",
+      "loadMore": "Show more",
+      "cancel": "Cancel",
+      "confirm": "Choose",
+      "pending": "Saving…",
+      "notReady": "Preparing the preview",
+      "unavailable": "Preview unavailable",
+      "frameName": "Frame {number}, photo",
+      "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen"
+    }
+  },
+  "templates": {
+    "classic": {
+      "name": "Classic",
+      "locks": {
+        "coverPlacement": "In «Classic» the cover sits above the title, and on a computer in the side column."
+      }
+    },
+    "fullscreen": {
+      "name": "Full screen"
+    },
+    "journal": {
+      "name": "Journal"
+    },
+    "postcard": {
+      "name": "Postcard"
+    },
+    "party": {
+      "name": "Party"
+    },
+    "minimal": {
+      "name": "Minimal"
+    }
   }
 }

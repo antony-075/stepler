@@ -1,6 +1,6 @@
 'use client';
 
-// «Вибрати з кадрів»: one guest photo as the cover (plan Task 11, [A8]).
+// «Вибрати з кадрів»: one guest photo for the draft's cover or background (plan Tasks 11, 14, [A8]).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - A short task over the tab: a bottom sheet on phones (in the thumb zone, the safe area kept),
 //   a centred dialog of at most 46rem from 640px (the same `Sheet side="bottom"`, so there is one
@@ -39,7 +39,7 @@ import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 import { usePendingPreviews } from '../content/use-pending-previews';
 
-export function CoverPicker({
+export function FramePicker({
   collectionId,
   open,
   onOpenChange,
@@ -48,10 +48,10 @@ export function CoverPicker({
   collectionId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Makes the frame the cover; the picker closes once it resolves, stays open if it throws. */
+  /** Uses the frame; the picker closes once it resolves, stays open if it throws. */
   onPicked: (item: AdminContentItem) => Promise<void>;
 }) {
-  const t = useTranslations('appearance.picker');
+  const t = useTranslations('guestPage.picker');
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="sm:max-w-[46rem]">
@@ -86,7 +86,7 @@ function PickerBody({
   onCancel: () => void;
   onPicked: (item: AdminContentItem) => Promise<void>;
 }) {
-  const t = useTranslations('appearance.picker');
+  const t = useTranslations('guestPage.picker');
   const [selected, setSelected] = useState<AdminContentItem | null>(null);
   const [pending, setPending] = useState(false);
   const list = useInfiniteQuery({
@@ -173,7 +173,7 @@ function PickerBody({
           {t('cancel')}
         </Button>
         <Button
-          data-slot="cover-picker-confirm"
+          data-slot="frame-picker-confirm"
           aria-disabled={selected === null || pending || undefined}
           onClick={() => void confirm()}
         >
@@ -195,7 +195,7 @@ function PickerFrame({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const t = useTranslations('appearance.picker');
+  const t = useTranslations('guestPage.picker');
   const queryClient = useQueryClient();
   const picture = gridPicture(item);
   if (picture.kind !== 'thumbnail') {

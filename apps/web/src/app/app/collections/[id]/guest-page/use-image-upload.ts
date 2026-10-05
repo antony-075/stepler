@@ -1,32 +1,37 @@
 'use client';
 
-import { type Collection, type CollectionDetail, fileTypeFor } from '@stepler/contracts';
-import { useQueryClient } from '@tanstack/react-query';
+import { fileTypeFor, type GuestPageEditor } from '@stepler/contracts';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { collectionKey, coverUploadApi, useInvalidateCollections } from '@/api/collections';
 import { useLeaveGuard } from '@/components/use-leave-guard';
 import { isApiError } from '@/api/client';
 import { isRetryable, type UploadErrorCode } from '@/guest/upload/queue';
 import {
   createUploadTransport,
   TransferError,
+  type UploadApi,
   type UploadTransport,
 } from '@/guest/upload/transport';
-import type { UploadPhase } from './cover-state';
 
-// The admin's cover file, browser → storage (plan [A1], spec §10.2): one file through the same
-// transport as a guest's (multipart, part retries, completion by the server), against the admin
-// cover routes. No queue: one file, «Скасувати» while it goes, «Повторити» after a retryable
-// failure with the same `clientUploadId` (a lost answer then finds the upload it completed).
-// Only the type is checked here; the size limit is the API's answer (`FILE_TOO_LARGE`).
+// One admin image file (the draft's cover or background), browser → storage (spec §10.2, §10.7):
+// the same transport as a guest's (multipart, part retries, completion by the server) against
+// the draft image routes, whose completion answers the whole editor state. No queue: one file,
+// «Скасувати» while it goes, «Повторити» after a retryable failure with the same
+// `clientUploadId` (a lost answer then finds the upload it completed). Only the type is checked
+// here; the size limit is the API's answer (`FILE_TOO_LARGE`).
+
+/** Where one image upload is. */
+export type UploadPhase =
+  | { kind: 'idle' }
+  | { kind: 'uploading'; progress: number }
+  | { kind: 'failed'; code: UploadErrorCode; retryable: boolean };
 
 /** Progress updates at most this often (DESIGN-SYSTEM.md §8: ≤ 4 a second). */
 const PROGRESS_INTERVAL_MS = 250;
 
 const defaultTransport = createUploadTransport();
 
-export interface CoverUpload {
+export interface ImageUpload {
   phase: UploadPhase;
   /** Starts sending a picked file; a file that is not a photo fails at once, nothing sent. */
   start: (file: File) => void;
@@ -36,14 +41,12 @@ export interface CoverUpload {
   cancel: () => void;
 }
 
-export function useCoverUpload(
-  collectionId: string,
-  onUploaded: (collection: Collection) => void,
+export function useImageUpload(
+  api: UploadApi<GuestPageEditor>,
+  onUploaded: (editor: GuestPageEditor) => void,
   transport: UploadTransport = defaultTransport,
-): CoverUpload {
-  const t = useTranslations('appearance.cover');
-  const queryClient = useQueryClient();
-  const invalidate = useInvalidateCollections();
+): ImageUpload {
+  const t = useTranslations('guestPage.image');
   const [phase, setPhase] = useState<UploadPhase>({ kind: 'idle' });
   const controller = useRef<AbortController | null>(null);
   const attempt = useRef<{ file: File; clientUploadId: string; uploadId?: string } | null>(null);
@@ -67,7 +70,7 @@ export function useCoverUpload(
     transport
       .upload(
         item,
-        coverUploadApi(collectionId),
+        api,
         abort.signal,
         (loaded) => {
           const now = Date.now();
@@ -85,17 +88,12 @@ export function useCoverUpload(
         },
       )
       .then(
-        async (collection) => {
+        (editor) => {
           if (abort.signal.aborted) return;
           controller.current = null;
           attempt.current = null;
-          // The detail also holds the storage line, which the answer leaves out.
-          queryClient.setQueryData<CollectionDetail>(collectionKey(collectionId), (previous) =>
-            previous === undefined ? undefined : { ...previous, ...collection },
-          );
           setPhase({ kind: 'idle' });
-          done.current(collection);
-          await invalidate();
+          done.current(editor);
         },
         (error: unknown) => {
           if (abort.signal.aborted) return;
@@ -107,11 +105,9 @@ export function useCoverUpload(
                 ? error.code
                 : 'INTERNAL';
           setPhase({ kind: 'failed', code, retryable: isRetryable(code) });
-          // Archived meanwhile: the tab turns read-only once the collection is fetched again.
-          if (code === 'COLLECTION_ARCHIVED') void invalidate();
         },
       );
-  }, [collectionId, invalidate, queryClient, transport]);
+  }, [api, transport]);
 
   const start = useCallback(
     (file: File) => {

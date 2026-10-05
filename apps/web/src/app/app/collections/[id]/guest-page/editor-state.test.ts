@@ -7,6 +7,7 @@ import type { TemplateDefinition } from '@stepler/templates/core';
 import { definitionOf } from '@stepler/templates/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '@/api/client';
+import { guestPageVersionSchema } from '@stepler/contracts';
 import { Autosaver } from './autosave';
 import {
   editorReducer,
@@ -125,6 +126,12 @@ describe('previewPage', () => {
     });
     state = reduce(state, { type: 'template', id: 'fake' });
     expect(previewPage(state, lookup)).toMatchObject({ templateId: 'fake', templateVersion: 3 });
+  });
+
+  it('is a page the preview message accepts: the draft’s revision is left out', () => {
+    const page = previewPage(initialEditorState(withDraft(2, { cover: IMAGE })), lookup);
+    expect(page).not.toHaveProperty('revision');
+    expect(guestPageVersionSchema.safeParse(page).success).toBe(true);
   });
 });
 

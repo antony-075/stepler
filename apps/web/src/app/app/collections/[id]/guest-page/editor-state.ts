@@ -19,6 +19,8 @@ export type EditorState = {
   /** Local changes not yet saved; `version` counts them, so an answer knows if it is stale. */
   pending: boolean;
   version: number;
+  /** Bumped when the working copy is replaced from the server (a rebase or a reset). */
+  generation: number;
 };
 
 export type EditorAction =
@@ -45,7 +47,7 @@ export function workingOf(editor: GuestPageEditor): EditorWorking {
 }
 
 export function initialEditorState(editor: GuestPageEditor): EditorState {
-  return { editor, working: workingOf(editor), pending: false, version: 0 };
+  return { editor, working: workingOf(editor), pending: false, version: 0, generation: 0 };
 }
 
 function changed(state: EditorState, working: EditorWorking): EditorState {
@@ -77,13 +79,22 @@ export function editorReducer(
     case 'server':
       return state.pending
         ? { ...state, editor: action.editor }
-        : { ...state, editor: action.editor, working: workingOf(action.editor) };
+        : {
+            ...state,
+            editor: action.editor,
+            working: workingOf(action.editor),
+            generation: state.generation + 1,
+          };
     case 'saved':
       return action.version === state.version
         ? { ...state, editor: action.editor, pending: false }
         : { ...state, editor: action.editor };
     case 'reset':
-      return { ...initialEditorState(action.editor), version: state.version + 1 };
+      return {
+        ...initialEditorState(action.editor),
+        version: state.version + 1,
+        generation: state.generation + 1,
+      };
   }
 }
 
@@ -105,12 +116,15 @@ export function editorStatus(
  * the template version from its definition.
  */
 export function previewPage(state: EditorState, lookup: Lookup = definitionOf): GuestPageVersion {
-  const base = currentVersion(state.editor);
+  // The draft's `revision` is not part of a page: the preview message's schema is strict.
+  const { cover, background, templateVersion, updatedAt } = currentVersion(state.editor);
   const def = lookup(state.working.templateId);
   return {
-    ...base,
+    cover,
+    background,
+    updatedAt,
     templateId: state.working.templateId,
-    templateVersion: def?.version ?? base.templateVersion,
+    templateVersion: def?.version ?? templateVersion,
     settings: state.working.settings,
     welcomeMessage: state.working.welcomeMessage,
   };

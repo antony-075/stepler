@@ -34,6 +34,8 @@ import {
 export interface GuestPageEditorApi {
   editor: GuestPageEditor;
   working: EditorWorking;
+  /** Changes when the working copy was replaced from the server: local inputs start over. */
+  generation: number;
   dispatch: (action: Extract<EditorAction, { type: 'template' | 'settings' | 'welcome' }>) => void;
   status: EditorStatus;
   /** Local changes or a draft on the server: something guests do not see yet. */
@@ -181,6 +183,7 @@ export function useGuestPageEditor(
   return {
     editor: state.editor,
     working: state.working,
+    generation: state.generation,
     dispatch,
     status,
     dirty: state.pending || state.editor.draft !== null,
