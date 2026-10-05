@@ -1,6 +1,7 @@
 import { classic } from '../templates/classic/definition.ts';
 import { fullscreen } from '../templates/fullscreen/definition.ts';
 import { journal } from '../templates/journal/definition.ts';
+import { party } from '../templates/party/definition.ts';
 import { postcard } from '../templates/postcard/definition.ts';
 import type { TemplateDefinition } from './definition.ts';
 
@@ -10,6 +11,7 @@ export const TEMPLATE_DEFINITIONS: readonly TemplateDefinition[] = [
   fullscreen,
   journal,
   postcard,
+  party,
 ];
 
 /** What a collection without a stored page, or with an unknown template, gets. */

@@ -7,6 +7,7 @@
 @import './templates/fullscreen/styles.css';
 @import './templates/journal/styles.css';
 @import './templates/postcard/styles.css';
+@import './templates/party/styles.css';
 
 /* Geologica is the interface font (apps/web/src/app/fonts.ts sets --font-geologica on <html>),
    so templates that use it need no font of their own. */

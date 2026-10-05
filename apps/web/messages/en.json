@@ -917,7 +917,12 @@
         "E3D9C6": "kraft",
         "D9E4D4": "mint",
         "EAD7D7": "powder",
-        "D8D3E6": "lavender"
+        "D8D3E6": "lavender",
+        "110F15": "night",
+        "141A22": "deep blue",
+        "1C1511": "coffee",
+        "0F1713": "dark forest",
+        "1D1020": "aubergine"
       },
       "gradientNames": {
         "mist": "mist",
@@ -925,7 +930,10 @@
         "lilac": "lilac",
         "linen": "linen",
         "blush": "blush",
-        "sage": "sage"
+        "sage": "sage",
+        "night": "night",
+        "ocean": "ocean",
+        "forest": "forest"
       },
       "dim": "Dimming",
       "dimValue": "{value}%",
