@@ -150,9 +150,10 @@ export function FileStage({
       />
     );
   }
-  // No link to the original until the worker has stripped its location (ADR 0008 addendum).
+  // No link to the original until the worker has stripped its location (ADR 0008 addendum): a
+  // new video is `PENDING`, one from before waits `READY` for the backfill.
   if (detail.originalUrl === null) {
-    return tile(t(detail.processingStatus === 'PENDING' ? 'pendingPreview' : 'viewer.mediaFailed'));
+    return tile(t(detail.processingStatus === 'FAILED' ? 'viewer.mediaFailed' : 'pendingPreview'));
   }
   if (videoFailed) return tile(t('viewer.videoFallback'));
   return (
