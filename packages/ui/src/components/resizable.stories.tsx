@@ -23,6 +23,27 @@ function Split() {
   );
 }
 
+/** Two cards with the page between them; the gap is the handle. */
+function Gap() {
+  return (
+    <div className="h-80 w-full max-w-4xl bg-background p-2">
+      <ResizablePanelGroup orientation="horizontal">
+        <ResizablePanel id="settings" defaultSize="320px" minSize="240px" maxSize="480px">
+          <div className="grid h-full place-items-center rounded-sheet border bg-card p-4 text-sm font-semibold">
+            Налаштування
+          </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle gap aria-label="Ширина панелі налаштувань" />
+        <ResizablePanel id="preview" minSize="240px">
+          <div className="grid h-full place-items-center rounded-sheet border bg-muted p-4 text-sm font-semibold">
+            Попередній перегляд
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
+  );
+}
+
 const meta = {
   title: 'Components/Resizable',
   component: Split,
@@ -30,6 +51,15 @@ const meta = {
 
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+export const WithGap: Story = {
+  render: () => <Gap />,
+  play: async ({ canvas }) => {
+    const handle = canvas.getByRole('separator', { name: 'Ширина панелі налаштувань' });
+    await expect(getComputedStyle(handle).cursor).toBe('col-resize');
+    await expect(handle.getBoundingClientRect().width).toBe(14);
+  },
+};
 
 export const Keyboard: Story = {
   play: async ({ canvas }) => {

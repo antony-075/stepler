@@ -160,8 +160,8 @@ const WORKSPACE_MIN = 560;
 /**
  * The editor on a computer (owner remarks 66, 67): one fixed-height workspace from under the
  * tabs to the window's bottom, so the page itself does not scroll. The settings panel scrolls on
- * its own; the preview pane never scrolls. Between them a draggable splitter (shadcn/ui
- * Resizable): arrows resize it from the keyboard; the width is remembered per account in this
+ * its own; the preview pane never scrolls. They are two cards with a 14px gap of page between
+ * them, and the gap is the splitter (shadcn/ui Resizable, owner remark 90): arrows resize it from the keyboard; the width is remembered per account in this
  * browser (localStorage, ignored when storage is not available).
  */
 function DesktopEditor({ props, preview }: { props: SectionProps; preview: ReactNode }) {
@@ -179,7 +179,7 @@ function DesktopEditor({ props, preview }: { props: SectionProps; preview: React
       ref={workspace}
       data-slot="editor-workspace"
       // Most of the page's bottom padding goes: 16px stay under the workspace.
-      className="-mb-16 overflow-hidden rounded-sheet border bg-card"
+      className="-mb-16"
       style={{ height }}
     >
       <ResizablePanelGroup
@@ -200,14 +200,14 @@ function DesktopEditor({ props, preview }: { props: SectionProps; preview: React
             aria-label={t('panelLabel')}
             data-slot="settings-panel"
             // Positioned, so screen-reader-only text inside is clipped here too.
-            className="relative h-full overflow-y-auto overscroll-contain"
+            className="relative h-full overflow-y-auto overscroll-contain rounded-sheet border bg-card"
           >
             <SettingsAccordion mode="multiple" {...props} />
           </div>
         </ResizablePanel>
-        <ResizableHandle withHandle aria-label={t('splitLabel')} />
+        <ResizableHandle withHandle gap aria-label={t('splitLabel')} />
         <ResizablePanel id="preview" minSize={`${PREVIEW_MIN}px`}>
-          {preview}
+          <div className="h-full overflow-hidden rounded-sheet border">{preview}</div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
