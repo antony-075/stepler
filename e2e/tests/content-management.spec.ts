@@ -2,7 +2,7 @@ import { type Browser, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
 import { guestLinks, mainLinkPath, openGuestLink, submitTextViaApi } from '../support/guest.js';
-import { uploadViaApi } from '../support/media.js';
+import { uploadViaApi, waitForProcessed } from '../support/media.js';
 
 // PR E: the guest's shared gallery and own delete, the admin's multi-select and the
 // «Гості можуть видаляти своє» switch. Guest journeys run on all three projects; admin-only
@@ -73,6 +73,7 @@ test.describe('guest gallery and own delete', () => {
     const a = await asGuest(browser, path);
     await uploadViaApi(a, id, 'photo.jpg');
     await uploadViaApi(a, id, 'photo.png');
+    await waitForProcessed(page, id);
     const b = await asGuest(browser, path);
 
     // B: everyone's frames, no numbers, names or delete; the viewer says only time and kind.

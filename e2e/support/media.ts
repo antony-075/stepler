@@ -73,3 +73,21 @@ export async function uploadViaApi(
   expect(done.status()).toBe(200);
   return (await done.json()) as { id: string; frameNo: number };
 }
+
+/**
+ * Waits until the worker has processed every frame of the collection (none `PENDING`), as the
+ * admin of `page`. Originals are linked only once their location is stripped (ADR 0008
+ * addendum 2026-10-05), so journeys that open or download an original wait for this first.
+ */
+export async function waitForProcessed(page: Page, collectionId: string): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get(`/api/v1/collections/${collectionId}/content`);
+        const { items } = (await res.json()) as { items: { processingStatus: string }[] };
+        return items.filter((item) => item.processingStatus === 'PENDING').length;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(0);
+}
