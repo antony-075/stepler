@@ -18,10 +18,10 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { draftImageApi, removeDraftImage, setDraftImageFromFrame } from '@/api/collections';
-import { FramePicker } from '../frame-picker';
-import { imageErrorKey } from '../image-errors';
-import { imageState } from '../image-state';
-import { useImageUpload } from '../use-image-upload';
+import { FramePicker } from '../../images/frame-picker';
+import { imageErrorKey } from '../../images/image-errors';
+import { imageState } from '../../images/image-state';
+import { useImageUpload } from '../../images/use-image-upload';
 
 /** What the file picker offers: the photo types the API takes for an admin image. */
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.heic,.heif';

@@ -1,6 +1,7 @@
 'use client';
 
-// «Вибрати з кадрів»: one guest photo for the draft's cover or background (plan Tasks 11, 14, [A8]).
+// «Вибрати з кадрів»: one guest photo for the draft's cover or background, or the collection image
+// (plan Tasks 11, 14, 24, [A8]).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
 // - A short task over the tab: a bottom sheet on phones (in the thumb zone, the safe area kept),
 //   a centred dialog of at most 46rem from 640px (the same `Sheet side="bottom"`, so there is one
@@ -12,7 +13,8 @@
 //   another moves the choice). A photo without a thumbnail yet is shown «Готується прев’ю» and
 //   cannot be chosen (the API would refuse a photo the worker failed on); it is asked for again
 //   every 10 s like in «Вміст», and becomes selectable in place.
-// - The footer never scrolls: «Зробити обкладинкою» (ink, 44px, waits for a choice) and
+// - The line under the title says what the copy means where it goes (`description`).
+// - The footer never scrolls: «Вибрати» (ink, 44px, waits for a choice) and
 //   «Скасувати». Empty: «Гості ще не додали фото»; a failed load: an alert with «Спробувати ще».
 // - Closing returns focus to the button that opened it (Radix).
 
@@ -44,12 +46,15 @@ export function FramePicker({
   open,
   onOpenChange,
   onPicked,
+  description,
 }: {
   collectionId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Uses the frame; the picker closes once it resolves, stays open if it throws. */
   onPicked: (item: AdminContentItem) => Promise<void>;
+  /** What the copy means where it goes; the guest page's line by default. */
+  description?: string;
 }) {
   const t = useTranslations('guestPage.picker');
   return (
@@ -58,7 +63,7 @@ export function FramePicker({
         <SheetHeader closeLabel={t('close')}>
           <div className="grid gap-0.5">
             <SheetTitle>{t('title')}</SheetTitle>
-            <SheetDescription>{t('description')}</SheetDescription>
+            <SheetDescription>{description ?? t('description')}</SheetDescription>
           </div>
         </SheetHeader>
         {/* Mounted only while open, so the list loads when the picker opens. */}

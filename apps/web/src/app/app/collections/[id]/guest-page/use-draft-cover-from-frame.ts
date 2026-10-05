@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useCallback } from 'react';
 import { isApiError } from '@/api/client';
 import { guestPageKey, setDraftImageFromFrame, useInvalidateCollections } from '@/api/collections';
-import { imageErrorKey } from './image-errors';
+import { imageErrorKey } from '../images/image-errors';
 
 /**
  * «Зробити обкладинкою» in the content viewer [D1]: the frame's original becomes the cover of the

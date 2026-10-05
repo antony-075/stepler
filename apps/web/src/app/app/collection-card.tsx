@@ -7,7 +7,7 @@ import { CalendarDays, Images, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
-import { CollectionCoverImage } from './collection-cover-image';
+import { CollectionMark } from './collection-mark';
 import { ShareButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
 
@@ -24,10 +24,10 @@ const ABOVE_LINK = 'relative z-1';
 
 /**
  * One collection on the dashboard (DESIGN-SYSTEM.md §6.5; the owner's reference 2026-10-02):
- * the cover (the admin's cover picture once ready, else its initials in its own tint, in the same
- * slot: `CollectionCoverImage`), the title, the description, what guests may add through the main
- * link (chips from its real permissions), then a quiet line with the date and the main link's
- * state. On the right: the status and one everyday action, «Поділитися» (the share dialog: the
+ * the mark (the admin's «Картинка колекції» once ready, else its initials in its own tint, in the
+ * same slot: `CollectionMark`; never the guest page's cover), the title, the description, what
+ * guests may add through the main link (chips from its real permissions), then a quiet line with
+ * the date and the main link's state. On the right: the status and one everyday action, «Поділитися» (the share dialog: the
  * main link's QR with its download, the link with Copy and Open, its state; owner 2026-10-02:
  * two buttons looked like one thing; hidden for archived collections); «⋯» right of the status
  * holds archive (or bring back) and delete. The meta line counts frames once there are any.
@@ -51,11 +51,7 @@ export function CollectionCard({ collection }: { collection: Collection }) {
       data-status={collection.status}
       className={cn(CARD, { 'bg-transparent': archived })}
     >
-      <CollectionCoverImage
-        collection={collection}
-        size="cover"
-        className="col-[1] row-[1/span_2]"
-      />
+      <CollectionMark collection={collection} size="cover" className="col-[1] row-[1/span_2]" />
 
       <h3 className="type-h2 col-[2] row-[1] min-w-0 self-end [overflow-wrap:anywhere] md:self-start">
         <Link

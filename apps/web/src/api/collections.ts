@@ -147,3 +147,47 @@ export const removeDraftImage = (id: string, slot: ImageSlotParam): Promise<Gues
     method: 'DELETE',
     schema: guestPageEditorSchema,
   });
+
+// «Картинка колекції» (plan Task 24, ADR 0017): the owner's own image of the collection, on the
+// dashboard and in the share dialog only. Changes answer the collection (removal: nothing).
+
+const collectionImageBase = (id: string) => `/collections/${encodeURIComponent(id)}/image`;
+
+/** The collection image upload calls, in the shape the upload transport takes. */
+export function collectionImageApi(id: string): UploadApi<Collection> {
+  const uploads = `${collectionImageBase(id)}/uploads`;
+  const one = (uploadId: string) => `${uploads}/${encodeURIComponent(uploadId)}`;
+  return {
+    initiate: (body) =>
+      apiRequest(uploads, { method: 'POST', body, schema: uploadSessionResponseSchema }),
+    parts: (uploadId, partNumbers, signal) =>
+      apiRequest(`${one(uploadId)}/parts`, {
+        method: 'POST',
+        body: { partNumbers },
+        schema: uploadPartsResponseSchema,
+        signal,
+      }),
+    complete: (uploadId, signal) =>
+      apiRequest(`${one(uploadId)}/complete`, {
+        method: 'POST',
+        schema: collectionSchema,
+        signal,
+      }),
+    cancel: (uploadId) => apiRequest(one(uploadId), { method: 'DELETE' }),
+  };
+}
+
+/** Copies a guest's PHOTO frame into the collection image. */
+export const setCollectionImageFromFrame = (
+  id: string,
+  contentItemId: string,
+): Promise<Collection> =>
+  apiRequest(`${collectionImageBase(id)}/from-frame`, {
+    method: 'POST',
+    body: { contentItemId },
+    schema: collectionSchema,
+  });
+
+/** Removes the collection image (the initials show again). Idempotent. */
+export const removeCollectionImage = (id: string): Promise<void> =>
+  apiRequest(collectionImageBase(id), { method: 'DELETE' });

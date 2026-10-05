@@ -273,7 +273,17 @@
       "leave": "The collection details aren’t saved. Leave the page without saving?",
       "subtitle": "Title and description, guest access, archive and deletion.",
       "archiving": "Archiving",
-      "archiveTitle": "Archive the collection"
+      "archiveTitle": "Archive the collection",
+      "image": "Collection image",
+      "imageHint": "Only you see it, on your collections dashboard. Guests see the cover on the guest page.",
+      "imageNone": "Initials for now",
+      "imageReady": "Shown on your collections dashboard",
+      "imageRemove": "Remove",
+      "imageRemoveConfirmTitle": "Remove the collection image?",
+      "imageRemoveConfirmText": "The dashboard shows the initials again. The guest page does not change.",
+      "imageRemoveConfirm": "Remove",
+      "imageRemovePending": "Removing",
+      "imagePickerDescription": "The photo is copied: if the guest deletes it, the collection image stays."
     },
     "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
     "share": "Share",

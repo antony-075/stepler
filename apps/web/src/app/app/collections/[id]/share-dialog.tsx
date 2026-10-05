@@ -43,7 +43,7 @@ import { useTranslations } from 'next-intl';
 import { type ReactNode, type RefObject, useId, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { useInvalidateCollections } from '@/api/collections';
-import { CollectionCoverImage } from '../../collection-cover-image';
+import { CollectionMark } from '../../collection-mark';
 import { activateGuestLink, guestLinksKey, listGuestLinks } from '@/api/guest-links';
 import { errorMessageKey } from '@/errors/error-message';
 import { findLink, linkKey as linkKeyOf, MAIN_LINK, useLinkName } from '@/guest-links/link-pages';
@@ -138,7 +138,7 @@ function ShareBody({ collection, linkKey }: { collection: Collection; linkKey: s
     <>
       {/* The collection's 44px mark beside the title [A7]: which collection is being shared. */}
       <DialogHeader className="grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3">
-        <CollectionCoverImage collection={collection} size="sm" className="row-span-2" />
+        <CollectionMark collection={collection} size="sm" className="row-span-2" />
         <DialogTitle>{t('title')}</DialogTitle>
         <DialogDescription>{t('description')}</DialogDescription>
       </DialogHeader>

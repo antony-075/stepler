@@ -1,7 +1,8 @@
 'use client';
 
 // Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри колекції» tab of the collection
-// page. Two cards: «Архівування» (asks once; bringing it back just happens) and the danger zone
+// page. «Картинка колекції» first (plan Task 24: the owner's own image for the dashboard; its card
+// has its own design notes), then «Архівування» (asks once; bringing it back just happens) and the danger zone
 // (the only red on the page; a destructive ConfirmDialog names the collection). Guest access is
 // not here: permissions belong to each link, on «Посилання» (owner 2026-10-03). Errors stay
 // inline; toasts only confirm.
@@ -21,10 +22,12 @@ import { collectionKey, deleteCollection, useInvalidateCollections } from '@/api
 import { errorMessageKey } from '@/errors/error-message';
 import { useArchiveToggle } from '../../use-archive';
 import { SectionCard } from '../section-card';
+import { CollectionImageCard } from './collection-image-card';
 
 /**
  * The collection's «Параметри колекції» tab (owner 2026-10-02: one page, no separate settings page; the
- * title and description are edited in place in the header): archiving and the danger zone.
+ * title and description are edited in place in the header): the collection image, archiving and
+ * the danger zone.
  */
 export function CollectionSettingsPanel({
   collection,
@@ -35,6 +38,7 @@ export function CollectionSettingsPanel({
 }) {
   return (
     <div className="grid min-w-0 gap-6">
+      <CollectionImageCard collection={collection} />
       <ArchiveCard collection={collection} />
       <DangerCard collection={collection} onDeleted={onDeleted} />
     </div>
