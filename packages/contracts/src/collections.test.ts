@@ -122,6 +122,7 @@ describe('collectionSchema', () => {
     lastContentAt: null,
     welcomeMessage: null,
     cover: null,
+    image: null,
   };
 
   test('accepts a collection', () => {
@@ -136,11 +137,15 @@ describe('collectionSchema', () => {
         status: 'READY',
         thumbnailUrl: 'https://storage.example.com/t.webp',
         previewUrl: 'https://storage.example.com/p.webp',
+        largeUrl: null,
         width: 4000,
         height: 3000,
       },
     };
     expect(collectionSchema.parse(withCover)).toEqual(withCover);
+    const withoutImage: Partial<typeof collection> = { ...collection };
+    delete withoutImage.image;
+    expect(collectionSchema.safeParse(withoutImage).success).toBe(false);
     const withoutCover: Partial<typeof collection> = { ...collection };
     delete withoutCover.cover;
     expect(collectionSchema.safeParse(withoutCover).success).toBe(false);

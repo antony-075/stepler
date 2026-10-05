@@ -9,8 +9,11 @@ import type { JobData, JobName } from '../src/jobs/job-names.js';
 import type { PgBossClient } from '../src/jobs/pg-boss-queue.js';
 import type { ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
-import { coverKey } from '../src/collections/cover-keys.js';
-import { CoverDerivativesHandler } from '../src/worker/handlers/cover-derivatives.handler.js';
+import { imageKey } from '../src/images/image-keys.js';
+import {
+  CollectionImageDerivativesHandler,
+  LegacyCoverDerivativesHandler,
+} from '../src/worker/handlers/collection-image-derivatives.handler.js';
 import { ImageDerivativesHandler } from '../src/worker/handlers/image-derivatives.handler.js';
 import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.js';
 import type { JobHandler } from '../src/worker/job-handler.js';
@@ -22,6 +25,9 @@ import { resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { allKeys } from './support/storage.js';
 import { fixture } from './support/uploads.js';
+
+const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
+  imageKey(collectionId, 'COVER', id, role);
 
 const apiEnv = testEnv();
 const env = loadWorkerEnv({
@@ -203,8 +209,19 @@ describe('media.image-derivatives', () => {
   });
 });
 
-describe('media.cover-derivatives', () => {
-  const handler = (s: ObjectStorage = storage) => new CoverDerivativesHandler(prisma, s, slots);
+describe('media.collection-image (covers)', () => {
+  const images = (s: ObjectStorage = storage) =>
+    new CollectionImageDerivativesHandler(prisma, s, slots);
+  /** The image handler, called the way slice 8a queued cover jobs (`coverId`). */
+  const handler = (s: ObjectStorage = storage) => {
+    const inner = images(s);
+    return {
+      handle: ({ collectionId, coverId }: { collectionId: string; coverId: string }) =>
+        inner.handle({ collectionId, imageId: coverId }),
+      onFinalFailure: ({ collectionId, coverId }: { collectionId: string; coverId: string }) =>
+        inner.onFinalFailure({ collectionId, imageId: coverId }),
+    };
+  };
 
   /** A pending cover whose copied original (`bytes`) is at its own key. */
   async function addCover(bytes: Buffer, mimeType: string) {
@@ -212,9 +229,10 @@ describe('media.cover-derivatives', () => {
     const collection = await prisma.collection.create({
       data: { ownerId: owner.id, title: 'Весілля' },
     });
-    const cover = await prisma.collectionCover.create({
+    const cover = await prisma.collectionImage.create({
       data: {
         collectionId: collection.id,
+        slot: 'COVER',
         source: 'UPLOAD',
         mimeType,
         originalSizeBytes: BigInt(bytes.length),
@@ -224,7 +242,7 @@ describe('media.cover-derivatives', () => {
     await storage.putObject(original, bytes, mimeType, bytes.length);
     return { collectionId: collection.id, coverId: cover.id, original };
   }
-  const coverRow = (id: string) => prisma.collectionCover.findUnique({ where: { id } });
+  const coverRow = (id: string) => prisma.collectionImage.findUnique({ where: { id } });
   const coverKeys = (collectionId: string) =>
     allKeys(storage, `collections/${collectionId}/cover/`);
 
@@ -264,7 +282,7 @@ describe('media.cover-derivatives', () => {
         coverKey(collectionId, coverId, 'thumbnail'),
       ].sort(),
     );
-    expect(await prisma.collectionCover.count({ where: { collectionId } })).toBe(1);
+    expect(await prisma.collectionImage.count({ where: { collectionId } })).toBe(1);
     expect((await coverRow(coverId))?.status).toBe('READY');
   });
 
@@ -286,7 +304,7 @@ describe('media.cover-derivatives', () => {
         if (!replaced) {
           replaced = true;
           // The API's replace: the row goes at once; its purge may run any time after.
-          await prisma.collectionCover.delete({ where: { id: coverId } });
+          await prisma.collectionImage.delete({ where: { id: coverId } });
         }
         await storage.putObject(key, body, type, length);
       },
@@ -426,6 +444,8 @@ describe('JobRunner', () => {
       noop('uploads.expire') as never,
       handler as never,
       noop('media.video-poster') as never,
+      noop('media.collection-image') as never,
+      noop('collection-image.purge') as never,
       noop('media.cover-derivatives') as never,
       noop('cover.purge') as never,
     );
@@ -473,5 +493,106 @@ describe('JobRunner', () => {
     expect(await statusOf(itemId)).toBe('PENDING');
     await expect(attempt(5)).rejects.toThrow();
     expect(await statusOf(itemId)).toBe('FAILED');
+  });
+});
+
+describe('media.collection-image: renditions per slot (plan Task 8)', () => {
+  const handler = () => new CollectionImageDerivativesHandler(prisma, storage, slots);
+
+  async function addImage(slot: 'BACKGROUND' | 'COLLECTION_IMAGE' | 'COVER', bytes: Buffer) {
+    const owner = await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } });
+    const collection = await prisma.collection.create({
+      data: { ownerId: owner.id, title: 'Весілля' },
+    });
+    const image = await prisma.collectionImage.create({
+      data: {
+        collectionId: collection.id,
+        slot,
+        source: 'UPLOAD',
+        mimeType: 'image/jpeg',
+        originalSizeBytes: BigInt(bytes.length),
+      },
+    });
+    const original = imageKey(collection.id, slot, image.id, 'original');
+    await storage.putObject(original, bytes, 'image/jpeg', bytes.length);
+    return { collectionId: collection.id, imageId: image.id, original };
+  }
+
+  const longest = async (key: string) => {
+    const meta = await sharp(await objectBytes(key)).metadata();
+    return { format: meta.format, longest: Math.max(meta.width, meta.height) };
+  };
+
+  test('a BACKGROUND gets three WebP renditions (480, 1600, 2400); derivedSizeBytes is their sum', async () => {
+    const jpeg = await sharp({
+      create: { width: 3200, height: 2000, channels: 3, background: '#2c7350' },
+    })
+      .jpeg()
+      .toBuffer();
+    const { collectionId, imageId, original } = await addImage('BACKGROUND', jpeg);
+    await handler().handle({ collectionId, imageId });
+    const key = (role: 'thumbnail' | 'preview' | 'large') =>
+      imageKey(collectionId, 'BACKGROUND', imageId, role);
+    expect(await longest(key('thumbnail'))).toEqual({ format: 'webp', longest: 480 });
+    expect(await longest(key('preview'))).toEqual({ format: 'webp', longest: 1600 });
+    expect(await longest(key('large'))).toEqual({ format: 'webp', longest: 2400 });
+    const sizes = await Promise.all(
+      (['thumbnail', 'preview', 'large'] as const).map(
+        async (role) => (await objectBytes(key(role))).length,
+      ),
+    );
+    const row = await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } });
+    expect(row).toMatchObject({ status: 'READY', width: 3200, height: 2000 });
+    expect(row.derivedSizeBytes).toBe(BigInt(sizes.reduce((a, b) => a + b, 0)));
+    expect(await allKeys(storage, `collections/${collectionId}/background/`)).toEqual(
+      [original, key('large'), key('preview'), key('thumbnail')].sort(),
+    );
+  });
+
+  test('a small BACKGROUND is never enlarged', async () => {
+    const { collectionId, imageId } = await addImage('BACKGROUND', fixture('photo.jpg'));
+    await handler().handle({ collectionId, imageId });
+    const row = await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } });
+    const large = await longest(imageKey(collectionId, 'BACKGROUND', imageId, 'large'));
+    expect(large.longest).toBe(Math.max(row.width ?? 0, row.height ?? 0));
+  });
+
+  test('a BACKGROUND over the decoded pixel limit (a 42 MP PNG) is FAILED, nothing written', async () => {
+    const png = await sharp({
+      create: { width: 7000, height: 6000, channels: 3, background: '#110f15' },
+    })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    const { collectionId, imageId, original } = await addImage('BACKGROUND', png);
+    await handler().handle({ collectionId, imageId });
+    expect(
+      (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
+    ).toBe('FAILED');
+    expect(await allKeys(storage, `collections/${collectionId}/background/`)).toEqual([original]);
+  });
+
+  test('a COLLECTION_IMAGE gets the thumbnail only', async () => {
+    const { collectionId, imageId, original } = await addImage(
+      'COLLECTION_IMAGE',
+      fixture('photo.jpg'),
+    );
+    await handler().handle({ collectionId, imageId });
+    expect(await allKeys(storage, `collections/${collectionId}/collection-image/`)).toEqual(
+      [original, imageKey(collectionId, 'COLLECTION_IMAGE', imageId, 'thumbnail')].sort(),
+    );
+    expect(
+      (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
+    ).toBe('READY');
+  });
+
+  test('a legacy media.cover-derivatives job ({ coverId }) still completes a COVER image', async () => {
+    const { collectionId, imageId } = await addImage('COVER', fixture('photo.jpg'));
+    const legacy = new LegacyCoverDerivativesHandler(handler());
+    expect(legacy.name).toBe('media.cover-derivatives');
+    await legacy.handle({ collectionId, coverId: imageId });
+    expect(
+      (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
+    ).toBe('READY');
+    expect(await allKeys(storage, `collections/${collectionId}/cover/${imageId}/`)).toHaveLength(3);
   });
 });

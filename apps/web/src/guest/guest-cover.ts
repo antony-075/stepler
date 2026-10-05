@@ -1,4 +1,4 @@
-import type { GuestCover } from '@stepler/contracts';
+import type { GuestCover, GuestImage } from '@stepler/contracts';
 import type { TemplateImage } from '@stepler/templates/react';
 
 // The collection's cover for the guest page template ([A4], [A7]; plan Task 4). Only a `READY`
@@ -8,6 +8,7 @@ import type { TemplateImage } from '@stepler/templates/react';
 
 const THUMBNAIL_PX = 480;
 const PREVIEW_PX = 1600;
+const LARGE_PX = 2400;
 
 /** The width of a rendition whose longest side is at most `px`, as the worker resizes. */
 export function renditionWidth(width: number, height: number, px: number): number {
@@ -34,4 +35,19 @@ export function coverImage(cover: GuestCover | null, onError?: () => void): Temp
     height,
     ...(onError === undefined ? {} : { onError }),
   };
+}
+
+/**
+ * The background as a template image: the 1600 px preview by default and, from 1024 px screens,
+ * the 2400 px large rendition when the slot has made one.
+ */
+export function backgroundImage(
+  background: GuestImage | null,
+  onError?: () => void,
+): TemplateImage | null {
+  const image = coverImage(background, onError);
+  if (image === null || background === null || background.largeUrl === null) return image;
+  const large = renditionWidth(background.width, background.height, LARGE_PX);
+  if (large === renditionWidth(background.width, background.height, PREVIEW_PX)) return image;
+  return { ...image, srcSet: `${image.srcSet}, ${background.largeUrl} ${large}w` };
 }

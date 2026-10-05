@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { collectionCoverSchema, collectionWelcomeMessageSchema } from './cover.js';
+import {
+  adminImageSchema,
+  collectionCoverSchema,
+  collectionWelcomeMessageSchema,
+} from './cover.js';
 import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
@@ -54,6 +58,8 @@ export const collectionSchema = z
     welcomeMessage: z.string().nullable(),
     /** The cover (an upload or a guest photo frame); `null` = the initials tile [A2]. */
     cover: collectionCoverSchema.nullable(),
+    /** «Картинка колекції»: the owner's own image of it, for the dashboard; never shown to guests. */
+    image: adminImageSchema.nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

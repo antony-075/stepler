@@ -1,11 +1,11 @@
 # ADR 0017 — Guest Page Templates
 
-Status: Proposed (owner decisions 2026-10-04/05, D1–D5 confirmed; plan `docs/superpowers/plans/2026-10-05-guest-page-templates.md`)
+Status: Accepted (owner decisions 2026-10-04/05, D1–D5 confirmed; plan `docs/superpowers/plans/2026-10-05-guest-page-templates.md`; PR H and PR I reviewed)
 Date: 2026-10-05
 
-This ADR covers the parts in place after PR H (the package, its contract, fonts and contrast) and
-the decisions the later PRs build on. The storage parts (images per slot, published and draft
-versions) are added in plan Task 11 (PR I).
+This ADR covers the package, its contract, fonts and contrast (PR H), the storage model, the
+editor's draft and publish semantics and the image lifecycle (PR I), and the decisions the later
+PRs build on.
 
 ## Context
 
@@ -105,6 +105,76 @@ Three things make this more than styling:
   `svh` and fixed bars that only a real viewport renders faithfully, and their CSS and fonts stay
   isolated from the admin shell. It reads admin endpoints only and never creates a guest session.
 
+### Storage: published and draft versions, slot-typed images (PR I)
+
+- **`GuestPageVersion`:** one `PUBLISHED` row per collection (what guests see) and at most one
+  `DRAFT` (the editor's), each with `templateId`, `templateVersion`, validated `settings` (jsonb),
+  `welcomeMessage`, `coverImageId` and `backgroundImageId`. Settings are validated by the
+  template's definition before they are stored and resolved again on every read
+  (`resolveTheme`: a removed template or settings it no longer accepts read as the defaults,
+  never an error). Guests get only the published version, inside `GuestContext.page`; no guest
+  DTO carries a draft, a revision or an image status.
+- **`CollectionImage`:** a row per image with its `slot` (`COVER`, `BACKGROUND`,
+  `COLLECTION_IMAGE`), status, source, verified type, sizes and dimensions. Rows are referenced,
+  not unique per slot: a published and a draft cover can both exist. Keys come from ids only:
+  `collections/{cid}/{cover|background|collection-image}/{imageId}/{original|thumbnail.webp|preview.webp|large.webp}`.
+  Renditions per slot: cover 480 + 1600, background 480 + 1600 + 2400, collection image 480.
+- **`Collection.imageId`:** «Картинка колекції», the owner's own image for the dashboard and the
+  share dialog; it is never in a guest response (tested over every guest body).
+- **Same-collection references** use composite keys `(id, collectionId)` with `ON DELETE NO
+  ACTION`, so a version or a collection can never point at another collection's image, and
+  deleting a collection still cascades in one statement.
+- **The image slot of a reference is enforced by the application, not the database.** Every write
+  takes the row's slot, the upload's purpose and the reference column from one `ImageTarget`, so
+  a cover column only ever points at a `COVER` image (unit and integration tests). A generated
+  column plus a three-column foreign key would enforce it in PostgreSQL; that was judged not worth
+  the schema weight (review M4).
+
+### Editing: draft, publish, reset and revisions (PR I)
+
+- Everything in the editor, cover and welcome included, reaches guests only on «Зберегти»
+  [D1]. `PUT …/guest-page/draft` saves the whole working copy (template, settings, welcome);
+  `POST …/publish {revision}` copies the draft over the published version and deletes it;
+  `DELETE …/draft` resets. Draft images change through their own routes.
+- **Optimistic concurrency.** Revisions come from a per-collection counter
+  (`Collection.lastPageRevision`): a new draft and every save take the next number, and the
+  published version keeps the revision it was published at, so a revision names one draft state
+  for the life of the collection. A save must name the draft's current revision, else
+  `409 GUEST_PAGE_DRAFT_CONFLICT`; `baseRevision: null` means "no draft yet" and is also accepted
+  while the draft has never been saved (`savedAt IS NULL`: an image change created it, so it holds
+  only what was published). A publish names the draft's revision; without a draft it is `200`
+  only for the published revision (a repeat), else `409`. Image changes never bump the revision
+  (they do not conflict with autosave); changes through the slice 8a routes do (review I1, I2, M2).
+- **Locks.** Every write locks the collection row first, then the draft row (lock order: owner →
+  collection → draft row), so saves, publishes, resets and image changes of one collection run one
+  at a time. The editor's `GET` is a single repeatable-read read and never writes.
+
+### Image lifecycle: references and garbage collection (PR I)
+
+- An image row lives while a guest page version or the collection references it. The transaction
+  that drops the last reference (a replaced image, a publish that supersedes the old published
+  images, a reset, a removal) deletes the row in the same transaction, so usage drops at once, and
+  queues `collection-image.purge` for its prefix. The purge job skips a row that still exists.
+- Usage counts every image of every slot (original and renditions) plus open upload
+  reservations. The upload flow is the guest one (ADR 0008 addenda), with `purpose` = slot and
+  `imageTarget` fixed at initiation.
+- The hourly sweep marks `FAILED` an image still `PENDING` an hour after it was set with no
+  rendition job left.
+
+### Expand and contract
+
+- **PR I (expand):** the migration copies every `CollectionCover` into a `COVER` image with the
+  same id (its keys stay valid) and every collection's welcome and cover into a published
+  `classic` v1 version. The slice 8a cover routes and `PATCH welcomeMessage` keep their contract as
+  a "publish now" adapter (they change the published version and the draft's, and move the draft
+  to a new revision), so the old «Гостьова сторінка» tab works until PR J. The slice 8a job names
+  stay served by the new handlers.
+- **PR J** removes the adapter routes with the old tab. **PR L (contract)** drops
+  `CollectionCover`, `CoverStatus`, `CoverSource`, `Collection.welcomeMessage` with its CHECK, the
+  legacy job names, `Collection.cover` in the contract and the `LEGACY_COVER` upload target.
+- **Deploy (PR I):** the worker is suspended while the API migrates, then deployed before the web
+  (runbook: `docs/deployment/staging.md`, release notes).
+
 ## Alternatives considered
 
 - **Templates inside apps/web.** Simpler wiring, but nothing would stop a template from reaching
@@ -114,6 +184,13 @@ Three things make this more than styling:
   Лайм and Електрик unusable on every light template.
 - **Fonts from Google at runtime.** Contradicts ADR 0015 (privacy, availability, build failures).
 - **One font for headings and body.** Display faces at 15–17px body sizes hurt reading on phones.
+- **One versions table with history.** More than published plus draft is out of scope; two
+  states with a unique key keep "what guests see" a single row.
+- **Covers and backgrounds as columns of the version** (no image table). Reference counting would
+  then live in application code across columns and the collection image; one image table with
+  explicit references and one collector is simpler to reason about.
+- **Per-draft revisions starting at 1.** Rejected after review: a draft created after a publish or
+  a reset reused numbers an old tab still held (review I1).
 - **An inline preview instead of an iframe.** Viewport units and media queries would answer to
   the admin's window, not the previewed device, and template CSS would leak into the admin.
 

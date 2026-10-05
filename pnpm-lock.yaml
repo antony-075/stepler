@@ -119,6 +119,9 @@ importers:
       '@stepler/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@stepler/templates':
+        specifier: workspace:*
+        version: link:../templates
       arctic:
         specifier: 3.7.0
         version: 3.7.0

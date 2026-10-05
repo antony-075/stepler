@@ -11,6 +11,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { createApp } from '../src/create-app.js';
 import type { CollectionStatus } from '../src/generated/prisma/client.js';
 import { listenOnLoopback } from './support/app.js';
+import { seedPublishedCover, setPublishedPage } from './support/guest-page.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
@@ -336,15 +337,10 @@ describe('collections API', () => {
 
   describe('cover on the collection DTO [A2]', () => {
     const cover = (collectionId: string, status: 'PENDING' | 'READY' | 'FAILED') =>
-      prisma.collectionCover.create({
-        data: {
-          collectionId,
-          status,
-          source: 'UPLOAD',
-          mimeType: 'image/jpeg',
-          originalSizeBytes: 1000n,
-          ...(status === 'READY' ? { width: 4000, height: 3000, derivedSizeBytes: 500n } : {}),
-        },
+      seedPublishedCover(prisma, collectionId, {
+        status,
+        source: 'UPLOAD',
+        ...(status === 'READY' ? { width: 4000, height: 3000, derivedSizeBytes: 500n } : {}),
       });
 
     test('lists and reads carry welcomeMessage and cover; URLs only once READY', async () => {
@@ -354,10 +350,7 @@ describe('collections API', () => {
       const ready = await seed(userId, 'ACTIVE', 'Ready', new Date('2026-10-03T10:00:00Z'));
       await cover(pending.id, 'PENDING');
       await cover(ready.id, 'READY');
-      await prisma.collection.update({
-        where: { id: ready.id },
-        data: { welcomeMessage: 'Вітаємо!' },
-      });
+      await setPublishedPage(prisma, ready.id, { welcomeMessage: 'Вітаємо!' });
 
       const list = await request(server()).get('/api/v1/collections').set('Cookie', cookie);
       const items = collectionListResponseSchema.parse(list.body).items;
@@ -367,6 +360,7 @@ describe('collections API', () => {
         status: 'PENDING',
         thumbnailUrl: null,
         previewUrl: null,
+        largeUrl: null,
         width: null,
         height: null,
       });

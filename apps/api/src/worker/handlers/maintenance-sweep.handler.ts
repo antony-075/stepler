@@ -19,6 +19,9 @@ const ENQUEUE_CHUNK = 50;
  * - marks `FAILED` the photos and videos still `PENDING` an hour after upload with no media job
  *   queued, retrying or running for them (a job pg-boss expired on its last attempt never runs
  *   `onFinalFailure`); they keep their original and show the type tile;
+ * - marks `FAILED` the admin images (covers, backgrounds, collection images) still `PENDING` an
+ *   hour after they were set with no rendition job queued, retrying or running for them (for
+ *   example a job lost while the worker was down during a deploy); the owner can set them again;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
  *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
@@ -66,12 +69,14 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       enqueueError = error instanceof Error ? error : new Error('enqueue failed');
     }
     const stalledMedia = await this.failStalledMedia(staleBefore);
+    const stalledImages = await this.failStalledImages(staleBefore);
     const idleSessions = await this.deleteIdleGuestSessions();
     this.logger.log({
       msg: 'maintenance.sweep done',
       contentPurges: items.length,
       collectionPurges: collections.length,
       stalledMediaFailed: stalledMedia,
+      stalledImagesFailed: stalledImages,
       idleSessionsDeleted: idleSessions,
     });
     if (enqueueError !== undefined) throw enqueueError;
@@ -88,6 +93,22 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
           SELECT 1 FROM pgboss.job AS job
           WHERE job.name IN ('media.image-derivatives', 'media.video-poster')
             AND job.singleton_key = job.name || ':' || item.id::text
+            AND job.state IN ('created', 'retry', 'active'))`;
+  }
+
+  /**
+   * Image jobs use the singleton key `{name}:{imageId}`; the slice 8a queue (covers kept their
+   * ids) is checked too until PR L removes it.
+   */
+  private failStalledImages(createdBefore: Date): Promise<number> {
+    return this.prisma.$executeRaw`
+      UPDATE "CollectionImage" AS image SET "status" = 'FAILED'
+      WHERE image."status" = 'PENDING'
+        AND image."createdAt" < ${createdBefore}
+        AND NOT EXISTS (
+          SELECT 1 FROM pgboss.job AS job
+          WHERE job.name IN ('media.collection-image', 'media.cover-derivatives')
+            AND job.singleton_key = job.name || ':' || image.id::text
             AND job.state IN ('created', 'retry', 'active'))`;
   }
 

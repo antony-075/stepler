@@ -9,6 +9,7 @@ import type { ApiEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { ErrorsModule } from './errors/errors.module.js';
 import { GuestAccessModule } from './guest-access/guest-access.module.js';
+import { GuestPageModule } from './guest-page/guest-page.module.js';
 import { HealthModule } from './health/health.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { LimitsModule } from './limits/limits.module.js';
@@ -45,6 +46,7 @@ export class AppModule {
         AuthModule,
         UsersModule,
         CollectionsModule,
+        GuestPageModule,
         GuestAccessModule,
         ContentModule,
         UploadsModule,

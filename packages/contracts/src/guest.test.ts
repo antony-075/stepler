@@ -10,8 +10,21 @@ const context = {
     id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
     title: 'Wedding',
     description: null,
+  },
+  page: {
+    templateId: 'classic',
+    templateVersion: 1,
+    settings: {
+      background: { kind: 'solid', color: '#F0F1EE' },
+      accent: '#B83E26',
+      headingFont: 'geologica',
+      coverPlacement: 'top',
+      align: 'start',
+      corners: 'soft',
+    },
     welcomeMessage: null,
     cover: null,
+    background: null,
   },
   permissions: {
     canUploadPhotos: true,
@@ -36,34 +49,41 @@ describe('guestContextSchema', () => {
     expect(guestContextSchema.safeParse({ ...context, counts: null }).success).toBe(true);
   });
 
-  test('carries the welcome message and a READY cover, never the cover status or source frame', () => {
+  test('the published page: welcome and READY images, never a draft, revision or status', () => {
     const cover = {
       thumbnailUrl: 'https://storage.example.com/t.webp',
       previewUrl: 'https://storage.example.com/p.webp',
+      largeUrl: null,
       width: 4000,
       height: 3000,
     };
-    const withCover = {
+    const withPage = {
       ...context,
-      collection: { ...context.collection, welcomeMessage: 'Дякуємо, що ви з нами!', cover },
+      page: { ...context.page, welcomeMessage: 'Дякуємо, що ви з нами!', cover },
     };
-    expect(guestContextSchema.parse(withCover)).toEqual(withCover);
-    for (const extra of [
-      { status: 'READY' },
-      { sourceContentItemId: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9' },
+    expect(guestContextSchema.parse(withPage)).toEqual(withPage);
+    for (const page of [
+      { ...context.page, draft: null },
+      { ...context.page, revision: 2 },
+      { ...context.page, background: { ...cover, status: 'READY' } },
+      { ...context.page, cover: { ...cover, sourceContentItemId: context.collection.id } },
     ]) {
+      expect(guestContextSchema.safeParse({ ...context, page }).success).toBe(false);
+    }
+  });
+
+  test('the collection no longer carries the cover or the welcome (they are the page’s)', () => {
+    for (const extra of [{ cover: null }, { welcomeMessage: null }]) {
       expect(
         guestContextSchema.safeParse({
           ...context,
-          collection: { ...context.collection, cover: { ...cover, ...extra } },
+          collection: { ...context.collection, ...extra },
         }).success,
       ).toBe(false);
     }
-    const withoutCover: Record<string, unknown> = { ...context.collection };
-    delete withoutCover.cover;
-    expect(guestContextSchema.safeParse({ ...context, collection: withoutCover }).success).toBe(
-      false,
-    );
+    const withoutPage: Record<string, unknown> = { ...context };
+    delete withoutPage.page;
+    expect(guestContextSchema.safeParse(withoutPage).success).toBe(false);
   });
 
   test('never carries the session id', () => {

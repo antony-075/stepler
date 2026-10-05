@@ -32,6 +32,7 @@
     "@prisma/adapter-pg": "catalog:",
     "@prisma/client": "catalog:",
     "@stepler/contracts": "workspace:*",
+    "@stepler/templates": "workspace:*",
     "arctic": "3.7.0",
     "nestjs-pino": "5.2.1",
     "nodemailer": "10.0.12",

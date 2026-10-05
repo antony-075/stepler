@@ -36,6 +36,7 @@ describe('collectionCoverSchema', () => {
       status: 'READY',
       thumbnailUrl: URL_A,
       previewUrl: URL_B,
+      largeUrl: null,
       width: 4000,
       height: 3000,
     };
@@ -44,6 +45,7 @@ describe('collectionCoverSchema', () => {
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,
+      largeUrl: null,
       width: null,
       height: null,
     };

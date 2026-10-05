@@ -11,10 +11,21 @@ interface JobPayloads {
   'maintenance.sweep': Record<never, never>;
   'media.image-derivatives': { contentItemId: string };
   'media.video-poster': { contentItemId: string };
-  /** The cover's thumbnail and preview from its copied original [A4]. */
+  /**
+   * Legacy (slice 8a; kept until PR L so queued jobs still run): a COVER image's renditions.
+   * The id is the image's (covers kept their ids).
+   */
   'media.cover-derivatives': { collectionId: string; coverId: string };
-  /** The objects of a replaced or removed cover (its prefix), unless a row with that id lives. */
+  /** Legacy (slice 8a; kept until PR L): a COVER image's objects. */
   'cover.purge': { collectionId: string; coverId: string };
+  /** An admin image's renditions for its slot, from its copied original (plan Task 8). */
+  'media.collection-image': { collectionId: string; imageId: string };
+  /** The objects of an image no version or collection references (its prefix), unless it lives. */
+  'collection-image.purge': {
+    collectionId: string;
+    imageId: string;
+    slot: 'COVER' | 'BACKGROUND' | 'COLLECTION_IMAGE';
+  };
 }
 
 /** Job payloads by queue name (ADR 0009). Payloads hold ids only, never user content. */
@@ -60,6 +71,8 @@ export const JOB_OPTIONS = {
   'media.video-poster': MEDIA,
   'media.cover-derivatives': MEDIA,
   'cover.purge': PURGE,
+  'media.collection-image': MEDIA,
+  'collection-image.purge': PURGE,
 } as const satisfies Record<JobName, JobOptions>;
 
 export const JOB_NAMES = Object.keys(JOB_OPTIONS) as JobName[];
@@ -74,6 +87,8 @@ const ENTITY_KEY: { [N in JobName]: (data: JobData[N]) => string | null } = {
   'media.video-poster': (data) => data.contentItemId,
   'media.cover-derivatives': (data) => data.coverId,
   'cover.purge': (data) => data.coverId,
+  'media.collection-image': (data) => data.imageId,
+  'collection-image.purge': (data) => data.imageId,
 };
 
 /**

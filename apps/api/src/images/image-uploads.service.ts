@@ -1,6 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
-  type Collection,
   type CreateUploadRequest,
   fileTypeFor,
   type UploadPartsResponse,
@@ -10,7 +9,7 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { constraintViolation } from '../database/constraint-violation.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
-import type { Prisma, UploadSession } from '../generated/prisma/client.js';
+import type { ImageUploadTarget, Prisma, UploadSession } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
@@ -23,57 +22,75 @@ import {
   uploadInProgress,
   viaStorage,
 } from '../uploads/uploads.service.js';
-import { CollectionsService } from './collections.service.js';
-import { coverKey } from './cover-keys.js';
-import { CoversService } from './covers.service.js';
+import { CollectionImagesService, type ImageTarget } from './collection-images.service.js';
+import { imageKey, type ImageSlotKey } from './image-keys.js';
 
 const HOUR_MS = 3600_000;
 const IDEMPOTENCY_INDEX = 'UploadSession_uploaderUserId_clientUploadId_key';
 
-/** Cover uploads open at once per collection [A9]: a bound on load, not a quota. */
-export const MAX_OPEN_COVER_UPLOADS = 3;
+/** Image uploads open at once per collection and purpose [A9]: a bound on load, not a quota. */
+export const MAX_OPEN_IMAGE_UPLOADS = 3;
+
+/** The upload purpose of each admin image slot (the same names). */
+export type ImagePurpose = ImageSlotKey;
+
+/** What a route's uploads complete into, stored on the upload so another route cannot complete it. */
+export function uploadTargetOf(target: ImageTarget): {
+  purpose: ImagePurpose;
+  imageTarget: ImageUploadTarget;
+} {
+  if (target.slot === 'COLLECTION_IMAGE')
+    return { purpose: target.slot, imageTarget: 'COLLECTION' };
+  return {
+    purpose: target.slot,
+    imageTarget: target.version === 'BOTH' ? 'LEGACY_COVER' : 'DRAFT',
+  };
+}
 
 /** What a short transaction decided; errors are thrown after it commits. */
 type Outcome =
-  /** `inserted`: this request recorded the cover (else another completion did, earlier). */
+  /** `inserted`: this request recorded the image (else another completion did, earlier). */
   | { kind: 'done'; inserted: boolean }
   | { kind: 'claimed'; claimedAt: Date; row: UploadSession }
   | { kind: 'refused'; error: AppError };
 
 /**
- * The admin's cover file travels like a guest's (spec §10, ADR 0008 addendum 2026-10-04): an
- * `UploadSession` with `purpose = COVER` and `uploaderUserId`, a multipart upload the browser
- * sends parts to, a claimed completion that inspects storage outside any transaction. What
- * differs is the scope (the owner's own collection and own uploads, else `404`) and the result:
- * the verified original is copied into the cover's own prefix and the cover row replaced
- * (`CoversService.replace`), never a content frame. Presigned URLs are credentials: never logged.
+ * An admin image file (a guest page cover or background, or the collection image) travels like
+ * a guest's file (spec §10, ADR 0008 addenda): an `UploadSession` whose `purpose` is the image
+ * slot, with `uploaderUserId`, a multipart upload the browser sends parts to, a claimed
+ * completion that inspects storage outside any transaction. What differs is the scope (the
+ * owner's own collection and own uploads of that purpose, else `404`) and the result: the
+ * verified original is copied into the image's own prefix and set on its target
+ * (`CollectionImagesService.set`), never a content frame. Presigned URLs are credentials: never
+ * logged.
  */
 @Injectable()
-export class CoverUploadsService {
-  private readonly logger = new Logger(CoverUploadsService.name);
+export class ImageUploadsService {
+  private readonly logger = new Logger(ImageUploadsService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly limits: LimitsService,
     private readonly usage: UsageService,
-    private readonly covers: CoversService,
-    private readonly collections: CollectionsService,
+    private readonly images: CollectionImagesService,
     private readonly inspector: UploadInspector,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   /**
-   * Opens a cover upload, or (same `clientUploadId` and file) returns the open one. Order: type
-   * (photos only), size, scope, idempotent replay, the open-uploads cap, then the quota
-   * reservation under the owner lock and the collection lock [C9]. The multipart upload is
+   * Opens an image upload, or (same `clientUploadId` and file) returns the open one. Order: type
+   * (photos only), size, scope, idempotent replay, the open-uploads cap per purpose, then the
+   * quota reservation under the owner lock and the collection lock [C9]. The multipart upload is
    * created in storage before the row; a failed insert aborts it.
    */
   async initiate(
     a: AccountPrincipal,
     collectionId: string,
+    target: ImageTarget,
     body: CreateUploadRequest,
   ): Promise<UploadSessionResponse> {
+    const { purpose, imageTarget } = uploadTargetOf(target);
     const type = fileTypeFor(body.filename, body.mimeType);
     if (type === null || type.kind !== 'PHOTO') throw new AppError('FILE_TYPE_NOT_ALLOWED', 422);
     const size = BigInt(body.sizeBytes);
@@ -85,24 +102,31 @@ export class CoverUploadsService {
     if (collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     const existing = await this.findByClientId(a, body.clientUploadId);
     if (existing !== null) {
-      if (existing.collectionId !== collection.id) throw new AppError('IDEMPOTENCY_CONFLICT', 409);
+      if (
+        existing.collectionId !== collection.id ||
+        existing.purpose !== purpose ||
+        existing.imageTarget !== imageTarget
+      ) {
+        throw new AppError('IDEMPOTENCY_CONFLICT', 409);
+      }
       return this.replay(existing, body);
     }
     const open = await this.prisma.uploadSession.count({
       where: {
         collectionId: collection.id,
-        purpose: 'COVER',
+        purpose,
+        imageTarget,
         status: { in: ['INITIATED', 'COMPLETING'] },
         expiresAt: { gt: new Date() },
       },
     });
-    if (open >= MAX_OPEN_COVER_UPLOADS) {
+    if (open >= MAX_OPEN_IMAGE_UPLOADS) {
       throw new AppError('RATE_LIMITED', 429, { retryable: true, retryAfterSeconds: 5 });
     }
 
     const settings = this.limits.uploads();
     const plan = planUpload(size, settings.partSizeBytes);
-    const id = await this.newId();
+    const id = await this.images.newId();
     const key = uploadKey(collection.id, id);
     const multipartUploadId = await viaStorage(() =>
       this.storage.createMultipart(key, type.canonicalMime),
@@ -112,7 +136,7 @@ export class CoverUploadsService {
     try {
       row = await this.prisma.$transaction(async (tx) => {
         await this.usage.lockOwner(tx, collection.ownerId);
-        const locked = await this.covers.lockMutable(tx, a, collection.id);
+        const locked = await this.images.lockMutable(tx, a, collection.id);
         await this.usage.assertCanReserve(tx, {
           userId: locked.ownerId,
           collectionId: locked.id,
@@ -122,7 +146,8 @@ export class CoverUploadsService {
           data: {
             id,
             collectionId: locked.id,
-            purpose: 'COVER',
+            purpose,
+            imageTarget,
             uploaderUserId: a.userId,
             clientUploadId: body.clientUploadId,
             kind: 'PHOTO',
@@ -146,15 +171,21 @@ export class CoverUploadsService {
         code === 'QUOTA_EXCEEDED'
       ) {
         const winner = await this.findByClientId(a, body.clientUploadId);
-        if (winner !== null && winner.collectionId === collection.id) {
+        if (
+          winner !== null &&
+          winner.collectionId === collection.id &&
+          winner.purpose === purpose &&
+          winner.imageTarget === imageTarget
+        ) {
           return this.replay(winner, body);
         }
       }
       throw error;
     }
     this.logger.log({
-      msg: 'cover upload initiated',
+      msg: 'image upload initiated',
       uploadSessionId: row.id,
+      purpose,
       collectionId: row.collectionId,
       partCount: row.partCount,
       sizeBytes: Number(row.declaredSizeBytes),
@@ -162,14 +193,15 @@ export class CoverUploadsService {
     return this.describe(row);
   }
 
-  /** URLs for some parts of the admin's open cover upload; each signs its exact length. */
+  /** URLs for some parts of the admin's open image upload; each signs its exact length. */
   async presignParts(
     a: AccountPrincipal,
     collectionId: string,
+    target: ImageTarget,
     uploadId: string,
     partNumbers: readonly number[],
   ): Promise<UploadPartsResponse> {
-    const row = await this.findCoverUpload(this.prisma, a, collectionId, uploadId);
+    const row = await this.findUpload(this.prisma, a, collectionId, target, uploadId);
     const { status } = await this.prisma.collection.findUniqueOrThrow({
       where: { id: row.collectionId },
       select: { status: true },
@@ -202,15 +234,20 @@ export class CoverUploadsService {
   }
 
   /**
-   * Gives an open cover upload up: `ABORTED`, its reservation freed at once, the bytes discarded
+   * Gives an open image upload up: `ABORTED`, its reservation freed at once, the bytes discarded
    * by the worker. Idempotent; allowed on an archived collection (it only frees things). While a
    * completion is checking it: `409 UPLOAD_IN_PROGRESS`.
    */
-  async cancel(a: AccountPrincipal, collectionId: string, uploadId: string): Promise<void> {
+  async cancel(
+    a: AccountPrincipal,
+    collectionId: string,
+    target: ImageTarget,
+    uploadId: string,
+  ): Promise<void> {
     // Started outside the transaction, so a first start never runs while it holds a connection.
     await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
-      const row = await this.findCoverUpload(tx, a, collectionId, uploadId);
+      const row = await this.findUpload(tx, a, collectionId, target, uploadId);
       if (row.status === 'ABORTED') return;
       if (row.status === 'COMPLETED') throw new AppError('UPLOAD_CLOSED', 409);
       if (isBeingCompleted(row)) throw uploadInProgress();
@@ -236,17 +273,25 @@ export class CoverUploadsService {
   }
 
   /**
-   * Completes the cover upload (spec §10.4, three steps like a guest's): claim → inspect storage
-   * outside any transaction → copy the verified original into the cover's prefix → a short
-   * transaction that re-checks the claim, locks the collection and replaces the cover
-   * (`COMPLETED`, no content item). A repeat of a finished completion returns the collection as
-   * it is now (the cover may have been replaced since); it never copies again. The upload's own
-   * key is deleted best-effort after commit (the collection purge is the backstop).
+   * Completes the image upload (spec §10.4, three steps like a guest's): claim → inspect storage
+   * outside any transaction → copy the verified original into the image's prefix → a short
+   * transaction that re-checks the claim, locks the collection and sets the image on `target`
+   * (`COMPLETED`, no content item). A repeat of a finished completion succeeds without copying
+   * again (the image may have been replaced since). The upload's own key is deleted best-effort
+   * after commit (the collection purge is the backstop). The caller answers with the state now.
    */
-  async complete(a: AccountPrincipal, collectionId: string, uploadId: string): Promise<Collection> {
+  async complete(
+    a: AccountPrincipal,
+    collectionId: string,
+    uploadId: string,
+    target: ImageTarget,
+  ): Promise<void> {
+    const { purpose } = uploadTargetOf(target);
     await this.jobs.ready();
-    const claim = await this.prisma.$transaction((tx) => this.claim(tx, a, collectionId, uploadId));
-    if (claim.kind !== 'claimed') return this.finish(a, collectionId, claim);
+    const claim = await this.prisma.$transaction((tx) =>
+      this.claim(tx, a, collectionId, target, uploadId),
+    );
+    if (claim.kind !== 'claimed') return this.finish(claim);
 
     let verdict: Verdict;
     try {
@@ -259,15 +304,15 @@ export class CoverUploadsService {
     if (verdict.kind === 'refuse') {
       const refusal = verdict.error;
       const outcome = await this.prisma.$transaction((tx) =>
-        this.record(tx, a, claim.row.id, claim.claimedAt, (row) =>
+        this.record(tx, a, target, claim.row.id, claim.claimedAt, (row) =>
           this.close(tx, row, 'REJECTED', refusal),
         ),
       );
-      return this.finish(a, collectionId, outcome);
+      return this.finish(outcome);
     }
 
-    const coverId = await this.newId();
-    const original = coverKey(claim.row.collectionId, coverId, 'original');
+    const imageId = await this.images.newId();
+    const original = imageKey(claim.row.collectionId, purpose, imageId, 'original');
     try {
       await viaStorage(() => this.storage.copyObject(claim.row.storageKey, original, verdict.mime));
     } catch (error) {
@@ -277,17 +322,17 @@ export class CoverUploadsService {
     let outcome: Outcome;
     try {
       outcome = await this.prisma.$transaction((tx) =>
-        this.record(tx, a, claim.row.id, claim.claimedAt, async (row) => {
+        this.record(tx, a, target, claim.row.id, claim.claimedAt, async (row) => {
           let locked: { id: string };
           try {
-            locked = await this.covers.lockMutable(tx, a, row.collectionId);
+            locked = await this.images.lockMutable(tx, a, row.collectionId);
           } catch (error) {
             // Archived or deleted while storage was checked: the refusal is recorded (D8).
             if (!(error instanceof AppError)) throw error;
             return this.close(tx, row, 'REJECTED', error);
           }
-          await this.covers.replace(tx, locked.id, {
-            id: coverId,
+          await this.images.set(tx, locked.id, target, {
+            id: imageId,
             source: 'UPLOAD',
             mimeType: verdict.mime,
             originalSizeBytes: BigInt(verdict.size),
@@ -297,10 +342,11 @@ export class CoverUploadsService {
             data: { status: 'COMPLETED', completedAt: new Date(), claimedAt: null },
           });
           this.logger.log({
-            msg: 'cover upload completed',
+            msg: 'image upload completed',
             uploadSessionId: row.id,
             collectionId: locked.id,
-            coverId,
+            imageId,
+            purpose,
             sizeBytes: verdict.size,
           });
           return { kind: 'done', inserted: true };
@@ -314,7 +360,7 @@ export class CoverUploadsService {
     if (outcome.kind === 'done' && outcome.inserted) {
       await this.storage.delete(claim.row.storageKey).catch((error: unknown) => {
         this.logger.warn({
-          msg: 'cover upload key not deleted after completion',
+          msg: 'image upload key not deleted after completion',
           uploadSessionId: claim.row.id,
           reason: error instanceof Error ? error.message : 'unknown',
         });
@@ -324,17 +370,12 @@ export class CoverUploadsService {
       // completion that took over a claim it thought stale and recorded its own copy first.
       await this.storage.delete(original).catch(() => undefined);
     }
-    return this.finish(a, collectionId, outcome);
+    return this.finish(outcome);
   }
 
-  private async finish(
-    a: AccountPrincipal,
-    collectionId: string,
-    outcome: Outcome,
-  ): Promise<Collection> {
+  private finish(outcome: Outcome): void {
     if (outcome.kind === 'refused') throw outcome.error;
     if (outcome.kind === 'claimed') throw new Error('unreachable: an unfinished claim');
-    return this.collections.read(a, collectionId);
   }
 
   /** Step 1: state checks under the row lock, then the claim. */
@@ -342,10 +383,11 @@ export class CoverUploadsService {
     tx: Prisma.TransactionClient,
     a: AccountPrincipal,
     collectionId: string,
+    target: ImageTarget,
     uploadId: string,
   ): Promise<Outcome> {
     // Scope first (another admin's upload is 404), then lock the row and read it again.
-    const own = await this.findCoverUpload(tx, a, collectionId, uploadId);
+    const own = await this.findUpload(tx, a, collectionId, target, uploadId);
     await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${own.id}::uuid FOR UPDATE`;
     const row = await tx.uploadSession.findUniqueOrThrow({ where: { id: own.id } });
 
@@ -358,7 +400,7 @@ export class CoverUploadsService {
     if (row.expiresAt <= new Date()) {
       return this.close(tx, row, 'EXPIRED', new AppError('UPLOAD_EXPIRED', 410));
     }
-    // Re-checked now [A6]: a collection archived since initiation takes no cover.
+    // Re-checked now [A6]: a collection archived since initiation takes no image.
     const collection = await tx.collection.findUniqueOrThrow({
       where: { id: row.collectionId },
       select: { status: true },
@@ -386,13 +428,14 @@ export class CoverUploadsService {
   private async record(
     tx: Prisma.TransactionClient,
     a: AccountPrincipal,
+    target: ImageTarget,
     uploadId: string,
     claimedAt: Date,
     then: (row: UploadSession) => Promise<Outcome>,
   ): Promise<Outcome> {
     await tx.$queryRaw`SELECT 1 FROM "UploadSession" WHERE "id" = ${uploadId}::uuid FOR UPDATE`;
     const row = await tx.uploadSession.findFirst({
-      where: { id: uploadId, purpose: 'COVER', uploaderUserId: a.userId },
+      where: { id: uploadId, ...uploadTargetOf(target), uploaderUserId: a.userId },
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
     // Another request took over a claim it thought stale, or the purge aborted the upload.
@@ -429,8 +472,9 @@ export class CoverUploadsService {
     });
     await this.jobs.enqueue(tx, 'storage.discard-upload', { uploadSessionId: row.id });
     this.logger.log({
-      msg: 'cover upload refused',
+      msg: 'image upload refused',
       uploadSessionId: row.id,
+      purpose: row.purpose,
       status,
       reason: error.code,
     });
@@ -438,19 +482,21 @@ export class CoverUploadsService {
   }
 
   /**
-   * The admin's own cover upload in their own collection; anything else (another admin's
-   * upload, a guest's upload, another collection, a `DELETING` one) is `404` like a missing one.
+   * The admin's own upload for this target in their own collection; anything else (another
+   * admin's upload, a guest's upload, another slot or route, another collection, a `DELETING`
+   * one) is `404` like a missing one.
    */
-  private async findCoverUpload(
+  private async findUpload(
     prisma: Pick<Prisma.TransactionClient, 'uploadSession'>,
     a: AccountPrincipal,
     collectionId: string,
+    target: ImageTarget,
     uploadId: string,
   ): Promise<UploadSession> {
     const row = await prisma.uploadSession.findFirst({
       where: {
         id: uploadId,
-        purpose: 'COVER',
+        ...uploadTargetOf(target),
         uploaderUserId: a.userId,
         collectionId,
         collection: { ownerId: a.userId, status: { not: 'DELETING' } },
@@ -495,11 +541,5 @@ export class CoverUploadsService {
       partCount: row.partCount,
       expiresAt: row.expiresAt.toISOString(),
     };
-  }
-
-  /** A UUIDv7 from the database, like every other id (keys are built from it before the row). */
-  private async newId(): Promise<string> {
-    const [{ id }] = await this.prisma.$queryRaw<[{ id: string }]>`SELECT uuidv7()::text AS "id"`;
-    return id;
   }
 }
