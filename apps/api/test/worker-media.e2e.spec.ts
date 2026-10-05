@@ -12,10 +12,7 @@ import type { PgBossClient } from '../src/jobs/pg-boss-queue.js';
 import type { ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { imageKey } from '../src/images/image-keys.js';
-import {
-  CollectionImageDerivativesHandler,
-  LegacyCoverDerivativesHandler,
-} from '../src/worker/handlers/collection-image-derivatives.handler.js';
+import { CollectionImageDerivativesHandler } from '../src/worker/handlers/collection-image-derivatives.handler.js';
 import { ImageDerivativesHandler } from '../src/worker/handlers/image-derivatives.handler.js';
 import { VideoPosterHandler } from '../src/worker/handlers/video-poster.handler.js';
 import type { JobHandler } from '../src/worker/job-handler.js';
@@ -320,7 +317,7 @@ describe('media.collection-image (covers)', () => {
     });
     await handler(replacingStorage).handle({ collectionId, coverId });
     expect(await coverRow(coverId)).toBeNull();
-    // Only the original is left, for `cover.purge` to remove.
+    // Only the original is left, for `collection-image.purge` to remove.
     expect(await coverKeys(collectionId)).toEqual([original]);
   });
 
@@ -456,8 +453,6 @@ describe('JobRunner', () => {
       noop('media.video-poster') as never,
       noop('media.collection-image') as never,
       noop('collection-image.purge') as never,
-      noop('media.cover-derivatives') as never,
-      noop('cover.purge') as never,
     );
   }
   const job = (retryCount: number) =>
@@ -598,17 +593,6 @@ describe('media.collection-image: renditions per slot (plan Task 8)', () => {
     expect(
       (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
     ).toBe('READY');
-  });
-
-  test('a legacy media.cover-derivatives job ({ coverId }) still completes a COVER image', async () => {
-    const { collectionId, imageId } = await addImage('COVER', fixture('photo.jpg'));
-    const legacy = new LegacyCoverDerivativesHandler(handler());
-    expect(legacy.name).toBe('media.cover-derivatives');
-    await legacy.handle({ collectionId, coverId: imageId });
-    expect(
-      (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
-    ).toBe('READY');
-    expect(await allKeys(storage, `collections/${collectionId}/cover/${imageId}/`)).toHaveLength(3);
   });
 });
 

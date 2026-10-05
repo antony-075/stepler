@@ -178,7 +178,6 @@ LegalAcceptance            -- slice 10 (ADR 0016)
 ```text
 Collection
   id, ownerId → User (restrict), title (1–100), description? (1–1000),
-  welcomeMessage? (1–160 code points, one paragraph; slice 8a),
   status (ACTIVE|ARCHIVED|DELETING), archivedAt?, deletionRequestedAt?,
   blockedAt?, blockedReason?, createdAt, updatedAt
   SQL CHECK ((status = 'ARCHIVED') = (archivedAt IS NOT NULL))
@@ -188,7 +187,7 @@ Collection
 Collection (additions, guest page templates, PR I, 2026-10-05; ADR 0017)
   imageId? → CollectionImage («Картинка колекції», admin-only; FK (imageId, id) → (id, collectionId), no action)
   lastPageRevision (≥ 1): the highest guest page revision handed out
-  -- welcomeMessage is kept for the PR L contraction only; the published version holds it now
+  -- slice 8a's welcomeMessage column (1–160) was dropped in PR L; the published version holds the welcome
 
 CollectionImage                                     (PR I, 2026-10-05; ADR 0017)
   id, collectionId → Collection (cascade), slot (COVER|BACKGROUND|COLLECTION_IMAGE),
@@ -204,13 +203,8 @@ GuestPageVersion                                    (PR I, 2026-10-05; ADR 0017)
   welcomeMessage? (1–160), coverImageId?, backgroundImageId? → CollectionImage (same collection, no action),
   revision (≥ 1, from Collection.lastPageRevision), savedAt? (the draft was saved), createdAt, updatedAt
 
-CollectionCover                                     (slice 8a, 2026-10-04; [A2]; superseded by CollectionImage in PR I, dropped in PR L)
-  id, collectionId → Collection (cascade, UNIQUE: one cover, replaced whole),
-  status (PENDING|READY|FAILED), source (UPLOAD|FRAME), mimeType (verified),
-  originalSizeBytes (bigint), derivedSizeBytes (bigint, 0 until READY), width?, height?, createdAt
-  SQL CHECK (originalSizeBytes > 0 AND derivedSizeBytes >= 0)
-  SQL CHECK ((status = 'READY') = (width IS NOT NULL AND height IS NOT NULL))
-  -- no storage keys: every key is collections/{cid}/cover/{id}/{original|thumbnail.webp|preview.webp}
+CollectionCover                                     (slice 8a, 2026-10-04; [A2]) — dropped in PR L (2026-10-05)
+  -- its rows live on as COVER images with the same ids (keys collections/{cid}/cover/{id}/… unchanged)
 
 GuestLink
   id, collectionId → Collection (cascade), isDefault, label?,
@@ -232,7 +226,7 @@ GuestSession
   INDEX (collectionId), INDEX (currentLinkId)
 ```
 
-- **Guest page versions and images (PR I, 2026-10-05; ADR 0017):** guests read only the `PUBLISHED` version; the owner edits a `DRAFT` and publishes or resets it. An image row lives while a version or the collection references it; the transaction that drops the last reference deletes it (usage drops at once) and queues `collection-image.purge`. The slice 8a `CollectionCover` rows were copied into `COVER` images with the same ids, and `Collection.welcomeMessage` into the published version; both old structures stay until PR L.
+- **Guest page versions and images (PR I, 2026-10-05; ADR 0017):** guests read only the `PUBLISHED` version; the owner edits a `DRAFT` and publishes or resets it. An image row lives while a version or the collection references it; the transaction that drops the last reference deletes it (usage drops at once) and queues `collection-image.purge`. The slice 8a `CollectionCover` rows were copied into `COVER` images with the same ids, and `Collection.welcomeMessage` into the published version. **PR L (2026-10-05)** dropped both old structures with `CoverStatus` and `CoverSource` (migration `20261005130030_drop_slice_8a_cover`). Its guards run before anything is dropped and refuse a database where a collection has no published version, a cover was copied into the wrong collection or slot, the old table or column was written after the backfill (`_prisma_migrations`), or a slice 8a job (`media.cover-derivatives`, `cover.purge`) is still queued. `ImageUploadTarget.LEGACY_COVER` stays: every cover upload from before PR I keeps it. The collection DTO no longer carries `cover`. Its mark on the dashboard and in the share dialog is `image` («Картинка колекції»), with the initials when there is none.
 
 *`Collection` implemented in slice 1* (Phase 4), without `blockedAt`/`blockedReason`: those columns arrive with operator blocking in slice 9. Title and description are plain text, trimmed, and reject C0 control characters (the description keeps line breaks and tabs); the lengths are also SQL CHECKs. `GuestLink` is implemented in slice 2. *`GuestSession` implemented in slice 3* (PR A, 2026-10-03), as above: the link key is composite with the collection, so PostgreSQL itself refuses a session bound to another collection's link; `NO ACTION` (not `RESTRICT`) lets deleting a collection cascade to its links and sessions in one statement while refusing to delete a link a session points at.
 
@@ -240,7 +234,7 @@ GuestSession
 - **GuestSession belongs to the collection** (F5). The link is the capability used to enter. Permissions are always read from `currentLinkId` at request time; every guest request re-checks that link, the collection and its owner ([G5] order) and writes `lastSeenAt` at most once an hour.
 - **The guest's name lives on the session** ([O4], [C4], amended 2026-10-03; it was "not stored on the session"): `contributorName` is optional, asked once before the first contribution («Пропустити» is an answer: `nameAnsweredAt` is set either way), editable, and copied to each new item. Renaming also updates this session's non-deleted items in the same transaction, so the admin never sees two names for one guest. It is never shown to other guests. The session holds nothing else about the guest.
 - Future `expiresAt` / scheduled activation are nullable columns added later (D9).
-- **Cover and welcome message (slice 8a, PR F, 2026-10-04; owner decisions A1–A10 in `docs/superpowers/plans/2026-10-04-collection-appearance.md`):** `welcomeMessage` is edited through `PATCH /collections/{id}` like the title (trimmed, no control characters or line breaks, 160 code points; editable while archived, D9). The cover is one `CollectionCover` row per collection, replaced whole: replacing or removing deletes the row at once (usage drops immediately) and enqueues `cover.purge` for its prefix. Its original is a server-side copy (`CopyObject`) of the admin's verified upload or of a guest photo frame's ORIGINAL, so deleting that frame never touches the cover. Cover changes are refused on an `ARCHIVED` collection with `409 COLLECTION_ARCHIVED` [A6]. The admin DTO carries `cover: {status, thumbnailUrl, previewUrl, width, height} | null` (URLs once `READY`); the guest context carries `cover` only when `READY`, never its status, source or frame id.
+- **Cover and welcome message (slice 8a, PR F, 2026-10-04; owner decisions A1–A10 in `docs/superpowers/plans/2026-10-04-collection-appearance.md`; history: superseded by the guest page versions in PR I, routes removed in PR J, table and DTO field removed in PR L):** `welcomeMessage` is edited through `PATCH /collections/{id}` like the title (trimmed, no control characters or line breaks, 160 code points; editable while archived, D9). The cover is one `CollectionCover` row per collection, replaced whole: replacing or removing deletes the row at once (usage drops immediately) and enqueues `cover.purge` for its prefix. Its original is a server-side copy (`CopyObject`) of the admin's verified upload or of a guest photo frame's ORIGINAL, so deleting that frame never touches the cover. Cover changes are refused on an `ARCHIVED` collection with `409 COLLECTION_ARCHIVED` [A6]. The admin DTO carries `cover: {status, thumbnailUrl, previewUrl, width, height} | null` (URLs once `READY`); the guest context carries `cover` only when `READY`, never its status, source or frame id.
 
 ### 7.3 Content
 
@@ -373,9 +367,9 @@ Auth / me
 
 Admin
   GET/POST            /collections
-  GET/PATCH/DELETE    /collections/{id}                  (PATCH: title, description, welcomeMessage)
+  GET/PATCH/DELETE    /collections/{id}                  (PATCH: title, description; the welcome is the guest page draft's since PR J)
   POST                /collections/{id}/archive | /unarchive
-  POST                /collections/{id}/cover/uploads                         (slice 8a: admin cover upload,
+  POST                /collections/{id}/cover/uploads                         (slice 8a, removed in PR J: admin cover upload,
   POST                /collections/{id}/cover/uploads/{uid}/parts              the guest upload protocol
   POST                /collections/{id}/cover/uploads/{uid}/complete → Collection   under the admin session)
   DELETE              /collections/{id}/cover/uploads/{uid}
@@ -542,9 +536,9 @@ Decision details: ADR 0009.
   - `content.purge`, `collection.purge` — idempotent (missing rows and objects are success); implemented. `storage.discard-upload` (bytes of rejected or cancelled uploads) — *pending*, upload slice. (Earlier drafts named these `storage.purge-content`, `storage.purge-collection`, `storage.delete-object`.)
   - `uploads.expire` — scheduled every 15 min; *pending*, upload slice (the schedule is registered once its handler exists).
   - `maintenance.sweep` — hourly; implemented (see above). It does not yet cover a cover left `PENDING` by a job pg-boss expired on its last attempt (slice 8a follow-up).
-  - `media.cover-derivatives` `{collectionId, coverId}` — the cover's thumbnail (480 px) and preview (1600 px) from its copied original, the photo way (HEIC included); one conditional update sets `READY` with the dimensions and derived bytes only while the row still exists, else the two objects just written are deleted. Implemented (slice 8a).
-  - `cover.purge` `{collectionId, coverId}` — the prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
-  - `media.collection-image` `{collectionId, imageId}` — an admin image's renditions for its slot: cover 480 + 1600 px, background 480 + 1600 + 2400 px (q 72), collection image 480 px (PR I). The two slice 8a names stay registered until PR L and run the new handlers (covers kept their ids).
+  - `media.cover-derivatives` `{collectionId, coverId}` — *removed in PR L* (the contract migration refuses to run while one is queued). The cover's thumbnail (480 px) and preview (1600 px) from its copied original, the photo way (HEIC included); one conditional update sets `READY` with the dimensions and derived bytes only while the row still exists, else the two objects just written are deleted. Implemented (slice 8a).
+  - `cover.purge` `{collectionId, coverId}` — *removed in PR L*, as above. The prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
+  - `media.collection-image` `{collectionId, imageId}` — an admin image's renditions for its slot: cover 480 + 1600 px, background 480 + 1600 + 2400 px (q 72), collection image 480 px (PR I). The two slice 8a names ran the new handlers until PR L removed them.
   - `collection-image.purge` `{collectionId, imageId, slot}` — the image's prefix, unless its row is live (PR I).
   - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I).
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.

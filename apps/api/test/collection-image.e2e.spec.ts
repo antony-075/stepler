@@ -112,8 +112,8 @@ describe('collection image API', () => {
       (await o.calls.complete(session.uploadId).expect(200)).body,
     );
     expect(done.image).toMatchObject({ status: 'PENDING', thumbnailUrl: null });
-    // The guest page cover is a different thing: still none.
-    expect(done.cover).toBeNull();
+    // The guest page cover is a different thing: the collection does not carry it.
+    expect(done).not.toHaveProperty('cover');
     const [row] = await imageRows(o.collectionId);
     expect((await queuedJobs(prisma, 'media.collection-image')).map((job) => job.data)).toEqual([
       { collectionId: o.collectionId, imageId: row?.id },

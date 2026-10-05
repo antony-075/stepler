@@ -145,22 +145,3 @@ export class CollectionImageDerivativesHandler implements JobHandler<'media.coll
     await this.sanitizer.giveUpImage(imageId);
   }
 }
-
-/**
- * Legacy queue (slice 8a, until PR L): `media.cover-derivatives` jobs queued before the upgrade
- * still run. Covers kept their ids as COVER images, so `coverId` is the image's.
- */
-@Injectable()
-export class LegacyCoverDerivativesHandler implements JobHandler<'media.cover-derivatives'> {
-  readonly name = 'media.cover-derivatives';
-
-  constructor(private readonly images: CollectionImageDerivativesHandler) {}
-
-  handle({ collectionId, coverId, ...meta }: JobData['media.cover-derivatives']): Promise<void> {
-    return this.images.handle({ collectionId, imageId: coverId, ...meta });
-  }
-
-  onFinalFailure({ collectionId, coverId }: JobData['media.cover-derivatives']): Promise<void> {
-    return this.images.onFinalFailure({ collectionId, imageId: coverId });
-  }
-}

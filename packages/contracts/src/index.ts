@@ -81,7 +81,6 @@ export {
 } from './content.js';
 export {
   adminImageSchema,
-  collectionCoverSchema,
   collectionWelcomeMessageSchema,
   coverStatusSchema,
   coverUploadParamsSchema,
@@ -91,7 +90,6 @@ export {
   setCoverFromFrameRequestSchema,
   WELCOME_MESSAGE_MAX_CHARS,
   type AdminImage,
-  type CollectionCover,
   type CoverStatus,
   type GuestCover,
   type GuestImage,

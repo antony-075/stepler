@@ -549,56 +549,6 @@
                             "minimum": 0,
                             "type": "integer"
                           },
-                          "cover": {
-                            "additionalProperties": false,
-                            "nullable": true,
-                            "properties": {
-                              "height": {
-                                "maximum": 9007199254740991,
-                                "minimum": 1,
-                                "nullable": true,
-                                "type": "integer"
-                              },
-                              "largeUrl": {
-                                "format": "uri",
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "previewUrl": {
-                                "format": "uri",
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "status": {
-                                "enum": [
-                                  "PENDING",
-                                  "READY",
-                                  "FAILED"
-                                ],
-                                "type": "string"
-                              },
-                              "thumbnailUrl": {
-                                "format": "uri",
-                                "nullable": true,
-                                "type": "string"
-                              },
-                              "width": {
-                                "maximum": 9007199254740991,
-                                "minimum": 1,
-                                "nullable": true,
-                                "type": "integer"
-                              }
-                            },
-                            "required": [
-                              "status",
-                              "thumbnailUrl",
-                              "previewUrl",
-                              "largeUrl",
-                              "width",
-                              "height"
-                            ],
-                            "type": "object"
-                          },
                           "createdAt": {
                             "format": "date-time",
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -743,7 +693,6 @@
                           "contentCount",
                           "lastContentAt",
                           "welcomeMessage",
-                          "cover",
                           "image"
                         ],
                         "type": "object"
@@ -834,56 +783,6 @@
                       "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
-                    },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
                     },
                     "createdAt": {
                       "format": "date-time",
@@ -1029,7 +928,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"
@@ -1135,56 +1033,6 @@
                       "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
-                    },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
                     },
                     "createdAt": {
                       "format": "date-time",
@@ -1350,7 +1198,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image",
                     "storage"
                   ],
@@ -1438,56 +1285,6 @@
                       "minimum": 0,
                       "type": "integer"
                     },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
-                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -1632,7 +1429,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"
@@ -1695,56 +1491,6 @@
                       "minimum": 0,
                       "type": "integer"
                     },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
-                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -1889,7 +1635,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"
@@ -7115,56 +6860,6 @@
                       "minimum": 0,
                       "type": "integer"
                     },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
-                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -7309,7 +7004,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"
@@ -7589,56 +7283,6 @@
                       "minimum": 0,
                       "type": "integer"
                     },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
-                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -7783,7 +7427,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"
@@ -7999,56 +7642,6 @@
                       "minimum": 0,
                       "type": "integer"
                     },
-                    "cover": {
-                      "additionalProperties": false,
-                      "nullable": true,
-                      "properties": {
-                        "height": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        },
-                        "largeUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "previewUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "status": {
-                          "enum": [
-                            "PENDING",
-                            "READY",
-                            "FAILED"
-                          ],
-                          "type": "string"
-                        },
-                        "thumbnailUrl": {
-                          "format": "uri",
-                          "nullable": true,
-                          "type": "string"
-                        },
-                        "width": {
-                          "maximum": 9007199254740991,
-                          "minimum": 1,
-                          "nullable": true,
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "status",
-                        "thumbnailUrl",
-                        "previewUrl",
-                        "largeUrl",
-                        "width",
-                        "height"
-                      ],
-                      "type": "object"
-                    },
                     "createdAt": {
                       "format": "date-time",
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
@@ -8193,7 +7786,6 @@
                     "contentCount",
                     "lastContentAt",
                     "welcomeMessage",
-                    "cover",
                     "image"
                   ],
                   "type": "object"

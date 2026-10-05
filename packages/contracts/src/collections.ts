@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { adminImageSchema, collectionCoverSchema } from './cover.js';
+import { adminImageSchema } from './cover.js';
 import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import {
@@ -52,9 +52,10 @@ export const collectionSchema = z
     lastContentAt: z.iso.datetime().nullable(),
     /** Shown to guests above their main action; `null` = hidden [A5]. */
     welcomeMessage: z.string().nullable(),
-    /** The cover (an upload or a guest photo frame); `null` = the initials tile [A2]. */
-    cover: collectionCoverSchema.nullable(),
-    /** «Картинка колекції»: the owner's own image of it, for the dashboard; never shown to guests. */
+    /**
+     * «Картинка колекції»: the owner's own image of it, for the dashboard and the share dialog;
+     * `null` = the initials tile. Never shown to guests (they see the guest page's cover).
+     */
     image: adminImageSchema.nullable(),
   })
   .strict();

@@ -307,28 +307,43 @@ describe('collections API', () => {
     });
   });
 
-  describe('cover on the collection DTO [A2]', () => {
-    const cover = (collectionId: string, status: 'PENDING' | 'READY' | 'FAILED') =>
-      seedPublishedCover(prisma, collectionId, {
-        status,
-        source: 'UPLOAD',
-        ...(status === 'READY' ? { width: 4000, height: 3000, derivedSizeBytes: 500n } : {}),
+  describe('collection image on the collection DTO (plan Task 24)', () => {
+    const collectionImage = async (collectionId: string, status: 'PENDING' | 'READY') => {
+      const image = await prisma.collectionImage.create({
+        data: {
+          collectionId,
+          slot: 'COLLECTION_IMAGE',
+          source: 'UPLOAD',
+          status,
+          mimeType: 'image/jpeg',
+          originalSizeBytes: 1000n,
+          ...(status === 'READY' ? { width: 4000, height: 3000, derivedSizeBytes: 500n } : {}),
+        },
       });
+      await prisma.collection.update({ where: { id: collectionId }, data: { imageId: image.id } });
+    };
 
-    test('lists and reads carry welcomeMessage and cover; URLs only once READY', async () => {
+    test('lists and reads carry welcomeMessage and the image (URLs only once READY), never the cover', async () => {
       const { cookie, userId } = await signInAs(app, prisma, 'a@stepler.test');
       await seed(userId, 'ACTIVE', 'Plain', new Date('2026-10-01T10:00:00Z'));
       const pending = await seed(userId, 'ACTIVE', 'Pending', new Date('2026-10-02T10:00:00Z'));
       const ready = await seed(userId, 'ACTIVE', 'Ready', new Date('2026-10-03T10:00:00Z'));
-      await cover(pending.id, 'PENDING');
-      await cover(ready.id, 'READY');
+      await collectionImage(pending.id, 'PENDING');
+      await collectionImage(ready.id, 'READY');
+      // A published guest page cover is the guest page's, not the collection's mark.
+      await seedPublishedCover(prisma, ready.id, {
+        status: 'READY',
+        width: 4000,
+        height: 3000,
+        derivedSizeBytes: 500n,
+      });
       await setPublishedPage(prisma, ready.id, { welcomeMessage: 'Вітаємо!' });
 
       const list = await request(server()).get('/api/v1/collections').set('Cookie', cookie);
       const items = collectionListResponseSchema.parse(list.body).items;
       expect(items.map((item) => item.title)).toEqual(['Ready', 'Pending', 'Plain']);
-      expect(items[2]).toMatchObject({ welcomeMessage: null, cover: null });
-      expect(items[1]?.cover).toEqual({
+      expect(items[2]).toMatchObject({ welcomeMessage: null, image: null });
+      expect(items[1]?.image).toEqual({
         status: 'PENDING',
         thumbnailUrl: null,
         previewUrl: null,
@@ -338,14 +353,14 @@ describe('collections API', () => {
       });
       expect(items[0]).toMatchObject({
         welcomeMessage: 'Вітаємо!',
-        cover: { status: 'READY', width: 4000, height: 3000 },
+        image: { status: 'READY', width: 4000, height: 3000, previewUrl: null, largeUrl: null },
       });
-      const readyCover = items[0]?.cover;
-      expect(readyCover?.thumbnailUrl).toMatch(/^https?:\/\//);
-      expect(readyCover?.previewUrl).toMatch(/^https?:\/\//);
-      expect(readyCover?.thumbnailUrl).not.toBe(readyCover?.previewUrl);
-      // No internal id or storage key leaks; the URLs name the cover's own prefix.
-      expect(JSON.stringify(items[0]?.cover)).not.toMatch(/source|collectionId/);
+      for (const item of items) expect(item).not.toHaveProperty('cover');
+      const readyImage = items[0]?.image;
+      expect(readyImage?.thumbnailUrl).toMatch(/^https?:\/\//);
+      // No internal id or storage key leaks; the URL names the image's own prefix.
+      expect(JSON.stringify(items[0]?.image)).not.toMatch(/source|collectionId/);
+      expect(JSON.stringify(items[0])).not.toContain('/cover/');
 
       const detail = await request(server())
         .get(`/api/v1/collections/${ready.id}`)
@@ -353,8 +368,8 @@ describe('collections API', () => {
         .expect(200);
       const parsed = collectionDetailSchema.parse(detail.body);
       // Signed per window: the same link twice within it.
-      expect(parsed.cover).toEqual(readyCover);
-      expect(parsed.cover?.thumbnailUrl).toContain(`/cover/`);
+      expect(parsed.image).toEqual(readyImage);
+      expect(parsed.image?.thumbnailUrl).toContain('/collection-image/');
     });
   });
 

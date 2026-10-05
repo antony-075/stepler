@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  collectionCoverSchema,
+  adminImageSchema,
   collectionDescriptionSchema,
   collectionTitleSchema,
   displayNameSchema,
@@ -30,8 +30,8 @@ describe('collectionWelcomeMessageSchema', () => {
   });
 });
 
-describe('collectionCoverSchema', () => {
-  test('a READY cover has URLs and dimensions; a PENDING one has nulls', () => {
+describe('adminImageSchema', () => {
+  test('a READY image has URLs and dimensions; a PENDING one has nulls', () => {
     const ready = {
       status: 'READY',
       thumbnailUrl: URL_A,
@@ -40,7 +40,7 @@ describe('collectionCoverSchema', () => {
       width: 4000,
       height: 3000,
     };
-    expect(collectionCoverSchema.parse(ready)).toEqual(ready);
+    expect(adminImageSchema.parse(ready)).toEqual(ready);
     const pending = {
       status: 'PENDING',
       thumbnailUrl: null,
@@ -49,9 +49,9 @@ describe('collectionCoverSchema', () => {
       width: null,
       height: null,
     };
-    expect(collectionCoverSchema.parse(pending)).toEqual(pending);
-    expect(collectionCoverSchema.safeParse({ ...ready, status: 'UPLOADING' }).success).toBe(false);
-    expect(collectionCoverSchema.safeParse({ ...ready, source: 'FRAME' }).success).toBe(false);
+    expect(adminImageSchema.parse(pending)).toEqual(pending);
+    expect(adminImageSchema.safeParse({ ...ready, status: 'UPLOADING' }).success).toBe(false);
+    expect(adminImageSchema.safeParse({ ...ready, source: 'FRAME' }).success).toBe(false);
   });
 });
 

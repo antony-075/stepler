@@ -17,7 +17,6 @@ const collection = (title: string, createdAt: string, archived = false): Collect
   contentCount: 0,
   lastContentAt: null,
   welcomeMessage: null,
-  cover: null,
   image: null,
 });
 

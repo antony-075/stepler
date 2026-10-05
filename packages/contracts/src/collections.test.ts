@@ -113,7 +113,6 @@ describe('collectionSchema', () => {
     contentCount: 0,
     lastContentAt: null,
     welcomeMessage: null,
-    cover: null,
     image: null,
   };
 
@@ -121,11 +120,11 @@ describe('collectionSchema', () => {
     expect(collectionSchema.parse(collection)).toEqual(collection);
   });
 
-  test('carries the welcome message and the cover, both required and nullable', () => {
-    const withCover = {
+  test('carries the welcome message and the collection image, both required and nullable; no cover', () => {
+    const withImage = {
       ...collection,
       welcomeMessage: 'Вітаємо!',
-      cover: {
+      image: {
         status: 'READY',
         thumbnailUrl: 'https://storage.example.com/t.webp',
         previewUrl: 'https://storage.example.com/p.webp',
@@ -134,13 +133,12 @@ describe('collectionSchema', () => {
         height: 3000,
       },
     };
-    expect(collectionSchema.parse(withCover)).toEqual(withCover);
+    expect(collectionSchema.parse(withImage)).toEqual(withImage);
     const withoutImage: Partial<typeof collection> = { ...collection };
     delete withoutImage.image;
     expect(collectionSchema.safeParse(withoutImage).success).toBe(false);
-    const withoutCover: Partial<typeof collection> = { ...collection };
-    delete withoutCover.cover;
-    expect(collectionSchema.safeParse(withoutCover).success).toBe(false);
+    // The guest page's cover is the guest page's (PR L): the collection no longer carries it.
+    expect(collectionSchema.safeParse({ ...collection, cover: null }).success).toBe(false);
     const withoutWelcome: Partial<typeof collection> = { ...collection };
     delete withoutWelcome.welcomeMessage;
     expect(collectionSchema.safeParse(withoutWelcome).success).toBe(false);

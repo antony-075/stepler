@@ -775,76 +775,27 @@ describe('upload session and media object schema', () => {
   });
 });
 
-describe('collection cover schema [A2]', () => {
-  beforeEach(async () => {
-    await resetDatabase(prisma);
-  });
-
-  let sequence = 0;
-  const check = (constraint: string) => ({ kind: 'check', constraint });
-
-  async function collection(): Promise<string> {
-    const ownerId = (await prisma.user.create({ data: { email: `c${sequence++}@x.io` } })).id;
-    return (await prisma.collection.create({ data: { ownerId, title: 'A' } })).id;
-  }
-
-  /** A valid pending cover; tests override one field to break one rule. */
-  const cover = (collectionId: string, overrides: Record<string, unknown> = {}) =>
-    prisma.collectionCover.create({
-      data: {
-        collectionId,
-        source: 'UPLOAD',
-        mimeType: 'image/jpeg',
-        originalSizeBytes: 1000n,
-        ...overrides,
-      },
-    });
-
-  test('the welcome message is 1 to 160 code points when set', async () => {
-    const id = await collection();
-    const rule = check('Collection_welcome_length');
-    await prisma.collection.update({
-      where: { id },
-      data: { welcomeMessage: '😀'.repeat(160) },
-    });
-    expect(
-      await violation(
-        prisma.collection.update({ where: { id }, data: { welcomeMessage: '😀'.repeat(161) } }),
-      ),
-    ).toEqual(rule);
-    expect(
-      await violation(prisma.collection.update({ where: { id }, data: { welcomeMessage: '' } })),
-    ).toEqual(rule);
-    await prisma.collection.update({ where: { id }, data: { welcomeMessage: null } });
-  });
-
-  test('sizes: a positive original and a non-negative derived size', async () => {
-    const id = await collection();
-    const rule = check('CollectionCover_sizes');
-    expect(await violation(cover(id, { originalSizeBytes: 0n }))).toEqual(rule);
-    expect(await violation(cover(id, { derivedSizeBytes: -1n }))).toEqual(rule);
-  });
-
-  test('READY iff both dimensions are recorded', async () => {
-    const id = await collection();
-    const rule = check('CollectionCover_ready_dimensions');
-    expect(await violation(cover(id, { status: 'READY' }))).toEqual(rule);
-    expect(await violation(cover(id, { status: 'READY', width: 100 }))).toEqual(rule);
-    expect(await violation(cover(id, { width: 100, height: 100 }))).toEqual(rule);
-    expect(await violation(cover(id, { status: 'FAILED', width: 100, height: 100 }))).toEqual(rule);
-    await cover(id, { status: 'READY', width: 100, height: 100, derivedSizeBytes: 500n });
-  });
-
-  test('one cover per collection; deleting the collection deletes it', async () => {
-    const id = await collection();
-    await cover(id);
-    expect(await violation(cover(id, { source: 'FRAME' }))).toEqual({
-      kind: 'unique',
-      constraint: 'CollectionCover_collectionId_key',
-    });
-    await cover(await collection());
-    await prisma.collection.delete({ where: { id } });
-    expect(await prisma.collectionCover.count()).toBe(1);
+describe('slice 8a cover storage, contracted (plan Task 25)', () => {
+  test('the cover table, its enums and the welcome column are gone; LEGACY_COVER stays', async () => {
+    const tables = await prisma.$queryRaw<{ name: string | null }[]>`
+      SELECT to_regclass('public."CollectionCover"')::text AS "name"`;
+    expect(tables).toEqual([{ name: null }]);
+    const columns = await prisma.$queryRaw<{ column_name: string }[]>`
+      SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'Collection' AND column_name = 'welcomeMessage'`;
+    expect(columns).toEqual([]);
+    const types = await prisma.$queryRaw<{ typname: string }[]>`
+      SELECT typname FROM pg_type WHERE typname IN ('CoverStatus', 'CoverSource')`;
+    expect(types).toEqual([]);
+    const checks = await prisma.$queryRaw<{ conname: string }[]>`
+      SELECT conname FROM pg_constraint
+       WHERE conname IN ('Collection_welcome_length', 'CollectionCover_sizes',
+                         'CollectionCover_ready_dimensions')`;
+    expect(checks).toEqual([]);
+    // Cover uploads from before PR I keep their target (schema.prisma says why).
+    const targets = await prisma.$queryRaw<{ value: string }[]>`
+      SELECT unnest(enum_range(NULL::"ImageUploadTarget"))::text AS "value"`;
+    expect(targets.map((row) => row.value)).toEqual(['DRAFT', 'LEGACY_COVER', 'COLLECTION']);
   });
 });
 
