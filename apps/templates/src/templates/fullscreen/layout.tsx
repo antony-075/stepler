@@ -5,7 +5,7 @@
 //   lightest at the top and darkest under the title; the count, the 46px white title and the
 //   welcome sit low on it. Text on the picture always reads: the band under it never drops
 //   below the alpha that keeps white at 4.5:1 over any picture (`--tpl-text-band`), whatever
-//   the admin's dimming. With no cover: the same hero in the sheet's `#1B1917`.
+//   the admin's dimming.
 // - A dark sheet (radius 28, a 40×4 handle) slides 28px over the hero with «Ваші кадри», «Усі
 //   кадри» and the footer. On phones and tablets the actions live in a glass bar fixed 12px
 //   from the edges (primary 54, the wish as a text button, the terms notice); the sheet keeps
@@ -14,6 +14,10 @@
 // - From 1024px: the hero is a sticky panel of 60% (title 80/1, welcome 20) and the right
 //   column scrolls: the language, a `#24211E` action card (radius 24), then the sections in 3
 //   columns and the footer.
+// - No cover (owner, item 83): a designed hero instead of an empty dark screen: a glow in the
+//   admin's accent and a fine dot pattern over the sheet colour, at a reduced height on phones
+//   and tablets. With no picture to keep clear there is no glass bar either: the action card
+//   opens the sheet, so nothing in it ever sits under a fixed bar.
 // - Dark only [D5]; Manrope with the apricot accent by default. The focus ring is white.
 
 import { ImagePlus, PenLine } from 'lucide-react';
@@ -25,7 +29,11 @@ const HERO_SIZES = '(min-width: 1024px) 60vw, 100vw';
 
 export function FullscreenLayout({ model, actions, slots }: TemplateLayoutProps) {
   return (
-    <div className="fs-page" data-actions={actions === null ? undefined : ''}>
+    <div
+      className="fs-page"
+      data-actions={actions === null ? undefined : ''}
+      data-cover={model.cover === null ? undefined : ''}
+    >
       <section className="fs-hero" data-cover={model.cover === null ? undefined : ''}>
         {model.cover === null ? null : (
           <div data-slot="guest-cover" className="fs-hero-picture">

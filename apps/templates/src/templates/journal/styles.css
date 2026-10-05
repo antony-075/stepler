@@ -54,7 +54,6 @@
   font-weight: 600;
   letter-spacing: -0.01em;
   text-wrap: balance;
-  overflow-wrap: anywhere;
 }
 
 [data-template='journal'] .jr-ornament {
@@ -82,7 +81,6 @@
   font-size: 15px;
   color: var(--tpl-muted);
   white-space: pre-line;
-  overflow-wrap: anywhere;
 }
 
 [data-template='journal'] .jr-welcome {
@@ -93,7 +91,6 @@
   font-style: italic;
   color: var(--tpl-body);
   text-wrap: pretty;
-  overflow-wrap: anywhere;
 }
 
 [data-template='journal'] .jr-count {
@@ -232,7 +229,6 @@
   font-style: italic;
   font-weight: 500;
   text-align: center;
-  overflow-wrap: anywhere;
 }
 
 [data-template='journal'] .jr-sections {
@@ -386,6 +382,15 @@
 
   [data-template='journal'] .jr-hero-actions .jr-actions > :not(button) {
     grid-column: 1 / -1;
+  }
+
+  /* One action alone (no wish, or the wish is the primary): centred on the column like the
+     rest of the aside, not left in the first of two cells (owner, item 84). */
+  [data-template='journal'] .jr-hero-actions .jr-actions > button:only-of-type {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-width: min(100%, 280px);
+    padding-inline: 32px;
   }
 
   [data-template='journal'] .jr-hero-actions .jr-primary,

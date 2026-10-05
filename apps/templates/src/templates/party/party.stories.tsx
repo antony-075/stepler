@@ -45,6 +45,18 @@ export const ImageBackground360 = at('ImageBackground', 'phone360');
 export const ImageBackground390 = at('ImageBackground', 'phone390');
 export const ImageBackground768 = at('ImageBackground', 'tablet768');
 export const ImageBackground1440 = at('ImageBackground', 'desktop1440');
+export const EmptyFrames360 = at('EmptyFrames', 'phone360');
+export const EmptyFrames390 = at('EmptyFrames', 'phone390');
+export const EmptyFrames768 = at('EmptyFrames', 'tablet768');
+export const EmptyFrames1440 = at('EmptyFrames', 'desktop1440');
+export const LongUkrainianTitle360 = at('LongUkrainianTitle', 'phone360');
+export const LongUkrainianTitle390 = at('LongUkrainianTitle', 'phone390');
+export const LongUkrainianTitle768 = at('LongUkrainianTitle', 'tablet768');
+export const LongUkrainianTitle1440 = at('LongUkrainianTitle', 'desktop1440');
+export const ManyFrames360 = at('ManyFrames', 'phone360');
+export const ManyFrames390 = at('ManyFrames', 'phone390');
+export const ManyFrames768 = at('ManyFrames', 'tablet768');
+export const ManyFrames1440 = at('ManyFrames', 'desktop1440');
 
 /**
  * Review Focus 5: under `prefers-reduced-motion: reduce` the emblem's ring stands still and the
