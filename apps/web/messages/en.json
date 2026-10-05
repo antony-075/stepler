@@ -1056,7 +1056,11 @@
       }
     },
     "fullscreen": {
-      "name": "Full screen"
+      "name": "Full screen",
+      "locks": {
+        "coverPlacement": "This template always shows the cover full screen. «Classic» and «Minimal» have the other options.",
+        "background": "This template's background is always the cover."
+      }
     },
     "journal": {
       "name": "Journal"

@@ -25,8 +25,13 @@ const RADII: Record<Corners, { tile: number; btn: number; card: number; bar: num
 const ACCENT_SOFT_ALPHA = 0.22;
 const ACCENT_GLOW_ALPHA = 0.55;
 
-/** The veil over a background image: the admin's dimming, never below what keeps text readable. */
+/**
+ * The veil over a background image: the admin's dimming, never below what keeps text readable.
+ * A cover-as-background (T2) carries text only in its scrimmed band (`--tpl-text-band`) and on
+ * opaque sheets, so there the admin's dimming is used as is.
+ */
 function veilAlpha(def: TemplateDefinition, dim: number): number {
+  if (def.options.backgroundImageSource === 'cover') return dim / 100;
   return Math.max(dim / 100, minVeil(def.palette.text, def.palette.veil));
 }
 
@@ -53,6 +58,9 @@ function pageBackgrounds(def: TemplateDefinition, settings: ThemeSettings): Hex[
       return gradient === undefined ? [def.palette.veil] : [...gradient.stops];
     }
     case 'image': {
+      // The cover is the hero (T2): page text sits on the template's own sheets.
+      if (def.options.backgroundImageSource === 'cover')
+        return [def.palette.surfaces[0] ?? def.palette.veil];
       const alpha = veilAlpha(def, background.dim);
       return [
         composite(def.palette.veil, alpha, '#FFFFFF'),

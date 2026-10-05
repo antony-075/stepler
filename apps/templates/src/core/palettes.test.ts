@@ -33,7 +33,9 @@ describe.each(TEMPLATE_DEFINITIONS.map((def) => [def.id, def] as const))('%s', (
   });
 
   test('the image dimming floor keeps the heading colour readable on any picture', () => {
+    // A cover-as-background (T2) has no text on the veil: its band has its own scrim.
     if (!def.options.backgroundKinds.includes('image')) return;
+    if (def.options.backgroundImageSource === 'cover') return;
     expect(def.options.imageDim.min / 100).toBeGreaterThanOrEqual(
       minVeil(def.palette.text, def.palette.veil),
     );
