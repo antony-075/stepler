@@ -9,31 +9,13 @@ import type { GuestContext } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { EmptyState } from '@stepler/ui/components/empty-state';
 import { cn } from '@stepler/ui/lib/utils';
-import type { TemplateSlots } from '@stepler/templates/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
-import { SiteFooter } from '@/components/site-footer';
-import { SiteWordmark } from '@/components/site-header';
-import { LanguageSwitch } from '@/i18n/language-switch';
-import { GuestLegalNotice } from './legal-notice';
 import { GuestFrames, guestContentKey } from './own-frames';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
-
-/** The slots that do not depend on the guest's state. */
-export function staticSlots(): Pick<
-  TemplateSlots,
-  'brand' | 'languageSwitch' | 'legalNotice' | 'footer'
-> {
-  return {
-    brand: <SiteWordmark />,
-    languageSwitch: <LanguageSwitch variant="header" />,
-    legalNotice: <GuestLegalNotice className="pt-1" />,
-    footer: <SiteFooter />,
-  };
-}
 
 /**
  * «Ваші кадри»: this browser's frames, the upload batch above them, and who the guest is to the

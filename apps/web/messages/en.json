@@ -895,5 +895,12 @@
     "navLabel": "Legal documents",
     "opensInNewTab": "(opens in a new tab)",
     "newTabName": "{title} (opens in a new tab)"
+  },
+  "guestPage": {
+    "preview": {
+      "unavailable": "This collection’s preview could not be shown.",
+      "placeholder": "Guests’ frames will be here",
+      "frame": "A guest’s frame"
+    }
   }
 }

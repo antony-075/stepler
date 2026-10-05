@@ -1,4 +1,4 @@
-import type { GuestCover, GuestImage } from '@stepler/contracts';
+import type { AdminImage, GuestCover, GuestImage } from '@stepler/contracts';
 import type { TemplateImage } from '@stepler/templates/react';
 
 // The collection's cover for the guest page template ([A4], [A7]; plan Task 4). Only a `READY`
@@ -50,4 +50,16 @@ export function backgroundImage(
   const large = renditionWidth(background.width, background.height, LARGE_PX);
   if (large === renditionWidth(background.width, background.height, PREVIEW_PX)) return image;
   return { ...image, srcSet: `${image.srcSet}, ${background.largeUrl} ${large}w` };
+}
+
+/**
+ * An owner's image (the editor's draft or published version) as a template image, once `READY`
+ * with its renditions; `null` before (the preview shows what guests would see).
+ */
+export function fromAdminImage(image: AdminImage | null): TemplateImage | null {
+  if (image === null || image.status !== 'READY') return null;
+  const { thumbnailUrl, previewUrl, largeUrl, width, height } = image;
+  if (thumbnailUrl === null || previewUrl === null || width === null || height === null)
+    return null;
+  return backgroundImage({ thumbnailUrl, previewUrl, largeUrl, width, height });
 }
