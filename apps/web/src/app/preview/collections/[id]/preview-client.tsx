@@ -2,35 +2,50 @@
 
 // The guest page as the editor's working copy would show it (plan Task 12, ADR 0017).
 // - Driven by postMessage from the editor (`preview-protocol.ts`): it announces itself ready
-//   once, then renders the last version it accepted (same origin, from the parent window only).
-// - Real data the owner already sees: the collection's title, description and frame count, and
-//   its 12 newest frames as a static «Усі кадри» grid (no viewer). «Ваші кадри» is the empty
-//   block a first-time guest sees. The actions carry the default link's real labels and do
-//   nothing; the whole page is `inert`, so nothing in it can be focused or clicked.
+//   once, then renders the last version and page state it accepted (same origin, from the parent
+//   window only).
+// - Real where it is the admin's own: the collection's title and description, the working copy's
+//   welcome and cover. The frames are built-in samples (owner remark 76: generated pictures, a
+//   video, wishes, a document; never a guest's real photo), so a new collection shows how the
+//   page looks with content.
+// - The page state comes from the editor's «Стан сторінки» (owner remark 77): a first visit, only
+//   my frames, only others', mine + others' (the default), the gallery hidden by the link, a
+//   view-only link, uploads in progress, the link paused, the collection closed. Each is drawn
+//   with the same pieces the guest page uses; the actions carry the default link's real labels
+//   and do nothing; the whole page is `inert`.
 // - Admin endpoints only: no guest session is created and no guest API is called (lint and a
 //   test check the imports).
 
-import type {
-  AdminContentItem,
-  CollectionDetail,
-  GuestLinkPermissions,
-  GuestPageVersion,
-} from '@stepler/contracts';
+import type { CollectionDetail, GuestLinkPermissions, GuestPageVersion } from '@stepler/contracts';
+import { Button } from '@stepler/ui/components/button';
+import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
+import { UploadFrame } from '@stepler/ui/components/upload-frame';
+import { UploadSummary } from '@stepler/ui/components/upload-summary';
 import { GuestTemplateRoot, type TemplateSlots } from '@stepler/templates/react';
 import { useQuery } from '@tanstack/react-query';
+import { RefreshCw, UserRound } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
+import { LinkStatePage } from '@/app/g/[token]/link-state-page';
 import { collectionKey, fetchCollection } from '@/api/collections';
-import { listContent } from '@/api/content';
+import { formatBytes } from '@/format/bytes';
+import { primaryContribution } from '@/guest/contribute-actions';
+import { GuestChrome } from '@/guest/guest-chrome';
 import { fromAdminImage } from '@/guest/guest-cover';
 import { staticSlots } from '@/guest/static-slots';
 import { fontVariables } from '@/guest/template-fonts';
 import { buildGuestActions } from '@/guest/template-model';
-import { acceptPreviewMessage, previewReadyMessage } from '@/guest-page/preview-protocol';
+import {
+  acceptPreviewMessage,
+  type PreviewState,
+  type PreviewView,
+  previewReadyMessage,
+} from '@/guest-page/preview-protocol';
+import { samplePhoto } from '@/guest-page/sample-photos';
 
-/** A link that takes everything: the preview's labels when the default link is not known. */
+/** A link that takes everything: the preview's labels when the default link takes nothing. */
 const ALL: GuestLinkPermissions = {
   canUploadPhotos: true,
   canUploadVideos: true,
@@ -40,14 +55,59 @@ const ALL: GuestLinkPermissions = {
   canDeleteOwn: true,
 };
 
-const FRAMES = 12;
-const PLACEHOLDERS = 6;
-
 const noop = () => {};
+
+/** One sample frame. */
+type Sample =
+  | { kind: 'photo'; picture: number }
+  | { kind: 'video'; picture: number; duration: string }
+  | { kind: 'wish'; text: 'wishOwn' | 'wishOther' | 'wishOther2' }
+  | { kind: 'document' };
+
+const OWN: readonly Sample[] = [
+  { kind: 'photo', picture: 0 },
+  { kind: 'wish', text: 'wishOwn' },
+  { kind: 'video', picture: 2, duration: '0:12' },
+];
+const OTHERS: readonly Sample[] = [
+  { kind: 'photo', picture: 1 },
+  { kind: 'photo', picture: 3 },
+  { kind: 'wish', text: 'wishOther' },
+  { kind: 'photo', picture: 4 },
+  { kind: 'video', picture: 5, duration: '0:47' },
+  { kind: 'document' },
+  { kind: 'photo', picture: 6 },
+  { kind: 'wish', text: 'wishOther2' },
+  { kind: 'photo', picture: 7 },
+];
+
+/** What each state shows, as the guest page would. */
+type Shape = {
+  own: 'none' | 'empty' | 'items' | 'uploading';
+  all: 'none' | 'empty' | 'own' | 'others' | 'both';
+  actions: boolean;
+};
+const SHAPES: Record<Exclude<PreviewState, 'paused' | 'closed'>, Shape> = {
+  'first-visit': { own: 'empty', all: 'empty', actions: true },
+  mine: { own: 'items', all: 'own', actions: true },
+  others: { own: 'empty', all: 'others', actions: true },
+  mixed: { own: 'items', all: 'both', actions: true },
+  'own-only': { own: 'items', all: 'none', actions: true },
+  'view-only': { own: 'none', all: 'others', actions: false },
+  uploading: { own: 'uploading', all: 'both', actions: true },
+};
+
+const ITEMS: Record<Shape['all'], readonly Sample[]> = {
+  none: [],
+  empty: [],
+  own: OWN,
+  others: OTHERS,
+  both: [...OWN, ...OTHERS],
+};
 
 export function PreviewClient({ collectionId }: { collectionId: string }) {
   const t = useTranslations('guestPage.preview');
-  const [page, setPage] = useState<GuestPageVersion | null>(null);
+  const [view, setView] = useState<PreviewView | null>(null);
 
   useEffect(() => {
     // Not framed: nothing will ever post a page here.
@@ -55,7 +115,7 @@ export function PreviewClient({ collectionId }: { collectionId: string }) {
     const parent = window.parent;
     const onMessage = (event: MessageEvent) => {
       const next = acceptPreviewMessage(event, parent);
-      if (next !== null) setPage(next);
+      if (next !== null) setView(next);
     };
     window.addEventListener('message', onMessage);
     parent.postMessage(previewReadyMessage, window.location.origin);
@@ -67,11 +127,6 @@ export function PreviewClient({ collectionId }: { collectionId: string }) {
     queryFn: () => fetchCollection(collectionId),
     retry: false,
   });
-  const frames = useQuery({
-    queryKey: ['guest-page-preview', collectionId, 'frames'],
-    queryFn: () => listContent(collectionId, { sort: 'newest', limit: FRAMES }),
-    retry: false,
-  });
 
   if (collection.isError) {
     return (
@@ -80,78 +135,80 @@ export function PreviewClient({ collectionId }: { collectionId: string }) {
       </main>
     );
   }
-  if (page === null || collection.data === undefined) {
+  if (view === null || collection.data === undefined) {
     // Neutral, so a dark template does not flash over a light page.
     return <div aria-busy="true" className="min-h-svh bg-background" />;
   }
+  if (view.state === 'paused' || view.state === 'closed') {
+    return <PreviewLinkState state={view.state} />;
+  }
+  return <PreviewPage collection={collection.data} page={view.page} shape={SHAPES[view.state]} />;
+}
+
+/** The link or collection state page, as the guest page shows it (inert like the rest). */
+function PreviewLinkState({ state }: { state: 'paused' | 'closed' }) {
+  const t = useTranslations('guestLink');
   return (
-    <PreviewPage
-      collection={collection.data}
-      page={page}
-      items={frames.data?.items.slice(0, FRAMES) ?? []}
-    />
+    <div inert data-slot="preview-link-state" data-state={state}>
+      <GuestChrome>
+        <div className="mx-auto grid w-full max-w-[720px] gap-4">
+          {state === 'paused' ? (
+            <LinkStatePage tone="warning" title={t('paused.title')} text={t('paused.text')} />
+          ) : (
+            <LinkStatePage title={t('archived.title')} text={t('archived.text')} />
+          )}
+        </div>
+      </GuestChrome>
+    </div>
   );
 }
 
 function PreviewPage({
   collection,
   page,
-  items,
+  shape,
 }: {
   collection: CollectionDetail;
   page: GuestPageVersion;
-  items: AdminContentItem[];
+  shape: Shape;
 }) {
   const t = useTranslations('guest');
-  const tPreview = useTranslations('guestPage.preview');
   const format = useFormatter();
-  const permissions = collection.defaultLinkPermissions ?? ALL;
-  const actions = buildGuestActions(
-    permissions,
-    { t: (key) => t(key), batchStarted: false },
-    { onFiles: noop, onWrite: noop },
-    null,
-  );
+  const linkPermissions = collection.defaultLinkPermissions ?? ALL;
+  // A contributing state on a view-only default link still shows what contributing looks like.
+  const contributing = primaryContribution(linkPermissions) === null ? ALL : linkPermissions;
+  // Whether others' frames show is the state's to say, whatever the default link allows now.
+  const permissions: GuestLinkPermissions = {
+    ...contributing,
+    canViewGallery: shape.all !== 'none',
+  };
+  const uploading = shape.own === 'uploading';
+  const actions = shape.actions
+    ? buildGuestActions(
+        permissions,
+        { t: (key) => t(key), batchStarted: uploading },
+        { onFiles: noop, onWrite: noop },
+        uploading ? t('upload.keepOpen') : null,
+      )
+    : null;
+
+  const allItems = ITEMS[shape.all];
+  // A sample «останній о 21:10», in the viewer's own time format.
+  const lastAt = new Date();
+  lastAt.setHours(21, 10, 0, 0);
+  const showsCounts = allItems.length > 0;
+
   const slots: TemplateSlots = {
     ...staticSlots(),
     ownFrames:
-      actions === null ? null : (
-        <section
-          aria-labelledby="preview-own-title"
-          data-slot="guest-own-frames"
-          className="grid gap-4"
-        >
-          <h2 id="preview-own-title" className="type-h2">
-            {t('ownTitle')}
-          </h2>
-          <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
-            {t('ownEmpty')}
-          </p>
-        </section>
+      shape.own === 'none' ? null : (
+        <OwnSection
+          hasItems={shape.own !== 'empty'}
+          viewsGallery={permissions.canViewGallery}
+          batch={uploading ? <SampleBatch /> : null}
+        />
       ),
-    allFrames: (
-      <section
-        aria-labelledby="preview-all-title"
-        data-slot="guest-all-frames"
-        className="grid gap-4"
-      >
-        <h2 id="preview-all-title" className="type-h2">
-          {t('allTitle')}
-        </h2>
-        <FrameGrid ariaLabel={t('listLabelAll')}>
-          {items.length === 0
-            ? Array.from({ length: PLACEHOLDERS }, (_, i) => (
-                <Frame
-                  key={i}
-                  kind="pending-preview"
-                  accessibleName={tPreview('placeholder')}
-                  placeholderLabel=""
-                />
-              ))
-            : items.map((item) => <PreviewFrame key={item.id} item={item} />)}
-        </FrameGrid>
-      </section>
-    ),
+    allFrames: shape.all === 'none' ? null : <AllSection items={allItems} />,
   };
   return (
     <GuestTemplateRoot
@@ -163,20 +220,13 @@ function PreviewPage({
         title: collection.title,
         description: collection.description,
         welcomeMessage: page.welcomeMessage,
-        countsLabel:
-          collection.contentCount === 0 ? null : t('counts', { count: collection.contentCount }),
-        lastAddedLabel:
-          collection.lastContentAt === null
-            ? null
-            : t('lastAt', {
-                time: format.dateTime(new Date(collection.lastContentAt), {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-              }),
+        countsLabel: showsCounts ? t('counts', { count: allItems.length }) : null,
+        lastAddedLabel: showsCounts
+          ? t('lastAt', { time: format.dateTime(lastAt, { hour: '2-digit', minute: '2-digit' }) })
+          : null,
         cover: fromAdminImage(page.cover),
         background: fromAdminImage(page.background),
-        phase: 'first-visit',
+        phase: shape.own === 'items' || uploading ? 'contributed' : 'first-visit',
       }}
       actions={actions}
       slots={slots}
@@ -185,24 +235,203 @@ function PreviewPage({
   );
 }
 
-/** One of the newest frames, as a guest of the shared gallery sees it: no number, no name. */
-function PreviewFrame({ item }: { item: AdminContentItem }) {
-  const t = useTranslations('guestPage.preview');
-  const name = t('frame');
-  if (item.kind === 'TEXT') {
-    return <Frame kind="text" text={item.text ?? ''} accessibleName={name} />;
-  }
-  if (item.thumbnailUrl === null) {
-    return <Frame kind="pending-preview" placeholderLabel="" accessibleName={name} />;
-  }
+/** «Ваші кадри», as `OwnFramesSection` draws it, with the sample frames. */
+function OwnSection({
+  hasItems,
+  viewsGallery,
+  batch,
+}: {
+  hasItems: boolean;
+  viewsGallery: boolean;
+  batch: ReactNode;
+}) {
+  const t = useTranslations('guest');
+  const tSample = useTranslations('guestPage.preview.sample');
   return (
-    <Frame
-      kind={item.kind === 'VIDEO' ? 'video' : item.kind === 'DOCUMENT' ? 'document' : 'photo'}
-      accessibleName={name}
-      // A presigned thumbnail: nothing for next/image to optimise.
-      // eslint-disable-next-line @next/next/no-img-element
-      media={<img src={item.thumbnailUrl} alt={DECORATIVE} loading="lazy" decoding="async" />}
-    />
+    <section
+      aria-labelledby="preview-own-title"
+      data-slot="guest-own-frames"
+      className="grid gap-4"
+    >
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <div className="grid gap-1">
+          <h2 id="preview-own-title" className="type-h2">
+            {t('ownTitle')}
+          </h2>
+          {viewsGallery ? null : (
+            <p className="text-sm text-muted-foreground">{t('onlyOrganizer')}</p>
+          )}
+        </div>
+        {hasItems ? (
+          <p className="flex min-w-0 items-center gap-1 text-sm">
+            <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full border bg-card py-1 pr-3 pl-2">
+              <UserRound aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{t('you', { name: tSample('guestName') })}</span>
+            </span>
+            <Button variant="ghost" size="sm" className="shrink-0 text-link">
+              {t('changeName')}
+            </Button>
+          </p>
+        ) : null}
+      </div>
+      {batch}
+      {hasItems ? (
+        <FrameGrid ariaLabel={t('listLabelOwn')}>
+          {OWN.map((sample, i) => (
+            <SampleFrame key={i} sample={sample} number={OWN.length - i} />
+          ))}
+        </FrameGrid>
+      ) : (
+        <p className="rounded-sheet border border-dashed border-input px-4 py-6 text-center text-sm text-muted-foreground">
+          {t('ownEmpty')}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/** «Усі кадри», as `AllFramesSection` draws it: everyone's frames, without numbers. */
+function AllSection({ items }: { items: readonly Sample[] }) {
+  const t = useTranslations('guest');
+  return (
+    <section
+      aria-labelledby="preview-all-title"
+      data-slot="guest-all-frames"
+      className="grid gap-4"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="preview-all-title" className="type-h2">
+          {t('allTitle')}
+        </h2>
+        <Button variant="outline" size="sm" className="shrink-0">
+          <RefreshCw aria-hidden="true" className="size-4" />
+          {t('refresh')}
+        </Button>
+      </div>
+      {items.length === 0 ? (
+        <EmptyState
+          frameNumber={1}
+          headingLevel={3}
+          title={t('allEmpty')}
+          description={t('allEmptyText')}
+        />
+      ) : (
+        <FrameGrid ariaLabel={t('listLabelAll')}>
+          {items.map((sample, i) => (
+            <SampleFrame key={i} sample={sample} />
+          ))}
+        </FrameGrid>
+      )}
+    </section>
+  );
+}
+
+/** One sample frame; a number only on the guest's own (others' numbers stay private). */
+function SampleFrame({ sample, number }: { sample: Sample; number?: number }) {
+  const t = useTranslations('guestPage.preview');
+  const numbered = number === undefined ? {} : { number };
+  const name = t('frame');
+  switch (sample.kind) {
+    case 'wish':
+      return (
+        <Frame kind="text" {...numbered} text={t(`sample.${sample.text}`)} accessibleName={name} />
+      );
+    case 'document':
+      return (
+        <Frame
+          kind="document"
+          {...numbered}
+          docType="PDF"
+          // Only the guest's own frames carry a file name.
+          {...(number === undefined ? {} : { docTitle: t('sample.docTitle') })}
+          accessibleName={name}
+        />
+      );
+    case 'video':
+    case 'photo':
+      return (
+        <Frame
+          kind={sample.kind}
+          {...numbered}
+          {...(sample.kind === 'video' ? { meta: sample.duration } : {})}
+          accessibleName={name}
+          // A generated SVG: nothing for next/image to optimise.
+          // eslint-disable-next-line @next/next/no-img-element
+          media={<img src={samplePhoto(sample.picture)} alt={DECORATIVE} />}
+        />
+      );
+  }
+}
+
+const BATCH = [
+  { state: 'done', progress: 100, frameNo: 4 },
+  { state: 'uploading', progress: 62 },
+  { state: 'queued', progress: 0 },
+] as const;
+
+/** Uploads in progress, as `UploadBatch` shows them: the summary over the frames on their way. */
+function SampleBatch() {
+  const t = useTranslations('guest.upload');
+  const format = useFormatter();
+  const bytes = (value: number) => formatBytes(format.number, value);
+  const total = BATCH.length;
+  return (
+    <div className="grid gap-4" data-slot="upload-batch">
+      <UploadSummary
+        added={1}
+        total={total}
+        failed={0}
+        cancelled={0}
+        bytesDone={7_400_000}
+        bytesTotal={14_200_000}
+        offline={false}
+        labels={{
+          added: (added, of) => t('added', { added, total: of }),
+          failed: (count) => t('failedCount', { count }),
+          cancelled: (count) => t('cancelled', { count }),
+          bytes: (done, of) => t('bytes', { done: bytes(done), total: bytes(of) }),
+          eta: (seconds) => t('eta', { minutes: Math.max(1, Math.ceil(seconds / 60)) }),
+          progress: t('progress'),
+          // Inert and sample: nothing to announce.
+          announce: () => '',
+          retryFailed: t('retryFailed'),
+          cancelRest: t('cancelRest'),
+          offline: t('offline'),
+          retryNow: t('retryNow'),
+          why: t('why'),
+        }}
+        onCancelRest={noop}
+      />
+      <FrameGrid ariaLabel={t('listLabel')}>
+        {BATCH.map((frame, i) => (
+          <UploadFrame
+            key={i}
+            state={frame.state}
+            progress={frame.progress}
+            preview={
+              // A generated SVG: nothing for next/image to optimise.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={samplePhoto(8 + i)} alt={DECORATIVE} className="size-full object-cover" />
+            }
+            position={{ index: i + 1, total }}
+            {...(frame.state === 'done' ? { frameNo: frame.frameNo } : {})}
+            accessibleName={t('frameQueued', { index: i + 1, total })}
+            labels={{
+              queued: t('queued'),
+              processing: t('processing'),
+              done: t('done'),
+              failed: t('failed'),
+              retry: t('retry'),
+              cancel: t('cancel', { index: i + 1, total }),
+              position: (index, of) => t('position', { index, total: of }),
+              percent: (value) => t('percent', { value }),
+            }}
+            onCancel={noop}
+            className="h-full"
+          />
+        ))}
+      </FrameGrid>
+    </div>
   );
 }
 

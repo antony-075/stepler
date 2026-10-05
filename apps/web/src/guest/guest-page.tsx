@@ -24,13 +24,11 @@ import { useToast } from '@stepler/ui/components/toast';
 import { GuestTemplateRoot } from '@stepler/templates/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LinkStatePage } from '@/app/g/[token]/link-state-page';
-import { SiteFooter } from '@/components/site-footer';
-import { SiteHeader } from '@/components/site-header';
-import { LanguageSwitch } from '@/i18n/language-switch';
 import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution } from './contribute-actions';
+import { GuestChrome } from './guest-chrome';
 import type { GuestPageState } from './guest-state';
 import { NamePrompt } from './name-prompt';
 import { guestContentKey, useFrameTime } from './own-frames';
@@ -72,19 +70,6 @@ export function GuestPage({ token }: { token: string }) {
       setContext={session.setContext}
       onAdded={setAdded}
     />
-  );
-}
-
-/** The plain Stepler header, page column and footer around the loading and link states. */
-function GuestChrome({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      <SiteHeader>
-        <LanguageSwitch variant="header" />
-      </SiteHeader>
-      <main className="stepler-container flex-1 pt-6 pb-16 sm:pt-10 lg:pt-12">{children}</main>
-      <SiteFooter />
-    </div>
   );
 }
 

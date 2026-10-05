@@ -829,7 +829,6 @@
   "guestPage": {
     "preview": {
       "unavailable": "This collection’s preview could not be shown.",
-      "placeholder": "Guests’ frames will be here",
       "frame": "A guest’s frame",
       "title": "Preview",
       "subtitle": "The «{name}» template with your settings",
@@ -838,8 +837,27 @@
       "desktop": "Computer",
       "openAsGuest": "Open as a guest",
       "newTab": "(new tab, saved version)",
-      "caption": "Scroll the preview to see guests’ frames",
-      "frameTitle": "Guest page preview"
+      "frameTitle": "Guest page preview",
+      "tablet": "Tablet",
+      "stateTrigger": "Page state: {name}. Change",
+      "states": {
+        "first-visit": "First visit, no frames yet",
+        "mine": "Only my frames",
+        "others": "Only other guests’ frames",
+        "mixed": "Mine and other guests’",
+        "own-only": "The link hides others’ frames",
+        "view-only": "A view-only link",
+        "uploading": "Frames uploading",
+        "paused": "The link is paused",
+        "closed": "The collection is closed"
+      },
+      "sample": {
+        "guestName": "Olena",
+        "wishOwn": "Thank you for a wonderful evening! The best people around.",
+        "wishOther": "Happiness, love and many more evenings like this!",
+        "wishOther2": "Warmest wishes from the whole family.",
+        "docTitle": "Evening programme.pdf"
+      }
     },
     "leave": "Your changes are still being saved. Leave the page?",
     "panelLabel": "Guest page settings",
@@ -870,7 +888,7 @@
       "retry": "Retry",
       "uploadFailed": "The image could not be uploaded",
       "processing": "Preparing…",
-      "failed": "The image could not be prepared. Try another one.",
+      "failed": "The image could not be processed — try another one",
       "ready": "Ready",
       "none": "None",
       "setFailed": "The image could not be chosen",
@@ -880,11 +898,20 @@
         "STORAGE_403": "Storage refused the file. Try again."
       },
       "archivedRefused": "The collection is archived — its images cannot be changed now.",
-      "frameGone": "The frame has been deleted."
+      "frameGone": "The frame has been deleted.",
+      "remove": "Remove",
+      "replace": "Replace",
+      "noneCover": "No cover",
+      "noneCoverText": "Guests will see the title without a picture.",
+      "noneBackground": "No image",
+      "processingText": "This usually takes a few seconds.",
+      "failedShort": "Failed",
+      "slow": "Processing is taking longer than usual",
+      "slowText": "You can check again, remove this image or upload another one.",
+      "check": "Check again"
     },
     "cover": {
       "remove": "Remove cover",
-      "none": "No cover. Guests will see the title without a picture.",
       "alt": "Cover"
     },
     "welcome": {
@@ -942,7 +969,6 @@
       "dim": "Dimming",
       "dimValue": "{value}%",
       "remove": "Remove image",
-      "coverAsBackground": "In this template the cover is the background. Dimming keeps the white text readable.",
       "noImage": "Add an image for the background."
     },
     "accent": {
@@ -961,7 +987,8 @@
       "good": "Contrast {ratio}:1 — reads well on the template’s background",
       "smallText": "Contrast {ratio}:1 — small accent text becomes a little {direction, select, darker {darker} other {lighter}} so it reads.",
       "merges": "Contrast {ratio}:1 — the accent blends into the background. Buttons and text stay readable, but a {direction, select, darker {darker} other {lighter}} shade would be better.",
-      "footnote": "Button labels turn white or black, whichever reads better."
+      "footnote": "Button labels turn white or black, whichever reads better.",
+      "picker": "Pick your own colour"
     },
     "font": {
       "trigger": "Font: {name}. Change",
@@ -1064,14 +1091,17 @@
       "notReady": "Preparing the preview",
       "unavailable": "Preview unavailable",
       "frameName": "Frame {number}, photo",
-      "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen"
+      "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen",
+      "unusable": "Cannot be used",
+      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen"
     },
     "fromViewer": {
       "added": "Cover added to the draft",
       "addedText": "Guests will see it once you save the guest page.",
       "open": "Open the guest page",
       "openAlt": "Open the «Guest page» tab to save the changes."
-    }
+    },
+    "splitLabel": "Settings panel width"
   },
   "templates": {
     "classic": {
