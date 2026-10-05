@@ -105,14 +105,62 @@ test.describe('legal pages', () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test('the admin sidebar links to both documents in new tabs @desktop', async ({ page }) => {
+  // Owner 2026-10-05: short labels on one line in the 240px sidebar and the 360px phone menu; the
+  // accessible name still names the full document.
+  test('the admin sidebar and phone menu link to both documents on one line', async ({
+    page,
+    baseURL,
+    isMobile,
+  }) => {
     await signIn(page, newEmail());
-    await page.goto('/app');
-    const nav = page.locator('#admin-sidebar').getByRole('navigation', { name: LEGAL_NAV });
-    for (const slug of ['terms', 'privacy'] as const) {
-      const link = nav.getByRole('link', { name: `${TITLES[slug]} ${NEW_TAB}` });
-      await expect(link).toHaveAttribute('href', `/legal/${slug}`);
-      await expect(link).toHaveAttribute('target', '_blank');
+    if (isMobile) await page.setViewportSize({ width: 360, height: 740 });
+    const LOCALES = {
+      uk: { label: LEGAL_NAV, menu: 'Відкрити меню', sheet: 'Розділи', newTab: NEW_TAB },
+      en: {
+        label: 'Legal documents',
+        menu: 'Open menu',
+        sheet: 'Sections',
+        newTab: '(opens in a new tab)',
+      },
+    } as const;
+    const LINKS = {
+      uk: [
+        { slug: 'terms', text: 'Умови', name: TITLES.terms },
+        { slug: 'privacy', text: 'Конфіденційність', name: TITLES.privacy },
+      ],
+      en: [
+        { slug: 'terms', text: 'Terms', name: 'Terms of Service' },
+        { slug: 'privacy', text: 'Privacy', name: 'Privacy Policy' },
+      ],
+    } as const;
+    for (const locale of ['uk', 'en'] as const) {
+      const copy = LOCALES[locale];
+      // The profile locale wins over the cookie on /app (ADR 0011).
+      const res = await page.request.patch('/api/v1/me', {
+        data: { locale },
+        headers: { origin: baseURL! },
+      });
+      expect(res.status()).toBe(200);
+      await page.goto('/app');
+      await expect(page.locator('html')).toHaveAttribute('lang', locale);
+      let scope = page.locator('#admin-sidebar');
+      if (isMobile) {
+        await page.getByRole('button', { name: copy.menu }).click();
+        scope = page.getByRole('dialog', { name: copy.sheet });
+      }
+      const nav = scope.getByRole('navigation', { name: copy.label });
+      const links = nav.getByRole('link');
+      await expect(links).toHaveText(LINKS[locale].map(({ text }) => text));
+      for (const { slug, name } of LINKS[locale]) {
+        const link = nav.getByRole('link', { name: `${name} ${copy.newTab}`, exact: true });
+        await expect(link).toHaveAttribute('href', `/legal/${slug}`);
+        await expect(link).toHaveAttribute('target', '_blank');
+      }
+      // One line: both links share a row, and neither wraps inside itself.
+      const [first, second] = [await links.nth(0).boundingBox(), await links.nth(1).boundingBox()];
+      expect(Math.abs(first!.y - second!.y)).toBeLessThan(2);
+      expect(Math.abs(first!.height - second!.height)).toBeLessThan(2);
+      expect(first!.height).toBeLessThan(30);
     }
   });
 
