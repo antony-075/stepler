@@ -586,6 +586,7 @@
 - `LARGE_PX = 2400`, `LARGE_QUALITY = 72`.
 - `renderRenditions(input, roles, opts): Promise<Record<Role, Rendition>>`. `renderDerivatives` for content stays unchanged.
 - The derivatives handler renders `RENDITIONS[slot]`, then `updateMany` where the row is still `PENDING`. If the count is 0, it deletes what it wrote, as today.
+  - **Accepted deviation (PR I review):** the update is `where: { id }` (any status), as the slice 8a cover handler did. A `PENDING`-only update would make a rerun after `READY` delete a ready image's renditions (same keys). `markFailed` stays `PENDING`-only.
 - The purge handler skips when the row exists, and otherwise deletes the prefix.
 
 - [ ] **Step 1: Failing tests.**

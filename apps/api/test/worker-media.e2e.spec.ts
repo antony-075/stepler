@@ -557,6 +557,20 @@ describe('media.collection-image: renditions per slot (plan Task 8)', () => {
     expect(large.longest).toBe(Math.max(row.width ?? 0, row.height ?? 0));
   });
 
+  test('a BACKGROUND over the decoded pixel limit (a 42 MP PNG) is FAILED, nothing written', async () => {
+    const png = await sharp({
+      create: { width: 7000, height: 6000, channels: 3, background: '#110f15' },
+    })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    const { collectionId, imageId, original } = await addImage('BACKGROUND', png);
+    await handler().handle({ collectionId, imageId });
+    expect(
+      (await prisma.collectionImage.findUniqueOrThrow({ where: { id: imageId } })).status,
+    ).toBe('FAILED');
+    expect(await allKeys(storage, `collections/${collectionId}/background/`)).toEqual([original]);
+  });
+
   test('a COLLECTION_IMAGE gets the thumbnail only', async () => {
     const { collectionId, imageId, original } = await addImage(
       'COLLECTION_IMAGE',

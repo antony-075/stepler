@@ -357,6 +357,40 @@ describe('worker handlers', () => {
       expect(await status(recent.id)).toBe('PENDING');
     });
 
+    test('fails admin images stuck PENDING for an hour with no rendition job left (deploy window)', async () => {
+      const { collectionId } = await seed();
+      const hourAgo = new Date(Date.now() - 2 * 3600_000);
+      const image = (createdAt: Date, slot: 'COVER' | 'BACKGROUND' = 'COVER') =>
+        prisma.collectionImage.create({
+          data: {
+            collectionId,
+            slot,
+            source: 'UPLOAD',
+            mimeType: 'image/jpeg',
+            originalSizeBytes: 1000n,
+            createdAt,
+          },
+        });
+      const lost = await image(hourAgo, 'BACKGROUND');
+      const queued = await image(hourAgo);
+      const legacyQueued = await image(hourAgo);
+      const recent = await image(new Date());
+      await prisma.$transaction(async (tx) => {
+        await queue.enqueue(tx, 'media.collection-image', { collectionId, imageId: queued.id });
+        await queue.enqueue(tx, 'media.cover-derivatives', {
+          collectionId,
+          coverId: legacyQueued.id,
+        });
+      });
+      await sweep().handle();
+      const status = async (id: string) =>
+        (await prisma.collectionImage.findUniqueOrThrow({ where: { id } })).status;
+      expect(await status(lost.id)).toBe('FAILED');
+      expect(await status(queued.id)).toBe('PENDING');
+      expect(await status(legacyQueued.id)).toBe('PENDING');
+      expect(await status(recent.id)).toBe('PENDING');
+    });
+
     test('re-enqueues purges for old DELETING collections and old deleted items only', async () => {
       const stale = await seed({ status: 'DELETING', deletedHoursAgo: 2 });
       const recent = await seed({ status: 'DELETING', deletedHoursAgo: 0.1 });

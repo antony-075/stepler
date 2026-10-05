@@ -41,25 +41,49 @@ afterAll(async () => {
 });
 
 describe('guest page templates migration', () => {
-  test('backfills one published classic page per collection, with the welcome and the cover', async () => {
+  test('backfills one published classic page per collection (any status), with the welcome and the cover', async () => {
     expect(index).toBeGreaterThan(0);
     const [{ id: ownerId }] = (
       await client.query<{ id: string }>(
         `INSERT INTO "User" ("email", "updatedAt") VALUES ('olena@example.com', now()) RETURNING "id"::text`,
       )
     ).rows as [{ id: string }];
-    const insertCollection = async (title: string, welcome: string | null) =>
+    const insertCollection = async (
+      title: string,
+      welcome: string | null,
+      status: 'ACTIVE' | 'ARCHIVED' | 'DELETING' = 'ACTIVE',
+    ) =>
       (
         (
           await client.query<{ id: string }>(
-            `INSERT INTO "Collection" ("ownerId", "title", "welcomeMessage", "updatedAt")
-             VALUES ($1, $2, $3, now()) RETURNING "id"::text`,
-            [ownerId, title, welcome],
+            `INSERT INTO "Collection"
+               ("ownerId", "title", "welcomeMessage", "status", "archivedAt", "deletionRequestedAt", "updatedAt")
+             VALUES ($1, $2, $3, $4::"CollectionStatus",
+                     CASE WHEN $4 = 'ARCHIVED' THEN now() END,
+                     CASE WHEN $4 = 'DELETING' THEN now() END, now())
+             RETURNING "id"::text`,
+            [ownerId, title, welcome, status],
+          )
+        ).rows[0] as { id: string }
+      ).id;
+    const insertCover = async (collectionId: string, status: 'PENDING' | 'FAILED') =>
+      (
+        (
+          await client.query<{ id: string }>(
+            `INSERT INTO "CollectionCover"
+               ("collectionId", "status", "source", "mimeType", "originalSizeBytes")
+             VALUES ($1, $2::"CoverStatus", 'UPLOAD', 'image/png', 2000)
+             RETURNING "id"::text`,
+            [collectionId, status],
           )
         ).rows[0] as { id: string }
       ).id;
     const dressed = await insertCollection('Весілля', 'Дякуємо, що ви з нами!');
     const bare = await insertCollection('Ювілей', null);
+    const archived = await insertCollection('Архів', 'Дякуємо!', 'ARCHIVED');
+    const deleting = await insertCollection('Видаляється', null, 'DELETING');
+    const pendingCover = await insertCover(archived, 'PENDING');
+    const failedCover = await insertCover(deleting, 'FAILED');
     const cover = (
       (
         await client.query<{ id: string }>(
@@ -72,6 +96,17 @@ describe('guest page templates migration', () => {
         )
       ).rows[0] as { id: string }
     ).id;
+
+    // An admin cover upload still open across the upgrade (the slice 8a route).
+    await client.query(
+      `INSERT INTO "UploadSession"
+         ("collectionId", "purpose", "uploaderUserId", "clientUploadId", "kind",
+          "originalFilename", "declaredMime", "declaredSizeBytes", "storageKey",
+          "multipartUploadId", "partSizeBytes", "partCount", "expiresAt")
+       VALUES ($1::uuid, 'COVER', $2::uuid, gen_random_uuid(), 'PHOTO', 'c.jpg', 'image/jpeg', 1000,
+               'collections/' || $1::text || '/uploads/x/original', 'mp', 5242880, 1, now() + interval '1 day')`,
+      [bare, ownerId],
+    );
 
     await client.query(sql(folders[index]!));
 
@@ -91,7 +126,13 @@ describe('guest page templates migration', () => {
          FROM "GuestPageVersion" ORDER BY "createdAt", "id"`,
     );
     const byCollection = new Map(versions.rows.map((row) => [row.collectionId, row]));
-    expect(versions.rows).toHaveLength(2);
+    expect(versions.rows).toHaveLength(4);
+    expect(byCollection.get(archived)).toMatchObject({
+      state: 'PUBLISHED',
+      welcomeMessage: 'Дякуємо!',
+      coverImageId: pendingCover,
+    });
+    expect(byCollection.get(deleting)).toMatchObject({ coverImageId: failedCover });
     const classic = definitionOf('classic')!;
     expect(byCollection.get(dressed)).toEqual({
       collectionId: dressed,
@@ -114,8 +155,18 @@ describe('guest page templates migration', () => {
     const images = await client.query(
       `SELECT "id"::text, "collectionId"::text, "slot", "status", "source", "mimeType",
               "originalSizeBytes"::int, "derivedSizeBytes"::int, "width", "height"
-         FROM "CollectionImage"`,
+         FROM "CollectionImage" WHERE "collectionId" = $1`,
+      [dressed],
     );
+    const others = await client.query(
+      `SELECT "id"::text, "slot", "status", "width" FROM "CollectionImage"
+        WHERE "collectionId" <> $1 ORDER BY "status"`,
+      [dressed],
+    );
+    expect(others.rows).toEqual([
+      { id: pendingCover, slot: 'COVER', status: 'PENDING', width: null },
+      { id: failedCover, slot: 'COVER', status: 'FAILED', width: null },
+    ]);
     expect(images.rows).toEqual([
       {
         id: cover,
@@ -130,9 +181,13 @@ describe('guest page templates migration', () => {
         height: 3000,
       },
     ]);
+    // The open cover upload completes through the route it came from.
+    expect(
+      (await client.query(`SELECT "imageTarget"::text AS "target" FROM "UploadSession"`)).rows,
+    ).toEqual([{ target: 'LEGACY_COVER' }]);
     // Expand step: the old table and column are kept as they were.
     expect((await client.query(`SELECT count(*)::int AS n FROM "CollectionCover"`)).rows).toEqual([
-      { n: 1 },
+      { n: 3 },
     ]);
   });
 });

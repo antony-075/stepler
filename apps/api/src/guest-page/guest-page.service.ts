@@ -7,6 +7,7 @@ import type {
 import {
   assertReadable,
   ContrastError,
+  DEFAULT_TEMPLATE_ID,
   definitionOf,
   resolveTheme,
   settingsSchemaFor,
@@ -16,9 +17,14 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { GuestPageVersion, Prisma } from '../generated/prisma/client.js';
 import { CollectionImagesService } from '../images/collection-images.service.js';
-import { IMAGE_SELECT, ImageUrls } from '../images/image-urls.js';
+import { IMAGE_SELECT, type ImageRow, ImageUrls } from '../images/image-urls.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { GuestPageRepository } from './guest-page.repository.js';
+
+type VersionWithImages = GuestPageVersion & {
+  coverImage: ImageRow | null;
+  backgroundImage: ImageRow | null;
+};
 
 const conflict = () => new AppError('GUEST_PAGE_DRAFT_CONFLICT', 409);
 
@@ -44,17 +50,36 @@ export class GuestPageService {
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
-  /** The owner's view: both versions, images signed in one window. Archived collections too. */
+  /**
+   * The owner's view: both versions, images signed in one window. Archived collections too. A
+   * read only: one repeatable-read snapshot of the versions and their images, so a concurrent
+   * publish is seen whole or not at all. A collection without a published row (the backfill and
+   * creation make one; this is the backstop) reads as the default template's defaults.
+   */
   async read(a: AccountPrincipal, collectionId: string): Promise<GuestPageEditor> {
-    const collection = await this.prisma.collection.findFirst({
-      where: { id: collectionId, ownerId: a.userId, status: { not: 'DELETING' } },
-      select: { id: true },
-    });
+    const collection = await this.prisma.$transaction(
+      (tx) =>
+        tx.collection.findFirst({
+          where: { id: collectionId, ownerId: a.userId, status: { not: 'DELETING' } },
+          select: {
+            id: true,
+            createdAt: true,
+            guestPageVersions: {
+              include: {
+                coverImage: { select: IMAGE_SELECT },
+                backgroundImage: { select: IMAGE_SELECT },
+              },
+            },
+          },
+        }),
+      { isolationLevel: 'RepeatableRead' },
+    );
     if (collection === null) throw new AppError('NOT_FOUND', 404);
-    const { published, draft } = await this.pages.readVersions(this.prisma, collection.id);
+    const published = collection.guestPageVersions.find((row) => row.state === 'PUBLISHED');
+    const draft = collection.guestPageVersions.find((row) => row.state === 'DRAFT') ?? null;
     const now = new Date();
     const [publishedDto, draftDto] = await Promise.all([
-      this.toDto(published, now),
+      published === undefined ? this.defaultsDto(collection.createdAt) : this.toDto(published, now),
       draft === null ? null : this.toDto(draft, now),
     ]);
     return {
@@ -204,7 +229,7 @@ export class GuestPageService {
    * A version as the owner sees it: the template and settings resolved (a removed template or
    * settings it no longer accepts read as the fallback, with a log line), images signed.
    */
-  private async toDto(version: GuestPageVersion, now: Date): Promise<GuestPageVersionDto> {
+  private async toDto(version: VersionWithImages, now: Date): Promise<GuestPageVersionDto> {
     const resolved = resolveTheme(version.templateId, version.templateVersion, version.settings);
     if (resolved.fellBack) {
       this.logger.warn({
@@ -213,20 +238,9 @@ export class GuestPageService {
         templateId: version.templateId,
       });
     }
-    const ids = [version.coverImageId, version.backgroundImageId].filter(
-      (id): id is string => id !== null,
-    );
-    const rows =
-      ids.length === 0
-        ? []
-        : await this.prisma.collectionImage.findMany({
-            where: { id: { in: ids }, collectionId: version.collectionId },
-            select: IMAGE_SELECT,
-          });
-    const byId = (id: string | null) => rows.find((row) => row.id === id) ?? null;
     const [cover, background] = await Promise.all([
-      this.urls.forAdmin(byId(version.coverImageId), now),
-      this.urls.forAdmin(byId(version.backgroundImageId), now),
+      this.urls.forAdmin(version.coverImage, now),
+      this.urls.forAdmin(version.backgroundImage, now),
     ]);
     return {
       templateId: resolved.def.id,
@@ -236,6 +250,20 @@ export class GuestPageService {
       cover,
       background,
       updatedAt: version.updatedAt.toISOString(),
+    };
+  }
+
+  /** The default template with its defaults, for a collection that has no published row. */
+  private defaultsDto(since: Date): GuestPageVersionDto {
+    const { def, settings } = resolveTheme(DEFAULT_TEMPLATE_ID, 1, undefined);
+    return {
+      templateId: def.id,
+      templateVersion: def.version,
+      settings,
+      welcomeMessage: null,
+      cover: null,
+      background: null,
+      updatedAt: since.toISOString(),
     };
   }
 }

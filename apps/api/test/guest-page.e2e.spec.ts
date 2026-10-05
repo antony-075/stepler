@@ -176,6 +176,19 @@ describe('guest page editor API', () => {
     });
   });
 
+  test('M6: GET never writes; a collection without a published row reads as the defaults', async () => {
+    const o = await owner();
+    await prisma.guestPageVersion.deleteMany({ where: { collectionId: o.collectionId } });
+    const body = editor((await o.get().expect(200)).body);
+    expect(body).toMatchObject({
+      draft: null,
+      published: { templateId: 'classic', settings: classic.defaults },
+    });
+    expect(await prisma.guestPageVersion.count({ where: { collectionId: o.collectionId } })).toBe(
+      0,
+    );
+  });
+
   test('draft isolation: a saved draft and its background never reach guests', async () => {
     const o = await owner();
     const saved = editor((await o.save(draftBody(null, { accent: '#5A4A8C' })).expect(200)).body);
@@ -303,6 +316,20 @@ describe('guest page editor API', () => {
         collectionId: o.collectionId,
         imageId: background?.id,
       });
+    });
+
+    test('M4: each reference points at an image of its own slot (application-enforced)', async () => {
+      const o = await owner();
+      await o.fromFrame('cover', (await frame(o, 'a.jpg')).id).expect(200);
+      await o.fromFrame('background', (await frame(o, 'b.jpg')).id).expect(200);
+      const draft = await prisma.guestPageVersion.findUniqueOrThrow({
+        where: { collectionId_state: { collectionId: o.collectionId, state: 'DRAFT' } },
+        include: { coverImage: true, backgroundImage: true },
+      });
+      expect([draft.coverImage?.slot, draft.backgroundImage?.slot]).toEqual([
+        'COVER',
+        'BACKGROUND',
+      ]);
     });
 
     test('a READY background shows largeUrl to the owner', async () => {
