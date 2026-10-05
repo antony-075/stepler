@@ -912,7 +912,12 @@
         "F4EEE4": "cream",
         "FAF6EF": "paper",
         "EFE6E6": "ash rose",
-        "E9ECE4": "sage"
+        "E9ECE4": "sage",
+        "C9D7E8": "airmail blue",
+        "E3D9C6": "kraft",
+        "D9E4D4": "mint",
+        "EAD7D7": "powder",
+        "D8D3E6": "lavender"
       },
       "gradientNames": {
         "mist": "mist",
@@ -1078,7 +1083,12 @@
       }
     },
     "postcard": {
-      "name": "Postcard"
+      "name": "Postcard",
+      "locks": {
+        "background": "«Postcard» has a solid background only, dotted like paper.",
+        "align": "In «Postcard» the card lays out its own text.",
+        "corners": "«Postcard» keeps its own corners: stamps, polaroids and the envelope."
+      }
     },
     "party": {
       "name": "Party"
