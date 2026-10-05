@@ -193,4 +193,21 @@ describe('buildGuestPageModel', () => {
     }).cover;
     expect(small?.srcSet).toBe(`${COVER.previewUrl} 400w`);
   });
+
+  it('a background adds its 2400 px rendition when it has one', () => {
+    const LARGE = 'https://storage.example.com/b/large.webp?X-Amz-Signature=c';
+    const withBackground = (largeUrl: string | null) => {
+      const ctx = context({});
+      return buildGuestPageModel(
+        { ...ctx, page: { ...ctx.page, background: { ...COVER, largeUrl } } },
+        { countsLabel: null, lastAddedLabel: null, contributed: false },
+      ).background;
+    };
+    expect(withBackground(LARGE)?.srcSet).toBe(
+      `${COVER.thumbnailUrl} 480w, ${COVER.previewUrl} 1600w, ${LARGE} 2400w`,
+    );
+    expect(withBackground(null)?.srcSet).toBe(
+      `${COVER.thumbnailUrl} 480w, ${COVER.previewUrl} 1600w`,
+    );
+  });
 });

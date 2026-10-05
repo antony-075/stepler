@@ -1,14 +1,14 @@
 import type { GuestContext, GuestLinkPermissions } from '@stepler/contracts';
 import type { GuestPageModel, TemplateActions } from '@stepler/templates/react';
 import { primaryContribution, uploadLabelKey, type UploadLabelKey } from './contribute-actions';
-import { coverImage } from './guest-cover';
+import { backgroundImage, coverImage } from './guest-cover';
 
 // What apps/web hands a guest page template (ADR 0017): the page as data. Strings arrive
 // translated; the template only places them.
 
 /**
  * The page model from the guest context. `contributed`: the guest has frames here or added some
- * in this visit. `onCoverError` asks for fresh presigned links once the cover's expire.
+ * in this visit. `onCoverError` asks for fresh presigned links once the images' expire.
  */
 export function buildGuestPageModel(
   context: GuestContext,
@@ -27,8 +27,8 @@ export function buildGuestPageModel(
     countsLabel: opts.countsLabel,
     lastAddedLabel: opts.lastAddedLabel,
     cover: coverImage(page.cover, opts.onCoverError),
-    // PR I brings the background image with the published page.
-    background: null,
+    // Only an image background shows it (GuestTemplateRoot decides from the settings).
+    background: backgroundImage(page.background, opts.onCoverError),
     phase: opts.contributed ? 'contributed' : 'first-visit',
   };
 }

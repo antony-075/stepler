@@ -70,6 +70,13 @@ export const draftImageUploadCalls = (
 ): UploadCalls =>
   callsAt(server, `/api/v1/collections/${collectionId}/guest-page/draft/${slot}/uploads`, cookie);
 
+/** The admin's upload routes of the collection image («Картинка колекції»). */
+export const collectionImageUploadCalls = (
+  server: Server,
+  collectionId: string,
+  cookie: string,
+): UploadCalls => callsAt(server, `/api/v1/collections/${collectionId}/image/uploads`, cookie);
+
 export const asSession = (body: unknown): UploadSessionResponse =>
   uploadSessionResponseSchema.parse(body);
 

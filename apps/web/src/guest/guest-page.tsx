@@ -4,8 +4,9 @@
 // The page itself is a guest page template (`@stepler/templates`): this module owns the session,
 // the data, the uploads, the name prompt and the wish composer, and hands the template a model,
 // the actions as data, and the app's own pieces as slots (template-model.ts, template-slots.tsx).
-// Until PR I stores a page per collection, every collection renders `classic` with its defaults,
-// which is the guest page as it was before templates (its layout notes are in the template).
+// The template, its settings, the welcome and the images are the collection's published guest
+// page (`context.page`, never a draft); `classic` with its defaults is the guest page as it was
+// before templates (its layout notes are in the template).
 // - The pencil is the guest's main action only: «Додати фото й відео» (or what the link takes),
 //   opening the system picker for many files at once; «Додати ще» after a batch. The wish is the
 //   quieter second action, or the pencil one on a text-only link. A view-only link has none.
@@ -20,7 +21,7 @@ import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
-import { classic, GuestTemplateRoot } from '@stepler/templates/react';
+import { GuestTemplateRoot } from '@stepler/templates/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -246,10 +247,11 @@ function GuestCollection({
     ]);
   }
 
-  /** The cover's links expired (a tab left open for hours): ask for fresh ones, once per link. */
+  /** The page images' links expired (a tab left open for hours): fresh ones, once per link. */
   const [coverRetried, setCoverRetried] = useState<string | null>(null);
   function coverExpired() {
-    const src = context.page.cover?.previewUrl ?? null;
+    // One key for the page's links: a refresh signs the cover and the background together.
+    const src = context.page.cover?.previewUrl ?? context.page.background?.previewUrl ?? null;
     if (src === null || coverRetried === src) return;
     setCoverRetried(src);
     refreshContext();
@@ -290,9 +292,9 @@ function GuestCollection({
   return (
     <>
       <GuestTemplateRoot
-        templateId={classic.id}
-        templateVersion={classic.version}
-        settings={classic.defaults}
+        templateId={context.page.templateId}
+        templateVersion={context.page.templateVersion}
+        settings={context.page.settings}
         fontClassName={fontVariables}
         model={model}
         actions={actions}
