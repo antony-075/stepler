@@ -1,7 +1,5 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { EditorSection } from '../locked-option';
 import { AccentSection } from './accent-section';
 import { BackgroundSection } from './background-section';
 import { CoverSection } from './cover-section';
@@ -22,20 +20,6 @@ export const SECTION_IDS = [
   'layout',
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
-
-/** The desktop panel: every section under its h2. */
-export function Sections(props: SectionProps) {
-  const t = useTranslations('guestPage.sections');
-  return (
-    <>
-      {SECTION_IDS.map((id) => (
-        <EditorSection key={id} id={`guest-page-${id}`} title={t(id)}>
-          <SectionBody id={id} {...props} />
-        </EditorSection>
-      ))}
-    </>
-  );
-}
 
 export function SectionBody({ id, ...props }: SectionProps & { id: SectionId }) {
   switch (id) {

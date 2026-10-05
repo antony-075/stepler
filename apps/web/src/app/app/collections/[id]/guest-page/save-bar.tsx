@@ -12,23 +12,28 @@ import { useState } from 'react';
 import type { GuestPageEditorApi } from './use-guest-page-editor';
 
 /**
- * The editor's save bar (Appendix B), at the bottom of the panel: the status dot and line, then
+ * The editor's save bar (Appendix B): the status dot and line, then
  * «Скинути зміни» (outline, asks first) and «Зберегти» (ink, with a dot while there is something
  * guests do not see; the dot is said as «, є незбережені зміни»). Both wait (`aria-disabled`)
  * while nothing differs from what guests see. A failed save offers «Повторити»; a conflict is an
  * alert with «Показати останню версію». `size="touch"` gives the phone sheet its 48px buttons.
+ * `layout="header"` is the desktop preview pane's header (owner remark 71): one row, the status on
+ * the left and the two buttons on the right, always in view; `stacked` is the phone sheet's foot.
  */
 export function SaveBar({
   editor,
   readOnly,
   size = 'default',
+  layout = 'stacked',
   className,
 }: {
   editor: GuestPageEditorApi;
   readOnly: boolean;
   size?: 'default' | 'touch';
+  layout?: 'stacked' | 'header';
   className?: string;
 }) {
+  const header = layout === 'header';
   const t = useTranslations('guestPage');
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
@@ -57,10 +62,17 @@ export function SaveBar({
     <div
       data-slot="save-bar"
       data-status={status}
-      className={cn('grid gap-3 border-t bg-background px-6 py-4', className)}
+      data-layout={layout}
+      className={cn(
+        header
+          ? 'flex flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-5 py-3'
+          : 'grid gap-3 border-t bg-background px-6 py-4',
+        className,
+      )}
     >
       {status === 'conflict' ? (
         <Alert
+          className={cn({ 'basis-full': header })}
           variant="warning"
           title={t('status.conflict')}
           action={
@@ -74,7 +86,9 @@ export function SaveBar({
       ) : (
         <p
           role="status"
-          className="flex min-h-6 items-center gap-2 text-sm"
+          className={cn('flex min-h-6 items-center gap-2 text-sm', {
+            'min-w-0 flex-1 basis-48': header,
+          })}
           data-slot="save-status"
         >
           {status === 'saving' ? (
@@ -97,7 +111,13 @@ export function SaveBar({
           ) : null}
         </p>
       )}
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-2">
+      <div
+        className={
+          header
+            ? 'ml-auto flex shrink-0 gap-2'
+            : 'grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-2'
+        }
+      >
         <Button
           variant="outline"
           className={touch}
@@ -107,10 +127,11 @@ export function SaveBar({
           }}
         >
           <RotateCcw aria-hidden="true" />
-          {t('actions.reset')}
+          {/* On a narrow preview pane only the icon shows; the name stays the accessible name. */}
+          <span className={cn({ '@max-[32rem]/pane:sr-only': header })}>{t('actions.reset')}</span>
         </Button>
         <Button
-          className={cn('relative', touch)}
+          className={cn('relative', header && 'min-w-28', touch)}
           aria-disabled={idle || publishing || status === 'conflict' || undefined}
           onClick={() => void publish()}
           data-slot="save-button"

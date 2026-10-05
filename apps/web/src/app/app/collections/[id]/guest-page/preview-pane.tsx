@@ -1,75 +1,72 @@
 'use client';
 
 import type { GuestPageVersion } from '@stepler/contracts';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@stepler/ui/components/select';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
-import { ExternalLink, Monitor, Smartphone } from 'lucide-react';
+import { bestTextOn, resolveTheme, themeTokens } from '@stepler/templates/core';
+import { ExternalLink, Layers, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
-import { isPreviewReady, previewMessage } from '@/guest-page/preview-protocol';
+import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  DEFAULT_PREVIEW_STATE,
+  isPreviewReady,
+  PREVIEW_STATES,
+  type PreviewState,
+  previewMessage,
+} from '@/guest-page/preview-protocol';
+import { DeviceFrame, type PreviewDevice, viewportOf } from './device-frame';
 
-export type PreviewDevice = 'phone' | 'desktop';
+export type { PreviewDevice } from './device-frame';
 
-/** The previewed page's own viewport: a real 390 or 1440 px wide page, scaled to fit. */
-const DEVICES: Record<PreviewDevice, { width: number; height: number }> = {
-  phone: { width: 390, height: 844 },
-  desktop: { width: 1440, height: 900 },
-};
-/** The phone frame never grows past 0.7 (E-editor). */
-const PHONE_MAX_SCALE = 0.7;
-const BEZEL = 8;
+/** The system bars take the page's background, like Safari tinting its bar to the page. */
+function useBarColors(page: GuestPageVersion) {
+  return useMemo(() => {
+    const { def, settings } = resolveTheme(page.templateId, page.templateVersion, page.settings);
+    const background = themeTokens(def, settings)['--tpl-bg'] ?? '#ffffff';
+    return { background, foreground: bestTextOn(background) };
+  }, [page.settings, page.templateId, page.templateVersion]);
+}
 
 /**
- * The live preview (plan Task 14, ADR 0017): the same-origin route in an iframe at a real 390×844
- * or 1440×900 viewport, scaled by `min(width, height)` fit. The working copy goes in by
- * postMessage whenever it changes, once the frame said it is ready. The phone sits in an 8px ink
- * bezel; the computer in a 1px edge. Nothing in it can be clicked (it is inert).
+ * The live preview (plan Task 14, ADR 0017): the same-origin route in an iframe at the device's
+ * real viewport, scaled to fit, inside its device frame (`DeviceFrame`). The working copy and the
+ * page state go in by postMessage whenever they change, once the frame said it is ready. Nothing
+ * in it can be clicked (it is inert).
  */
 export function PreviewFrame({
   collectionId,
   page,
+  state = DEFAULT_PREVIEW_STATE,
   device,
   maxScale,
   className,
 }: {
   collectionId: string;
   page: GuestPageVersion;
+  state?: PreviewState;
   device: PreviewDevice;
   /** Caps the scale (the phone card on small screens). */
   maxScale?: number;
   className?: string;
 }) {
   const t = useTranslations('guestPage.preview');
-  const box = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
-  const [scale, setScale] = useState(0.5);
-  const { width, height } = DEVICES[device];
-  const bezel = device === 'phone' ? BEZEL : 1;
+  const barColors = useBarColors(page);
+  const viewport = viewportOf(device);
 
-  useLayoutEffect(() => {
-    const element = box.current;
-    if (element === null) return;
-    const fit = () => {
-      const available = element.getBoundingClientRect();
-      const next = Math.min(
-        (available.width - 2 * bezel) / width,
-        available.height > 0 ? (available.height - 2 * bezel) / height : Infinity,
-        maxScale ?? (device === 'phone' ? PHONE_MAX_SCALE : 1),
-      );
-      setScale(Math.max(0.1, next));
-    };
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [bezel, device, height, maxScale, width]);
-
-  // The latest page, for a «ready» that arrives after it changed (a reload of the frame).
-  const latest = useRef(page);
+  // The latest page and state, for a «ready» that arrives after they changed (a reload).
+  const latest = useRef({ page, state });
   useEffect(() => {
-    latest.current = page;
+    latest.current = { page, state };
   });
 
   useEffect(() => {
@@ -77,7 +74,10 @@ export function PreviewFrame({
       const target = frame.current?.contentWindow ?? null;
       if (!isPreviewReady(event, target)) return;
       setReady(true);
-      target?.postMessage(previewMessage(latest.current), window.location.origin);
+      target?.postMessage(
+        previewMessage(latest.current.page, latest.current.state),
+        window.location.origin,
+      );
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -85,73 +85,115 @@ export function PreviewFrame({
 
   useEffect(() => {
     if (ready) {
-      frame.current?.contentWindow?.postMessage(previewMessage(page), window.location.origin);
+      frame.current?.contentWindow?.postMessage(
+        previewMessage(page, state),
+        window.location.origin,
+      );
     }
-  }, [page, ready]);
+  }, [page, ready, state]);
 
   return (
-    <div ref={box} className={cn('grid min-h-0 min-w-0 place-items-center', className)}>
-      <div
-        data-slot="preview-device"
-        data-device={device}
-        className={cn(
-          'overflow-hidden bg-background',
-          device === 'phone' ? 'rounded-[42px] bg-[#141614] shadow-lg' : 'rounded-xl border',
-        )}
-        style={{
-          width: width * scale + 2 * bezel,
-          height: height * scale + 2 * bezel,
-          padding: bezel,
-        }}
-      >
-        <div
-          className={cn('overflow-hidden', device === 'phone' && 'rounded-[34px]')}
-          style={{ width: width * scale, height: height * scale }}
-        >
-          <iframe
-            ref={frame}
-            title={t('frameTitle')}
-            src={`/preview/collections/${encodeURIComponent(collectionId)}`}
-            className="origin-top-left border-0 bg-background"
-            style={{ width, height, transform: `scale(${scale})` }}
-            data-slot="preview-iframe"
-          />
-        </div>
-      </div>
-    </div>
+    <DeviceFrame
+      device={device}
+      barColors={barColors}
+      {...(maxScale === undefined ? {} : { maxScale })}
+      {...(className === undefined ? {} : { className })}
+    >
+      {(scale) => (
+        <iframe
+          ref={frame}
+          title={t('frameTitle')}
+          src={`/preview/collections/${encodeURIComponent(collectionId)}`}
+          className="absolute top-0 left-0 origin-top-left border-0 bg-background"
+          style={{
+            width: viewport.width,
+            height: viewport.height,
+            transform: `scale(${scale})`,
+          }}
+          data-slot="preview-iframe"
+        />
+      )}
+    </DeviceFrame>
   );
 }
 
+/** «Стан сторінки»: which guest page state the preview shows (owner remark 77). */
+export function PreviewStateSelect({
+  value,
+  onChange,
+  className,
+}: {
+  value: PreviewState;
+  onChange: (state: PreviewState) => void;
+  className?: string;
+}) {
+  const t = useTranslations('guestPage.preview');
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next as PreviewState)}>
+      <SelectTrigger
+        aria-label={t('stateTrigger', { name: t(`states.${value}`) })}
+        data-slot="preview-state"
+        className={cn('h-11 w-auto max-w-full min-w-0 gap-2 bg-background', className)}
+      >
+        <Layers aria-hidden="true" />
+        <span className="min-w-0 truncate">
+          <SelectValue />
+        </span>
+      </SelectTrigger>
+      <SelectContent align="end">
+        {PREVIEW_STATES.map((state) => (
+          <SelectItem key={state} value={state}>
+            {t(`states.${state}`)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+const DEVICES = [
+  { value: 'phone', Icon: Smartphone },
+  { value: 'tablet', Icon: Tablet },
+  { value: 'desktop', Icon: Monitor },
+] as const;
+
 /**
- * The desktop preview pane: the heading «Попередній перегляд» with the template's name, the
- * device toggle, «Відкрити як гість» (the default guest link, a new tab, the saved version) and
- * the caption, around the frame. It stays in view while the panel scrolls.
+ * The desktop preview pane (owner remarks 66, 67, 70, 71, 77). Its header is the editor's fixed
+ * place for what matters at any moment: the draft status, «Скинути зміни» and «Зберегти»
+ * (`actions`, the save bar), in view whatever the settings panel scrolls to. Under it, on the
+ * light table, one quiet toolbar: «Стан сторінки», the device toggle (Телефон / Планшет /
+ * Комп’ютер) and «Відкрити як гість»; then the device, as large as the pane allows. The pane never
+ * scrolls; on a narrow pane the toggle shows its icons only (the names stay accessible names).
  */
 export function PreviewPane({
   collectionId,
   page,
   templateName,
   guestUrl,
+  actions,
 }: {
   collectionId: string;
   page: GuestPageVersion;
   templateName: string;
   guestUrl: string | null;
+  actions: ReactNode;
 }) {
   const t = useTranslations('guestPage.preview');
   const deviceLabelId = useId();
   const [device, setDevice] = useState<PreviewDevice>('phone');
+  const [state, setState] = useState<PreviewState>(DEFAULT_PREVIEW_STATE);
   return (
     <div
       data-slot="preview-pane"
-      className="sticky top-14 grid h-[calc(100svh-3.5rem)] min-h-[32rem] grid-rows-[auto_minmax(0,1fr)_auto] gap-4 bg-muted px-6 py-5"
+      className="@container/pane grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] bg-muted"
     >
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-0.5">
-          <h2 className="text-base font-semibold">{t('title')}</h2>
-          <p className="text-sm text-muted-foreground">{t('subtitle', { name: templateName })}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
+      {actions}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pt-4">
+        {/* The template's name is in the panel's first row; here only for screen readers. */}
+        <h2 className="sr-only">{t('title')}</h2>
+        <p className="sr-only">{t('subtitle', { name: templateName })}</p>
+        <PreviewStateSelect value={state} onChange={setState} className="max-w-[18rem]" />
+        <div className="flex flex-wrap items-center gap-2">
           <span id={deviceLabelId} className="sr-only">
             {t('device')}
           </span>
@@ -161,12 +203,16 @@ export function PreviewPane({
             onValueChange={(next) => setDevice(next as PreviewDevice)}
             className="rounded-control bg-background p-1"
           >
-            <ToggleGroupItem value="phone" icon={<Smartphone />}>
-              {t('phone')}
-            </ToggleGroupItem>
-            <ToggleGroupItem value="desktop" icon={<Monitor />}>
-              {t('desktop')}
-            </ToggleGroupItem>
+            {DEVICES.map(({ value, Icon }) => (
+              <ToggleGroupItem
+                key={value}
+                value={value}
+                icon={<Icon />}
+                className="@max-[46rem]/pane:px-2.5"
+              >
+                <span className="@max-[46rem]/pane:sr-only">{t(value)}</span>
+              </ToggleGroupItem>
+            ))}
           </ToggleGroup>
           {guestUrl === null ? null : (
             <a
@@ -174,19 +220,24 @@ export function PreviewPane({
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 rounded-control text-sm font-semibold text-link underline underline-offset-4 hover:text-link-hover',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-control px-1 text-sm font-semibold text-link underline underline-offset-4 hover:text-link-hover',
                 focusRing,
               )}
             >
-              {t('openAsGuest')}
+              <span className="@max-[34rem]/pane:sr-only">{t('openAsGuest')}</span>
               <span className="sr-only">{t('newTab')}</span>
               <ExternalLink aria-hidden="true" className="size-4" />
             </a>
           )}
         </div>
       </div>
-      <PreviewFrame collectionId={collectionId} page={page} device={device} />
-      <p className="text-center type-caption text-muted-foreground">{t('caption')}</p>
+      <PreviewFrame
+        collectionId={collectionId}
+        page={page}
+        state={state}
+        device={device}
+        className="px-5 pt-4 pb-5"
+      />
     </div>
   );
 }
