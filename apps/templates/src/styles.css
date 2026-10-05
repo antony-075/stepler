@@ -157,6 +157,17 @@
   --link: var(--tpl-link);
   --link-hover: var(--tpl-text);
   --ring: var(--tpl-link);
+  /* The app's buttons inside a template follow it (owner remark 112): the primary is the
+     accent with its auto-contrasted text; corners follow the template's (fields stop short of
+     a pill), so «Написати побажання», «Оновити», «Показати ще», «Змінити ім’я», «Скасувати»,
+     «Повторити» and the dialogs' buttons all read as the page's. */
+  --primary: var(--tpl-accent);
+  --primary-hover: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 12%);
+  --primary-active: color-mix(in oklab, var(--tpl-accent), var(--tpl-on-accent) 22%);
+  --primary-foreground: var(--tpl-on-accent);
+  --radius-control: min(var(--tpl-radius-btn), 24px);
+  --radius-sheet: min(var(--tpl-radius-card), 16px);
+  --radius-dialog: min(calc(var(--tpl-radius-card) + 4px), 28px);
   /* Words wrap only between words (owner, item 87): a hyphen where the page's language has a
      dictionary, and a break inside a word only when that word alone is wider than its whole
      line (a pasted link, a 100-letter string), so nothing scrolls sideways. `anywhere`, not
@@ -179,6 +190,16 @@
   background-image: var(--tpl-gradient);
   color: var(--tpl-body);
   font-family: var(--tpl-font-body);
+}
+
+/* An overlay in the template's look (`templateSurfaceProps`, remark 112): the template's surface
+   colour for the sheet, none of the page's height or safe-area padding. */
+:where([data-template][data-template-surface]) {
+  --popover: var(--tpl-surface);
+  --card: var(--tpl-surface);
+  min-height: auto;
+  padding-inline: 0;
+  padding-top: 0;
 }
 
 /* The footer ends above the home indicator (item 96); fixed and sticky bars add the inset

@@ -197,6 +197,38 @@ test.describe('guest page templates at 390px, gallery hidden', () => {
   }
 });
 
+// Owner remark 112: the wish composer is the template's, «Надіслати» in its accent.
+test.describe('the wish composer in the template', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  for (const templateId of ['party', 'journal'] as const) {
+    test(`${templateId}: «Надіслати» is the accent, on the template's surface`, async ({
+      page: guest,
+      browser,
+    }) => {
+      const owner = await admin(browser);
+      await join(guest, owner.path);
+      await publish(owner.page, guest, owner.id, templateId);
+      const accent = await token(guest, '--tpl-accent');
+      await shown(guest.getByRole('button', { name: 'Написати побажання' })).click();
+      const name = guest.getByRole('dialog', { name: 'Як вас звати?' });
+      if (await name.isVisible().catch(() => false)) {
+        await name.getByRole('button', { name: 'Пропустити' }).click();
+      }
+      const composer = guest.getByRole('dialog', { name: 'Ваше побажання' });
+      await expect(composer).toHaveAttribute('data-template', templateId);
+      const send = composer.getByRole('button', { name: 'Надіслати' });
+      const rgb = await send.evaluate((el) => getComputedStyle(el).backgroundColor);
+      const hex = `#${(rgb.match(/\d+/g) ?? [])
+        .slice(0, 3)
+        .map((n) => Number(n).toString(16).padStart(2, '0'))
+        .join('')}`.toUpperCase();
+      expect(hex).toBe(accent);
+      await owner.done();
+    });
+  }
+});
+
 test.describe('guest page templates at 1440px @desktop', () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 

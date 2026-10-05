@@ -17,7 +17,8 @@ export const postcard: TemplateDefinition = {
     accent: '#B3303B',
     headingFont: 'comfortaa',
     coverPlacement: 'top',
-    align: 'start',
+    // Centred, as the card is drawn on phones (owner remark 111 unlocked it).
+    align: 'center',
     corners: 'soft',
   },
   options: {
@@ -27,8 +28,8 @@ export const postcard: TemplateDefinition = {
     imageDim: { min: 0, max: 0 },
     backgroundImageSource: 'own',
     coverPlacements: ['top', 'none'],
-    aligns: ['start'],
-    corners: ['soft'],
+    aligns: ['start', 'center'],
+    corners: ['sharp', 'soft', 'round'],
   },
   palette: {
     text: '#24304F',

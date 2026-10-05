@@ -1,5 +1,5 @@
 import type { Meta } from '@storybook/react-vite';
-import { storyAt, TemplateStory } from '../../fixtures/stories.tsx';
+import { matrixStory, storyAt, TemplateStory } from '../../fixtures/stories.tsx';
 
 const meta = {
   title: 'Templates/На весь екран (fullscreen)',
@@ -56,3 +56,6 @@ export const ManyFrames360 = at('ManyFrames', 'phone360');
 export const ManyFrames390 = at('ManyFrames', 'phone390');
 export const ManyFrames768 = at('ManyFrames', 'tablet768');
 export const ManyFrames1440 = at('ManyFrames', 'desktop1440');
+
+/** Left / centre × sharp / soft / round (owner remark 111). */
+export const AlignCornersMatrix = matrixStory('fullscreen');

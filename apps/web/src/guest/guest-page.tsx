@@ -19,7 +19,7 @@
 
 import type { GuestContext } from '@stepler/contracts';
 import { useToast } from '@stepler/ui/components/toast';
-import { GuestTemplateRoot } from '@stepler/templates/react';
+import { GuestTemplateRoot, templateSurfaceProps } from '@stepler/templates/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useEffect, useMemo, useState } from 'react';
@@ -167,6 +167,13 @@ function GuestCollection({
     refreshContext();
   }
 
+  // The composer and the name prompt in the page's template (owner remark 112).
+  const surface = templateSurfaceProps(
+    context.page.templateId,
+    context.page.templateVersion,
+    context.page.settings,
+    fontVariables,
+  );
   const model = buildGuestPageModel(context, {
     countsLabel: counts === null ? null : t('counts', { count: counts.total }),
     lastAddedLabel:
@@ -236,8 +243,14 @@ function GuestCollection({
         mode={namePrompt?.mode ?? 'first'}
         defaultName={guest.name}
         onDone={nameDone}
+        surface={surface}
       />
-      <TextComposer open={composerOpen} onOpenChange={setComposerOpen} onSend={sendText} />
+      <TextComposer
+        open={composerOpen}
+        onOpenChange={setComposerOpen}
+        onSend={sendText}
+        surface={surface}
+      />
     </>
   );
 }

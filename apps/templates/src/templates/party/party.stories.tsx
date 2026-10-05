@@ -1,6 +1,6 @@
 import type { Meta } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
-import { storyAt, TemplateStory } from '../../fixtures/stories.tsx';
+import { matrixStory, storyAt, TemplateStory } from '../../fixtures/stories.tsx';
 
 const meta = {
   title: 'Templates/Вечірка (party)',
@@ -85,3 +85,6 @@ export const RingTurns = {
     await expect(getComputedStyle(ring!).animationName).toBe('party-spin');
   },
 };
+
+/** Left / centre × sharp / soft / round (owner remark 111). */
+export const AlignCornersMatrix = matrixStory('party');

@@ -1,5 +1,5 @@
 import type { Meta } from '@storybook/react-vite';
-import { storyAt, TemplateStory } from '../../fixtures/stories.tsx';
+import { matrixStory, storyAt, TemplateStory } from '../../fixtures/stories.tsx';
 
 const meta = {
   title: 'Templates/Мінімалізм (minimal)',
@@ -60,3 +60,6 @@ export const CoverSide360 = storyAt('minimal', 'FirstVisit', 'phone360', 'side')
 export const CoverSide390 = storyAt('minimal', 'FirstVisit', 'phone390', 'side');
 export const CoverSide768 = storyAt('minimal', 'FirstVisit', 'tablet768', 'side');
 export const CoverSide1440 = storyAt('minimal', 'Contributed', 'desktop1440', 'side');
+
+/** Left / centre × sharp / soft / round (owner remark 111). */
+export const AlignCornersMatrix = matrixStory('minimal');
