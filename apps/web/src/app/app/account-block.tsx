@@ -45,7 +45,7 @@ export function AccountBlock({
       <div className="flex min-w-0 items-center gap-2.5">
         <span
           aria-hidden="true"
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-info-soft text-[0.8125rem] font-semibold text-link md:size-6 md:text-[0.6875rem]"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-info-soft text-[0.875rem] font-semibold text-link md:size-6 md:text-xs"
         >
           {accountInitial(displayName, email)}
         </span>
@@ -53,7 +53,7 @@ export function AccountBlock({
           <span className="sr-only">{t('signedInAs')} </span>
           {displayName === null ? null : (
             <span
-              className="min-w-0 shrink-0 truncate text-[0.8125rem] font-medium"
+              className="min-w-0 shrink-0 truncate text-[0.875rem] font-medium"
               title={displayName}
             >
               {displayName}
@@ -62,8 +62,8 @@ export function AccountBlock({
           <span
             className={
               displayName === null
-                ? 'min-w-0 truncate text-[0.8125rem] font-medium'
-                : 'min-w-0 truncate text-[0.8125rem] text-muted-foreground'
+                ? 'min-w-0 truncate text-[0.875rem] font-medium'
+                : 'min-w-0 truncate text-[0.875rem] text-muted-foreground'
             }
             title={email}
           >
