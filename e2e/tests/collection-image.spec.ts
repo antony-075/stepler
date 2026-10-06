@@ -90,8 +90,8 @@ test.describe('collection image', () => {
     await expect(markOf(dialog)).toHaveAttribute('data-state', 'image');
     await page.keyboard.press('Escape');
 
-    // The collection page's mini-nav (from 1440px) shows it above the title.
-    await page.setViewportSize({ width: 1440, height: 900 });
+    // The collection page's mini-nav (from 1500px) shows it above the title.
+    await page.setViewportSize({ width: 1536, height: 900 });
     await page.goto(`/app/collections/${id}`);
     await expect(markOf(page.locator('[data-slot="page-header"]'))).toHaveAttribute(
       'data-state',
@@ -149,7 +149,7 @@ test.describe('collection image', () => {
     await page.goto('/app');
     await expect(markOf(card(page))).toHaveText(INITIALS);
     await expect(markOf(card(page))).toHaveAttribute('data-state', 'initials');
-    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.setViewportSize({ width: 1536, height: 900 });
     await page.goto(`/app/collections/${id}`);
     await expect(markOf(page.locator('[data-slot="page-header"]'))).toHaveText(INITIALS);
   });

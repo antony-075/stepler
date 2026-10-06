@@ -36,10 +36,11 @@ import { LinksSheet, useLinksSheet } from './links/links-sheet';
 import { useCollection } from '../use-collection';
 
 /**
- * From 1440px the collection's mini-nav sits beside the content (V1); narrower, its column would
- * squeeze the guest-page editor's preview, so the tabs stay a row above the content.
+ * From 1500px the collection's mini-nav sits beside the content (V1); narrower, its column would
+ * squeeze the guest-page editor's preview, so the tabs stay a row above the content. (1440px
+ * until the mini-nav grew to 350px, owner remark 174: at 1440 the preview's toolbar was cut.)
  */
-const WIDE = '(min-width: 90rem)';
+const WIDE = '(min-width: 93.75rem)';
 
 /**
  * The mini-nav's column (350px; owner remark 174, 2026-10-06: 280px was too narrow) and the
@@ -196,7 +197,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <LinksSheet collection={collection} links={links.data.items} sheet={sheet} />
     );
 
-  // From 1440px (V1, owner 2026-10-06): a 350px mini-nav beside the content, sticky under the top
+  // From 1500px (V1, owner 2026-10-06): a 350px mini-nav beside the content, sticky under the top
   // bar at the window's height, with the collection's header, «Поділитися» and the four tabs as
   // a vertical list whose highlight slides. The content gets the full height.
   if (wide) {
@@ -312,7 +313,7 @@ function ArchivedNotice({ id }: { id: string }) {
 
 /**
  * The collection page's shape while it loads (owner 2026-10-06): the mini-nav beside a frame grid
- * from 1440px, else the header, the tabs and the grid; shown only after 180ms.
+ * from 1500px, else the header, the tabs and the grid; shown only after 180ms.
  */
 function OverviewSkeleton({ label }: { label: string }) {
   const wide = useMediaQuery(WIDE);
