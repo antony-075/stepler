@@ -58,17 +58,28 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { CheckSquare, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckSquare, Download, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type MouseEvent, type PointerEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import {
   bulkDeleteContent,
   contentCountsKey,
   contentListKey,
   contentListsKey,
   deleteContent,
+  getContent,
   listContent,
 } from '@/api/content';
 import { collectionsListKey } from '@/api/collections';
@@ -83,12 +94,11 @@ import {
   lockedFilters,
   sortFromParam,
 } from './content-filters';
-import { useDraftCoverFromFrame } from '../guest-page/use-draft-cover-from-frame';
 import { ContentViewer } from './content-viewer';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
-import { refreshFrames, usePendingPreviews } from './use-pending-previews';
+import { contentDetailKey, refreshFrames, usePendingPreviews } from './use-pending-previews';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
@@ -110,12 +120,13 @@ export function ContentTab({ collection }: { collection: Collection }) {
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
   const { toast } = useToast();
-  const setCover = useDraftCoverFromFrame(collection.id);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   // The frame toggled last: the start of a Shift+click range.
   const [anchor, setAnchor] = useState<string | null>(null);
   const [confirmingBulk, setConfirmingBulk] = useState(false);
+  // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
+  const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
   const view = `${kind ?? 'all'}:${sort}`;
   const [selectionView, setSelectionView] = useState(view);
@@ -207,6 +218,23 @@ export function ContentTab({ collection }: { collection: Collection }) {
       queryClient.invalidateQueries({ queryKey: contentCountsKey(collection.id) }),
       queryClient.invalidateQueries({ queryKey: collectionsListKey(collection.status) }),
     ]);
+  }
+
+  /**
+   * A tile's «Завантажити»: the frame's signed download link (an attachment), from the detail
+   * the viewer reads too (cached for half an hour).
+   */
+  async function downloadFrame(item: AdminContentItem) {
+    try {
+      const detail = await queryClient.fetchQuery({
+        queryKey: contentDetailKey(item.id),
+        queryFn: () => getContent(item.id),
+        staleTime: 30 * 60_000,
+      });
+      if (detail.downloadUrl) window.location.assign(detail.downloadUrl);
+    } catch {
+      toast({ variant: 'error', title: t('tile.downloadFailed') });
+    }
   }
 
   async function removeFrame(item: AdminContentItem) {
@@ -471,6 +499,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
                 <AdminFrame
                   item={item}
                   collectionId={collection.id}
+                  onDownload={() => void downloadFrame(item)}
+                  onDelete={() => setDeleting(item)}
                   onOpen={() => {
                     if (!longPress.consume(item.id)) openFrame(item.frameNo);
                   }}
@@ -543,7 +573,25 @@ export function ContentTab({ collection }: { collection: Collection }) {
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
         onClose={closeViewer}
         onDelete={removeFrame}
-        {...(collection.status === 'ARCHIVED' ? {} : { onSetCover: setCover })}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        title={t('delete.title', { frame: formatFrameNumber(deleting?.frameNo ?? 0) })}
+        description={t('delete.text')}
+        confirmLabel={t('delete.confirm')}
+        cancelLabel={t('delete.cancel')}
+        pendingLabel={t('delete.pending')}
+        errorMessage={t('delete.failed')}
+        destructive
+        onConfirm={async () => {
+          if (deleting === null) return;
+          await deleteContent(deleting.id);
+          await dropFrames(new Set([deleting.id]));
+          toast({ variant: 'info', title: t('delete.done') });
+        }}
       />
     </div>
   );
@@ -553,11 +601,15 @@ function AdminFrame({
   item,
   collectionId,
   onOpen,
+  onDownload,
+  onDelete,
   selection,
 }: {
   item: AdminContentItem;
   collectionId: string;
   onOpen: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
   /** In selection mode: the frame toggles instead of opening. */
   selection?: { selected: boolean; onToggle: (event: MouseEvent<HTMLButtonElement>) => void };
 }) {
@@ -578,15 +630,31 @@ function AdminFrame({
     selection === undefined
       ? {}
       : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
+  // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
+  const quick = {
+    outlined: true,
+    overlay: (
+      <>
+        {item.kind === 'TEXT' ? null : (
+          <TileAction label={t('tile.download', { number: item.frameNo })} onClick={onDownload}>
+            <Download aria-hidden="true" />
+          </TileAction>
+        )}
+        <TileAction label={t('tile.delete', { number: item.frameNo })} onClick={onDelete}>
+          <Trash2 aria-hidden="true" />
+        </TileAction>
+      </>
+    ),
+  };
   if (item.kind === 'TEXT') {
     return (
       <Frame
         kind="text"
-        number={item.frameNo}
         text={item.text ?? ''}
         name={name}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -595,12 +663,12 @@ function AdminFrame({
     return (
       <Frame
         kind="document"
-        number={item.frameNo}
         {...(item.sizeBytes === null ? {} : { meta: formatBytes(format.number, item.sizeBytes) })}
         docType={documentType(item)}
         {...(item.originalFilename === null ? {} : { docTitle: item.originalFilename })}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -617,10 +685,10 @@ function AdminFrame({
         {...(picture.kind === 'thumbnail'
           ? { media: <Thumbnail url={picture.url} item={item} collectionId={collectionId} /> }
           : {})}
-        number={item.frameNo}
         {...duration}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -628,11 +696,11 @@ function AdminFrame({
   return (
     <Frame
       kind="pending-preview"
-      number={item.frameNo}
       {...duration}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={accessibleName}
       onOpen={onOpen}
+      {...quick}
       {...select}
     />
   );
@@ -751,4 +819,31 @@ function useLongPress(onLongPress: (id: string) => void) {
       return true;
     },
   };
+}
+
+/** A 32px icon button over a tile's corner, on a dark disc so it reads on any picture. */
+function TileAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        'grid size-8 place-items-center rounded-control bg-[rgb(24_24_27/0.72)] text-[#FFFFFF] transition-colors duration-(--duration-fast) hover:bg-[rgb(24_24_27/0.9)] motion-reduce:transition-none [&_svg]:size-4',
+        focusRing,
+        'focus-visible:outline-[#FFFFFF]',
+      )}
+    >
+      {children}
+    </button>
+  );
 }

@@ -35,17 +35,19 @@ export type Choice<T extends string> = {
   ariaLabel?: string;
 };
 
+// Every variant sets its own height at every pointer and width: the chip's dense 32px (V1, with a
+// mouse from `md`) must never squeeze a taller tile, which would then spill over the next row.
 const ITEM = {
   segments:
-    'h-auto min-h-11 min-w-0 justify-center border-border bg-card px-3 py-2 text-center leading-tight whitespace-normal text-foreground',
+    'h-auto md:pointer-fine:h-auto pointer-coarse:h-auto min-h-11 min-w-0 justify-center border-border bg-card px-3 py-2 text-center leading-tight whitespace-normal text-foreground',
   tiles:
-    'h-auto min-h-14 min-w-0 justify-start gap-2 border-border bg-card px-2.5 py-2 text-left leading-tight whitespace-normal text-foreground',
+    'h-auto md:pointer-fine:h-auto pointer-coarse:h-auto min-h-14 min-w-0 justify-start gap-2 border-border bg-card px-2.5 py-2 text-left leading-tight whitespace-normal text-foreground',
   // One size for every sample (owner remark 108): the tile fills its column, the name has two
   // lines reserved and is clamped, and the choice is the 1px edge every item already has.
   backgrounds:
-    'h-full min-w-0 flex-col items-stretch justify-start gap-1 border-transparent bg-transparent p-1 text-center text-xs leading-tight font-medium whitespace-normal text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground [&>[data-slot=toggle-group-item-icon]]:block [&>[data-slot=toggle-group-item-label]]:line-clamp-2 [&>[data-slot=toggle-group-item-label]]:min-h-[2.5em] [&>[data-slot=toggle-group-item-label]]:[overflow-wrap:normal]',
+    'h-full md:pointer-fine:h-full pointer-coarse:h-full min-w-0 flex-col items-stretch justify-start gap-1 border-transparent bg-transparent p-1 text-center text-xs leading-tight font-medium whitespace-normal text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-transparent data-[state=on]:text-foreground aria-checked:border-foreground aria-checked:bg-transparent aria-checked:font-medium aria-checked:text-foreground [&>[data-slot=toggle-group-item-icon]]:block [&>[data-slot=toggle-group-item-label]]:line-clamp-2 [&>[data-slot=toggle-group-item-label]]:min-h-[2.5em] [&>[data-slot=toggle-group-item-label]]:[overflow-wrap:normal]',
   swatches:
-    'size-9 min-w-0 gap-0 rounded-full border-2 border-transparent bg-transparent p-[3px] pointer-coarse:size-11 hover:border-border data-[state=on]:border-foreground data-[state=on]:bg-transparent [&>[data-slot=toggle-group-item-icon]]:size-full [&>[data-slot=toggle-group-item-label]]:hidden',
+    'size-9 md:pointer-fine:size-9 min-w-0 gap-0 rounded-full border-2 border-transparent bg-transparent p-[3px] pointer-coarse:size-11 hover:border-border data-[state=on]:border-foreground data-[state=on]:bg-transparent aria-checked:border-foreground aria-checked:bg-transparent [&>[data-slot=toggle-group-item-icon]]:size-full [&>[data-slot=toggle-group-item-label]]:hidden',
 } as const;
 
 const CHOSEN = 'data-[state=on]:border-foreground data-[state=on]:shadow-sm';

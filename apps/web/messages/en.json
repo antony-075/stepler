@@ -102,8 +102,8 @@
         "settings": "Collection settings"
       },
       "account": "Account",
-      "collapse": "Collapse the sidebar",
-      "expand": "Expand the sidebar"
+      "collapse": "Collapse the menu",
+      "expand": "Expand the menu"
     },
     "breadcrumbs": "Breadcrumb"
   },
@@ -212,7 +212,9 @@
     "sort": {
       "newest": "Newest",
       "oldest": "Oldest",
-      "title": "By title"
+      "title": "By title",
+      "largest": "Largest",
+      "smallest": "Smallest"
     },
     "nothingFound": "No collections with “{query}” in the title.",
     "noArchived": "The archive is empty.",
@@ -242,14 +244,14 @@
       "collection": "Collection",
       "guestsAdd": "Guests can add",
       "frames": "Frames",
-      "date": "Date",
-      "status": "Status"
+      "status": "Status",
+      "size": "Size",
+      "last": "Latest frame",
+      "created": "Created"
     },
-    "dateLabel": {
-      "ACTIVE": "Created",
-      "ARCHIVED": "Archived"
-    },
-    "guestsClosed": "Guests can’t open it"
+    "guestsClosed": "Guests can’t open it",
+    "cellName": "{name}:",
+    "none": "—"
   },
   "collection": {
     "pageTitle": "Collection",
@@ -292,7 +294,8 @@
       "leave": "The collection details aren’t saved. Leave the page without saving?",
       "subtitle": "Title and description, guest access, archive and deletion.",
       "archiving": "Archiving",
-      "archiveTitle": "Archive the collection"
+      "archiveTitle": "Archive the collection",
+      "detailsTitle": "Title and description"
     },
     "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
     "share": "Share",
@@ -302,18 +305,6 @@
       "links": "Links",
       "appearance": "Guest page",
       "settings": "Collection settings"
-    },
-    "inline": {
-      "editTitle": "Edit title",
-      "editDescription": "Edit description",
-      "addDescription": "Add a description",
-      "titleField": "Collection title",
-      "descriptionField": "Collection description",
-      "descriptionHint": "Ctrl+Enter or ⌘+Enter saves, Esc cancels.",
-      "save": "Save",
-      "cancel": "Cancel",
-      "saved": "Saved",
-      "failed": "Couldn’t save"
     }
   },
   "content": {
@@ -388,8 +379,7 @@
       "noPreviewYet": "The preview comes later",
       "documentOpen": "Documents open after you download them.",
       "photoAlt": "Frame {number}",
-      "dimensionsValue": "{width, number} × {height, number}",
-      "setCover": "Make it the cover"
+      "dimensionsValue": "{width, number} × {height, number}"
     },
     "delete": {
       "title": "Delete frame {frame}?",
@@ -414,6 +404,11 @@
       "confirm": "Delete",
       "failed": "Couldn’t delete every frame. Try again — the ones already deleted stay deleted.",
       "done": "{count, plural, one {# frame deleted} other {# frames deleted}}"
+    },
+    "tile": {
+      "download": "Download frame {number}",
+      "delete": "Delete frame {number}",
+      "downloadFailed": "Couldn’t get the file. Try again."
     }
   },
   "guestLinks": {
@@ -1130,12 +1125,6 @@
       "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen",
       "unusable": "Cannot be used",
       "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen"
-    },
-    "fromViewer": {
-      "added": "Cover added to the draft",
-      "addedText": "Guests will see it once you save the guest page.",
-      "open": "Open the guest page",
-      "openAlt": "Open the «Guest page» tab to save the changes."
     },
     "splitLabel": "Settings panel width",
     "statusShort": {

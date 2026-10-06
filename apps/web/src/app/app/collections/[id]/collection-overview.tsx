@@ -35,7 +35,7 @@ import { LinksSheet, useLinksSheet } from './links/links-sheet';
 import { useCollection } from '../use-collection';
 
 /**
- * From 1440px the collection's mini-nav sits beside the content (V1); narrower, the 248px column
+ * From 1440px the collection's mini-nav sits beside the content (V1); narrower, the 280px column
  * would squeeze the guest-page editor's preview, so the tabs stay a row above the content.
  */
 const WIDE = '(min-width: 90rem)';
@@ -189,7 +189,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <LinksSheet collection={collection} links={links.data.items} sheet={sheet} />
     );
 
-  // From 1440px (V1, owner 2026-10-06): a 248px mini-nav beside the content, sticky under the top
+  // From 1440px (V1, owner 2026-10-06): a 280px mini-nav beside the content, sticky under the top
   // bar at the window's height, with the collection's header, «Поділитися» and the four tabs as
   // a vertical list whose highlight slides. The content gets the full height.
   if (wide) {
@@ -200,15 +200,21 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           onValueChange={selectTab}
           orientation="vertical"
           // Out to the panel's edges: the mini-nav's line runs from the top bar to the bottom.
-          className="-mx-(--admin-gutter) -mt-6 -mb-16 grid grid-cols-[15.5rem_minmax(0,1fr)] items-start gap-0 laptop:-mt-5"
+          // `data-page-top="tight"`: the shell's --page-top shrinks to the mini-nav's own inset,
+          // so the sidebar's «Колекції» lines up with the mini-nav's first line.
+          data-page-top="tight"
+          className="-mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start gap-0"
         >
           {/* 58px: under the top bar (the panel's 8px margin and the 50px bar with its edges). */}
           <aside
             aria-label={collection.title}
-            className="sticky top-[58px] flex h-[calc(100dvh-58px-var(--shell-inset-bottom))] min-w-0 flex-col gap-4 overflow-y-auto border-r px-3 pt-3 pb-4"
+            className="sticky top-[58px] flex h-[calc(100dvh-58px-var(--shell-inset-bottom))] min-w-0 flex-col gap-4 overflow-y-auto border-r px-4 pt-(--page-top) pb-4"
           >
             <CollectionHeader collection={collection} layout="nav" />
-            <TabsList variant="nav" aria-label={t('tabs.label')} className="border-t pt-3.5">
+            <div aria-hidden="true" className="border-t" />
+            {/* The rows' icons and labels start on the cover's edge; their highlight bleeds
+                10px to each side. */}
+            <TabsList variant="nav" aria-label={t('tabs.label')} className="-mx-2.5 -mt-0.5">
               {triggers}
             </TabsList>
           </aside>
@@ -291,15 +297,54 @@ function ArchivedNotice({ id }: { id: string }) {
   );
 }
 
+/**
+ * The collection page's shape while it loads (owner 2026-10-06): the mini-nav beside a frame grid
+ * from 1440px, else the header, the tabs and the grid; shown only after 180ms.
+ */
 function OverviewSkeleton({ label }: { label: string }) {
+  const wide = useMediaQuery(WIDE);
+  const grid = (
+    <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-6">
+      {Array.from({ length: 12 }, (_, i) => (
+        <Skeleton key={i} className="aspect-square" />
+      ))}
+    </div>
+  );
+  if (wide) {
+    return (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={label}
+        data-page-top="tight"
+        className="loading-delayed -mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start"
+      >
+        <div className="grid gap-3 border-r px-4 pt-(--page-top) pb-4">
+          <Skeleton className="aspect-[16/9] w-full rounded-sheet" />
+          <Skeleton className="h-6 w-4/5" />
+          <Skeleton className="h-4 w-3/5" />
+          <Skeleton className="h-9 w-full" />
+          <div className="grid gap-2 border-t pt-3">
+            {[0, 1, 2, 3].map((key) => (
+              <Skeleton key={key} className="h-7 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-4 px-6 pt-5 pb-16">
+          <Skeleton className="h-9 w-full max-w-xl" />
+          {grid}
+        </div>
+      </div>
+    );
+  }
   return (
-    <div role="status" aria-busy="true" aria-label={label} className="grid gap-8">
-      <div className="grid gap-3">
-        <Skeleton className="h-11 w-28" />
-        <Skeleton className="h-9 w-2/3 max-w-md" />
+    <div role="status" aria-busy="true" aria-label={label} className="loading-delayed grid gap-5">
+      <div className="grid gap-2.5">
+        <Skeleton className="h-8 w-2/3 max-w-md" />
         <Skeleton className="h-5 w-48" />
       </div>
-      <Skeleton className="h-64 w-full rounded-sheet" />
+      <Skeleton className="h-11 w-full rounded-[7px] md:w-[36rem] md:pointer-fine:h-10" />
+      {grid}
     </div>
   );
 }
