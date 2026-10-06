@@ -28,7 +28,6 @@ import { fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 import { setLocaleCookie } from '@/i18n/set-locale';
 import { BrandLoading } from '@/components/brand-loading';
-import { BrandMark } from '@/components/brand-mark';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { TopbarCrumbsProvider, useTopbarCrumbs } from '@/components/topbar-crumbs';
 import { AccountBlock } from './account-block';
@@ -141,15 +140,10 @@ export function AppShell({
                 collapsed ? 'justify-center px-3' : 'pr-2 pl-4',
               )}
             >
-              {/* Folded: the «S» alone, «Розгорнути меню» in its own row under it. */}
-              <BrandLink markOnly={collapsed} />
-              {collapsed ? null : <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />}
+              {/* Folded (owner 2026-10-06): no logo, only «Розгорнути меню» on this line. */}
+              {collapsed ? null : <BrandLink />}
+              <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />
             </div>
-            {collapsed ? (
-              <div className="flex justify-center px-3">
-                <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />
-              </div>
-            ) : null}
             {/* The nav starts where the page's first line does (--page-top under the top bar); its
               36px row is 5px taller than the h1's line, so it starts 2.5px higher to share the
               h1's centre line. */}
@@ -226,11 +220,10 @@ function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
 }
 
 /**
- * Back to the collections. Expanded (owner 2026-10-06): the wordmark «stepler» alone (Golos Text
- * 700, as in the logo files; ink in light, near-white in dark). `markOnly` (the folded rail):
- * the wordmark's «S» in blue, named by a screen-reader-only wordmark.
+ * Back to the collections (owner 2026-10-06): the wordmark «stepler» alone (Golos Text 700, as in
+ * the logo files; ink in light, near-white in dark). The folded rail shows no logo.
  */
-function BrandLink({ markOnly = false }: { markOnly?: boolean }) {
+function BrandLink() {
   const t = useTranslations('brand');
   return (
     <Link
@@ -238,12 +231,11 @@ function BrandLink({ markOnly = false }: { markOnly?: boolean }) {
       translate="no"
       className={cn(
         'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-control text-[1.1875rem] text-foreground no-underline',
-        markOnly ? 'justify-center' : '-ml-1 px-1',
+        '-ml-1 px-1',
         focusRing,
       )}
     >
-      {markOnly ? <BrandMark kind="letter" className="h-8" /> : null}
-      <span className={cn('font-wordmark lowercase', markOnly && 'sr-only')}>{t('name')}</span>
+      <span className="font-wordmark lowercase">{t('name')}</span>
     </Link>
   );
 }
