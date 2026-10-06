@@ -333,8 +333,24 @@ export function ContentTab({ collection }: { collection: Collection }) {
               ))}
             </ToggleGroup>
           </div>
-          <div className="flex min-w-0 items-center gap-3">
-            <span id={sortId} className="shrink-0 text-sm text-muted-foreground max-sm:sr-only">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+            <Button
+              variant="ghost"
+              aria-disabled={refreshing || undefined}
+              onClick={() => void refreshAll()}
+              className="h-11 shrink-0 px-3 text-foreground-soft md:h-9 pointer-coarse:h-11"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(
+                  'size-4',
+                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+                )}
+              />
+              <span className="max-sm:sr-only">{t('refresh')}</span>
+            </Button>
+            <span id={sortId} className="sr-only">
               {t('sortLabel')}
             </span>
             <Select
@@ -345,7 +361,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
             >
               <SelectTrigger
                 aria-labelledby={sortId}
-                className="h-11 w-full min-w-0 sm:min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+                className="h-11 w-full min-w-0 sm:min-w-40 md:h-9 md:w-auto pointer-coarse:h-11"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -359,6 +375,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
             {/* «Вибрати», then «Вибрати все завантажене» while selecting; icon only on phones. */}
             {selecting ? (
               <Button
@@ -381,22 +398,6 @@ export function ContentTab({ collection }: { collection: Collection }) {
                 <span className="max-sm:sr-only">{t('select.start')}</span>
               </Button>
             )}
-            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
-            <Button
-              variant="outline"
-              aria-disabled={refreshing || undefined}
-              onClick={() => void refreshAll()}
-              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-            >
-              <RefreshCw
-                aria-hidden="true"
-                className={cn(
-                  'size-4',
-                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
-                )}
-              />
-              <span className="max-sm:sr-only">{t('refresh')}</span>
-            </Button>
           </div>
         </div>
       </div>
@@ -457,7 +458,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
         </Panel>
       ) : (
         <div ref={grid} className="grid gap-4">
-          <FrameGrid ariaLabel={t('listLabel')}>
+          <FrameGrid ariaLabel={t('listLabel')} density="dense">
             {items.map((item) => (
               <div
                 key={item.id}
@@ -509,7 +510,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
               className="max-lg:-mx-(--stepler-gutter)"
               actions={
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   aria-disabled={selected.size === 0 || undefined}
                   onClick={() => {
                     if (selected.size > 0) setConfirmingBulk(true);

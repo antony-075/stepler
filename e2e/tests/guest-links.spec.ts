@@ -123,7 +123,8 @@ test.describe('links tab', () => {
       'Керувати',
     ]);
     const copyBox = await main.getByRole('button', { name: 'Копіювати посилання' }).boundingBox();
-    expect(copyBox!.height).toBeGreaterThanOrEqual(40);
+    // 44px on phones; V1's dense 36px with a mouse (above WCAG 2.5.8's 24px).
+    expect(copyBox!.height).toBeGreaterThanOrEqual(page.viewportSize()!.width < 768 ? 40 : 32);
     // The row itself is not a link: a click on its text stays put.
     await expect(main.getByRole('link')).toHaveCount(0);
     await main.getByText(/^Фото · Відео/).click();

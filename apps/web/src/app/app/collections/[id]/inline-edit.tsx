@@ -59,7 +59,7 @@ function useSaveField(collection: Collection) {
   });
 }
 
-/** The visible pencil next to a field (not hover-only): 44px, named for what it edits. */
+/** The visible pencil next to a field (not hover-only): 44px (40px with a mouse), named for what it edits. */
 function PencilButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <Button
@@ -68,12 +68,25 @@ function PencilButton({ label, onClick }: { label: string; onClick: () => void }
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="shrink-0 text-muted-foreground hover:text-foreground"
+      className="shrink-0 text-muted-foreground hover:text-foreground md:pointer-fine:size-10"
     >
-      <Pencil aria-hidden="true" />
+      <Pencil aria-hidden="true" className="size-3.5" />
     </Button>
   );
 }
+
+/** `page`: the page header (below 1440px). `nav`: the collection's mini-nav from 1440px (V1). */
+type EditSize = 'page' | 'nav';
+
+const TITLE_CLASS: Record<EditSize, string> = {
+  page: 'type-h1 pt-1.5',
+  nav: 'pt-2 text-lg leading-tight font-[650] tracking-[-0.012em]',
+};
+
+const DESCRIPTION_CLASS: Record<EditSize, string> = {
+  page: 'pt-2.5 text-sm',
+  nav: 'pt-2.5 text-[0.8125rem] leading-[1.45] text-foreground-soft',
+};
 
 /** ✓ and ✕ for touch, next to the field being edited. */
 function EditActions({
@@ -140,7 +153,13 @@ const FIELD = cn(
  * or ✕ cancels. The title rules are the API's (1–100 characters, one line); the error is shown
  * under the field. Archived collections are read-only: no pencil.
  */
-export function EditableTitle({ collection }: { collection: Collection }) {
+export function EditableTitle({
+  collection,
+  size = 'page',
+}: {
+  collection: Collection;
+  size?: EditSize;
+}) {
   const t = useTranslations('collection.inline');
   const tForm = useTranslations('collections.form');
   const [editing, setEditing] = useState(false);
@@ -200,7 +219,7 @@ export function EditableTitle({ collection }: { collection: Collection }) {
             value={value}
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={onKeyDown}
-            className={cn(FIELD, 'type-h1 py-0.5 xl:text-[2rem]')}
+            className={cn(FIELD, TITLE_CLASS[size], 'py-0.5')}
           />
           <EditActions pending={save.isPending} onSave={commit} onCancel={cancel} />
         </div>
@@ -212,7 +231,7 @@ export function EditableTitle({ collection }: { collection: Collection }) {
     <div className="flex min-w-0 items-start gap-1">
       <h1
         data-slot="page-header-title"
-        className="type-h1 min-w-0 [overflow-wrap:anywhere] xl:text-[2rem] laptop:text-[1.625rem]"
+        className={cn('min-w-0 [overflow-wrap:anywhere]', TITLE_CLASS[size])}
       >
         {collection.title}
       </h1>
@@ -226,7 +245,13 @@ export function EditableTitle({ collection }: { collection: Collection }) {
  * none) turns it into a textarea that grows with its text; Ctrl/Cmd+Enter, ✓ or leaving the
  * field saves, Escape or ✕ cancels. Empty clears it. Archived: read-only.
  */
-export function EditableDescription({ collection }: { collection: Collection }) {
+export function EditableDescription({
+  collection,
+  size = 'page',
+}: {
+  collection: Collection;
+  size?: EditSize;
+}) {
   const t = useTranslations('collection.inline');
   const tForm = useTranslations('collections.form');
   const [editing, setEditing] = useState(false);
@@ -308,7 +333,7 @@ export function EditableDescription({ collection }: { collection: Collection }) 
       <Button
         variant="ghost"
         onClick={start}
-        className="-ml-3 justify-self-start font-normal text-muted-foreground"
+        className="-ml-3 justify-self-start font-normal text-muted-foreground md:pointer-fine:-ml-3"
       >
         <Plus aria-hidden="true" />
         {t('addDescription')}
@@ -317,7 +342,12 @@ export function EditableDescription({ collection }: { collection: Collection }) 
   }
   return (
     <div className="flex max-w-[64ch] items-start gap-1">
-      <p className="min-w-0 pt-2.5 whitespace-pre-line [overflow-wrap:anywhere]">
+      <p
+        className={cn(
+          'min-w-0 whitespace-pre-line [overflow-wrap:anywhere]',
+          DESCRIPTION_CLASS[size],
+        )}
+      >
         {collection.description}
       </p>
       {readOnly ? null : <PencilButton label={t('editDescription')} onClick={start} />}

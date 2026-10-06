@@ -41,7 +41,7 @@ function triggerValues(children: ReactNode): string[] {
 // `segmented` (V1, DESIGN-SYSTEM.md §0.5): equal segments on the grey track with a white thumb
 // that slides to the active one; full width below `md` (where the collection page shows icon +
 // count only), its own width from `md`.
-// `nav` (V1): a vertical list of equal rows (the collection page's mini-nav from `xl`) with a
+// `nav` (V1): a vertical list of equal rows (the collection page's mini-nav from 1440px) with a
 // soft accent highlight that slides to the active row. Give its Tabs `orientation="vertical"`.
 // The thumb follows the active trigger by CSS alone (SegmentThumb).
 function TabsList({
@@ -83,10 +83,10 @@ function TabsList({
 
 // A segment: 44px on phones and touch, transparent over the track (the thumb shows the active
 // one), icon and label (and a count as data), the active one in foreground at 600. The ring is
-// drawn inside. Side padding grows from `sm` and `xl` so long labels («Гостьова сторінка»,
-// «Параметри колекції») fit untruncated.
+// drawn inside. 8px side padding (16px from `xl`): the segments are equal, so the collection
+// page's four labels («Гостьова сторінка», «Параметри колекції») fit 768px untruncated.
 const SEGMENT = cn(
-  'relative z-1 inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-sm md:pointer-fine:min-h-9 whitespace-nowrap sm:gap-2 sm:px-3 xl:px-4 transition-colors duration-(--duration-fast) motion-reduce:transition-none',
+  'relative z-1 inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-sm md:pointer-fine:min-h-9 whitespace-nowrap xl:px-4 transition-colors duration-(--duration-fast) motion-reduce:transition-none',
   focusRingInset,
   'hover:text-foreground data-[state=active]:font-semibold data-[state=active]:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',
