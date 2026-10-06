@@ -4,9 +4,11 @@
 // - The h1 «Колекції» with the usage in one quiet line under it: active collections and storage,
 //   numbers in mono, each with a thin meter (decorative; the words carry it). One indigo
 //   «Нова колекція» on the right.
-// - One toolbar row: «Усі / Активні / Архів» with counts (a segmented control, the thumb slides),
-//   the search (in the browser, over the loaded collections), the sort and «Таблиця / Плитки».
-//   Counts are of what is loaded; a list with more pages says «50+».
+// - One toolbar row: the «Стан» filter (owner remark S2, 2026-10-06: a menu of checkboxes like
+//   «Вміст»'s, OR between «Активні / В архіві / Заблоковані», `?state=` in the URL, mono counts,
+//   «Скинути» at the foot; nothing checked = all), the search (in the browser, over the loaded
+//   collections), the sort and «Таблиця / Плитки». Counts are of what is loaded; a list with
+//   more pages says «50+». The list fades in again when the filter changes.
 // - «Таблиця» (the default) is a dense 64px-row table; «Плитки» the cards in a grid. The choice is
 //   remembered in this browser (localStorage, read after mount: the first paint is the table).
 //   Phones always get the cards and no toggle.
@@ -21,6 +23,15 @@ import { Input } from '@stepler/ui/components/input';
 import { PageHeader } from '@stepler/ui/components/page-header';
 import { Panel } from '@stepler/ui/components/panel';
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@stepler/ui/components/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -34,8 +45,19 @@ import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-grou
 import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Archive, Images, LayoutGrid, Plus, Rows3, Search, SearchX } from 'lucide-react';
+import {
+  Archive,
+  ChevronDown,
+  Images,
+  LayoutGrid,
+  Plus,
+  Rows3,
+  Search,
+  SearchX,
+  X,
+} from 'lucide-react';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   type ReactNode,
   useDeferredValue,
@@ -57,10 +79,12 @@ import {
   writeDashboardView,
 } from './dashboard-view';
 import {
-  type CollectionFilter as Filter,
   type CollectionSort as Sort,
-  COLLECTION_FILTERS as FILTERS,
+  type CollectionStateFilter as StateFilter,
   COLLECTION_SORTS as SORTS,
+  COLLECTION_STATE_FILTERS as STATE_FILTERS,
+  stateCounts,
+  statesFromParams,
   visibleCollections,
 } from './collection-filters';
 import { CreateCollectionDialog } from './create-collection-dialog';
@@ -108,8 +132,20 @@ export function CollectionsDashboard() {
   const t = useTranslations('collections');
   const locale = useLocale();
   const format = useFormatter();
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
   const [createOpen, setCreateOpen] = useState(false);
-  const [filter, setFilter] = useState<Filter>('all');
+  // The «Стан» filter lives in the URL (`?state=active&state=blocked`), so it survives a reload
+  // and can be shared, as the content tab's does.
+  const states = useMemo(() => statesFromParams(params.getAll('state')), [params]);
+  const setStates = (next: readonly StateFilter[]) => {
+    const query = new URLSearchParams(params.toString());
+    query.delete('state');
+    for (const one of next) query.append('state', one);
+    const search = query.toString();
+    router.replace(`${pathname}${search === '' ? '' : `?${search}`}`, { scroll: false });
+  };
   const [sort, setSort] = useState<Sort>('newest');
   const [query, setQuery] = useState('');
   // Typing stays responsive; the list follows a moment later.
@@ -130,35 +166,44 @@ export function CollectionsDashboard() {
   const shown = useMemo(
     () =>
       visibleCollections(activeItems, archivedItems, {
-        filter,
+        states,
         query: deferredQuery,
         sort,
         locale,
       }),
-    [activeItems, archivedItems, filter, deferredQuery, sort, locale],
+    [activeItems, archivedItems, states, deferredQuery, sort, locale],
   );
 
-  // «Усі» lists the archive after the active ones, under «Архів · N» (owner 2026-10-06);
-  // presentation only: the sort holds within each group, the «Архів» filter has no heading.
-  const archivedShown = shown.filter((collection) => collection.status === 'ARCHIVED').length;
+  // With nothing checked, the archive comes after the active ones under «Архів · N» (owner
+  // 2026-10-06); presentation only: the sort holds within each group. A checked state has no
+  // heading (S2). A blocked archived collection is blocked first, so it stays with the blocked.
+  const isArchived = (collection: Collection) =>
+    collection.status === 'ARCHIVED' && collection.blocked === null;
+  const archivedShown = shown.filter(isArchived).length;
   const grouped: (Collection | typeof ARCHIVE_GROUP)[] =
-    filter === 'all' && archivedShown > 0
+    states.length === 0 && archivedShown > 0
       ? [
-          ...shown.filter((collection) => collection.status !== 'ARCHIVED'),
+          ...shown.filter((collection) => !isArchived(collection)),
           ARCHIVE_GROUP,
-          ...shown.filter((collection) => collection.status === 'ARCHIVED'),
+          ...shown.filter(isArchived),
         ]
       : shown;
+  // Remounts the list when the filter changes, so it fades in again (the segmented thumb's
+  // motion before S2).
+  const listKey = states.join('+');
 
   const openCreate = () => setCreateOpen(true);
-  const counts: Record<Filter, string> = {
-    all: count(
-      activeItems.length + archivedItems.length,
-      active.hasNextPage || archived.hasNextPage,
-    ),
-    active: count(activeItems.length, active.hasNextPage),
-    archived: count(archivedItems.length, archived.hasNextPage),
+  const loadedCounts = stateCounts(activeItems, archivedItems);
+  const counts: Record<StateFilter, string> = {
+    active: count(loadedCounts.active, active.hasNextPage),
+    archived: count(loadedCounts.archived, archived.hasNextPage),
+    // A blocked collection may sit in either list.
+    blocked: count(loadedCounts.blocked, active.hasNextPage || archived.hasNextPage),
   };
+  // «Показати ще» per list: the active list holds active and blocked ones, the archive list
+  // archived and blocked ones.
+  const wantsActiveList = states.length === 0 || states.some((state) => state !== 'archived');
+  const wantsArchiveList = states.length === 0 || states.some((state) => state !== 'active');
 
   return (
     <>
@@ -251,13 +296,13 @@ export function CollectionsDashboard() {
           className="grid grid-cols-[minmax(0,1fr)] gap-4"
         >
           <h2 id="collections-list" className="sr-only">
-            {t(`filter.${filter}`)}
+            {t('pageTitle')}
           </h2>
           <Toolbar
             query={query}
             onQueryChange={setQuery}
-            filter={filter}
-            onFilterChange={setFilter}
+            states={states}
+            onStatesChange={setStates}
             counts={counts}
             sort={sort}
             onSortChange={setSort}
@@ -266,15 +311,19 @@ export function CollectionsDashboard() {
           />
           {shown.length === 0 ? (
             <NothingFound
-              filter={filter}
+              states={states}
               query={deferredQuery}
               onClear={() => {
                 setQuery('');
-                setFilter('all');
+                setStates([]);
               }}
             />
           ) : phone ? (
-            <ul className="grid grid-cols-[minmax(0,1fr)] gap-2" aria-label={t(`filter.${filter}`)}>
+            <ul
+              key={`cards-${listKey}`}
+              className="grid grid-cols-[minmax(0,1fr)] gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
+              aria-label={t('pageTitle')}
+            >
               {grouped.map((collection) =>
                 collection === ARCHIVE_GROUP ? (
                   <GroupHeading key="archive" count={archivedShown} className="mt-3" />
@@ -287,10 +336,10 @@ export function CollectionsDashboard() {
             </ul>
           ) : view === 'tiles' ? (
             <ul
-              key="tiles"
+              key={`tiles-${listKey}`}
               data-slot="collections-tiles"
               className="grid grid-cols-[repeat(auto-fill,minmax(16.5rem,1fr))] gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
-              aria-label={t(`filter.${filter}`)}
+              aria-label={t('pageTitle')}
             >
               {grouped.map((collection) =>
                 collection === ARCHIVE_GROUP ? (
@@ -308,13 +357,13 @@ export function CollectionsDashboard() {
             </ul>
           ) : (
             <div
-              key="table"
+              key={`table-${listKey}`}
               data-slot="collections-table"
               className="@container/table rounded-sheet border bg-card shadow-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
             >
               <div className={TABLE_COLUMNS}>
                 <CollectionTableHeader />
-                <ul aria-label={t(`filter.${filter}`)}>
+                <ul aria-label={t('pageTitle')}>
                   {grouped.map((collection) =>
                     collection === ARCHIVE_GROUP ? (
                       <GroupHeading
@@ -331,10 +380,8 @@ export function CollectionsDashboard() {
             </div>
           )}
           <div className="flex flex-wrap justify-center gap-2">
-            {filter === 'archived' ? null : <ShowMore list={active} label={t('showMore')} />}
-            {filter === 'active' ? null : (
-              <ShowMore list={archived} label={t('showMoreArchived')} />
-            )}
+            {wantsActiveList ? <ShowMore list={active} label={t('showMore')} /> : null}
+            {wantsArchiveList ? <ShowMore list={archived} label={t('showMoreArchived')} /> : null}
           </div>
         </section>
       )}
@@ -369,15 +416,15 @@ function GroupHeading({ count, className }: { count: number; className?: string 
 const count = (loaded: number, more: boolean): string => (more ? `${loaded}+` : String(loaded));
 
 /**
- * The toolbar (V1): the status filter as a segmented control with counts, the search, the sort
- * and the view toggle, on one row from `lg` (the search pushed right). Phones: the search and
- * the sort, then the filter at full width; no view toggle (`view` null).
+ * The toolbar (V1): the «Стан» filter (a menu of checkboxes with counts, S2), the search, the
+ * sort and the view toggle, on one row from `lg` (the search pushed right). Phones: the search
+ * and the sort, then the filter at full width (44px); no view toggle (`view` null).
  */
 function Toolbar({
   query,
   onQueryChange,
-  filter,
-  onFilterChange,
+  states,
+  onStatesChange,
   counts,
   sort,
   onSortChange,
@@ -386,9 +433,9 @@ function Toolbar({
 }: {
   query: string;
   onQueryChange: (query: string) => void;
-  filter: Filter;
-  onFilterChange: (filter: Filter) => void;
-  counts: Record<Filter, string>;
+  states: readonly StateFilter[];
+  onStatesChange: (states: readonly StateFilter[]) => void;
+  counts: Record<StateFilter, string>;
   sort: Sort;
   onSortChange: (sort: Sort) => void;
   view: DashboardView | null;
@@ -397,25 +444,71 @@ function Toolbar({
   const t = useTranslations('collections');
   const searchId = useId();
   const sortId = useId();
+  const chosen =
+    states.length === 0
+      ? t('state.all')
+      : states.length === 1
+        ? t(`state.${states[0]!}`)
+        : t('state.selected', { count: states.length });
   return (
     <div
       data-slot="collections-toolbar"
       className="flex flex-wrap items-center gap-2 max-md:flex-col max-md:items-stretch"
     >
-      <ToggleGroup
-        variant="segmented"
-        aria-label={t('filterLabel')}
-        value={filter}
-        onValueChange={(value) => onFilterChange(value as Filter)}
-        className="max-md:order-last max-md:w-full"
-      >
-        {FILTERS.map((value) => (
-          <ToggleGroupItem key={value} value={value}>
-            {t(`filter.${value}`)}
-            <span className="ml-0.5 type-data text-muted-foreground">{counts[value]}</span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+      {/* Non-modal and open while ticking (OR between states), as the content tab's «Стан». */}
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-11 w-full min-w-0 shrink justify-between font-normal md:h-9 md:w-auto md:min-w-44 pointer-coarse:h-11 max-md:order-last"
+          >
+            <span className="min-w-0 truncate">
+              <span className="text-muted-foreground">{t('state.prefix')}</span> {chosen}
+            </span>
+            <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-64">
+          <DropdownMenuLabel>{t('state.label')}</DropdownMenuLabel>
+          {STATE_FILTERS.map((value) => (
+            <DropdownMenuCheckboxItem
+              key={value}
+              checked={states.includes(value)}
+              // Stays open: the admin usually ticks more than one.
+              onSelect={(event) => event.preventDefault()}
+              onCheckedChange={(next) =>
+                onStatesChange(
+                  STATE_FILTERS.filter((other) =>
+                    other === value ? next === true : states.includes(other),
+                  ),
+                )
+              }
+            >
+              <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                {t(`state.${value}`)}
+              </span>
+              <span className="type-data ml-3 text-muted-foreground tabular-nums">
+                {counts[value]}
+              </span>
+            </DropdownMenuCheckboxItem>
+          ))}
+          {states.length === 0 ? null : (
+            <>
+              <DropdownMenuSeparator />
+              {/* The same gutter as the checkboxes, so the labels line up. */}
+              <DropdownMenuItem
+                className="pl-9 md:pointer-fine:pl-9"
+                onSelect={() => onStatesChange([])}
+              >
+                <span className="pointer-events-none absolute left-3 flex size-4 items-center justify-center">
+                  <X aria-hidden="true" />
+                </span>
+                {t('state.clear')}
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <div className="flex min-w-0 items-center gap-2 md:ml-auto">
         <div className="relative min-w-0 flex-1 md:w-52 md:flex-none xl:w-64">
           <label htmlFor={searchId} className="sr-only">
@@ -477,16 +570,17 @@ function Toolbar({
 
 /** A search or filter with no match: what was looked for, and a way back to everything. */
 function NothingFound({
-  filter,
+  states,
   query,
   onClear,
 }: {
-  filter: Filter;
+  states: readonly StateFilter[];
   query: string;
   onClear: () => void;
 }) {
   const t = useTranslations('collections');
   const searching = query.trim() !== '';
+  const only = states.length === 1 ? states[0] : undefined;
   return (
     <div
       data-slot="collections-nothing-found"
@@ -496,11 +590,13 @@ function NothingFound({
       <p role="status" className="max-w-[48ch] text-pretty">
         {searching
           ? t('nothingFound', { query: query.trim() })
-          : filter === 'archived'
+          : only === 'archived'
             ? t('noArchived')
-            : t('noActive')}
+            : only === 'active'
+              ? t('noActive')
+              : t('state.empty')}
       </p>
-      {searching || filter !== 'all' ? (
+      {searching || states.length > 0 ? (
         <Button variant="outline" onClick={onClear}>
           {t('showAll')}
         </Button>

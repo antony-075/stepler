@@ -33,7 +33,6 @@ const T = {
   deleted: 'Колекцію видалено',
   contentEmpty: 'Тут з’являться фото, відео й побажання гостей',
   notFound: 'Колекцію не знайдено',
-  filterLabel: 'Показати',
   details: 'Основна інформація',
 };
 
@@ -113,7 +112,7 @@ test.describe('dashboard', () => {
     await expect(dialog.getByLabel(T.title)).toHaveAttribute('aria-invalid', 'true');
   });
 
-  test('active and archived collections share one list; the chips filter it by status', async ({
+  test('active and archived collections share one list; the «Стан» menu filters it', async ({
     page,
   }) => {
     await signIn(page, newEmail());
@@ -123,10 +122,18 @@ test.describe('dashboard', () => {
     await page.reload();
 
     await expect(page.getByText('1 з 3 активних колекцій')).toBeVisible();
-    const filter = page.getByRole('radiogroup', { name: T.filterLabel });
-    // Counts are of what is loaded, as data next to each chip.
-    await expect(filter.getByRole('radio')).toHaveText(['Усі2', 'Активні1', 'Архів1']);
-    await expect(filter.getByRole('radio', { name: /^Усі/ })).toBeChecked();
+    // The «Стан» filter (S2): a menu of checkboxes with counts of what is loaded; nothing checked
+    // shows everything with the «Архів · 1» group heading.
+    const filter = page.getByRole('button', { name: /^Стан:/ });
+    await expect(filter).toHaveText('Стан: Усі');
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveText('Архів · 1');
+    await filter.click();
+    await expect(page.getByRole('menuitemcheckbox')).toHaveText([
+      'Активні1',
+      'В архіві1',
+      'Заблоковані0',
+    ]);
+    await page.keyboard.press('Escape');
     const archivedCard = card(page, 'Випускний 2025');
     await expect(archivedCard.getByText(T.archived, { exact: true })).toBeVisible();
     await expect(
@@ -137,10 +144,25 @@ test.describe('dashboard', () => {
       `/app/collections/${kept.id}`,
     );
 
-    await filter.getByRole('radio', { name: /^Архів/ }).click();
+    // One state: only its collections, no group heading, the URL carries it.
+    await filter.click();
+    await page.getByRole('menuitemcheckbox', { name: /^В архіві/ }).click();
+    await expect(filter).toHaveText('Стан: В архіві');
+    await expect(page).toHaveURL(/[?&]state=archived/);
     await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
     await expect(archivedCard).toBeVisible();
-    await filter.getByRole('radio', { name: /^Активні/ }).click();
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveCount(0);
+    // Two states (OR): both back, «2 вибрано»; the menu stayed open for the second tick.
+    await page.getByRole('menuitemcheckbox', { name: /^Активні/ }).click();
+    await expect(filter).toHaveText('Стан: 2 вибрано');
+    await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(2);
+    // «Скинути» clears to all.
+    await page.getByRole('menuitem', { name: 'Скинути' }).click();
+    await expect(filter).toHaveText('Стан: Усі');
+    await expect(page).not.toHaveURL(/state=/);
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveText('Архів · 1');
+    // Only active, from the URL.
+    await page.goto('/app?state=active');
     await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
     await expect(card(page, 'Ювілей бабусі')).toBeVisible();
   });

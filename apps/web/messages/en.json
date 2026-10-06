@@ -209,11 +209,16 @@
     "subtitle": "Create a collection for each event and gather photos, videos, documents and wishes from guests.",
     "search": "Search collections",
     "searchPlaceholder": "Search by title",
-    "filterLabel": "Show",
-    "filter": {
+    "state": {
+      "label": "State",
+      "prefix": "State:",
       "all": "All",
       "active": "Active",
-      "archived": "Archive"
+      "archived": "Archived",
+      "blocked": "Blocked",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "clear": "Clear",
+      "empty": "No collections in the chosen states."
     },
     "sortLabel": "Sort:",
     "sort": {

@@ -1,12 +1,18 @@
 import type { Collection } from '@stepler/contracts';
 import { describe, expect, it } from 'vitest';
-import { visibleCollections } from './collection-filters';
+import {
+  stateCounts,
+  stateFilterOf,
+  statesFromParams,
+  visibleCollections,
+} from './collection-filters';
 
 const collection = (
   title: string,
   createdAt: string,
   archived = false,
   storageBytes = 0,
+  blocked = false,
 ): Collection => ({
   id: `0198f0b0-0000-7000-8000-${String(Math.abs(hash(title)))
     .padStart(12, '0')
@@ -24,7 +30,7 @@ const collection = (
   storageBytes,
   welcomeMessage: null,
   image: null,
-  blocked: null,
+  blocked: blocked ? { at: createdAt, reason: 'Спам' } : null,
 });
 
 function hash(text: string): number {
@@ -37,10 +43,10 @@ const active = [
 ];
 const archived = [collection('Випускний 2025', '2026-08-01T10:00:00.000Z', true)];
 const titles = (items: Collection[]) => items.map((item) => item.title);
-const base = { filter: 'all', query: '', sort: 'newest', locale: 'uk' } as const;
+const base = { states: [], query: '', sort: 'newest', locale: 'uk' } as const;
 
 describe('visibleCollections', () => {
-  it('shows active and archived together, newest first, under «Усі»', () => {
+  it('shows active and archived together, newest first, with nothing checked', () => {
     expect(titles(visibleCollections(active, archived, base))).toEqual([
       'Весілля Олі',
       'Ювілей бабусі',
@@ -48,14 +54,37 @@ describe('visibleCollections', () => {
     ]);
   });
 
-  it('keeps one status under its chip', () => {
-    expect(titles(visibleCollections(active, archived, { ...base, filter: 'archived' }))).toEqual([
-      'Випускний 2025',
-    ]);
-    expect(titles(visibleCollections(active, archived, { ...base, filter: 'active' }))).toEqual([
+  it('keeps one state when it alone is checked', () => {
+    expect(titles(visibleCollections(active, archived, { ...base, states: ['archived'] }))).toEqual(
+      ['Випускний 2025'],
+    );
+    expect(titles(visibleCollections(active, archived, { ...base, states: ['active'] }))).toEqual([
       'Весілля Олі',
       'Ювілей бабусі',
     ]);
+  });
+
+  it('ORs the checked states and ANDs the search (owner remark S2)', () => {
+    const blocked = collection('Корпоратив', '2026-09-02T10:00:00.000Z', false, 0, true);
+    const blockedArchived = collection('Старий архів', '2026-07-01T10:00:00.000Z', true, 0, true);
+    const all = [...active, blocked];
+    const archive = [...archived, blockedArchived];
+    // A blocked collection is «Заблоковані», never «В архіві» or «Активні».
+    expect(titles(visibleCollections(all, archive, { ...base, states: ['blocked'] }))).toEqual([
+      'Корпоратив',
+      'Старий архів',
+    ]);
+    expect(titles(visibleCollections(all, archive, { ...base, states: ['archived'] }))).toEqual([
+      'Випускний 2025',
+    ]);
+    expect(
+      titles(visibleCollections(all, archive, { ...base, states: ['active', 'blocked'] })),
+    ).toEqual(['Весілля Олі', 'Корпоратив', 'Ювілей бабусі', 'Старий архів']);
+    expect(
+      titles(
+        visibleCollections(all, archive, { ...base, states: ['active', 'blocked'], query: 'кор' }),
+      ),
+    ).toEqual(['Корпоратив']);
   });
 
   it('finds titles by any part, ignoring case and surrounding spaces', () => {
@@ -97,5 +126,29 @@ describe('visibleCollections', () => {
       'Мала',
       'Велика',
     ]);
+  });
+});
+
+describe('the «Стан» options', () => {
+  it('reads ?state= values in the menu order, deduped, dropping unknown ones', () => {
+    expect(statesFromParams(['blocked', 'x', 'active', 'blocked'])).toEqual(['active', 'blocked']);
+    expect(statesFromParams([])).toEqual([]);
+  });
+
+  it('files a blocked collection under «Заблоковані», even an archived one', () => {
+    expect(stateFilterOf(collection('a', '2026-09-01T10:00:00.000Z', true, 0, true))).toBe(
+      'blocked',
+    );
+    expect(stateFilterOf(collection('a', '2026-09-01T10:00:00.000Z', true))).toBe('archived');
+    expect(stateFilterOf(collection('a', '2026-09-01T10:00:00.000Z'))).toBe('active');
+  });
+
+  it('counts by display status over both loaded lists', () => {
+    const blocked = collection('Корпоратив', '2026-09-02T10:00:00.000Z', false, 0, true);
+    expect(stateCounts([...active, blocked], archived)).toEqual({
+      active: 2,
+      archived: 1,
+      blocked: 1,
+    });
   });
 });
