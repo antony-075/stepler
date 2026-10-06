@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { contentModerationSchema } from './reports.js';
 import {
   codePointLength,
   NO_CONTROL_CHARACTERS,
@@ -69,6 +70,8 @@ export const adminContentItemSchema = z
     processingStatus: processingStatusSchema,
     text: z.string().nullable(),
     ...mediaUrls,
+    /** Hidden from guests (by whom, why) and the open reports the admin has not dismissed. */
+    moderation: contentModerationSchema,
   })
   .strict();
 export type AdminContentItem = z.infer<typeof adminContentItemSchema>;
@@ -149,6 +152,8 @@ export const adminContentListQuerySchema = z
   .object({
     kind: contentKindSchema.optional(),
     sort: adminContentSortSchema.default('newest'),
+    /** Only frames with open reports the admin has not dismissed («Скарги», R2). */
+    reported: z.enum(['true']).optional(),
     cursor,
     limit,
   })
@@ -172,6 +177,8 @@ export const contentCountsSchema = z
     document: count,
     text: count,
     lastAddedAt: z.iso.datetime().nullable(),
+    /** Non-deleted frames with open reports the admin has not dismissed. */
+    reported: count,
   })
   .strict();
 export type ContentCounts = z.infer<typeof contentCountsSchema>;

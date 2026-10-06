@@ -12,6 +12,7 @@ import {
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   adminContentDetailSchema,
+  adminContentItemSchema,
   adminContentListQuerySchema,
   adminContentPageSchema,
   bulkDeleteContentRequestSchema,
@@ -20,6 +21,7 @@ import {
   contentCountsSchema,
   contentIdParamsSchema,
   type AdminContentDetail,
+  type AdminContentItem,
   type AdminContentListQuery,
   type AdminContentPage,
   type BulkDeleteContentRequest,
@@ -95,6 +97,38 @@ export class AdminContentController {
     @Param({ schema: contentIdParamsSchema }) params: IdParams,
   ): Promise<AdminContentDetail> {
     return this.content.get(principal, params.id);
+  }
+
+  /** «Приховати від гостей» (R3): idempotent; an operator-hidden frame stays as it is. */
+  @Post('content/:id/hide')
+  @ApiTags('Moderation')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: adminContentItemSchema })
+  @ApiResponse(NOT_FOUND)
+  hide(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: contentIdParamsSchema }) params: IdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<AdminContentItem> {
+    return this.content.hide(principal, params.id, requestId);
+  }
+
+  /** «Показати гостям»: only a frame the admin hid. Idempotent. */
+  @Post('content/:id/unhide')
+  @ApiTags('Moderation')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: adminContentItemSchema })
+  @ApiResponse(NOT_FOUND)
+  @ApiResponse({
+    status: 409,
+    description: 'CONTENT_MODERATED: the Stepler operator hid it; the admin cannot show it',
+  })
+  unhide(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: contentIdParamsSchema }) params: IdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<AdminContentItem> {
+    return this.content.unhide(principal, params.id, requestId);
   }
 
   @Delete('content/:id')

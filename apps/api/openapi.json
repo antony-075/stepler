@@ -41,7 +41,9 @@
               "LEGAL_ACCEPTANCE_REQUIRED",
               "LEGAL_VERSION_OUTDATED",
               "GUEST_PAGE_DRAFT_CONFLICT",
-              "THEME_CONTRAST_TOO_LOW"
+              "THEME_CONTRAST_TOO_LOW",
+              "CONTENT_MODERATED",
+              "REPORT_RESOLVED"
             ],
             "type": "string"
           },
@@ -544,6 +546,25 @@
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
+                          "blocked": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "at": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "at",
+                              "reason"
+                            ],
+                            "type": "object"
+                          },
                           "contentCount": {
                             "maximum": 9007199254740991,
                             "minimum": 0,
@@ -705,7 +726,8 @@
                           "lastContentAt",
                           "storageBytes",
                           "welcomeMessage",
-                          "image"
+                          "image",
+                          "blocked"
                         ],
                         "type": "object"
                       },
@@ -790,6 +812,25 @@
                       "nullable": true,
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
                     },
                     "contentCount": {
                       "maximum": 9007199254740991,
@@ -952,7 +993,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -1052,6 +1094,25 @@
                       "nullable": true,
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
+                    },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
                     },
                     "contentCount": {
                       "maximum": 9007199254740991,
@@ -1235,6 +1296,7 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
+                    "blocked",
                     "storage"
                   ],
                   "type": "object"
@@ -1316,6 +1378,25 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
                     "contentCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -1477,7 +1558,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -1534,6 +1616,25 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
                     "contentCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -1695,7 +1796,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -1761,6 +1863,17 @@
               "enum": [
                 "newest",
                 "frame"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reported",
+            "required": false,
+            "schema": {
+              "enum": [
+                "true"
               ],
               "type": "string"
             }
@@ -1842,6 +1955,49 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "moderation": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "hidden": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "at": {
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                    "type": "string"
+                                  },
+                                  "by": {
+                                    "enum": [
+                                      "ADMIN",
+                                      "OPERATOR"
+                                    ],
+                                    "type": "string"
+                                  },
+                                  "reason": {
+                                    "nullable": true,
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "by",
+                                  "at",
+                                  "reason"
+                                ],
+                                "type": "object"
+                              },
+                              "openReports": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "hidden",
+                              "openReports"
+                            ],
+                            "type": "object"
+                          },
                           "originalFilename": {
                             "nullable": true,
                             "type": "string"
@@ -1903,7 +2059,8 @@
                           "text",
                           "thumbnailUrl",
                           "previewUrl",
-                          "posterUrl"
+                          "posterUrl",
+                          "moderation"
                         ],
                         "type": "object"
                       },
@@ -2097,6 +2254,11 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "reported": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "text": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -2119,7 +2281,8 @@
                     "video",
                     "document",
                     "text",
-                    "lastAddedAt"
+                    "lastAddedAt",
+                    "reported"
                   ],
                   "type": "object"
                 }
@@ -7700,6 +7863,25 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
                     "contentCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -7861,7 +8043,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -8135,6 +8318,25 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
                     "contentCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -8296,7 +8498,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -8506,6 +8709,25 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "blocked": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "at": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "reason"
+                      ],
+                      "type": "object"
+                    },
                     "contentCount": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -8667,7 +8889,8 @@
                     "lastContentAt",
                     "storageBytes",
                     "welcomeMessage",
-                    "image"
+                    "image",
+                    "blocked"
                   ],
                   "type": "object"
                 }
@@ -8811,6 +9034,49 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "moderation": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hidden": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "by": {
+                              "enum": [
+                                "ADMIN",
+                                "OPERATOR"
+                              ],
+                              "type": "string"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "by",
+                            "at",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "openReports": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "hidden",
+                        "openReports"
+                      ],
+                      "type": "object"
+                    },
                     "originalFilename": {
                       "nullable": true,
                       "type": "string"
@@ -8878,6 +9144,7 @@
                     "thumbnailUrl",
                     "previewUrl",
                     "posterUrl",
+                    "moderation",
                     "originalUrl",
                     "downloadUrl"
                   ],
@@ -8908,6 +9175,417 @@
         ],
         "tags": [
           "Content"
+        ]
+      }
+    },
+    "/api/v1/content/{id}/hide": {
+      "post": {
+        "operationId": "AdminContentController_hide_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contributorName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "durationMs": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "frameNo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PHOTO",
+                        "VIDEO",
+                        "DOCUMENT",
+                        "TEXT"
+                      ],
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "moderation": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hidden": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "by": {
+                              "enum": [
+                                "ADMIN",
+                                "OPERATOR"
+                              ],
+                              "type": "string"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "by",
+                            "at",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "openReports": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "hidden",
+                        "openReports"
+                      ],
+                      "type": "object"
+                    },
+                    "originalFilename": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "posterUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "previewUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "processingStatus": {
+                      "enum": [
+                        "NOT_REQUIRED",
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "width": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frameNo",
+                    "kind",
+                    "createdAt",
+                    "contributorName",
+                    "originalFilename",
+                    "mimeType",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "durationMs",
+                    "processingStatus",
+                    "text",
+                    "thumbnailUrl",
+                    "previewUrl",
+                    "posterUrl",
+                    "moderation"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content",
+          "Moderation"
+        ]
+      }
+    },
+    "/api/v1/content/{id}/unhide": {
+      "post": {
+        "operationId": "AdminContentController_unhide_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "contributorName": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "durationMs": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "frameNo": {
+                      "maximum": 9007199254740991,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "height": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PHOTO",
+                        "VIDEO",
+                        "DOCUMENT",
+                        "TEXT"
+                      ],
+                      "type": "string"
+                    },
+                    "mimeType": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "moderation": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "hidden": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "by": {
+                              "enum": [
+                                "ADMIN",
+                                "OPERATOR"
+                              ],
+                              "type": "string"
+                            },
+                            "reason": {
+                              "nullable": true,
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "by",
+                            "at",
+                            "reason"
+                          ],
+                          "type": "object"
+                        },
+                        "openReports": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "hidden",
+                        "openReports"
+                      ],
+                      "type": "object"
+                    },
+                    "originalFilename": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "posterUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "previewUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "processingStatus": {
+                      "enum": [
+                        "NOT_REQUIRED",
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ],
+                      "type": "string"
+                    },
+                    "sizeBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "text": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "thumbnailUrl": {
+                      "format": "uri",
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "width": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frameNo",
+                    "kind",
+                    "createdAt",
+                    "contributorName",
+                    "originalFilename",
+                    "mimeType",
+                    "sizeBytes",
+                    "width",
+                    "height",
+                    "durationMs",
+                    "processingStatus",
+                    "text",
+                    "thumbnailUrl",
+                    "previewUrl",
+                    "posterUrl",
+                    "moderation"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "409": {
+            "description": "CONTENT_MODERATED: the Stepler operator hid it; the admin cannot show it"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content",
+          "Moderation"
         ]
       }
     },

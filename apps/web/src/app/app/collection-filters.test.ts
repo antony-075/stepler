@@ -24,6 +24,7 @@ const collection = (
   storageBytes,
   welcomeMessage: null,
   image: null,
+  blocked: null,
 });
 
 function hash(text: string): number {

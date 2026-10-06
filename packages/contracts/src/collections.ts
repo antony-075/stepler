@@ -62,6 +62,11 @@ export const collectionSchema = z
      * `null` = the initials tile. Never shown to guests (they see the guest page's cover).
      */
     image: adminImageSchema.nullable(),
+    /**
+     * Blocked by the Stepler operator (R7): guests cannot open it; the reason is the operator's.
+     * `null` = not blocked. The owner cannot unblock it.
+     */
+    blocked: z.object({ at: z.iso.datetime(), reason: z.string() }).strict().nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

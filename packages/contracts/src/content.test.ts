@@ -79,6 +79,7 @@ describe('adminContentItemSchema', () => {
     processingStatus: 'NOT_REQUIRED',
     text: 'Вітаємо!',
     ...media,
+    moderation: { hidden: null, openReports: 0 },
   };
 
   test('accepts a text frame; the detail adds original and download links', () => {
@@ -87,6 +88,20 @@ describe('adminContentItemSchema', () => {
     expect(adminContentDetailSchema.parse(detail)).toEqual(detail);
     expect(adminContentItemSchema.safeParse({ ...item, frameNo: 0 }).success).toBe(false);
     expect(adminContentItemSchema.safeParse({ ...item, deletedAt: null }).success).toBe(false);
+  });
+
+  test('carries its moderation state (slice 9)', () => {
+    const hidden = {
+      ...item,
+      moderation: {
+        hidden: { by: 'OPERATOR', at: '2026-10-06T10:00:00.000Z', reason: 'Спам' },
+        openReports: 2,
+      },
+    };
+    expect(adminContentItemSchema.parse(hidden)).toEqual(hidden);
+    const withoutModeration: Partial<typeof item> = { ...item };
+    delete withoutModeration.moderation;
+    expect(adminContentItemSchema.safeParse(withoutModeration).success).toBe(false);
   });
 });
 
@@ -161,6 +176,11 @@ describe('list queries', () => {
     ).toEqual({ kind: 'TEXT', sort: 'frame', limit: 100 });
     expect(adminContentListQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
     expect(adminContentListQuerySchema.safeParse({ kind: 'AUDIO' }).success).toBe(false);
+    // «Скарги» (slice 9): only the literal `true`.
+    expect(adminContentListQuerySchema.parse({ reported: 'true' })).toMatchObject({
+      reported: 'true',
+    });
+    expect(adminContentListQuerySchema.safeParse({ reported: '1' }).success).toBe(false);
   });
 
   test('guest: the scope is required', () => {

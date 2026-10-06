@@ -91,15 +91,18 @@ export class ContentQueries {
     return { rows: items, nextCursor: more ? encodeCursor(last) : null };
   }
 
-  /** Non-deleted items by kind and the newest one's time, in one grouped query. */
-  async counts(collectionId: string): Promise<ContentCounts> {
+  /**
+   * Non-deleted items by kind and the newest one's time, in one grouped query. `reported` is the
+   * moderation module's (`ModerationReads.reportedCount`).
+   */
+  async counts(collectionId: string): Promise<Omit<ContentCounts, 'reported'>> {
     const groups = await this.prisma.contentItem.groupBy({
       by: ['kind'],
       where: { collectionId, deletedAt: null },
       _count: { _all: true },
       _max: { createdAt: true },
     });
-    const counts: ContentCounts = {
+    const counts: Omit<ContentCounts, 'reported'> = {
       total: 0,
       photo: 0,
       video: 0,

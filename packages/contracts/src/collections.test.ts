@@ -115,10 +115,22 @@ describe('collectionSchema', () => {
     storageBytes: 0,
     welcomeMessage: null,
     image: null,
+    blocked: null,
   };
 
   test('accepts a collection', () => {
     expect(collectionSchema.parse(collection)).toEqual(collection);
+  });
+
+  test('says whether the operator blocked it, and why (slice 9)', () => {
+    const blocked = {
+      ...collection,
+      blocked: { at: '2026-10-06T10:00:00.000Z', reason: 'Порушення умов' },
+    };
+    expect(collectionSchema.parse(blocked)).toEqual(blocked);
+    const withoutBlocked: Partial<typeof collection> = { ...collection };
+    delete withoutBlocked.blocked;
+    expect(collectionSchema.safeParse(withoutBlocked).success).toBe(false);
   });
 
   test('carries the welcome message and the collection image, both required and nullable; no cover', () => {
