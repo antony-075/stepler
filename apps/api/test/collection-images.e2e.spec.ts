@@ -146,12 +146,11 @@ describe('admin cover upload [A1]', () => {
       .get(`/api/v1/collections/${o.collectionId}/guest-page`)
       .set('Cookie', o.cookie)
       .expect(200);
-    expect(page.body).toMatchObject({ draft: { cover: { status: 'PENDING' } } });
-    const detail = await request(server)
-      .get(`/api/v1/collections/${o.collectionId}`)
-      .set('Cookie', o.cookie)
-      .expect(200);
-    expect(detail.body).toMatchObject({ cover: null });
+    // The draft's only: the published page (what guests see) has no cover yet.
+    expect(page.body).toMatchObject({
+      published: { cover: null },
+      draft: { cover: { status: 'PENDING' } },
+    });
   });
 
   test('a HEIC with no declared type is accepted as image/heic; completion is idempotent', async () => {

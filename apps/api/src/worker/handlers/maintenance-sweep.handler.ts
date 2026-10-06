@@ -139,10 +139,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
             AND job.state IN ('created', 'retry', 'active'))`;
   }
 
-  /**
-   * Image jobs use the singleton key `{name}:{imageId}`; the slice 8a queue (covers kept their
-   * ids) is checked too until PR L removes it.
-   */
+  /** Image jobs use the singleton key `{name}:{imageId}`. */
   private failStalledImages(createdBefore: Date): Promise<number> {
     return this.prisma.$executeRaw`
       UPDATE "CollectionImage" AS image SET "status" = 'FAILED'
@@ -150,7 +147,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
         AND image."createdAt" < ${createdBefore}
         AND NOT EXISTS (
           SELECT 1 FROM pgboss.job AS job
-          WHERE job.name IN ('media.collection-image', 'media.cover-derivatives')
+          WHERE job.name = 'media.collection-image'
             AND job.singleton_key = job.name || ':' || image.id::text
             AND job.state IN ('created', 'retry', 'active'))`;
   }

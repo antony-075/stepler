@@ -6,7 +6,7 @@ import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
-import { CollectionCoverImage } from './collection-cover-image';
+import { CollectionMark } from './collection-mark';
 import { formatBytes } from '@/format/bytes';
 import { ARCHIVED_COVER, ARCHIVED_SURFACE as ARCHIVED } from './archived-style';
 import { AccessBadge, CollectionStatusBadge } from './collection-row';
@@ -116,7 +116,7 @@ export function CollectionCard({
         data-status={collection.status}
         className={cn(CARD, 'h-full', archived && ARCHIVED)}
       >
-        <CollectionCoverImage
+        <CollectionMark
           collection={collection}
           size="band"
           className={cn('rounded-none border-b text-[2rem]', archived && ARCHIVED_COVER)}
@@ -150,7 +150,7 @@ export function CollectionCard({
       className={cn(CARD, 'gap-3 py-3.5 pr-1.5 pl-3.5', archived && ARCHIVED)}
     >
       <div className="flex min-w-0 items-start gap-3">
-        <CollectionCoverImage
+        <CollectionMark
           collection={collection}
           size="sm"
           className={cn('rounded-control', archived && ARCHIVED_COVER)}

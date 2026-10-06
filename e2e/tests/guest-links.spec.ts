@@ -26,7 +26,7 @@ const T = {
 
 const toast = (page: Page) => page.locator('[data-slot="toast-title"]');
 
-/** On a phone a toast sits over the bottom of the sheet: close every one first. */
+/** On a phone a toast can sit over the sheet (its top, under the top bar): close every one first. */
 async function closeToasts(page: Page): Promise<void> {
   await expect(async () => {
     const close = page.getByRole('button', { name: 'Закрити сповіщення' });

@@ -22,7 +22,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { contentListKey } from '@/api/content';
 import {
@@ -31,19 +31,14 @@ import {
   removeDraftImage,
   setDraftImageFromFrame,
 } from '@/api/collections';
-import { FramePicker } from '../frame-picker';
-import { imageErrorKey } from '../image-errors';
-import { imageState } from '../image-state';
-import { useImageUpload } from '../use-image-upload';
+import { FramePicker } from '../../images/frame-picker';
+import { imageErrorKey } from '../../images/image-errors';
+import { imageState } from '../../images/image-state';
+import { ImageProcessing, StatusLine as Line } from '../../images/image-status';
+import { useImageUpload } from '../../images/use-image-upload';
 
 /** What the file picker offers: the photo types the API takes for an admin image. */
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.heic,.heif';
-
-/**
- * Preparing an image takes seconds; past this it is not normal any more (the worker is down or
- * far behind, owner remark 81): the tile says so and offers to check again or remove it.
- */
-export const SLOW_PROCESSING_MS = 2 * 60_000;
 
 /**
  * One draft image (cover or background), as in E-editor, redesigned for owner remarks 74 and 81
@@ -181,7 +176,7 @@ export function ImageControl({
               <Progress value={upload.phase.progress} label={t('uploading')} />
             </>
           ) : state === 'processing' ? (
-            <Processing
+            <ImageProcessing
               onCheck={() =>
                 void queryClient.invalidateQueries({ queryKey: guestPageKey(collectionId) })
               }
@@ -272,65 +267,6 @@ export function ImageControl({
         />
       )}
     </div>
-  );
-}
-
-function Line({
-  children,
-  strong = false,
-  tone,
-}: {
-  children: ReactNode;
-  strong?: boolean;
-  tone?: 'muted' | 'destructive';
-}) {
-  return (
-    <p
-      className={cn('text-sm text-pretty', {
-        'font-semibold': strong,
-        'text-muted-foreground': tone === 'muted',
-        'text-destructive': tone === 'destructive',
-      })}
-    >
-      {children}
-    </p>
-  );
-}
-
-/**
- * «Готується…», and once it has taken longer than `SLOW_PROCESSING_MS` since this editor first
- * saw it, the slow state with «Перевірити ще раз». Mounted only while the image is processing,
- * so its clock starts over for the next image.
- */
-function Processing({ onCheck }: { onCheck: () => void }) {
-  const t = useTranslations('guestPage.image');
-  const [slow, setSlow] = useState(false);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setSlow(true), SLOW_PROCESSING_MS);
-    return () => window.clearTimeout(timer);
-  }, []);
-  if (!slow) {
-    return (
-      <>
-        <Line strong>{t('processing')}</Line>
-        <Line tone="muted">{t('processingText')}</Line>
-      </>
-    );
-  }
-  return (
-    <>
-      <Line strong>{t('slow')}</Line>
-      <Line tone="muted">{t('slowText')}</Line>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="-ml-2 justify-self-start text-link pointer-coarse:min-h-11"
-        onClick={onCheck}
-      >
-        <RotateCw aria-hidden="true" />
-        {t('check')}
-      </Button>
-    </>
   );
 }
 

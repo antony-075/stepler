@@ -300,7 +300,8 @@ describe('draft cover from a frame and its removal [A8][D1]', () => {
     expect((await queuedJobs(prisma, 'collection-image.purge')).map((job) => job.data)).toEqual([
       { collectionId: o.collectionId, imageId: cover?.id, slot: 'COVER' },
     ]);
-    expect((await o.detail().expect(200)).body).toMatchObject({ cover: null });
+    // Never published: guests never saw it.
+    expect(guestPageEditorSchema.parse(removed.body).published.cover).toBeNull();
     await o.remove().expect(200);
     expect(await queuedJobs(prisma, 'collection-image.purge')).toHaveLength(1);
   });

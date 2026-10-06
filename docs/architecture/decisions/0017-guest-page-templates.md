@@ -1,6 +1,6 @@
 # ADR 0017 — Guest Page Templates
 
-Status: Accepted (owner decisions 2026-10-04/05, D1–D5 confirmed; plan `docs/superpowers/plans/2026-10-05-guest-page-templates.md`; PR H and PR I reviewed)
+Status: Accepted (owner decisions 2026-10-04/05, D1–D5 confirmed; plan `docs/superpowers/plans/2026-10-05-guest-page-templates.md`; PR H and PR I reviewed; contract step done in PR L)
 Date: 2026-10-05
 
 This ADR covers the package, its contract, fonts and contrast (PR H), the storage model, the
@@ -171,9 +171,26 @@ Three things make this more than styling:
   a "publish now" adapter (they change the published version and the draft's, and move the draft
   to a new revision), so the old «Гостьова сторінка» tab works until PR J. The slice 8a job names
   stay served by the new handlers.
-- **PR J** removes the adapter routes with the old tab. **PR L (contract)** drops
+- **PR J** removes the adapter routes with the old tab. **PR L (contract)** was planned to drop
   `CollectionCover`, `CoverStatus`, `CoverSource`, `Collection.welcomeMessage` with its CHECK, the
   legacy job names, `Collection.cover` in the contract and the `LEGACY_COVER` upload target.
+- **Contraction done (PR L, 2026-10-05).** The migration `20261005130030_drop_slice_8a_cover`
+  drops the table, both enums, the column and its CHECK. Before anything is dropped, it checks
+  that the backfill covered the database and refuses otherwise, leaving it untouched:
+  - every collection has a published version;
+  - every cover that still has an image was copied with its id, collection and slot;
+  - nothing wrote the old table or column after PR I's migration started (`_prisma_migrations`);
+  - no `media.cover-derivatives` or `cover.purge` job is still waiting.
+
+  The worker and the job registry no longer know the two slice 8a names, and the collection DTO
+  no longer carries `cover`. **`LEGACY_COVER` stays:** every cover upload from before PR I keeps
+  it, because upload rows live as long as their collection. Dropping the value would mean
+  relabelling those rows with a target they never had. The value is never written and costs
+  nothing.
+- **«Картинка колекції» (PR L).** The dashboard card and the share dialog show
+  `Collection.image` (its 480 px thumbnail), else the initials, and never the guest page's cover
+  (owner 2026-10-05). It is set, picked from frames or removed in «Параметри колекції».
+  Guests never get it.
 - **Deploy (PR I):** the worker is suspended while the API migrates, then deployed before the web
   (runbook: `docs/deployment/staging.md`, release notes).
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { fileTypeFor, type GuestPageEditor } from '@stepler/contracts';
+import { fileTypeFor } from '@stepler/contracts';
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLeaveGuard } from '@/components/use-leave-guard';
@@ -13,9 +13,10 @@ import {
   type UploadTransport,
 } from '@/guest/upload/transport';
 
-// One admin image file (the draft's cover or background), browser → storage (spec §10.2, §10.7):
-// the same transport as a guest's (multipart, part retries, completion by the server) against
-// the draft image routes, whose completion answers the whole editor state. No queue: one file,
+// One admin image file (the draft's cover or background, or the collection image), browser →
+// storage (spec §10.2, §10.7): the same transport as a guest's (multipart, part retries,
+// completion by the server) against the image's routes, whose completion answers `T` (the whole
+// editor state, or the collection). No queue: one file,
 // «Скасувати» while it goes, «Повторити» after a retryable failure with the same
 // `clientUploadId` (a lost answer then finds the upload it completed). Only the type is checked
 // here; the size limit is the API's answer (`FILE_TOO_LARGE`).
@@ -41,9 +42,9 @@ export interface ImageUpload {
   cancel: () => void;
 }
 
-export function useImageUpload(
-  api: UploadApi<GuestPageEditor>,
-  onUploaded: (editor: GuestPageEditor) => void,
+export function useImageUpload<T>(
+  api: UploadApi<T>,
+  onUploaded: (result: T) => void,
   transport: UploadTransport = defaultTransport,
 ): ImageUpload {
   const t = useTranslations('guestPage.image');
@@ -88,12 +89,12 @@ export function useImageUpload(
         },
       )
       .then(
-        (editor) => {
+        (result) => {
           if (abort.signal.aborted) return;
           controller.current = null;
           attempt.current = null;
           setPhase({ kind: 'idle' });
-          done.current(editor);
+          done.current(result);
         },
         (error: unknown) => {
           if (abort.signal.aborted) return;

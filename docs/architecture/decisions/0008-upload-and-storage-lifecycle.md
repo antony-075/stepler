@@ -156,7 +156,7 @@ Headless Uppy (`@uppy/core` 6.2 + `@uppy/aws-s3` 6.2, 21.9 KB gzip) was measured
 **Status:** accepted (guest page templates, PR I; ADR 0017).
 
 - `UploadPurpose` gains `BACKGROUND` and `COLLECTION_IMAGE` beside `COVER`; the purpose is the image slot. `UploadSession_purpose_actor` now reads "every purpose but `CONTENT` has its uploader and nothing of a guest", and `UploadSession_admin_image_is_photo` replaces `UploadSession_cover_is_photo`.
-- `UploadSession.imageTarget` (`DRAFT`, `LEGACY_COVER`, `COLLECTION`; CHECK `UploadSession_image_target`: set iff the purpose is not `CONTENT`) records what the upload completes into, fixed at initiation. Every route finds uploads by purpose and target, so a draft cover upload cannot be completed through the legacy cover route, nor a background through the cover route (review M3). Open cover uploads at the upgrade were backfilled `LEGACY_COVER`.
+- `UploadSession.imageTarget` (`DRAFT`, `LEGACY_COVER`, `COLLECTION`; CHECK `UploadSession_image_target`: set iff the purpose is not `CONTENT`) records what the upload completes into, fixed at initiation. Every route finds uploads by purpose and target, so a draft cover upload cannot be completed through the legacy cover route, nor a background through the cover route (review M3). Open cover uploads at the upgrade were backfilled `LEGACY_COVER`. The value outlives PR L's contraction (2026-10-05): every pre-PR I cover upload keeps it (ADR 0017).
 - The cap of 3 open uploads counts per collection and purpose. The copy-then-record ordering, the shared `UploadInspector`, expiry and discard are unchanged.
 
 ## Addendum (2026-10-05): location metadata is stripped from originals once, at ingest

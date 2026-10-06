@@ -186,27 +186,45 @@ function useAvoidOffset(openKey: string): number {
   return offset;
 }
 
+/**
+ * Where toasts appear. `top-center` (the default; owner 2026-10-06): centred at the top, under
+ * the page's top bar (`--toast-top`, its height; 0 without one) and clear of the safe area.
+ * `bottom`: bottom-centre on phones, bottom-right from `sm`, lifted above any fixed bottom bar
+ * marked `data-toast-avoid` (pages whose top belongs to their own content, e.g. guest pages).
+ */
+type ToasterPosition = 'top-center' | 'bottom';
+
 type ToasterProps = {
   /** Name of the notifications region (e.g. "Сповіщення"); `{hotkey}` is replaced with F8. */
   label: string;
   /** Accessible name of each toast's close button. */
   closeLabel: string;
+  position?: ToasterPosition;
   className?: string;
 };
 
-// Based on shadcn/ui (new-york) toast. Deviations: rendered from context by one `Toaster`,
-// bottom-centre on phones (full width minus the 16px gutter, above the safe area) and
-// bottom-right from `sm`, the variant's soft fill and edge (8px radius, `--shadow-popover`), a built-in icon
-// per variant, a 44px close button, `error` toasts use Radix's `foreground` type (announced
-// assertively), and motion is off under reduced motion: enter = fade + 8px rise (180ms), exit =
-// fade (120ms).
-function Toaster({ label, closeLabel, className }: ToasterProps) {
+// Enter: fade and a short slide from the edge the toasts sit on (160ms); exit: the reverse, faster
+// (120ms). Transform and opacity only; nothing moves under reduced motion.
+const MOTION: Record<ToasterPosition, string> = {
+  'top-center':
+    'motion-safe:data-[state=open]:slide-in-from-top-2 motion-safe:data-[state=closed]:slide-out-to-top-2',
+  bottom: 'motion-safe:data-[state=open]:slide-in-from-bottom-2',
+};
+
+// Based on shadcn/ui (new-york) toast. Deviations: rendered from context by one `Toaster`, at
+// the top centre (full width minus the 16px gutter on phones, 420px from `sm`) or at the bottom
+// (`position`), the variant's soft fill and edge (8px radius, `--shadow-popover`), a built-in
+// icon per variant, a 44px close button, `error` toasts use Radix's `foreground` type (announced
+// assertively), and motion is off under reduced motion (`MOTION`).
+function Toaster({ label, closeLabel, position = 'top-center', className }: ToasterProps) {
   const { toasts, dismiss } = useToastContext();
+  const top = position === 'top-center';
   const openKey = toasts
     .filter((t) => t.open)
     .map((t) => t.id)
     .join(',');
-  const offset = useAvoidOffset(openKey);
+  // Only bottom toasts can meet a fixed bottom bar.
+  const offset = useAvoidOffset(top ? '' : openKey);
 
   return (
     <>
@@ -228,8 +246,9 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
               SURFACES[variant],
               focusRing,
               'ease-out animation-duration-[var(--duration-base)] data-[state=closed]:animation-duration-[var(--duration-fast)]',
-              'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in motion-safe:data-[state=open]:slide-in-from-bottom-2',
+              'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in',
               'motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out',
+              MOTION[position],
               // The swipe itself follows the finger; only the snap-back and the exit are animated.
               'data-[swipe=cancel]:translate-x-0 motion-safe:data-[swipe=cancel]:transition-transform data-[swipe=end]:translate-x-(--radix-toast-swipe-end-x) motion-safe:data-[swipe=end]:animate-out motion-safe:data-[swipe=end]:fade-out data-[swipe=move]:translate-x-(--radix-toast-swipe-move-x) data-[swipe=move]:transition-none',
             )}
@@ -273,11 +292,18 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
       <ToastPrimitive.Viewport
         data-slot="toast-viewport"
         label={label}
-        style={{ bottom: offset }}
+        data-position={position}
+        style={top ? undefined : { bottom: offset }}
         className={cn(
-          'pointer-events-none fixed inset-x-0 z-(--z-toast) m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none sm:left-auto sm:w-[420px] sm:max-w-full',
-          // Above a bottom bar the bar already clears the safe area; only the gutter remains.
-          { 'pb-[max(1rem,env(safe-area-inset-bottom))]': offset === 0 },
+          'pointer-events-none fixed inset-x-0 z-(--z-toast) m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none',
+          top
+            ? // 8px under the top bar, or clear of the notch on a page without one.
+              'top-(--toast-top,0px) mx-auto pt-[max(0.5rem,env(safe-area-inset-top))] sm:w-[420px] sm:max-w-full'
+            : [
+                'sm:left-auto sm:w-[420px] sm:max-w-full',
+                // Above a bottom bar the bar already clears the safe area; only the gutter remains.
+                { 'pb-[max(1rem,env(safe-area-inset-bottom))]': offset === 0 },
+              ],
           className,
         )}
       />
@@ -285,4 +311,11 @@ function Toaster({ label, closeLabel, className }: ToasterProps) {
   );
 }
 
-export { Toaster, ToastProvider, useToast, type ToastInput, type ToastVariant };
+export {
+  Toaster,
+  ToastProvider,
+  useToast,
+  type ToasterPosition,
+  type ToastInput,
+  type ToastVariant,
+};

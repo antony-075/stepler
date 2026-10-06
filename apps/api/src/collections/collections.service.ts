@@ -23,7 +23,6 @@ import { ImageUrls } from '../images/image-urls.js';
 import {
   type CollectionWithDefaultLink,
   type ContentStats,
-  imagesOf,
   toCollectionDto,
   WITH_DEFAULT_LINK,
 } from './collection-dto.js';
@@ -91,7 +90,7 @@ export class CollectionsService {
       return toCollectionDto({
         ...row,
         guestLinks: [link],
-        guestPageVersions: [{ welcomeMessage: null, coverImage: null }],
+        guestPageVersions: [{ welcomeMessage: null }],
         image: null,
       });
     });
@@ -133,7 +132,7 @@ export class CollectionsService {
     return {
       items: await Promise.all(
         items.map(async (row) =>
-          toCollectionDto(row, content.get(row.id), await this.signImages(row, now)),
+          toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image, now)),
         ),
       ),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
@@ -284,17 +283,7 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Collection> {
     const content = await this.contentStats([row.id], tx);
-    return toCollectionDto(row, content.get(row.id), await this.signImages(row));
-  }
-
-  /** The cover and the collection image, signed in one window. */
-  private async signImages(row: CollectionWithDefaultLink, now = new Date()) {
-    const { cover, image } = imagesOf(row);
-    const [coverDto, imageDto] = await Promise.all([
-      this.images.forAdmin(cover, now),
-      this.images.forAdmin(image, now),
-    ]);
-    return { cover: coverDto, image: imageDto };
+    return toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image));
   }
 
   /** One grouped query for a whole page, never one per collection (no N+1). */

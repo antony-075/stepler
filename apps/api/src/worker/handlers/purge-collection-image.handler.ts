@@ -42,15 +42,3 @@ export class PurgeCollectionImageHandler implements JobHandler<'collection-image
     );
   }
 }
-
-/** Legacy queue (slice 8a, until PR L): `cover.purge` jobs are COVER image purges. */
-@Injectable()
-export class LegacyPurgeCoverHandler implements JobHandler<'cover.purge'> {
-  readonly name = 'cover.purge';
-
-  constructor(private readonly images: PurgeCollectionImageHandler) {}
-
-  handle({ collectionId, coverId, ...meta }: JobData['cover.purge']): Promise<void> {
-    return this.images.handle({ collectionId, imageId: coverId, slot: 'COVER', ...meta });
-  }
-}

@@ -6,7 +6,7 @@ import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
-import { CollectionCoverImage } from '../../collection-cover-image';
+import { CollectionMark } from '../../collection-mark';
 import { AccessBadge, CollectionStatusBadge } from '../../collection-row';
 import { ShareButton } from './share-dialog';
 
@@ -16,9 +16,9 @@ import { ShareButton } from './share-dialog';
  * none), and the status and date. Read-only: the title and description are edited on the
  * «Параметри колекції» tab, as are archive and delete.
  *
- * `layout="nav"` (from 1440px, V1): the top of the collection's mini-nav, in a 280px column: the
- * cover as a full-width picture, the title and description, the status with the date, and «Поділитися» (the main link's
- * QR and link; active collections only).
+ * `layout="nav"` (from 1500px, V1): the top of the collection's mini-nav, in a 350px column: the
+ * collection image as a full-width picture (or its initials), the title and description, the
+ * status with the date, and «Поділитися» (the main link's QR and link; active collections only).
  */
 export function CollectionHeader({
   collection,
@@ -46,7 +46,7 @@ export function CollectionHeader({
         {/* Hands the trail to the top bar (shown there from `lg`; nothing here at this width). */}
         <CollectionBreadcrumbs collection={collection} />
         {/* The collection's face, full width (owner 2026-10-06): its picture, or its initials. */}
-        <CollectionCoverImage
+        <CollectionMark
           collection={collection}
           size="band"
           className="rounded-sheet text-[2.25rem] shadow-card"

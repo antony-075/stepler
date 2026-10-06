@@ -14,10 +14,7 @@ import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
-import {
-  LegacyPurgeCoverHandler,
-  PurgeCollectionImageHandler,
-} from '../src/worker/handlers/purge-collection-image.handler.js';
+import { PurgeCollectionImageHandler } from '../src/worker/handlers/purge-collection-image.handler.js';
 import { imageKey, imagePrefix } from '../src/images/image-keys.js';
 import { shutdownWorker } from '../src/worker/shutdown.js';
 import { WorkerModule } from '../src/worker/worker.module.js';
@@ -241,15 +238,6 @@ describe('worker handlers', () => {
       );
     });
 
-    test('a legacy cover.purge job ({ coverId }) purges a COVER image', async () => {
-      const { collectionId } = await seed();
-      const gone = await image(collectionId, false);
-      const legacy = new LegacyPurgeCoverHandler(handler());
-      expect(legacy.name).toBe('cover.purge');
-      await legacy.handle({ collectionId, coverId: gone });
-      expect(await allKeys(storage, coverPrefix(collectionId, gone))).toEqual([]);
-    });
-
     test('Review Focus 1: the collection purge removes the images with everything else', async () => {
       const { collectionId } = await seed({ status: 'DELETING' });
       await image(collectionId, true);
@@ -373,21 +361,15 @@ describe('worker handlers', () => {
         });
       const lost = await image(hourAgo, 'BACKGROUND');
       const queued = await image(hourAgo);
-      const legacyQueued = await image(hourAgo);
       const recent = await image(new Date());
       await prisma.$transaction(async (tx) => {
         await queue.enqueue(tx, 'media.collection-image', { collectionId, imageId: queued.id });
-        await queue.enqueue(tx, 'media.cover-derivatives', {
-          collectionId,
-          coverId: legacyQueued.id,
-        });
       });
       await sweep().handle();
       const status = async (id: string) =>
         (await prisma.collectionImage.findUniqueOrThrow({ where: { id } })).status;
       expect(await status(lost.id)).toBe('FAILED');
       expect(await status(queued.id)).toBe('PENDING');
-      expect(await status(legacyQueued.id)).toBe('PENDING');
       expect(await status(recent.id)).toBe('PENDING');
     });
 
