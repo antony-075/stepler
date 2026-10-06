@@ -119,3 +119,27 @@ export const REPORT_DECISION_COPY: Readonly<Record<MailLocale, ReportDecisionCop
     contact: 'If you disagree with the decision, write to {email}.',
   },
 };
+
+interface AccountBlockedCopy {
+  subject: string;
+  heading: string;
+  text: string;
+  /** `{email}` is `LEGAL_CONTACT_EMAIL`; the line is left out without it. */
+  contact: string;
+}
+
+/** Instead of a sign-in link, to a blocked account's own mailbox ([Q3], slice 9). */
+export const ACCOUNT_BLOCKED_COPY: Readonly<Record<MailLocale, AccountBlockedCopy>> = {
+  uk: {
+    subject: 'Stepler: акаунт заблоковано',
+    heading: 'Акаунт заблоковано',
+    text: 'Ваш акаунт Stepler заблоковано, тому посилання для входу не надіслано.',
+    contact: 'Якщо ви не згодні, напишіть на {email}.',
+  },
+  en: {
+    subject: 'Stepler: account blocked',
+    heading: 'Account blocked',
+    text: 'Your Stepler account is blocked, so no sign-in link was sent.',
+    contact: 'If you disagree, write to {email}.',
+  },
+};

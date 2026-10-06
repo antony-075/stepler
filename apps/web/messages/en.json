@@ -60,7 +60,8 @@
     "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
     "turnstileRetry": "Try again",
     "legalCheckbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
-    "legalHint": "Tick the box to continue."
+    "legalHint": "Tick the box to continue.",
+    "accountBlockedContact": "This account is blocked. If you disagree, write to {email}."
   },
   "verify": {
     "pageTitle": "Confirm sign-in",
@@ -254,7 +255,13 @@
     "guestsClosed": "Access closed",
     "cellName": "{name}:",
     "none": "—",
-    "archiveGroup": "Archive · {count}"
+    "archiveGroup": "Archive · {count}",
+    "blocked": {
+      "badge": "Blocked",
+      "title": "Collection blocked by moderation",
+      "text": "Guests can’t open it. Reason: {reason}.",
+      "contact": "If you disagree, write to <email></email>."
+    }
   },
   "collection": {
     "pageTitle": "Collection",

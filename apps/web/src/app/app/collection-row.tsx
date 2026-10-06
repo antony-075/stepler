@@ -217,11 +217,19 @@ export function CollectionStatusBadge({
 
 /**
  * Whether guests can get in, as a badge beside the collection's status (owner 2026-10-06: every
- * status is a badge): an archived collection is «Доступ закрито» (neutral); otherwise the main
- * link's state.
+ * status is a badge): a blocked collection is «Заблоковано» (danger, slice 9); an archived one
+ * «Доступ закрито» (neutral); otherwise the main link's state.
  */
 export function AccessBadge({ collection }: { collection: Collection }) {
   const t = useTranslations('collections');
+  // Blocked by the Stepler operator (slice 9, R7): closed to guests whatever the link says.
+  if (collection.blocked !== null) {
+    return (
+      <Badge data-slot="collection-access" variant="danger" title={t('blocked.badge')}>
+        {t('blocked.badge')}
+      </Badge>
+    );
+  }
   if (collection.status === 'ARCHIVED') {
     return (
       <Badge data-slot="collection-access" variant="neutral" title={t('guestsClosed')}>

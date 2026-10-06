@@ -40,6 +40,7 @@ export default defineConfig({
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
         // The operator's service accounts (slice 9, `support/operator.ts`); the same on the worker.
         OPERATOR_EMAILS,
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
         // Cloudflare's documented always-pass test keys.
         TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
         TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
@@ -82,6 +83,7 @@ export default defineConfig({
         SMTP_URL: E2E_SMTP_URL,
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
         OPERATOR_EMAILS,
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
         S3_ENDPOINT: E2E_S3_ENDPOINT,
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'stepler-test',

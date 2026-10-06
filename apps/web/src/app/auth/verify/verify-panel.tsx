@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest, isApiError } from '@/api/client';
 import { ME_QUERY_KEY } from '@/api/me';
-import { errorMessageKey } from '@/errors/error-message';
+import { signInErrorMessage } from '@/errors/error-message';
 import { LegalDocumentLink } from '@/legal/legal-consent';
 import { BrandLoading } from '@/components/brand-loading';
 
@@ -20,7 +20,14 @@ import { BrandLoading } from '@/components/brand-loading';
  * Loading this page only previews the link (read-only), so email scanners that open it do
  * not use it up. The link is consumed only when the person presses Sign in (Review Focus 1).
  */
-export function VerifyPanel({ token }: { token: string | null }) {
+export function VerifyPanel({
+  token,
+  contactEmail,
+}: {
+  token: string | null;
+  /** `LEGAL_CONTACT_EMAIL`, for a blocked account's message (slice 9); `null` when unset. */
+  contactEmail: string | null;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -71,7 +78,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
     token === null ? 'MAGIC_LINK_INVALID' : failureCode(preview.error ?? verify.error);
   if (failure !== null) {
     const retryable = failure === 'UPSTREAM_UNAVAILABLE' || failure === 'DEPENDENCY_UNAVAILABLE';
-    const message = t(errorMessageKey(failure));
+    const message = signInErrorMessage(t, failure, contactEmail);
     // A retryable failure offers Retry; otherwise the way out is a new link. Plain text under a
     // heading, not an Alert: the error is the whole content of this page.
     return (

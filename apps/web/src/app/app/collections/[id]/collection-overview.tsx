@@ -38,6 +38,7 @@ import { CollectionNotFound } from '../collection-not-found';
 import { GuestPageTab } from './guest-page/guest-page-tab';
 import { CollectionHeader } from './collection-header';
 import { type CollectionTab, tabOf } from './collection-tab';
+import { BlockedBanner } from './blocked-banner';
 import { ContentTab } from './content/content-tab';
 import { CollectionSettingsPanel } from './settings/collection-settings';
 import { LinksList } from './links/links-list';
@@ -163,9 +164,18 @@ function Overview({
     });
   };
 
-  const notice =
+  const archivedNotice =
     // On «Параметри колекції» the archiving card says the same with its own button: never two.
     archived && tab !== 'settings' ? <ArchivedNotice id={collection.id} /> : null;
+  // Blocked by the Stepler operator (slice 9, R7): first, on every tab.
+  const notice = (
+    <>
+      {collection.blocked === null ? null : (
+        <BlockedBanner reason={collection.blocked.reason} contactEmail={contactEmail} />
+      )}
+      {archivedNotice}
+    </>
+  );
   const triggers = (
     <>
       <TabsTrigger value="content">
