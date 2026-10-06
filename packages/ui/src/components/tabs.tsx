@@ -3,6 +3,7 @@ import {
   Children,
   type ComponentProps,
   createContext,
+  Fragment,
   isValidElement,
   type ReactNode,
   useContext,
@@ -26,13 +27,16 @@ type TabsVariant = 'line' | 'segmented' | 'nav';
 
 const VariantContext = createContext<TabsVariant>('line');
 
-/** The `value` of each direct trigger child, in order (for the sliding thumb). */
+/**
+ * The `value` of each trigger child, in order (for the sliding thumb), looking into fragments
+ * (a page that builds its triggers once as `<>…</>` for two layouts).
+ */
 function triggerValues(children: ReactNode): string[] {
-  return Children.toArray(children).flatMap((child) =>
-    isValidElement<{ value?: unknown }>(child) && typeof child.props.value === 'string'
-      ? [child.props.value]
-      : [],
-  );
+  return Children.toArray(children).flatMap((child) => {
+    if (!isValidElement<{ value?: unknown; children?: ReactNode }>(child)) return [];
+    if (child.type === Fragment) return triggerValues(child.props.children);
+    return typeof child.props.value === 'string' ? [child.props.value] : [];
+  });
 }
 
 // `line` (default; deviation from shadcn: no grey track): a row of text tabs on a 1px `--border`
@@ -41,7 +45,7 @@ function triggerValues(children: ReactNode): string[] {
 // `segmented` (V1, DESIGN-SYSTEM.md §0.5): equal segments on the grey track with a white thumb
 // that slides to the active one; full width below `md` (where the collection page shows icon +
 // count only), its own width from `md`.
-// `nav` (V1): a vertical list of equal rows (the collection page's mini-nav from 1440px) with a
+// `nav` (V1): a vertical list of equal rows (the collection page's mini-nav from 1500px) with a
 // soft accent highlight that slides to the active row. Give its Tabs `orientation="vertical"`.
 // The thumb follows the active trigger by CSS alone (SegmentThumb).
 function TabsList({
