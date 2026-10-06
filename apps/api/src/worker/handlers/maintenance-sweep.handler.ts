@@ -29,7 +29,9 @@ const ENQUEUE_CHUNK = 50;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
  *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
- *   behind), so nobody can come back to them.
+ *   behind), so nobody can come back to them;
+ * - deletes reporters' addresses (and their locale) kept longer than
+ *   `REPORT_EMAIL_RETENTION_DAYS` with no decision mail sent ([Q6]); logs the count only.
  */
 @Injectable()
 export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> {
@@ -40,7 +42,10 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     private readonly prisma: PrismaService,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
     @Inject(WORKER_ENV)
-    private readonly env: Pick<WorkerEnv, 'WORKER_PURGE_BATCH_SIZE' | 'GUEST_SESSION_IDLE_DAYS'>,
+    private readonly env: Pick<
+      WorkerEnv,
+      'WORKER_PURGE_BATCH_SIZE' | 'GUEST_SESSION_IDLE_DAYS' | 'REPORT_EMAIL_RETENTION_DAYS'
+    >,
   ) {}
 
   async handle(): Promise<void> {
@@ -113,6 +118,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     const stalledMedia = await this.failStalledMedia(staleBefore);
     const stalledImages = await this.failStalledImages(staleBefore);
     const idleSessions = await this.deleteIdleGuestSessions();
+    const reporterEmailsDeleted = await this.deleteOldReporterEmails();
     this.logger.log({
       msg: 'maintenance.sweep done',
       contentPurges: items.length,
@@ -121,6 +127,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       stalledMediaFailed: stalledMedia,
       stalledImagesFailed: stalledImages,
       idleSessionsDeleted: idleSessions,
+      reporterEmailsDeleted,
     });
     if (enqueueError !== undefined) throw enqueueError;
   }
@@ -165,6 +172,13 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
         }
       });
     }
+  }
+
+  private deleteOldReporterEmails(): Promise<number> {
+    return this.prisma.$executeRaw`
+      UPDATE "ContentReport" SET "reporterEmail" = NULL, "reporterLocale" = NULL
+      WHERE "reporterEmail" IS NOT NULL
+        AND "createdAt" < now() - make_interval(days => ${this.env.REPORT_EMAIL_RETENTION_DAYS}::int)`;
   }
 
   /** In batches, so no statement holds many row locks for long. */

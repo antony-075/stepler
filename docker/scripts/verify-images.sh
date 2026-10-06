@@ -166,10 +166,12 @@ docker run -d --name stepler-verify-web --network "$NET" -p 127.0.0.1:3199:3000 
 wait_healthy stepler-verify-api 30
 wait_healthy stepler-verify-web 30
 
-# The worker needs only the database to start (pg-boss installs its schema); S3 is not contacted
-# until a job runs, so placeholder storage values are enough here.
+# The worker needs only the database to start (pg-boss installs its schema); S3 and SMTP are not
+# contacted until a job runs, so placeholder storage and mail values are enough here.
 docker run -d --name stepler-verify-worker --network "$NET" \
   -e DATABASE_URL=postgresql://verify:verify@stepler-verify-db:5432/verify \
+  -e APP_ORIGIN=http://localhost:3000 -e SMTP_URL=smtp://placeholder:587 \
+  -e "MAIL_FROM=Stepler <no-reply@stepler.test>" \
   -e S3_REGION=auto -e S3_BUCKET=placeholder -e S3_ACCESS_KEY_ID=placeholder \
   -e S3_SECRET_ACCESS_KEY=placeholder "$WORKER_IMAGE" >/dev/null
 started=""

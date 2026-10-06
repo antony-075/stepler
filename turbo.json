@@ -192,7 +192,13 @@
         "GUEST_SESSION_IDLE_DAYS",
         "UPLOAD_URL_TTL_SECONDS",
         "S3_REQUEST_TIMEOUT_MS",
-        "S3_COMPLETE_TIMEOUT_MS"
+        "S3_COMPLETE_TIMEOUT_MS",
+        "APP_ORIGIN",
+        "SMTP_URL",
+        "MAIL_FROM",
+        "OPERATOR_EMAILS",
+        "LEGAL_CONTACT_EMAIL",
+        "REPORT_EMAIL_RETENTION_DAYS"
       ]
     },
     "build-storybook": {

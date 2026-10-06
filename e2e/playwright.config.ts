@@ -37,6 +37,8 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         SMTP_URL: E2E_SMTP_URL,
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+        // The operator's service account (slice 9); the same on the worker.
+        OPERATOR_EMAILS: 'moderation@stepler.test',
         // Cloudflare's documented always-pass test keys.
         TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
         TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
@@ -72,6 +74,11 @@ export default defineConfig({
         NODE_ENV: 'production',
         LOG_LEVEL: 'info',
         DATABASE_URL: E2E_DATABASE_URL,
+        // The report mail goes to Mailpit, with links to this web origin.
+        APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
+        SMTP_URL: E2E_SMTP_URL,
+        MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+        OPERATOR_EMAILS: 'moderation@stepler.test',
         S3_ENDPOINT: E2E_S3_ENDPOINT,
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'stepler-test',

@@ -196,6 +196,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
+| `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |
@@ -203,7 +204,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `LEGAL_ALLOW_DRAFT` | web | no | `true` lets a built server start on placeholder legal texts (`draft: true` in the registry) and without `LEGAL_CONTACT_EMAIL`: CI, the image check and staging set it; **production never does**, so the server refuses to start until the real texts are published (`docs/legal/README.md`, [C20]). `next dev` always allows drafts; default `false` |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
-The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables and the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` rows above; it needs no SMTP, Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
+The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables, the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` / `REPORT_EMAIL_RETENTION_DAYS` rows above and, for the report mail (slice 9), the API's `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, `OPERATOR_EMAILS` and optional `LEGAL_CONTACT_EMAIL`; it needs no Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
 
 ## Dependency policy
 

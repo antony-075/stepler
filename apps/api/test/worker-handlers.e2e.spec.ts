@@ -21,7 +21,7 @@ import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
 import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
-import { TEST_DATABASE_URL, testEnv } from './support/env.js';
+import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys, putObject } from './support/storage.js';
@@ -31,6 +31,7 @@ const coverPrefix = (collectionId: string, id: string) => imagePrefix(collection
 const apiEnv = testEnv();
 const workerEnv = (overrides: Record<string, string> = {}): WorkerEnv =>
   loadWorkerEnv({
+    ...WORKER_MAIL_ENV,
     NODE_ENV: 'test',
     LOG_LEVEL: 'error',
     DATABASE_URL: TEST_DATABASE_URL,

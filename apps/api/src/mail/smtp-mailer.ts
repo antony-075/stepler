@@ -27,13 +27,17 @@ export function smtpOptions(smtpUrl: string): SMTPTransportOptions {
   };
 }
 
-/** SMTP adapter (Mailpit locally). Message bodies contain sign-in links: never log them. */
+/**
+ * SMTP adapter (Mailpit locally). Message bodies contain sign-in links and addresses: never log
+ * them.
+ */
 @Injectable()
 export class SmtpMailer implements Mailer, OnModuleDestroy {
   private readonly transport: Transporter;
   private readonly from: string;
 
-  constructor(@Inject(API_ENV) env: ApiEnv) {
+  /** The API's env, or the worker's (it shares the mail variables). */
+  constructor(@Inject(API_ENV) env: Pick<ApiEnv, 'SMTP_URL' | 'MAIL_FROM'>) {
     this.transport = createTransport(smtpOptions(env.SMTP_URL));
     this.from = env.MAIL_FROM;
   }

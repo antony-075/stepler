@@ -44,6 +44,20 @@ const emailList = z
   )
   .pipe(z.array(z.email()));
 
+/**
+ * Mail and the links in it: the API sends sign-in mail, the worker the report mail (slice 9,
+ * [P1]), so both read these. `OPERATOR_EMAILS` is the Stepler operator's dedicated service
+ * mailbox (ADR 0013), never a personal account.
+ */
+export const mailEnvShape = {
+  APP_ORIGIN: origin,
+  OPERATOR_EMAILS: emailList.default([]),
+  SMTP_URL: z.url({ protocol: /^smtps?$/ }),
+  MAIL_FROM: z.string().regex(/^[^<>]+ <[^<>\s]+@[^<>\s]+>$/),
+  /** Where users write about moderation decisions; optional (drafts of the legal texts). */
+  LEGAL_CONTACT_EMAIL: z.email().optional(),
+};
+
 /** Variables the API and the worker (`worker/worker-env.ts`) both read. */
 export const sharedEnvShape = {
   NODE_ENV: z.enum(['development', 'test', 'production']),
@@ -77,18 +91,14 @@ export const sharedEnvShape = {
 const apiEnvSchema = z
   .object({
     ...sharedEnvShape,
+    ...mailEnvShape,
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
 
-    APP_ORIGIN: origin,
     COOKIE_SECURE: bool.optional(),
     SESSION_TTL_DAYS: positiveInt(30),
     MAGIC_LINK_TTL_MINUTES: positiveInt(15),
-    OPERATOR_EMAILS: emailList.default([]),
     API_TRUST_PROXY: trustProxy.default(false),
     APP_SECRET: appSecret,
-
-    SMTP_URL: z.url({ protocol: /^smtps?$/ }),
-    MAIL_FROM: z.string().regex(/^[^<>]+ <[^<>\s]+@[^<>\s]+>$/),
 
     TURNSTILE_SITE_KEY: z.string().min(1),
     TURNSTILE_SECRET_KEY: z.string().min(1),

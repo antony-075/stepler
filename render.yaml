@@ -108,6 +108,19 @@ services:
         sync: false
       - key: S3_SECRET_ACCESS_KEY
         sync: false
+      # The report mail (slice 9): the worker sends it, with the API's SMTP settings and origin
+      # (the console links), to the operator's service mailbox. LEGAL_CONTACT_EMAIL (optional) is
+      # the appeal address in the reporter's decision mail.
+      - key: APP_ORIGIN
+        sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: OPERATOR_EMAILS
+        sync: false
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false
 
   - type: web
     name: stepler-staging

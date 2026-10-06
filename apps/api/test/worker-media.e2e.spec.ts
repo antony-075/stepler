@@ -25,7 +25,7 @@ import { OriginalSanitizer } from '../src/worker/media/original-sanitizer.js';
 import { withWorkDir } from '../src/worker/media/work-dir.js';
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
 import { resetDatabase } from './support/database.js';
-import { TEST_DATABASE_URL, testEnv } from './support/env.js';
+import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { allKeys } from './support/storage.js';
 import { fixture } from './support/uploads.js';
 
@@ -34,6 +34,7 @@ const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnai
 
 const apiEnv = testEnv();
 const env = loadWorkerEnv({
+  ...WORKER_MAIL_ENV,
   NODE_ENV: 'test',
   LOG_LEVEL: 'error',
   DATABASE_URL: TEST_DATABASE_URL,
@@ -453,6 +454,8 @@ describe('JobRunner', () => {
       noop('media.video-poster') as never,
       noop('media.collection-image') as never,
       noop('collection-image.purge') as never,
+      noop('mail.report-received') as never,
+      noop('mail.report-decision') as never,
     );
   }
   const job = (retryCount: number) =>
