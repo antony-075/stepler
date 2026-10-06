@@ -73,6 +73,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | ----------------------------------------------- | ------------------------------------------------------------- |
 | `pnpm install`                                  | Install dependencies                                          |
 | `pnpm infra:up` / `pnpm infra:down`             | Start (and wait for healthy) / stop Postgres, Mailpit and the S3 emulator |
+| `pnpm mailpit`                                  | Start Mailpit alone (if not running) and open its inbox, http://127.0.0.1:8025 |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
