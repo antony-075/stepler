@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { horizontalOverflow } from '../support/collections.js';
 import { OPS_UK, signInAsOperator } from '../support/operator.js';
-import { seedReport } from '../support/reports.js';
+import { guestApi, seedReport } from '../support/reports.js';
 
 // The operator console at /ops (slice 9, R4, [P8]): the operator's service account only; for
 // anyone else signed in it does not exist, and a signed-out visitor signs in first.
@@ -67,5 +67,49 @@ test.describe('ops console access', () => {
     await signInAsOperator(page, testInfo);
     await expect(page.getByRole('heading', { name: 'Скарги', level: 1 })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+  });
+
+  test('the detail: hide the frame with a reason; guests no longer get it', async ({
+    browser,
+    page,
+  }, testInfo) => {
+    const admin = await (await browser.newContext({ locale: 'de-DE' })).newPage();
+    await signIn(admin, newEmail());
+    const seeded = await seedReport(admin);
+    const baseURL = new URL(admin.url()).origin;
+    await admin.context().close();
+
+    await signInAsOperator(page, testInfo);
+    await page.goto(`/ops/reports/${seeded.reportId}`);
+    await expect(
+      page.getByRole('heading', { name: 'Порушує приватність', level: 1 }),
+    ).toBeVisible();
+    await expect(page.getByText('Привітання від гостя')).toBeVisible();
+    await expect(page.getByText('Видимий', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Приховати кадр' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Приховати кадр' });
+    await dialog.getByRole('button', { name: 'Приховати', exact: true }).click();
+    // An empty reason keeps the dialog open with the field's error.
+    await expect(dialog.getByText('Вкажіть причину')).toBeVisible();
+    await dialog.getByLabel('Причина').fill('Тест');
+    await dialog.getByRole('button', { name: 'Приховати', exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText('Прихований', { exact: true })).toBeVisible();
+    await expect(page.getByText('Приховано модерацією. Причина: Тест')).toBeVisible();
+
+    const guest = await guestApi(baseURL, seeded.collectionId, seeded.linkPath);
+    const res = await guest.get(
+      `/api/v1/guest/collections/${seeded.collectionId}/content/${seeded.contentId}`,
+    );
+    expect(res.status()).toBe(404);
+    await guest.dispose();
+  });
+
+  test('a report that does not exist', async ({ page }, testInfo) => {
+    await signInAsOperator(page, testInfo);
+    await page.goto(`/ops/reports/${randomUUID()}`);
+    await expect(page.getByRole('heading', { name: 'Скаргу не знайдено' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Усі скарги' })).toBeVisible();
   });
 });

@@ -1245,6 +1245,122 @@
         "DISMISSED": "No dismissed reports yet"
       },
       "openReportsCount": "Reports on frame: {count}"
+    },
+    "collectionStatuses": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived",
+      "DELETING": "Being deleted"
+    },
+    "ownerStatuses": {
+      "ACTIVE": "Active",
+      "BLOCKED": "Blocked"
+    },
+    "detail": {
+      "back": "All reports",
+      "notFound": "Report not found",
+      "error": "Could not load the report.",
+      "content": "Content",
+      "contentPurged": "The content was deleted for good.",
+      "contentDeleted": "The content was deleted.",
+      "frameAlt": "Frame {frame}",
+      "noPreview": "No preview",
+      "openOriginal": "Open the original",
+      "hiddenByOperator": "Hidden by moderation. Reason: {reason}",
+      "hiddenByAdmin": "Hidden by the collection admin",
+      "addedAt": "Added {at}",
+      "report": "Report",
+      "reason": "Reason",
+      "description": "Description",
+      "noDescription": "No description",
+      "received": "Received",
+      "contact": "Contact",
+      "hasContact": "The reporter left a contact",
+      "noContact": "No contact",
+      "status": "State",
+      "adminDismissed": "Admin dismissed",
+      "decision": "Decision",
+      "otherReports": "Other reports on this frame ({count})",
+      "collection": "Collection",
+      "title": "Title",
+      "blocked": "Blocked",
+      "blockReason": "Block reason",
+      "owner": "Owner",
+      "email": "Email"
+    },
+    "actions": {
+      "reason": "Reason",
+      "reasonRequired": "Give a reason",
+      "reasonTooLong": "At most {max} characters",
+      "counter": "{count}/{max}",
+      "cancel": "Cancel",
+      "close": "Close",
+      "pending": "Saving…",
+      "failed": "Could not complete the action. Try again.",
+      "resolvedElsewhere": "This report was already decided differently.",
+      "gone": "This no longer exists. Reload the page.",
+      "hide": {
+        "button": "Hide frame",
+        "title": "Hide frame",
+        "description": "Guests will no longer see the frame. The admin sees the reason and cannot show it.",
+        "confirm": "Hide",
+        "done": "Frame hidden"
+      },
+      "unhide": {
+        "button": "Show frame",
+        "title": "Show frame to guests",
+        "description": "Guests will see the frame again.",
+        "confirm": "Show",
+        "done": "Frame visible to guests again"
+      },
+      "delete": {
+        "button": "Delete frame",
+        "title": "Delete frame",
+        "description": "The frame disappears for everyone for good; its files are deleted.",
+        "confirm": "Delete",
+        "done": "Frame deleted"
+      },
+      "dismiss": {
+        "button": "Dismiss report",
+        "title": "Dismiss report",
+        "description": "The decision covers every open report on this frame. A reporter with a contact gets an email.",
+        "confirm": "Dismiss",
+        "done": "Report dismissed"
+      },
+      "action": {
+        "button": "Mark as actioned",
+        "title": "Mark as actioned",
+        "description": "The decision covers every open report on this frame. A reporter with a contact gets an email.",
+        "confirm": "Mark",
+        "done": "Marked as actioned"
+      },
+      "blockCollection": {
+        "button": "Block collection",
+        "title": "Block collection",
+        "description": "Guests can no longer open the collection. The admin sees the reason and cannot unblock it.",
+        "confirm": "Block",
+        "done": "Collection blocked"
+      },
+      "unblockCollection": {
+        "button": "Unblock collection",
+        "title": "Unblock collection",
+        "description": "Guests can open the collection again.",
+        "confirm": "Unblock",
+        "done": "Collection unblocked"
+      },
+      "blockAccount": {
+        "button": "Block account",
+        "title": "Block account",
+        "description": "The owner is signed out everywhere and cannot sign in. None of their collections open for guests.",
+        "confirm": "Block",
+        "done": "Account blocked"
+      },
+      "unblockAccount": {
+        "button": "Unblock account",
+        "title": "Unblock account",
+        "description": "The owner can sign in again and their collections open for guests.",
+        "confirm": "Unblock",
+        "done": "Account unblocked"
+      }
     }
   }
 }
