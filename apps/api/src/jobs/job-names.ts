@@ -11,13 +11,6 @@ interface JobPayloads {
   'maintenance.sweep': Record<never, never>;
   'media.image-derivatives': { contentItemId: string };
   'media.video-poster': { contentItemId: string };
-  /**
-   * Legacy (slice 8a; kept until PR L so queued jobs still run): a COVER image's renditions.
-   * The id is the image's (covers kept their ids).
-   */
-  'media.cover-derivatives': { collectionId: string; coverId: string };
-  /** Legacy (slice 8a; kept until PR L): a COVER image's objects. */
-  'cover.purge': { collectionId: string; coverId: string };
   /** An admin image's renditions for its slot, from its copied original (plan Task 8). */
   'media.collection-image': { collectionId: string; imageId: string };
   /** The objects of an image no version or collection references (its prefix), unless it lives. */
@@ -74,8 +67,6 @@ export const JOB_OPTIONS = {
   'maintenance.sweep': PERIODIC,
   'media.image-derivatives': MEDIA,
   'media.video-poster': MEDIA_VIDEO,
-  'media.cover-derivatives': MEDIA,
-  'cover.purge': PURGE,
   'media.collection-image': MEDIA,
   'collection-image.purge': PURGE,
 } as const satisfies Record<JobName, JobOptions>;
@@ -90,8 +81,6 @@ const ENTITY_KEY: { [N in JobName]: (data: JobData[N]) => string | null } = {
   'maintenance.sweep': () => null,
   'media.image-derivatives': (data) => data.contentItemId,
   'media.video-poster': (data) => data.contentItemId,
-  'media.cover-derivatives': (data) => data.coverId,
-  'cover.purge': (data) => data.coverId,
   'media.collection-image': (data) => data.imageId,
   'collection-image.purge': (data) => data.imageId,
 };

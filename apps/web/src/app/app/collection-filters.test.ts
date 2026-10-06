@@ -23,7 +23,6 @@ const collection = (
   lastContentAt: null,
   storageBytes,
   welcomeMessage: null,
-  cover: null,
   image: null,
 });
 

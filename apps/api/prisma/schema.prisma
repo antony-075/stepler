@@ -52,19 +52,6 @@ enum ProcessingStatus {
   FAILED
 }
 
-/// A cover is PENDING until the worker made its derivatives (CHECK "CollectionCover_ready_dimensions").
-enum CoverStatus {
-  PENDING
-  READY
-  FAILED
-}
-
-/// Where the cover's original came from: the admin's own upload, or a copy of a guest photo frame.
-enum CoverSource {
-  UPLOAD
-  FRAME
-}
-
 /// What an upload becomes: a guest's content frame, or one of the admin's images: the guest page
 /// cover, its background, or the admin-only collection image [A1]
 /// (CHECKs "UploadSession_purpose_actor", "UploadSession_admin_image_is_photo").
@@ -105,8 +92,9 @@ enum GuestPageVersionState {
 /// What an admin image upload completes into, fixed at initiation (CHECK
 /// "UploadSession_image_target"): the draft's cover or background, or the collection image. A
 /// route completes only its own. `LEGACY_COVER` (the slice 8a cover routes, removed in PR J) is
-/// no longer written; its open uploads cannot complete and expire. The value stays so that
-/// removing it needs no enum rewrite of existing rows.
+/// no longer written; its open uploads cannot complete and expire. The value stays (PR L): every
+/// cover upload from before PR I keeps it (upload rows live as long as their collection), and
+/// removing it would mean relabelling those rows with a target they never had.
 enum ImageUploadTarget {
   DRAFT
   LEGACY_COVER
@@ -238,9 +226,6 @@ model Collection {
   title               String
   /// 1 to 1000 characters when set (CHECK "Collection_description_length").
   description         String?
-  /// Shown to guests above their main action; 1 to 160 code points when set
-  /// (CHECK "Collection_welcome_length") [A5].
-  welcomeMessage      String?
   /// ARCHIVED iff archivedAt is set, DELETING iff deletionRequestedAt is set
   /// (CHECKs "Collection_archived_consistent", "Collection_deleting_consistent").
   status              CollectionStatus   @default(ACTIVE)
@@ -260,7 +245,6 @@ model Collection {
   guestSessions       GuestSession[]
   contentItems        ContentItem[]
   uploadSessions      UploadSession[]
-  cover               CollectionCover?
   /// «Картинка колекції»: the owner's own image of the collection (dashboard, share dialog);
   /// never in a guest response. An image of this collection (composite key), NO ACTION so
   /// deleting the collection still cascades in one statement.
@@ -341,27 +325,6 @@ model GuestPageVersion {
   @@unique([collectionId, state])
   @@index([coverImageId])
   @@index([backgroundImageId])
-}
-
-/// The collection's cover [A2]: one row per collection, replaced whole (a replaced or removed
-/// cover's row is deleted at once and its objects purged by `cover.purge`). No storage keys here:
-/// every key is `coverKey(collectionId, id, role)`. Rules live as named CHECKs:
-/// "CollectionCover_sizes", "CollectionCover_ready_dimensions".
-model CollectionCover {
-  id                String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  collectionId      String      @unique @db.Uuid
-  status            CoverStatus @default(PENDING)
-  source            CoverSource
-  /// The verified type of the original (content signature), never the browser's claim.
-  mimeType          String
-  originalSizeBytes BigInt
-  /// Thumbnail plus preview; 0 until READY. Both count toward usage with the original.
-  derivedSizeBytes  BigInt      @default(0)
-  /// The source's upright dimensions, set with READY.
-  width             Int?
-  height            Int?
-  createdAt         DateTime    @default(now()) @db.Timestamptz(3)
-  collection        Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 }
 
 /// A public entry point to a collection (ADR 0007, spec §7.2). Rules live as named CHECKs:

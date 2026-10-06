@@ -11,8 +11,6 @@ describe('job names', () => {
       'maintenance.sweep': true,
       'media.image-derivatives': true,
       'media.video-poster': true,
-      'media.cover-derivatives': true,
-      'cover.purge': true,
       'media.collection-image': true,
       'collection-image.purge': true,
     };
@@ -31,11 +29,11 @@ describe('job names', () => {
     expect(singletonKeyFor('media.video-poster', { contentItemId: 'v' })).toBe(
       'media.video-poster:v',
     );
-    expect(singletonKeyFor('cover.purge', { collectionId: 'c', coverId: 'k' })).toBe(
-      'cover.purge:k',
-    );
-    expect(singletonKeyFor('media.cover-derivatives', { collectionId: 'c', coverId: 'k' })).toBe(
-      'media.cover-derivatives:k',
+    expect(
+      singletonKeyFor('collection-image.purge', { collectionId: 'c', imageId: 'k', slot: 'COVER' }),
+    ).toBe('collection-image.purge:k');
+    expect(singletonKeyFor('media.collection-image', { collectionId: 'c', imageId: 'k' })).toBe(
+      'media.collection-image:k',
     );
     expect(singletonKeyFor('maintenance.sweep', {})).toBe('maintenance.sweep');
     expect(singletonKeyFor('uploads.expire', {})).toBe('uploads.expire');

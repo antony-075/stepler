@@ -47,10 +47,6 @@ export const adminImageSchema = z
   .strict();
 export type AdminImage = z.infer<typeof adminImageSchema>;
 
-/** The collection cover as its owner sees it: an admin image (kept as a name until PR L). */
-export const collectionCoverSchema = adminImageSchema;
-export type CollectionCover = AdminImage;
-
 /**
  * The cover as guests see it: present only when `READY`, so there is never a status, and never
  * the frame it was taken from (deleting that frame does not touch the cover).

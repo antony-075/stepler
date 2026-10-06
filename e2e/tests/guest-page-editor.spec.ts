@@ -381,6 +381,24 @@ test.describe('guest page editor', () => {
     expect(Math.abs((await panel.boundingBox())!.width - wider)).toBeLessThan(4);
   });
 
+  test('the preview toolbar is never cut, with or without the mini-nav beside the editor @desktop', async ({
+    page,
+  }) => {
+    const { id } = await setUp(page);
+    // 1440: the tabs as a row; 1500 and 1536: the 350px mini-nav (owner remark 174).
+    for (const width of [1440, 1500, 1536]) {
+      await page.setViewportSize({ width, height: 900 });
+      await openEditor(page, id);
+      const pane = (await page.locator('[data-slot="preview-pane"]').boundingBox())!;
+      const link = page.getByRole('link', { name: /Відкрити як гість/ });
+      await expect(link).toBeVisible();
+      const box = (await link.boundingBox())!;
+      expect(box.x + box.width, `the link is cut at ${width}px`).toBeLessThanOrEqual(
+        pane.x + pane.width - 1,
+      );
+    }
+  });
+
   test('changed and changed back is saved; undo and redo across a template switch @desktop', async ({
     page,
   }) => {

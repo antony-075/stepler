@@ -2,20 +2,14 @@ import { Inject, Injectable, Logger, type OnApplicationBootstrap } from '@nestjs
 import type { Job } from 'pg-boss';
 import { JOB_OPTIONS, type JobData, type JobName, singletonKeyFor } from '../jobs/job-names.js';
 import { describeError, PgBossClient } from '../jobs/pg-boss-queue.js';
-import {
-  CollectionImageDerivativesHandler,
-  LegacyCoverDerivativesHandler,
-} from './handlers/collection-image-derivatives.handler.js';
+import { CollectionImageDerivativesHandler } from './handlers/collection-image-derivatives.handler.js';
 import { DiscardUploadHandler } from './handlers/discard-upload.handler.js';
 import { ExpireUploadsHandler } from './handlers/expire-uploads.handler.js';
 import { ImageDerivativesHandler } from './handlers/image-derivatives.handler.js';
 import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
-import {
-  LegacyPurgeCoverHandler,
-  PurgeCollectionImageHandler,
-} from './handlers/purge-collection-image.handler.js';
+import { PurgeCollectionImageHandler } from './handlers/purge-collection-image.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
@@ -49,8 +43,6 @@ export class JobRunner implements OnApplicationBootstrap {
     videoPoster: VideoPosterHandler,
     imageRenditions: CollectionImageDerivativesHandler,
     purgeImage: PurgeCollectionImageHandler,
-    legacyCoverDerivatives: LegacyCoverDerivativesHandler,
-    legacyPurgeCover: LegacyPurgeCoverHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -62,8 +54,6 @@ export class JobRunner implements OnApplicationBootstrap {
       videoPoster,
       imageRenditions,
       purgeImage,
-      legacyCoverDerivatives,
-      legacyPurgeCover,
     ] as JobHandler[];
   }
 
