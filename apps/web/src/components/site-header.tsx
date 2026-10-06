@@ -20,8 +20,8 @@ type SiteHeaderProps = {
 };
 
 /**
- * The wordmark «stepler» (Golos Text 650), linking to `href`; 44px tall. With `mark`, the V1
- * indigo mark before it (the sign-in and legal pages, DESIGN-SYSTEM.md §0.7). Also the guest
+ * The wordmark «stepler» (Golos Text 700, as in the logo), linking to `href`; 44px tall. With
+ * `mark`, the brand mark before it: the logo (sign-in, auth and legal pages, DESIGN-SYSTEM.md §0.7). Also the guest
  * page template's brand, without the mark (templates keep their look).
  */
 export function SiteWordmark({ href = '/', mark = false }: { href?: string; mark?: boolean }) {
@@ -35,7 +35,7 @@ export function SiteWordmark({ href = '/', mark = false }: { href?: string; mark
         focusRing,
       )}
     >
-      {mark ? <BrandMark /> : null}
+      {mark ? <BrandMark className="h-8" /> : null}
       <span className="font-wordmark lowercase">{t('name')}</span>
     </Link>
   );

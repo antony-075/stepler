@@ -23,6 +23,17 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: t('name'), template: `%s · ${t('name')}` },
     description: t('tagline'),
+    // The brand's icons (public/brand, refined from the owner's assets 2026-10-06): the SVG for
+    // browsers that take it, PNG sizes for the rest, the 180px tile for iOS home screens.
+    icons: {
+      icon: [
+        { url: '/brand/favicon.svg', type: 'image/svg+xml' },
+        { url: '/brand/favicon-48.png', sizes: '48x48', type: 'image/png' },
+        { url: '/brand/favicon-32.png', sizes: '32x32', type: 'image/png' },
+        { url: '/brand/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      ],
+      apple: [{ url: '/brand/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    },
   };
 }
 
