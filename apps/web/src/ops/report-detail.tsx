@@ -320,7 +320,7 @@ function ReportSection({ detail, actions }: { detail: Detail; actions: ReactNode
           )}
         </Fact>
         <Fact label={t('detail.received')}>
-          <time dateTime={report.createdAt} className="font-mono text-[0.875rem]">
+          <time dateTime={report.createdAt} className="tabular-nums">
             {format.dateTime(new Date(report.createdAt), {
               dateStyle: 'medium',
               timeStyle: 'short',
@@ -377,7 +377,7 @@ function OtherReports({ detail }: { detail: Detail }) {
             )}
             <time
               dateTime={other.createdAt}
-              className="font-mono text-[0.8125rem] text-muted-foreground"
+              className="text-[0.8125rem] text-muted-foreground tabular-nums"
             >
               {format.dateTime(new Date(other.createdAt), {
                 dateStyle: 'medium',

@@ -110,12 +110,20 @@ function useRowText() {
         absolute: format.dateTime(at, { dateStyle: 'medium', timeStyle: 'short' }),
       };
     },
-    content: (row: OperatorReportRow) =>
-      row.content === null
-        ? t('queue.contentGone')
-        : `${t(`kinds.${row.content.kind}`)} ${formatFrameNumber(row.content.frameNo)}`,
     collection: (row: OperatorReportRow) => row.collection?.title ?? t('queue.collectionGone'),
   };
+}
+
+/** «Фото #086»: the kind in the text face, the number in mono (numbers only, §0.2). */
+function ContentLabel({ row }: { row: OperatorReportRow }) {
+  const t = useTranslations('ops');
+  if (row.content === null) return <span className="truncate">{t('queue.contentGone')}</span>;
+  return (
+    <span className="truncate">
+      {t(`kinds.${row.content.kind}`)}{' '}
+      <span className="font-mono text-[0.8125rem]">{formatFrameNumber(row.content.frameNo)}</span>
+    </span>
+  );
 }
 
 function StateBadge({ row }: { row: OperatorReportRow }) {
@@ -142,7 +150,7 @@ function QueueTable({ rows }: { rows: OperatorReportRow[] }) {
             <th scope="col" className="w-[10rem] px-4 py-2.5 font-medium">
               {t('queue.columns.content')}
             </th>
-            <th scope="col" className="w-[8.5rem] px-4 py-2.5 font-medium">
+            <th scope="col" className="w-[10rem] px-4 py-2.5 font-medium">
               {t('queue.columns.state')}
             </th>
             <th scope="col" className="px-4 py-2.5 font-medium">
@@ -161,7 +169,7 @@ function QueueTable({ rows }: { rows: OperatorReportRow[] }) {
                 key={row.id}
                 className="relative h-14 transition-colors hover:bg-hover-ghost has-[a:focus-visible]:bg-hover-ghost"
               >
-                <td className="px-4 font-mono text-[0.8125rem] text-muted-foreground">
+                <td className="px-4 text-[0.8125rem] text-muted-foreground tabular-nums">
                   <time dateTime={row.createdAt} title={received.absolute}>
                     {received.relative}
                   </time>
@@ -173,7 +181,7 @@ function QueueTable({ rows }: { rows: OperatorReportRow[] }) {
                     className="flex items-center gap-2 outline-none after:absolute after:inset-0 focus-visible:underline"
                   >
                     {row.content === null ? null : <ContentKindIcon kind={row.content.kind} />}
-                    <span className="truncate font-mono text-[0.8125rem]">{text.content(row)}</span>
+                    <ContentLabel row={row} />
                   </Link>
                 </td>
                 <td className="px-4">
@@ -211,13 +219,13 @@ function QueueCards({ rows }: { rows: OperatorReportRow[] }) {
               </span>
               <span className="flex items-center gap-2 text-[0.875rem]">
                 {row.content === null ? null : <ContentKindIcon kind={row.content.kind} />}
-                <span className="font-mono">{text.content(row)}</span>
+                <ContentLabel row={row} />
                 <span className="min-w-0 truncate text-foreground-soft">
                   {text.collection(row)}
                 </span>
               </span>
               <span className="flex justify-between gap-3 text-[0.8125rem] text-muted-foreground">
-                <time dateTime={row.createdAt} title={received.absolute} className="font-mono">
+                <time dateTime={row.createdAt} title={received.absolute} className="tabular-nums">
                   {received.relative}
                 </time>
                 <span>{t('queue.openReportsCount', { count: row.openReportsOnItem })}</span>
