@@ -158,7 +158,9 @@
     "new": "New collection",
     "status": {
       "ACTIVE": "Active",
-      "ARCHIVED": "Archived"
+      "ARCHIVED": "Archived",
+      "BLOCKED": "Blocked",
+      "DELETING": "Being deleted"
     },
     "createdOn": "Created {date}",
     "archivedOn": "Archived {date}",
@@ -200,7 +202,9 @@
     "linkPaused": "Link paused",
     "statusChip": {
       "ACTIVE": "Collection active",
-      "ARCHIVED": "Archived"
+      "ARCHIVED": "Archived",
+      "BLOCKED": "Blocked",
+      "DELETING": "Being deleted"
     },
     "subtitle": "Create a collection for each event and gather photos, videos, documents and wishes from guests.",
     "search": "Search collections",
@@ -511,7 +515,8 @@
     "resume": "Turn on",
     "gone": "This link is gone. All of the collection’s links are under Manage links.",
     "picker": "Link",
-    "pausedMarker": "paused"
+    "pausedMarker": "paused",
+    "blockedNotice": "Guests can’t open any link of this collection until the block is lifted."
   },
   "links": {
     "loading": "Loading links",
@@ -1337,7 +1342,8 @@
     "collectionStatuses": {
       "ACTIVE": "Active",
       "ARCHIVED": "Archived",
-      "DELETING": "Being deleted"
+      "DELETING": "Being deleted",
+      "BLOCKED": "Blocked"
     },
     "ownerStatuses": {
       "ACTIVE": "Active",

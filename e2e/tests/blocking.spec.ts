@@ -43,8 +43,21 @@ test.describe('blocking', () => {
       'href',
       'mailto:privacy@stepler.test',
     );
+    // One truthful status (S1): «Заблоковано» in the status slot, «Доступ закрито» beside it,
+    // and no «Колекція активна» anywhere on the row or card.
     await page.goto('/app');
-    await expect(page.getByText('Заблоковано').first()).toBeVisible();
+    const blockedCard = page
+      .locator('[data-slot="collection-card"]')
+      .filter({ hasText: 'Випускний 11-Б' });
+    await expect(blockedCard).toHaveAttribute('data-display-status', 'BLOCKED');
+    await expect(blockedCard.locator('[data-slot="collection-status"]')).toHaveText('Заблоковано');
+    await expect(blockedCard.locator('[data-slot="collection-access"]')).toHaveText(
+      'Доступ закрито',
+    );
+    await expect(blockedCard.getByText('Колекція активна')).toHaveCount(0);
+    // The ops detail shows the same one badge.
+    await expect(ops.locator('[data-slot="collection-status"]')).toHaveText('Заблоковано');
+    await expect(ops.getByText('Активна', { exact: true })).toHaveCount(0);
 
     // Unblocked: guests get in again.
     await act(ops, seeded.reportId, 'Розблокувати колекцію', 'Розблокувати', 'Виправлено');

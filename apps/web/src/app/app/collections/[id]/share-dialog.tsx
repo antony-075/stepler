@@ -13,9 +13,10 @@
 // - Opened from the collection page's «Дії», its empty content and a dashboard card; Escape
 //   returns focus to whatever opened it.
 
-import type { Collection, GuestLink } from '@stepler/contracts';
+import { type Collection, collectionDisplayStatus, type GuestLink } from '@stepler/contracts';
 import { Alert, type AlertVariant } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
+import { CollectionStatusBadge } from '@stepler/ui/components/collection-status-badge';
 import { Button } from '@stepler/ui/components/button';
 import { CopyButton } from '@stepler/ui/components/copy-button';
 import {
@@ -168,6 +169,7 @@ export function ShareDialog({
 
 function ShareBody({ collection, linkKey }: { collection: Collection; linkKey: string }) {
   const t = useTranslations('share');
+  const tCollections = useTranslations('collections');
   // Loads when the dialog opens (its content mounts then), from the same cache as the tab.
   const links = useQuery({
     queryKey: guestLinksKey(collection.id),
@@ -208,7 +210,18 @@ function ShareBody({ collection, linkKey }: { collection: Collection; linkKey: s
         <Alert variant="info">{t('gone')}</Alert>
       ) : (
         <>
-          <LinkPicker links={live} value={linkKeyOf(link)} onChange={setSelected} />
+          {/* Blocked by the Stepler operator (S1): the link's own state is beside the point. */}
+          {collection.blocked === null ? null : (
+            <Alert variant="error" title={tCollections('blocked.title')}>
+              {t('blockedNotice')}
+            </Alert>
+          )}
+          <LinkPicker
+            links={live}
+            value={linkKeyOf(link)}
+            onChange={setSelected}
+            collection={collection}
+          />
           <SharedLink key={link.id} collection={collection} link={link} />
         </>
       )}
@@ -224,24 +237,36 @@ function LinkPicker({
   links,
   value,
   onChange,
+  collection,
 }: {
   links: readonly GuestLink[];
   value: string;
   onChange: (key: string) => void;
+  collection: Collection;
 }) {
   const t = useTranslations('share');
   const tLinks = useTranslations('links');
+  const tCollections = useTranslations('collections');
   const name = useLinkName();
   const labelId = useId();
   const only = links.length === 1 ? links[0] : undefined;
   if (only !== undefined) {
     const paused = only.status === 'INACTIVE';
     const statusKey = paused ? 'status.INACTIVE' : 'status.ACTIVE';
+    const status = collectionDisplayStatus(collection);
+    // One truthful status (S1): a blocked collection is closed, whatever the link says.
+    const closed = (
+      <>
+        <CollectionStatusBadge status={status} label={tCollections(`status.${status}`)} />
+        <Badge variant="neutral">{tCollections('guestsClosed')}</Badge>
+      </>
+    );
+    const linkState = <Badge variant={paused ? 'warning' : 'success'}>{tLinks(statusKey)}</Badge>;
     return (
       <p data-slot="share-link-status" className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted-foreground">{t('picker')}</span>
         <span className="font-semibold">{name(only)}</span>
-        <Badge variant={paused ? 'warning' : 'success'}>{tLinks(statusKey)}</Badge>
+        {status === 'BLOCKED' ? closed : linkState}
       </p>
     );
   }

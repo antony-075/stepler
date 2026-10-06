@@ -20,6 +20,13 @@ export {
   type UpdateMeRequest,
 } from './auth.js';
 export {
+  COLLECTION_DISPLAY_STATUSES,
+  collectionClosedToGuests,
+  collectionDisplayStatus,
+  type CollectionDisplayStatus,
+  type CollectionStateSource,
+} from './collection-status.js';
+export {
   collectionDescriptionSchema,
   collectionDetailSchema,
   collectionIdParamsSchema,

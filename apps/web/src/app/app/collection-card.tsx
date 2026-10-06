@@ -1,6 +1,6 @@
 'use client';
 
-import type { Collection } from '@stepler/contracts';
+import { type Collection, collectionDisplayStatus } from '@stepler/contracts';
 import { cn } from '@stepler/ui/lib/utils';
 import { Archive } from 'lucide-react';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
 import { CollectionMark } from './collection-mark';
 import { formatBytes } from '@/format/bytes';
-import { ARCHIVED_COVER, ARCHIVED_SURFACE as ARCHIVED } from './archived-style';
+import { ARCHIVED_COVER, ARCHIVED_SURFACE as ARCHIVED, BLOCKED_ACCENT } from './archived-style';
 import { AccessBadge, CollectionStatusBadge } from './collection-row';
 import { ShareIconButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
@@ -51,6 +51,9 @@ export function CollectionCard({
   const tCard = useTranslations('collections.card');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
+  // Blocked by the Stepler operator (S1): the one status badge says so; the card gets a left accent.
+  const blocked = collection.blocked !== null;
+  const displayStatus = collectionDisplayStatus(collection);
   const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
   const [count, ...word] = tCard('frames', { count: collection.contentCount }).split(' ');
 
@@ -114,7 +117,8 @@ export function CollectionCard({
         data-slot="collection-card"
         data-view="tiles"
         data-status={collection.status}
-        className={cn(CARD, 'h-full', archived && ARCHIVED)}
+        data-display-status={displayStatus}
+        className={cn(CARD, 'h-full', archived && ARCHIVED, blocked && BLOCKED_ACCENT)}
       >
         <CollectionMark
           collection={collection}
@@ -147,7 +151,13 @@ export function CollectionCard({
       data-slot="collection-card"
       data-view="card"
       data-status={collection.status}
-      className={cn(CARD, 'gap-3 py-3.5 pr-1.5 pl-3.5', archived && ARCHIVED)}
+      data-display-status={displayStatus}
+      className={cn(
+        CARD,
+        'gap-3 py-3.5 pr-1.5 pl-3.5',
+        archived && ARCHIVED,
+        blocked && BLOCKED_ACCENT,
+      )}
     >
       <div className="flex min-w-0 items-start gap-3">
         <CollectionMark

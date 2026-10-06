@@ -14,9 +14,10 @@
 //   {причина}», «Адміністратор відхилив», «Заявник залишив контакт / Без контакту»;
 // - a missing report is the page's empty state with a way back; loading is the layout's skeleton.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OperatorReportDetail } from '@stepler/contracts';
+import { collectionDisplayStatus, type OperatorReportDetail } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
+import { CollectionStatusBadge } from '@stepler/ui/components/collection-status-badge';
 import { Button } from '@stepler/ui/components/button';
 import { EmptyState, formatFrameNumber } from '@stepler/ui/components/empty-state';
 import { Skeleton } from '@stepler/ui/components/skeleton';
@@ -402,12 +403,11 @@ function CollectionSection({ detail, actions }: { detail: Detail; actions: React
         <dl className="grid gap-2 text-[0.9375rem]">
           <Fact label={t('detail.title')}>{collection.title}</Fact>
           <Fact label={t('detail.status')}>
-            <span className="flex flex-wrap gap-1.5">
-              <Badge variant="neutral">{t(`collectionStatuses.${collection.status}`)}</Badge>
-              {collection.blocked === null ? null : (
-                <Badge variant="danger">{t('detail.blocked')}</Badge>
-              )}
-            </span>
+            {/* One truthful status (S1): «Заблоковано» replaces «Активна», never beside it. */}
+            <CollectionStatusBadge
+              status={collectionDisplayStatus(collection)}
+              label={t(`collectionStatuses.${collectionDisplayStatus(collection)}`)}
+            />
           </Fact>
           {collection.blocked === null ? null : (
             <Fact label={t('detail.blockReason')}>{collection.blocked.reason}</Fact>
