@@ -40,6 +40,8 @@ describe('loadApiEnv', () => {
       LIMIT_COLLECTION_CREATIONS_PER_DAY: 10,
       LIMIT_STORAGE_BYTES_PER_ACCOUNT: 20n * 1024n ** 3n,
       LIMIT_STORAGE_BYTES_PER_COLLECTION: 10n * 1024n ** 3n,
+      LIMIT_REPORTS_PER_IP_PER_HOUR: 60,
+      LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR: 10,
     });
     expect(env.APP_SECRET).toHaveLength(32);
     expect(env.GOOGLE_CLIENT_ID).toBeUndefined();

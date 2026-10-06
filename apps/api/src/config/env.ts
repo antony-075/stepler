@@ -109,6 +109,10 @@ const apiEnvSchema = z
     LIMIT_TEXTS_PER_IP_PER_MINUTE: positiveInt(60),
     LIMIT_GUEST_READS_PER_IP_PER_MINUTE: positiveInt(600),
     LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE: positiveInt(120),
+    // Guest reports (slice 9): per client IP per hour (in memory), per guest session per hour
+    // (counted from rows, like texts).
+    LIMIT_REPORTS_PER_IP_PER_HOUR: positiveInt(60),
+    LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR: positiveInt(10),
     // Per-file maxima by kind (D2, decimal units) and the files a guest may pick at once.
     LIMIT_FILE_BYTES_PHOTO: byteCount(50_000_000n),
     LIMIT_FILE_BYTES_VIDEO: byteCount(2_000_000_000n),

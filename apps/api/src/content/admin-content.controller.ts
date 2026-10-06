@@ -31,6 +31,7 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { RequestId } from '../logging/request-id.decorator.js';
+import { ReportsService } from '../moderation/reports.service.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { AdminContentService } from './admin-content.service.js';
 
@@ -48,7 +49,10 @@ const NOT_FOUND = {
 @ApiCookieAuth(SESSION_COOKIE_SCHEME)
 @Controller({ version: '1' })
 export class AdminContentController {
-  constructor(private readonly content: AdminContentService) {}
+  constructor(
+    private readonly content: AdminContentService,
+    private readonly reports: ReportsService,
+  ) {}
 
   @Get('collections/:id/content')
   @ApiResponse({ status: 200, standardSchema: adminContentPageSchema })
@@ -129,6 +133,23 @@ export class AdminContentController {
     @RequestId() requestId: string | undefined,
   ): Promise<AdminContentItem> {
     return this.content.unhide(principal, params.id, requestId);
+  }
+
+  /**
+   * «Відхилити скарги» ([Q1]): clears the admin's «Скарга» mark on the frame. The reports stay
+   * open for the Stepler operator. Idempotent.
+   */
+  @Post('content/:id/reports/dismiss')
+  @ApiTags('Moderation')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse({ status: 204, description: 'Dismissed for the admin (or nothing was open)' })
+  @ApiResponse(NOT_FOUND)
+  dismissReports(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: contentIdParamsSchema }) params: IdParams,
+    @RequestId() requestId: string | undefined,
+  ): Promise<void> {
+    return this.reports.dismissForAdmin(principal, params.id, requestId);
   }
 
   @Delete('content/:id')

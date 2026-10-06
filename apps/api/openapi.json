@@ -9105,6 +9105,45 @@
                       ],
                       "type": "string"
                     },
+                    "reports": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "reason": {
+                            "enum": [
+                              "ILLEGAL",
+                              "INAPPROPRIATE",
+                              "PRIVACY",
+                              "SPAM",
+                              "OTHER"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "reason",
+                          "description",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "sizeBytes": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -9146,7 +9185,8 @@
                     "posterUrl",
                     "moderation",
                     "originalUrl",
-                    "downloadUrl"
+                    "downloadUrl",
+                    "reports"
                   ],
                   "type": "object"
                 }
@@ -9356,6 +9396,50 @@
               }
             },
             "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Content",
+          "Moderation"
+        ]
+      }
+    },
+    "/api/v1/content/{id}/reports/dismiss": {
+      "post": {
+        "operationId": "AdminContentController_dismissReports_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Dismissed for the admin (or nothing was open)"
           },
           "404": {
             "description": "NOT_FOUND: not the admin's, deleted, or the collection is being deleted"
@@ -10700,6 +10784,151 @@
         ],
         "tags": [
           "Guest"
+        ]
+      }
+    },
+    "/api/v1/guest/collections/{collectionId}/content/{id}/reports": {
+      "post": {
+        "operationId": "GuestReportsController_create_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "collectionId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "description": "A UUID per opened form",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "description": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "email": {
+                    "format": "email",
+                    "maxLength": 254,
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "uk",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "reason": {
+                    "enum": [
+                      "ILLEGAL",
+                      "INAPPROPRIATE",
+                      "PRIVACY",
+                      "SPAM",
+                      "OTHER"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason",
+                  "locale"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A retry with the same Idempotency-Key and body, or this session already has an open report on the frame: that report"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED"
+          },
+          "401": {
+            "description": "GUEST_SESSION_REQUIRED"
+          },
+          "403": {
+            "description": "FORBIDDEN (the guest's own frame), COLLECTION_ARCHIVED or LINK_INACTIVE"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such frame the guest can see (hidden and deleted included)"
+          },
+          "409": {
+            "description": "IDEMPOTENCY_CONFLICT: the key was used for another report"
+          },
+          "410": {
+            "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: reports per session per hour, or per client IP per hour"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_gs": []
+          }
+        ],
+        "tags": [
+          "Moderation"
         ]
       }
     },

@@ -84,7 +84,7 @@ describe('adminContentItemSchema', () => {
 
   test('accepts a text frame; the detail adds original and download links', () => {
     expect(adminContentItemSchema.parse(item)).toEqual(item);
-    const detail = { ...item, originalUrl: null, downloadUrl: null };
+    const detail = { ...item, originalUrl: null, downloadUrl: null, reports: [] };
     expect(adminContentDetailSchema.parse(detail)).toEqual(detail);
     expect(adminContentItemSchema.safeParse({ ...item, frameNo: 0 }).success).toBe(false);
     expect(adminContentItemSchema.safeParse({ ...item, deletedAt: null }).success).toBe(false);

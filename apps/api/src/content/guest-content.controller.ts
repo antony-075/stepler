@@ -21,7 +21,6 @@ import {
   guestContentListQuerySchema,
   guestContentPageSchema,
   guestContentParamsSchema,
-  idempotencyKeyHeaderSchema,
   type CreateTextRequest,
   type GuestContentDetail,
   type GuestContentItem,
@@ -31,7 +30,7 @@ import {
 import type { GuestPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
 import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
-import { AppError } from '../errors/app-error.js';
+import { parseIdempotencyKey } from '../common/idempotency-key.js';
 import { CurrentGuest } from '../guest-access/current-guest.decorator.js';
 import { GuestSessionGuard } from '../guest-access/guest-session.guard.js';
 import { RequestId } from '../logging/request-id.decorator.js';
@@ -42,15 +41,6 @@ import { TextsService } from './texts.service.js';
 interface GuestContentParams {
   collectionId: string;
   id: string;
-}
-
-/** The `Idempotency-Key` header: required, one UUID per draft. */
-function parseIdempotencyKey(value: string | undefined): string {
-  const parsed = idempotencyKeyHeaderSchema.safeParse(value);
-  if (parsed.success) return parsed.data;
-  throw new AppError('VALIDATION_FAILED', 400, {
-    errors: [{ path: ['Idempotency-Key'], message: 'A UUID is required' }],
-  });
 }
 
 /**

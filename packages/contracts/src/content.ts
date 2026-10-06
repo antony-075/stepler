@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { contentModerationSchema } from './reports.js';
+import { adminReportSchema, contentModerationSchema } from './reports.js';
 import {
   codePointLength,
   NO_CONTROL_CHARACTERS,
@@ -76,9 +76,16 @@ export const adminContentItemSchema = z
   .strict();
 export type AdminContentItem = z.infer<typeof adminContentItemSchema>;
 
-/** `GET /api/v1/content/:id`: the item plus links to the original (view and download). */
+/**
+ * `GET /api/v1/content/:id`: the item plus links to the original (view and download), and its
+ * open reports the admin has not dismissed, oldest first (never the reporter's contact, R2).
+ */
 export const adminContentDetailSchema = adminContentItemSchema
-  .extend({ originalUrl: z.url().nullable(), downloadUrl: z.url().nullable() })
+  .extend({
+    originalUrl: z.url().nullable(),
+    downloadUrl: z.url().nullable(),
+    reports: z.array(adminReportSchema),
+  })
   .strict();
 export type AdminContentDetail = z.infer<typeof adminContentDetailSchema>;
 

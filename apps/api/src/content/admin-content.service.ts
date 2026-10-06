@@ -78,7 +78,11 @@ export class AdminContentService {
 
   async get(a: AccountPrincipal, id: string): Promise<AdminContentDetail> {
     const { row, item } = await this.item(a, id);
-    return { ...item, ...(await this.media.original(row, { viewer: 'admin' })) };
+    return {
+      ...item,
+      ...(await this.media.original(row, { viewer: 'admin' })),
+      reports: await this.moderation.openReports(row.id),
+    };
   }
 
   /** One live frame of the admin's, as the list shows it. */

@@ -191,6 +191,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
 | `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
 | `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames per client IP per minute; default `120` |
+| `LIMIT_REPORTS_PER_IP_PER_HOUR` | api | no | Guest content reports per client IP per hour, across sessions; default `60` |
+| `LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Reports one guest session may send per rolling hour; default `10` |
 | `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
