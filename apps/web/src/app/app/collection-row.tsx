@@ -3,11 +3,13 @@
 import type { Collection } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
 import { cn } from '@stepler/ui/lib/utils';
+import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { formatBytes } from '@/format/bytes';
 import { PermissionChips } from '@/guest-links/permission-chips';
+import { ARCHIVED_COVER, ARCHIVED_SURFACE } from './archived-style';
 import { CollectionCoverImage } from './collection-cover-image';
 import { ShareIconButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
@@ -100,7 +102,6 @@ export function CollectionRow({ collection }: { collection: Collection }) {
   const tCard = useTranslations('collections.card');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
-  const status = t(`statusChip.${collection.status}`);
   const created = format.dateTime(new Date(collection.createdAt), 'short');
   const last =
     collection.lastContentAt === null
@@ -117,13 +118,13 @@ export function CollectionRow({ collection }: { collection: Collection }) {
       data-slot="collection-card"
       data-view="table"
       data-status={collection.status}
-      className={ROW}
+      className={cn(ROW, archived && cn(ARCHIVED_SURFACE, 'hover:bg-hover-card'))}
     >
       <div className="flex min-w-0 items-center gap-3">
         <CollectionCoverImage
           collection={collection}
           size="sm"
-          className={cn('size-11 rounded-control text-sm', archived && 'saturate-[.45]')}
+          className={cn('size-11 rounded-control text-sm', archived && ARCHIVED_COVER)}
         />
         <div className="min-w-0">
           <Link
@@ -168,9 +169,7 @@ export function CollectionRow({ collection }: { collection: Collection }) {
           {created}
         </Cell>
         <span className="flex min-w-0 flex-col items-start gap-1.5">
-          <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-            {status}
-          </Badge>
+          <CollectionStatusBadge collection={collection} />
           <AccessBadge collection={collection} />
         </span>
       </div>
@@ -180,6 +179,34 @@ export function CollectionRow({ collection }: { collection: Collection }) {
         <CollectionQuickActions collection={collection} />
       </div>
     </li>
+  );
+}
+
+/**
+ * The collection's status as a badge: green «Колекція активна», or a neutral «В архіві» with
+ * the archive box (owner 2026-10-06). `short`: «Активна» (the collection page's header).
+ */
+export function CollectionStatusBadge({
+  collection,
+  short = false,
+  className,
+}: {
+  collection: Collection;
+  short?: boolean;
+  className?: string;
+}) {
+  const t = useTranslations('collections');
+  const archived = collection.status === 'ARCHIVED';
+  const label = short ? t(`status.${collection.status}`) : t(`statusChip.${collection.status}`);
+  return (
+    <Badge
+      variant={archived ? 'neutral' : 'success'}
+      title={label}
+      {...(archived ? { icon: <Archive /> } : {})}
+      {...(className === undefined ? {} : { className })}
+    >
+      {label}
+    </Badge>
   );
 }
 

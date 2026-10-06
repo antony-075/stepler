@@ -251,7 +251,8 @@
     },
     "guestsClosed": "Access closed",
     "cellName": "{name}:",
-    "none": "—"
+    "none": "—",
+    "archiveGroup": "Archive · {count}"
   },
   "collection": {
     "pageTitle": "Collection",

@@ -14,7 +14,7 @@
 //   «Нова колекція» on the page and three steps. A search or filter that finds nothing says so
 //   and offers to clear it.
 
-import type { CollectionStatus } from '@stepler/contracts';
+import type { Collection, CollectionStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
@@ -34,7 +34,7 @@ import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-grou
 import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Images, LayoutGrid, Plus, Rows3, Search, SearchX } from 'lucide-react';
+import { Archive, Images, LayoutGrid, Plus, Rows3, Search, SearchX } from 'lucide-react';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import {
   type ReactNode,
@@ -137,6 +137,18 @@ export function CollectionsDashboard() {
       }),
     [activeItems, archivedItems, filter, deferredQuery, sort, locale],
   );
+
+  // «Усі» lists the archive after the active ones, under «Архів · N» (owner 2026-10-06);
+  // presentation only: the sort holds within each group, the «Архів» filter has no heading.
+  const archivedShown = shown.filter((collection) => collection.status === 'ARCHIVED').length;
+  const grouped: (Collection | typeof ARCHIVE_GROUP)[] =
+    filter === 'all' && archivedShown > 0
+      ? [
+          ...shown.filter((collection) => collection.status !== 'ARCHIVED'),
+          ARCHIVE_GROUP,
+          ...shown.filter((collection) => collection.status === 'ARCHIVED'),
+        ]
+      : shown;
 
   const openCreate = () => setCreateOpen(true);
   const counts: Record<Filter, string> = {
@@ -263,11 +275,15 @@ export function CollectionsDashboard() {
             />
           ) : phone ? (
             <ul className="grid grid-cols-[minmax(0,1fr)] gap-2" aria-label={t(`filter.${filter}`)}>
-              {shown.map((collection) => (
-                <li key={collection.id}>
-                  <CollectionCard collection={collection} />
-                </li>
-              ))}
+              {grouped.map((collection) =>
+                collection === ARCHIVE_GROUP ? (
+                  <GroupHeading key="archive" count={archivedShown} className="mt-3" />
+                ) : (
+                  <li key={collection.id}>
+                    <CollectionCard collection={collection} />
+                  </li>
+                ),
+              )}
             </ul>
           ) : view === 'tiles' ? (
             <ul
@@ -276,11 +292,19 @@ export function CollectionsDashboard() {
               className="grid grid-cols-[repeat(auto-fill,minmax(16.5rem,1fr))] gap-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
               aria-label={t(`filter.${filter}`)}
             >
-              {shown.map((collection) => (
-                <li key={collection.id}>
-                  <CollectionCard collection={collection} layout="tile" />
-                </li>
-              ))}
+              {grouped.map((collection) =>
+                collection === ARCHIVE_GROUP ? (
+                  <GroupHeading
+                    key="archive"
+                    count={archivedShown}
+                    className="col-span-full mt-3"
+                  />
+                ) : (
+                  <li key={collection.id}>
+                    <CollectionCard collection={collection} layout="tile" />
+                  </li>
+                ),
+              )}
             </ul>
           ) : (
             <div
@@ -291,9 +315,17 @@ export function CollectionsDashboard() {
               <div className={TABLE_COLUMNS}>
                 <CollectionTableHeader />
                 <ul aria-label={t(`filter.${filter}`)}>
-                  {shown.map((collection) => (
-                    <CollectionRow key={collection.id} collection={collection} />
-                  ))}
+                  {grouped.map((collection) =>
+                    collection === ARCHIVE_GROUP ? (
+                      <GroupHeading
+                        key="archive"
+                        count={archivedShown}
+                        className="border-t bg-subtle px-4 py-2"
+                      />
+                    ) : (
+                      <CollectionRow key={collection.id} collection={collection} />
+                    ),
+                  )}
                 </ul>
               </div>
             </div>
@@ -314,6 +346,22 @@ export function CollectionsDashboard() {
         limit={slots?.limit}
       />
     </>
+  );
+}
+
+/** Where «Усі» starts the archive group. */
+const ARCHIVE_GROUP = Symbol('archive-group');
+
+/** «Архів · 4»: the archive group's heading inside the list (a quiet line, not a control). */
+function GroupHeading({ count, className }: { count: number; className?: string }) {
+  const t = useTranslations('collections');
+  return (
+    <li data-slot="collections-group" className={className}>
+      <h3 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Archive aria-hidden="true" className="size-3.5" />
+        {t('archiveGroup', { count })}
+      </h3>
+    </li>
   );
 }
 

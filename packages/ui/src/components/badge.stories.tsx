@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Archive } from 'lucide-react';
 import { expect } from 'storybook/test';
 import { Badge, type BadgeVariant } from './badge';
 
@@ -95,5 +96,20 @@ export const LongText: Story = {
     await expect(text.scrollWidth).toBeGreaterThan(text.clientWidth);
     await expect(canvasElement.scrollWidth).toBeLessThanOrEqual(canvasElement.clientWidth);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  },
+};
+
+/** An icon in place of the dot (the archive box of «В архіві», owner 2026-10-06). */
+export const WithIcon: Story = {
+  render: () => (
+    <Badge variant="neutral" icon={<Archive />}>
+      Archived
+    </Badge>
+  ),
+  play: async ({ canvasElement }) => {
+    const badge = canvasElement.querySelector('[data-slot="badge"]')!;
+    await expect(badge.querySelector('[data-slot="badge-icon"] svg')).not.toBeNull();
+    await expect(badge.querySelector('[data-slot="badge-dot"]')).toBeNull();
+    await expect(badge).toHaveTextContent('Archived');
   },
 };

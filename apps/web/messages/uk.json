@@ -251,7 +251,8 @@
     },
     "guestsClosed": "Доступ закрито",
     "cellName": "{name}:",
-    "none": "—"
+    "none": "—",
+    "archiveGroup": "Архів · {count}"
   },
   "collection": {
     "pageTitle": "Колекція",

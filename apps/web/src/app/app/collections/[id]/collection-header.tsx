@@ -1,11 +1,10 @@
 'use client';
 
 import type { Collection } from '@stepler/contracts';
-import { Badge } from '@stepler/ui/components/badge';
 import { useFormatter, useTranslations } from 'next-intl';
 import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
 import { CollectionCoverImage } from '../../collection-cover-image';
-import { AccessBadge } from '../../collection-row';
+import { AccessBadge, CollectionStatusBadge } from '../../collection-row';
 import { ShareButton } from './share-dialog';
 
 /**
@@ -28,14 +27,11 @@ export function CollectionHeader({
   const tList = useTranslations('collections');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
-  const status = tList(`status.${collection.status}`);
   const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
   const dated = archived ? tList('archivedOn', { date }) : tList('createdOn', { date });
   const badge = (
     <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-muted-foreground">
-      <Badge variant={archived ? 'neutral' : 'success'} title={status}>
-        {status}
-      </Badge>
+      <CollectionStatusBadge collection={collection} short />
       <AccessBadge collection={collection} />
       <span className="text-[0.875rem] tabular-nums">{dated}</span>
     </p>

@@ -1,5 +1,5 @@
 import { cva } from 'class-variance-authority';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '../lib/utils';
 
 type BadgeVariant = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
@@ -25,9 +25,13 @@ const badgeVariants = cva(
   },
 );
 
-type BadgeProps = ComponentProps<'span'> & { variant?: BadgeVariant };
+type BadgeProps = ComponentProps<'span'> & {
+  variant?: BadgeVariant;
+  /** A 12px icon in place of the dot (e.g. the archive box for «В архіві»); decorative. */
+  icon?: ReactNode;
+};
 
-function Badge({ variant = 'neutral', className, children, ...props }: BadgeProps) {
+function Badge({ variant = 'neutral', icon, className, children, ...props }: BadgeProps) {
   return (
     <span
       data-slot="badge"
@@ -35,11 +39,17 @@ function Badge({ variant = 'neutral', className, children, ...props }: BadgeProp
       className={cn(badgeVariants({ variant }), className)}
       {...props}
     >
-      <span
-        aria-hidden="true"
-        data-slot="badge-dot"
-        className="size-1.5 shrink-0 rounded-full bg-current"
-      />
+      {icon === undefined ? (
+        <span
+          aria-hidden="true"
+          data-slot="badge-dot"
+          className="size-1.5 shrink-0 rounded-full bg-current"
+        />
+      ) : (
+        <span aria-hidden="true" data-slot="badge-icon" className="inline-flex [&_svg]:size-3">
+          {icon}
+        </span>
+      )}
       <span data-slot="badge-text" className="min-w-0 truncate">
         {children}
       </span>

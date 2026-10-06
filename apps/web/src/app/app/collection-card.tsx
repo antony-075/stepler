@@ -1,14 +1,15 @@
 'use client';
 
 import type { Collection } from '@stepler/contracts';
-import { Badge } from '@stepler/ui/components/badge';
 import { cn } from '@stepler/ui/lib/utils';
+import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
 import { CollectionCoverImage } from './collection-cover-image';
 import { formatBytes } from '@/format/bytes';
-import { AccessBadge } from './collection-row';
+import { ARCHIVED_COVER, ARCHIVED_SURFACE as ARCHIVED } from './archived-style';
+import { AccessBadge, CollectionStatusBadge } from './collection-row';
 import { ShareIconButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
 
@@ -50,15 +51,10 @@ export function CollectionCard({
   const tCard = useTranslations('collections.card');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
-  const status = t(`statusChip.${collection.status}`);
   const date = format.dateTime(new Date(collection.archivedAt ?? collection.createdAt), 'short');
   const [count, ...word] = tCard('frames', { count: collection.contentCount }).split(' ');
 
-  const badge = (
-    <Badge variant={archived ? 'neutral' : 'success'} title={status} className="shrink-0">
-      {status}
-    </Badge>
-  );
+  const badge = <CollectionStatusBadge collection={collection} className="shrink-0" />;
   const meta = (
     <p
       data-slot="collection-meta"
@@ -76,22 +72,37 @@ export function CollectionCard({
           {formatBytes(format.number, collection.storageBytes)}
         </span>
       ) : null}
-      <span className="whitespace-nowrap tabular-nums">
-        {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
-      </span>
-      <AccessBadge collection={collection} />
+      {/* Archived tiles say when and the access state in their own block (below). */}
+      {archived && layout === 'tile' ? null : (
+        <>
+          <span className="whitespace-nowrap tabular-nums">
+            {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
+          </span>
+          <AccessBadge collection={collection} />
+        </>
+      )}
     </p>
   );
   const chips =
     !archived && collection.defaultLinkPermissions !== null ? (
       <PermissionChips permissions={collection.defaultLinkPermissions} size="compact" />
     ) : null;
+  // An archived tile fills the chips' place with its archived state (owner 2026-10-06).
+  const archivedState = (
+    <div data-slot="collection-archived" className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1.5 text-[0.875rem] whitespace-nowrap text-muted-foreground tabular-nums">
+        <Archive aria-hidden="true" className="size-3.5" />
+        {t('archivedOn', { date })}
+      </span>
+      <AccessBadge collection={collection} />
+    </div>
+  );
   const title = (
     <Link
       data-slot="collection-link"
       href={`/app/collections/${collection.id}`}
       title={collection.title}
-      className={TITLE_LINK}
+      className={cn(TITLE_LINK, archived && 'text-foreground-soft')}
     >
       {collection.title}
     </Link>
@@ -103,12 +114,12 @@ export function CollectionCard({
         data-slot="collection-card"
         data-view="tiles"
         data-status={collection.status}
-        className={cn(CARD, 'h-full')}
+        className={cn(CARD, 'h-full', archived && ARCHIVED)}
       >
         <CollectionCoverImage
           collection={collection}
           size="band"
-          className={cn('rounded-none border-b text-[2rem]', archived && 'saturate-[.45]')}
+          className={cn('rounded-none border-b text-[2rem]', archived && ARCHIVED_COVER)}
         />
         <div className="grid min-w-0 flex-1 content-start gap-3.5 px-4 pt-4">
           <div className="grid min-w-0 gap-1">
@@ -117,7 +128,7 @@ export function CollectionCard({
               {collection.description ?? t('noDescription')}
             </p>
           </div>
-          {chips}
+          {archived ? archivedState : chips}
           {meta}
         </div>
         <div className="mt-4 flex h-12 items-center gap-1.5 border-t pr-1.5 pl-4">
@@ -136,13 +147,13 @@ export function CollectionCard({
       data-slot="collection-card"
       data-view="card"
       data-status={collection.status}
-      className={cn(CARD, 'gap-3 py-3.5 pr-1.5 pl-3.5')}
+      className={cn(CARD, 'gap-3 py-3.5 pr-1.5 pl-3.5', archived && ARCHIVED)}
     >
       <div className="flex min-w-0 items-start gap-3">
         <CollectionCoverImage
           collection={collection}
           size="sm"
-          className={cn('rounded-control', archived && 'saturate-[.45]')}
+          className={cn('rounded-control', archived && ARCHIVED_COVER)}
         />
         <div className="min-w-0 flex-1 pt-0.5">
           <h3 className="line-clamp-2 text-[0.9375rem] leading-snug font-semibold [overflow-wrap:anywhere]">
