@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { compose, E2E_DATABASE_URL, E2E_S3_ENDPOINT, E2E_SMTP_URL } from './support/env.js';
+import { OPERATOR_EMAILS } from './support/operator.js';
 
 // Dedicated ports so e2e never collides with `pnpm dev` (3000/4000); overridable for a second
 // stack running at the same time (uploads then need that origin in the bucket's CORS).
@@ -37,8 +38,8 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         SMTP_URL: E2E_SMTP_URL,
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
-        // The operator's service account (slice 9); the same on the worker.
-        OPERATOR_EMAILS: 'moderation@stepler.test',
+        // The operator's service accounts (slice 9, `support/operator.ts`); the same on the worker.
+        OPERATOR_EMAILS,
         // Cloudflare's documented always-pass test keys.
         TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
         TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
@@ -78,7 +79,7 @@ export default defineConfig({
         APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
         SMTP_URL: E2E_SMTP_URL,
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
-        OPERATOR_EMAILS: 'moderation@stepler.test',
+        OPERATOR_EMAILS,
         S3_ENDPOINT: E2E_S3_ENDPOINT,
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'stepler-test',

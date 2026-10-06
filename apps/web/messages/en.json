@@ -1190,5 +1190,15 @@
         "background": "«Minimal» has a solid background only."
       }
     }
+  },
+  "ops": {
+    "title": "Stepler · Moderation",
+    "brand": "Stepler",
+    "badge": "Moderation",
+    "signedInAs": "Signed in as",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out. Try again.",
+    "unavailable": "Could not load the console.",
+    "retry": "Try again"
   }
 }
