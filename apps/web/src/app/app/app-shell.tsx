@@ -27,6 +27,7 @@ import { isApiError } from '@/api/client';
 import { fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 import { setLocaleCookie } from '@/i18n/set-locale';
+import { BrandMark } from '@/components/brand-mark';
 import { AccountBlock } from './account-block';
 import { AdminNav } from './admin-nav';
 import { sidebarCookie } from './sidebar-state';
@@ -96,18 +97,19 @@ export function AppShell({
     );
   }
 
-  // Owner decisions 2026-10-02 (supersede 2026-10-01's "no section nav"): a left sidebar from
-  // `lg` with the wordmark, «Колекції» and «Акаунт» under it; it folds to a 72px icon
-  // rail (the toggle at its top, remembered per browser). Below `lg` the same nav is a sheet
-  // behind a menu button. Who is signed in and «Вийти» stay top right in a slim 56px bar. Everything is
-  // the flat light table: the sidebar is set apart by a hairline, not a fill.
+  // V1 «Графіт» (owner 2026-10-06; DESIGN-SYSTEM.md §0.7), on the decisions of 2026-10-02: from
+  // `lg` a left sidebar on the grey chrome with the wordmark, «Колекції» and «Акаунт» under it
+  // and the legal links at the bottom; it folds to a 72px icon rail (the toggle at its top,
+  // remembered per browser). The content is one white panel with a 1px edge, 8px from the window,
+  // with a slim 48px top bar (who is signed in, «Вийти») that stays at the top while the page
+  // scrolls. Below `lg` the same nav is a sheet behind a menu button in a 56px bar.
   return (
     <TooltipProvider>
       <div
         data-sidebar={collapsed ? 'collapsed' : 'expanded'}
         className={cn(
           'min-h-dvh bg-background lg:grid lg:transition-[grid-template-columns] lg:duration-(--duration-base) lg:ease-out motion-reduce:lg:transition-none',
-          collapsed ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]' : 'lg:grid-cols-[15rem_minmax(0,1fr)]',
+          collapsed ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]' : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
         )}
       >
         <a
@@ -121,31 +123,42 @@ export function AppShell({
         </a>
         <aside
           id="admin-sidebar"
-          className="sticky top-0 hidden h-dvh min-w-0 flex-col overflow-hidden border-r lg:flex"
+          className="sticky top-0 hidden h-dvh min-w-0 flex-col overflow-hidden lg:flex"
         >
           <div
             className={cn(
               'flex h-14 shrink-0 items-center gap-2',
-              collapsed ? 'justify-center px-3' : 'pr-2 pl-5',
+              collapsed ? 'justify-center px-3' : 'pr-2 pl-4',
             )}
           >
             {collapsed ? null : <BrandLink />}
             <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />
           </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pt-1 pb-4">
             <AdminNav collapsed={collapsed} />
           </div>
         </aside>
-        <div className="flex min-h-dvh min-w-0 flex-col">
-          <header className="sticky top-0 z-(--z-sticky) border-b bg-background">
-            <div className="admin-container flex h-14 items-center gap-2">
-              <MobileNav />
-              <div className="ml-auto flex min-w-0 justify-end">
-                <AccountBlock email={me.data.email} displayName={me.data.displayName} />
+        {/* The white panel; on `lg` the window's 8px margin stays visible around it. */}
+        <div className="flex min-h-dvh min-w-0 flex-col lg:py-2 lg:pr-2 [--shell-inset-bottom:0px] lg:[--shell-inset-bottom:9px]">
+          {/* Covers the 8px above the stuck top bar, so content never shows over it. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none sticky top-0 z-(--z-sticky) -mt-2 hidden h-2 bg-background lg:block"
+          />
+          <div
+            data-slot="admin-panel"
+            className="flex min-w-0 flex-1 flex-col bg-background lg:rounded-sheet lg:border lg:bg-card"
+          >
+            <header className="sticky top-0 z-(--z-sticky) border-b bg-background lg:top-2 lg:-mx-px lg:-mt-px lg:rounded-t-sheet lg:border lg:bg-card">
+              <div className="admin-container flex h-14 items-center gap-2 lg:h-12">
+                <MobileNav />
+                <div className="ml-auto flex min-w-0 justify-end">
+                  <AccountBlock email={me.data.email} displayName={me.data.displayName} />
+                </div>
               </div>
-            </div>
-          </header>
-          <div className="flex-1">{children}</div>
+            </header>
+            <div className="flex-1">{children}</div>
+          </div>
         </div>
       </div>
     </TooltipProvider>
@@ -170,7 +183,9 @@ function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
           aria-expanded={!collapsed}
           aria-controls="admin-sidebar"
           onClick={onToggle}
-          className={cn('text-muted-foreground hover:text-foreground', { 'ml-auto': !collapsed })}
+          className={cn('text-muted-foreground hover:bg-hover hover:text-foreground', {
+            'ml-auto': !collapsed,
+          })}
         >
           <Icon aria-hidden="true" />
         </Button>
@@ -180,7 +195,7 @@ function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
   );
 }
 
-/** The wordmark «stepler», back to the collections. */
+/** The wordmark «stepler» after its indigo mark, back to the collections. */
 function BrandLink() {
   const t = useTranslations('brand');
   return (
@@ -188,10 +203,11 @@ function BrandLink() {
       href="/app"
       translate="no"
       className={cn(
-        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center rounded-control px-1 text-xl text-foreground no-underline',
+        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-control px-1 text-base text-foreground no-underline',
         focusRing,
       )}
     >
+      <BrandMark />
       <span className="font-wordmark lowercase">{t('name')}</span>
     </Link>
   );
@@ -214,7 +230,7 @@ function MobileNav() {
           </Button>
         </SheetTrigger>
         <SheetContent aria-describedby={undefined}>
-          <SheetHeader closeLabel={t('close')} className="border-b-0 pl-5 sm:pl-5">
+          <SheetHeader closeLabel={t('close')} className="border-b-0 pl-4 sm:pl-4">
             <SheetTitle className="sr-only">{t('label')}</SheetTitle>
             <BrandLink />
           </SheetHeader>

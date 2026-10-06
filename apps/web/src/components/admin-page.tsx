@@ -14,7 +14,7 @@ export function AdminPage({ children, className }: { children: ReactNode; classN
       id="main"
       tabIndex={-1}
       className={cn(
-        'admin-container grid gap-8 pt-5 pb-16 outline-none lg:pt-8 lg:pb-20 laptop:gap-5 laptop:pt-5',
+        'admin-container grid grid-cols-[minmax(0,1fr)] content-start gap-5 pt-5 pb-16 outline-none lg:pt-6 laptop:gap-4 laptop:pt-5',
         className,
       )}
     >

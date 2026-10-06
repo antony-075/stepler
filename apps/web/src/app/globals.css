@@ -26,15 +26,17 @@
   }
 }
 
-/* The admin page column (DESIGN-SYSTEM.md §6.0; owner remark 102, 2026-10-05): fluid, the full
-   width right of the sidebar with gutters that grow with the screen (16px on a phone, 48px from
-   1600px), capped only on very wide screens. One column for every admin page and the top bar;
+/* The admin page column (DESIGN-SYSTEM.md §6.0; owner remark 102, 2026-10-05; V1): fluid, the
+   full width of the white panel with gutters that grow with the screen (16px on a phone, 32px
+   from 1600px; `--admin-gutter`, so a child can bleed to the panel's edge), capped only on very
+   wide screens. One column for every admin page and the top bar;
    text-heavy pages cap their own form columns inside it. */
 @utility admin-container {
+  --admin-gutter: clamp(16px, 2vw, 32px);
   width: 100%;
   max-width: 2200px;
   margin-inline: auto;
-  padding-inline: clamp(16px, 3vw, 48px);
+  padding-inline: var(--admin-gutter);
   box-sizing: border-box;
 }
 

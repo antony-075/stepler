@@ -42,12 +42,7 @@ export function LegalLinks({ className, variant = 'footer', current }: LegalLink
   const documents = DOCUMENTS.filter(({ document }) => document !== current);
   return (
     <nav aria-label={t('navLabel')} className={className}>
-      <ul
-        className={cn(
-          'flex flex-wrap items-center',
-          nav ? 'px-[0.8125rem] text-xs' : 'gap-x-5 text-sm',
-        )}
-      >
+      <ul className={cn('flex flex-wrap items-center', nav ? 'px-2.5 text-xs' : 'gap-x-5 text-sm')}>
         {documents.map(({ document, key, shortKey }, index) => (
           <li key={document} className="flex items-center">
             <a

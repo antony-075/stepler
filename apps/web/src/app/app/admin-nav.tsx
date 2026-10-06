@@ -31,9 +31,9 @@ const currentValue = (pathname: string, href: string): 'page' | 'true' =>
  * The admin's two sections (DESIGN-SYSTEM.md §6.0, owner decisions 2026-10-02): «Колекції», then
  * «Акаунт» right under it, in the sidebar from `lg` and in the menu sheet below it.
  * Top level only: a collection's own sections are its tabs, and the breadcrumbs say where you
- * are. 44px rows, an icon and the name; the current section sits on a sheet (`--card`, a 1px
- * edge) in the foreground colour with `aria-current` (`page` on its own page, `true` inside it),
- * the others muted until hover. `collapsed` (the desktop icon rail) keeps each name for screen
+ * are. 36px rows with a mouse (44px on touch and in the menu sheet), an icon and the name; the
+ * current section sits on a white chip with a 1px edge and an indigo icon (V1) with
+ * `aria-current` (`page` on its own page, `true` inside it), the others soft until hover. `collapsed` (the desktop icon rail) keeps each name for screen
  * readers and shows it as a tooltip on hover and focus. `onNavigate` closes the menu sheet. The
  * legal links sit at the bottom of the sidebar and the menu sheet, hidden in the icon rail.
  */
@@ -48,7 +48,7 @@ export function AdminNav({
   return (
     <div className="flex flex-1 flex-col gap-6">
       <nav aria-label={t('label')}>
-        <ul className="grid gap-1">
+        <ul className="grid gap-0.5">
           <NavItem section={COLLECTIONS} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem section={ACCOUNT} collapsed={collapsed} onNavigate={onNavigate} />
         </ul>
@@ -77,15 +77,17 @@ function NavItem({
       onClick={onNavigate}
       {...(active ? { 'aria-current': currentValue(pathname, href) } : {})}
       className={cn(
-        'flex min-h-11 items-center gap-3 rounded-control border border-transparent px-3 text-[0.9375rem] font-semibold text-muted-foreground no-underline transition-colors duration-(--duration-fast) hover:bg-hover hover:text-foreground motion-reduce:transition-none',
+        'flex min-h-11 items-center gap-2.5 rounded-control px-2.5 text-[0.9375rem] text-foreground-soft no-underline transition-colors duration-(--duration-fast) hover:bg-hover hover:text-foreground motion-reduce:transition-none lg:min-h-9 lg:text-sm pointer-coarse:min-h-11',
+        '[&>svg]:text-muted-foreground',
         focusRing,
         {
-          'border-border bg-card text-foreground hover:bg-card': active,
+          'bg-card font-medium text-foreground shadow-[inset_0_0_0_1px_var(--border)] hover:bg-card [&>svg]:text-primary':
+            active,
           'justify-center px-0': collapsed,
         },
       )}
     >
-      <Icon aria-hidden="true" className="size-[1.125rem] shrink-0" />
+      <Icon aria-hidden="true" className="size-4 shrink-0" />
       <span className={cn({ 'sr-only': collapsed })}>{label}</span>
     </Link>
   );
