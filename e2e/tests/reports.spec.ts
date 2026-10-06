@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { horizontalOverflow } from '../support/collections.js';
 import { openGuestLink, submitTextViaApi } from '../support/guest.js';
+import { waitForMail } from '../support/mailpit.js';
+import { uploadViaApi } from '../support/media.js';
+import { OPERATOR_INBOX, signInAsOperator } from '../support/operator.js';
 import { guestApi, sharedCollection } from '../support/reports.js';
 
 // Slice 9, R1: a guest reports another guest's frame from the viewer's «⋯». Phones and desktop.
@@ -120,5 +123,97 @@ test.describe('guest reports', () => {
     await expect(chip).toHaveCount(0);
     await a.dispose();
     await guest.context().close();
+  });
+
+  test('the whole journey: report, operator mail, hide, decision mail, gone for guests @desktop', async ({
+    page,
+    browser,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    // 1. The admin's collection with a shared gallery.
+    await signIn(page, newEmail());
+    const title = `Подорож ${crypto.randomUUID().slice(0, 8)}`;
+    const { collectionId, linkPath } = await sharedCollection(page, title);
+    const baseURL = new URL(page.url()).origin;
+
+    // 2. Guest A uploads a photo; guest B reports it, leaving an address.
+    const a = await openGuestLink(browser, linkPath);
+    await expect(a.getByRole('heading', { level: 1 })).toBeVisible();
+    const photo = await uploadViaApi(a, collectionId, 'photo.jpg');
+    const reporter = `reporter-${crypto.randomUUID()}@stepler.test`;
+    const b = await guestApi(baseURL, collectionId, linkPath);
+    const filed = await b.post(
+      `/api/v1/guest/collections/${collectionId}/content/${photo.id}/reports`,
+      {
+        data: {
+          reason: 'PRIVACY',
+          description: 'Мене зняли без дозволу',
+          email: reporter,
+          locale: 'uk',
+        },
+        headers: { 'idempotency-key': crypto.randomUUID() },
+      },
+    );
+    expect(filed.status()).toBe(201);
+    const { id: reportId } = (await filed.json()) as { id: string };
+
+    // 3. The operator's mail: the reason and the console link, nothing else.
+    const received = await waitForMail(OPERATOR_INBOX, 'нова скарга', reportId);
+    expect(received.subject).toBe('Stepler: нова скарга (Порушує приватність)');
+    const link = /(https?:\/\/\S+\/ops\/reports\/[0-9a-f-]{36})/.exec(received.text)?.[1];
+    expect(link).toBeDefined();
+    expect(received.text).not.toContain(reporter);
+    expect(received.text).not.toContain(title);
+    expect(received.text).not.toContain('Мене зняли без дозволу');
+
+    // 4. The admin sees the mark and the reason, never the address.
+    await page.goto(`/app/collections/${collectionId}`);
+    await page.getByRole('button', { name: /^Кадр 1, .*скарга/ }).click();
+    const viewer = page.getByRole('dialog', { name: /#001/ });
+    await expect(viewer).toContainText('Порушує приватність');
+    await expect(viewer).toContainText('Мене зняли без дозволу');
+    expect(await page.content()).not.toContain(reporter);
+    await viewer.getByRole('button', { name: 'Закрити' }).click();
+
+    // 5. The operator follows the mail's link, hides the photo and marks the report actioned.
+    const ops = await (await browser.newContext({ locale: 'de-DE' })).newPage();
+    await signInAsOperator(ops, testInfo);
+    await ops.goto(new URL(link!).pathname);
+    for (const [button, confirm, reason] of [
+      ['Приховати кадр', 'Приховати', 'Фото без згоди людини в кадрі'],
+      ['Позначити: вжито заходів', 'Позначити', 'Кадр приховано'],
+    ] as const) {
+      await ops.getByRole('button', { name: button }).click();
+      const dialog = ops.getByRole('dialog', { name: button });
+      await dialog.getByLabel('Причина').fill(reason);
+      await dialog.getByRole('button', { name: confirm, exact: true }).click();
+      await expect(dialog).toBeHidden();
+    }
+    await expect(ops.getByText('Прихований', { exact: true })).toBeVisible();
+
+    // 6. The reporter's decision mail.
+    const decision = await waitForMail(reporter, 'вашу скаргу розглянуто');
+    expect(decision.text).toContain('вжили заходів');
+    expect(decision.text).not.toContain('Кадр приховано');
+
+    // 7. Gone for guests: A's own frames, B's «Усі кадри».
+    const own = await a.request.get(`/api/v1/guest/collections/${collectionId}/content?scope=own`);
+    expect(((await own.json()) as { items: unknown[] }).items).toHaveLength(0);
+    const all = await b.get(`/api/v1/guest/collections/${collectionId}/content?scope=all`);
+    expect(((await all.json()) as { items: unknown[] }).items).toHaveLength(0);
+
+    // 8. The admin sees the operator's hide and its reason, and cannot show the frame.
+    await page.reload();
+    await page.getByRole('button', { name: /^Кадр 1, .*приховано модерацією/ }).click();
+    await expect(viewer).toContainText('Приховано модерацією');
+    await expect(viewer).toContainText('Причина: Фото без згоди людини в кадрі');
+    await expect(viewer.getByRole('button', { name: 'Показати гостям' })).toHaveCount(0);
+
+    // 9. «Розглянуті» lists the report.
+    await ops.goto('/ops/reports?status=actioned');
+    await expect(ops.locator(`a[href="/ops/reports/${reportId}"]`).first()).toBeVisible();
+
+    await b.dispose();
+    for (const p of [a, ops]) await p.context().close();
   });
 });
