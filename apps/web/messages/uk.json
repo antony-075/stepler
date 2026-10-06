@@ -230,7 +230,26 @@
       "deletePhrase": "Щоб підтвердити, введіть «{title}»",
       "menu": "Дії з колекцією «{title}»",
       "menuShort": "Дії"
-    }
+    },
+    "storageUsage": "{used} з {limit}",
+    "noDescription": "Без опису",
+    "view": {
+      "label": "Вигляд",
+      "table": "Таблиця",
+      "tiles": "Плитки"
+    },
+    "columns": {
+      "collection": "Колекція",
+      "guestsAdd": "Гості можуть додавати",
+      "frames": "Кадри",
+      "date": "Дата",
+      "status": "Стан"
+    },
+    "dateLabel": {
+      "ACTIVE": "Створено",
+      "ARCHIVED": "Заархівовано"
+    },
+    "guestsClosed": "Гості не мають доступу"
   },
   "collection": {
     "pageTitle": "Колекція",

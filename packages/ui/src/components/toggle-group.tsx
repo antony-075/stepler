@@ -137,7 +137,7 @@ const itemClassName = cn(
 
 /** A segment: transparent over the track; the thumb behind it shows which one is chosen. */
 const segmentClassName = cn(
-  'group/chip relative z-1 inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-3 text-sm whitespace-nowrap text-foreground-soft transition-colors duration-(--duration-fast) md:pointer-fine:h-7 pointer-coarse:h-11 motion-reduce:transition-none',
+  'group/chip relative z-1 inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-3 text-sm whitespace-nowrap text-foreground-soft transition-colors duration-(--duration-fast) md:pointer-fine:h-8 pointer-coarse:h-11 motion-reduce:transition-none',
   focusRingInset,
   'hover:text-foreground aria-checked:font-semibold aria-checked:text-foreground',
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground",

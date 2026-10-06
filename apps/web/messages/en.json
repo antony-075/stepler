@@ -230,7 +230,26 @@
       "deletePhrase": "To confirm, type “{title}”",
       "menu": "Actions for “{title}”",
       "menuShort": "Actions"
-    }
+    },
+    "storageUsage": "{used} of {limit}",
+    "noDescription": "No description",
+    "view": {
+      "label": "View",
+      "table": "Table",
+      "tiles": "Tiles"
+    },
+    "columns": {
+      "collection": "Collection",
+      "guestsAdd": "Guests can add",
+      "frames": "Frames",
+      "date": "Date",
+      "status": "Status"
+    },
+    "dateLabel": {
+      "ACTIVE": "Created",
+      "ARCHIVED": "Archived"
+    },
+    "guestsClosed": "Guests can’t open it"
   },
   "collection": {
     "pageTitle": "Collection",

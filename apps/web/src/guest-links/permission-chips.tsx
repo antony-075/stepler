@@ -7,8 +7,13 @@ import { useTranslations } from 'next-intl';
 import { fromPermissions } from './link-permissions';
 import { ADD_TYPES } from './permission-types';
 
-const CHIP =
-  'inline-flex h-8 items-center gap-1.5 rounded-sheet border bg-background px-2.5 text-sm font-medium whitespace-nowrap text-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground';
+const CHIP = {
+  default:
+    'inline-flex h-7 items-center gap-1.5 rounded-control bg-muted px-2 text-[0.8125rem] whitespace-nowrap text-foreground-soft [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
+  /** The dashboard's table and tiles (V1): 22px. */
+  compact:
+    'inline-flex h-[1.375rem] items-center gap-1.5 rounded-[5px] bg-muted px-1.5 text-xs whitespace-nowrap text-foreground-soft [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
+} as const;
 
 /**
  * What a link lets guests add, as quiet chips with icons («Фото · Відео · Документи ·
@@ -18,9 +23,11 @@ const CHIP =
  */
 export function PermissionChips({
   permissions,
+  size = 'default',
   className,
 }: {
   permissions: GuestLinkPermissions;
+  size?: keyof typeof CHIP;
   className?: string;
 }) {
   const t = useTranslations('links.permissions');
@@ -30,16 +37,16 @@ export function PermissionChips({
     <ul
       data-slot="permission-chips"
       aria-label={t('chipsLabel')}
-      className={cn('flex flex-wrap gap-2', className)}
+      className={cn('flex flex-wrap', size === 'compact' ? 'gap-1' : 'gap-1.5', className)}
     >
       {allowed.length === 0 ? (
-        <li className={CHIP}>
+        <li className={CHIP[size]}>
           <Eye aria-hidden="true" />
           {t('viewOnlyChip')}
         </li>
       ) : (
         allowed.map(({ name, icon: Icon }) => (
-          <li key={name} className={CHIP}>
+          <li key={name} className={CHIP[size]}>
             <Icon aria-hidden="true" />
             {t(`type.${name}.title`)}
           </li>

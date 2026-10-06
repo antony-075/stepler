@@ -55,13 +55,15 @@ import { downloadQr, type QrFileFormat, qrFileName } from '@/qr/qr';
 export function ShareButton({
   collection,
   variant = 'default',
+  size = 'default',
   icon = <Share2 aria-hidden="true" />,
   className,
   children,
 }: {
   collection: Collection;
-  /** Ink as the page's primary; outline where another primary is on the page. */
+  /** The accent as the page's primary; outline where another primary is on the page. */
   variant?: 'default' | 'outline';
+  size?: 'default' | 'sm';
   /** Decorative, before the label. */
   icon?: ReactNode;
   className?: string;
@@ -71,7 +73,7 @@ export function ShareButton({
     <ShareDialog
       collection={collection}
       trigger={
-        <Button variant={variant} className={className}>
+        <Button variant={variant} size={size} className={className}>
           {icon}
           {children}
         </Button>

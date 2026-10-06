@@ -175,21 +175,22 @@ test.describe('dashboard', () => {
     await page.reload();
     const strip = card(page, 'Ювілей бабусі');
     await expect(strip.getByRole('button')).toHaveCount(2);
+    // 44px touch targets on phones; the desktop table is dense (V1: 32px, mouse only).
+    const target = page.viewportSize()!.width < 768 ? 44 : 32;
     for (const name of ['Поділитися', 'Дії з колекцією «Ювілей бабусі»']) {
       const box = await strip.getByRole('button', { name }).boundingBox();
-      expect(box!.height).toBeGreaterThanOrEqual(44);
-      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(target);
+      expect(box!.width).toBeGreaterThanOrEqual(target);
     }
 
     // Archive asks once; the card turns archived in place.
-    // The «⋯» sits right of the status, on its row.
+    // From 768px (the table) the «⋯» sits right of the status, at the row's end.
     const badge = await strip.getByText(T.active, { exact: true }).boundingBox();
     const menu = await strip
       .getByRole('button', { name: 'Дії з колекцією «Ювілей бабусі»' })
       .boundingBox();
     if (page.viewportSize()!.width >= 768) {
       expect(menu!.x).toBeGreaterThan(badge!.x + badge!.width - 1);
-      expect(Math.abs(menu!.y + menu!.height / 2 - (badge!.y + badge!.height / 2))).toBeLessThan(8);
     }
     await act(strip, 'Ювілей бабусі', T.archiveAction);
     const archive = page.getByRole('alertdialog', { name: 'Архівувати «Ювілей бабусі»?' });
@@ -262,13 +263,14 @@ test.describe('dashboard', () => {
     await expect(titleLink).toHaveAttribute('href', `/app/collections/${id}`);
 
     if (!isMobile) {
-      // The title link, then the card's «Поділитися»; the card shows the focus ring.
+      // The title link, then the row's «Поділитися» and «⋯» in the order they are shown (the
+      // V1 table); the row shows the focus ring.
       await titleLink.focus();
       await expect(row).toHaveCSS('outline-style', 'solid');
       await page.keyboard.press('Tab');
-      await expect(row.getByRole('button', { name: 'Дії з колекцією «Хрестини»' })).toBeFocused();
-      await page.keyboard.press('Tab');
       await expect(row.getByRole('button', { name: 'Поділитися' })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(row.getByRole('button', { name: 'Дії з колекцією «Хрестини»' })).toBeFocused();
     }
 
     // A tap away from the title (on the cover) still opens the collection.
@@ -328,6 +330,75 @@ test.describe('dashboard', () => {
     const dialog = page.getByRole('dialog', { name: T.newCollection });
     await expect(dialog.getByText(T.limitTitle)).toBeVisible();
     await expect(dialog.getByLabel(T.title)).toHaveCount(0);
+  });
+});
+
+test.describe('dashboard view (V1, owner 2026-10-06)', () => {
+  test('«Таблиця» is the default; «Плитки» switches and is remembered in this browser', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, 'phones always show the cards (next test)');
+    await signIn(page, newEmail());
+    await createCollectionViaApi(page, 'Хрестини Марійки');
+    await page.reload();
+    const view = page.getByRole('radiogroup', { name: 'Вигляд' });
+    await expect(view.getByRole('radio', { name: 'Таблиця' })).toBeChecked();
+    await expect(page.locator('[data-slot="collections-table"]')).toBeVisible();
+    await expect(card(page, 'Хрестини Марійки')).toHaveAttribute('data-view', 'table');
+
+    await view.getByRole('radio', { name: 'Плитки' }).click();
+    await expect(view.getByRole('radio', { name: 'Плитки' })).toBeChecked();
+    await expect(page.locator('[data-slot="collections-tiles"]')).toBeVisible();
+    await expect(page.locator('[data-slot="collections-table"]')).toHaveCount(0);
+    await expect(card(page, 'Хрестини Марійки')).toHaveAttribute('data-view', 'tiles');
+
+    // Remembered after a reload, per browser.
+    await page.reload();
+    await expect(view.getByRole('radio', { name: 'Плитки' })).toBeChecked();
+    await expect(card(page, 'Хрестини Марійки')).toHaveAttribute('data-view', 'tiles');
+
+    // The keyboard path: arrows move the focus, Enter selects.
+    await view.getByRole('radio', { name: 'Плитки' }).focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(view.getByRole('radio', { name: 'Таблиця' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(view.getByRole('radio', { name: 'Таблиця' })).toBeChecked();
+    await expect(card(page, 'Хрестини Марійки')).toHaveAttribute('data-view', 'table');
+  });
+
+  test('the dashboard still works when the browser refuses storage', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'phones always show the cards');
+    await page.addInitScript(() => {
+      Object.defineProperty(window, 'localStorage', {
+        get() {
+          throw new DOMException('blocked', 'SecurityError');
+        },
+      });
+    });
+    await signIn(page, newEmail());
+    await createCollectionViaApi(page, 'Ювілей');
+    await page.reload();
+    const view = page.getByRole('radiogroup', { name: 'Вигляд' });
+    await expect(card(page, 'Ювілей')).toHaveAttribute('data-view', 'table');
+    await view.getByRole('radio', { name: 'Плитки' }).click();
+    await expect(card(page, 'Ювілей')).toHaveAttribute('data-view', 'tiles');
+  });
+
+  test('phones always show the cards, without the toggle', async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'phones only');
+    await signIn(page, newEmail());
+    await page.addInitScript(() => {
+      try {
+        window.localStorage.setItem('stepler:dashboard-view', 'table');
+      } catch {
+        // Nothing to set.
+      }
+    });
+    await createCollectionViaApi(page, 'Хрестини Марійки');
+    await page.reload();
+    await expect(card(page, 'Хрестини Марійки')).toHaveAttribute('data-view', 'card');
+    await expect(page.getByRole('radiogroup', { name: 'Вигляд' })).toHaveCount(0);
   });
 });
 
@@ -550,7 +621,7 @@ test.describe('isolation and stale screens', () => {
 });
 
 test.describe('dashboard card and settings layout (owner review 2026-10-02)', () => {
-  test('a card shows its status, then the description, the date and the link state', async ({
+  test('a card shows its status, the description, the date and the link state', async ({
     page,
   }) => {
     await signIn(page, newEmail());
@@ -561,10 +632,15 @@ test.describe('dashboard card and settings layout (owner review 2026-10-02)', ()
     const meta = strip.locator('[data-slot="collection-meta"]');
     await expect(meta.getByText('Посилання активне', { exact: true })).toBeVisible();
     await expect(meta).toContainText('Створено');
-    // The description sits under the title, above the date and link state.
-    const description = await strip.getByText('Неділя, 12:00').boundingBox();
-    const metaBox = await meta.boundingBox();
-    expect(description!.y + description!.height).toBeLessThanOrEqual(metaBox!.y);
+    // On a card the description sits under the title, above the date and link state; in the
+    // desktop table (V1) they are columns of the same row.
+    if ((await strip.getAttribute('data-view')) === 'card') {
+      const description = await strip.getByText('Неділя, 12:00').boundingBox();
+      const metaBox = await meta.boundingBox();
+      expect(description!.y + description!.height).toBeLessThanOrEqual(metaBox!.y);
+    } else {
+      await expect(strip.getByText('Неділя, 12:00')).toBeVisible();
+    }
   });
 });
 
