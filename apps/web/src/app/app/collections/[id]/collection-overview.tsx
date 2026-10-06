@@ -7,6 +7,7 @@ import { PageHeader } from '@stepler/ui/components/page-header';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
 import { useToast } from '@stepler/ui/components/toast';
+import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Images, Link2, Palette, SlidersHorizontal } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -35,10 +36,16 @@ import { LinksSheet, useLinksSheet } from './links/links-sheet';
 import { useCollection } from '../use-collection';
 
 /**
- * From 1440px the collection's mini-nav sits beside the content (V1); narrower, the 280px column
- * would squeeze the guest-page editor's preview, so the tabs stay a row above the content.
+ * From 1440px the collection's mini-nav sits beside the content (V1); narrower, its column would
+ * squeeze the guest-page editor's preview, so the tabs stay a row above the content.
  */
 const WIDE = '(min-width: 90rem)';
+
+/**
+ * The mini-nav's column (350px; owner remark 174, 2026-10-06: 280px was too narrow) and the
+ * content beside it. Everything in the mini-nav fills its width, so this is its one size.
+ */
+const NAV_COLUMNS = 'grid-cols-[21.875rem_minmax(0,1fr)]';
 
 /**
  * The collection's page (DESIGN-SYSTEM.md §0.9, §6.6; owner reviews 2026-10-02). The header (title,
@@ -189,7 +196,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
       <LinksSheet collection={collection} links={links.data.items} sheet={sheet} />
     );
 
-  // From 1440px (V1, owner 2026-10-06): a 280px mini-nav beside the content, sticky under the top
+  // From 1440px (V1, owner 2026-10-06): a 350px mini-nav beside the content, sticky under the top
   // bar at the window's height, with the collection's header, «Поділитися» and the four tabs as
   // a vertical list whose highlight slides. The content gets the full height.
   if (wide) {
@@ -204,7 +211,10 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           // (--admin-max) for it and the top bar. The mini-nav's first line is at --page-top,
           // where every page starts, so the sidebar's «Колекції» stays put.
           data-page-top="tight"
-          className="-mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start gap-0"
+          className={cn(
+            '-mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid items-start gap-0',
+            NAV_COLUMNS,
+          )}
         >
           {/* 58px: under the top bar (the panel's 8px margin and the 50px bar with its edges). Both
               columns use the page gutter, so the top bar's breadcrumbs and account block line up
@@ -320,7 +330,10 @@ function OverviewSkeleton({ label }: { label: string }) {
         aria-busy="true"
         aria-label={label}
         data-page-top="tight"
-        className="loading-delayed -mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start"
+        className={cn(
+          'loading-delayed -mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid items-start',
+          NAV_COLUMNS,
+        )}
       >
         <div className="grid gap-3 border-r px-(--admin-gutter) pt-(--page-top) pb-4">
           <Skeleton className="aspect-[16/9] w-full rounded-sheet" />

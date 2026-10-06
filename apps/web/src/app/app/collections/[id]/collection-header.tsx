@@ -16,9 +16,9 @@ import { ShareButton } from './share-dialog';
  * none), and the status and date. Read-only: the title and description are edited on the
  * «Параметри колекції» tab, as are archive and delete.
  *
- * `layout="nav"` (from 1440px, V1): the top of the collection's mini-nav, in a 280px column: the
- * cover as a full-width picture, the title and description, the status with the date, and «Поділитися» (the main link's
- * QR and link; active collections only).
+ * `layout="nav"` (from 1440px, V1): the top of the collection's mini-nav, in a 350px column: the
+ * collection image as a full-width picture (or its initials), the title and description, the
+ * status with the date, and «Поділитися» (the main link's QR and link; active collections only).
  */
 export function CollectionHeader({
   collection,
