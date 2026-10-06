@@ -113,3 +113,30 @@ export const WithIcon: Story = {
     await expect(badge).toHaveTextContent('Archived');
   },
 };
+
+/** Slice 9: the moderation marks on content and collections, on the card surface. */
+export const Moderation: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2 rounded-sheet bg-card p-4">
+      <Badge variant="warning">Скарга</Badge>
+      <Badge variant="neutral">Приховано</Badge>
+      <Badge variant="danger">Приховано модерацією</Badge>
+      <Badge variant="danger">Заблоковано</Badge>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Скарга').closest('[data-slot="badge"]')).toHaveAttribute(
+      'data-variant',
+      'warning',
+    );
+    await expect(canvas.getByText('Заблоковано').closest('[data-slot="badge"]')).toHaveAttribute(
+      'data-variant',
+      'danger',
+    );
+  },
+};
+
+export const ModerationDark: Story = {
+  ...Moderation,
+  globals: { theme: 'dark' },
+};

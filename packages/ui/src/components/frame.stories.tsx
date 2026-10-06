@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent } from 'storybook/test';
 import { Button } from './button';
+import { Badge } from './badge';
 import { Frame } from './frame';
 import { samplePhoto } from '../stories/sample-photo';
 import { FrameGrid } from './frame-grid';
@@ -228,4 +229,66 @@ export const Dark: Story = {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await expect(canvas.getAllByRole('listitem')).toHaveLength(6);
   },
+};
+
+/** Slice 9: a reported frame carries a «Скарга» mark; its name says so too. */
+export const Reported: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, скарга',
+    marks: <Badge variant="warning">Скарга</Badge>,
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: /скарга$/ })).toBeInTheDocument();
+    const marks = canvasElement.querySelector('[data-slot="frame-marks"]');
+    await expect(marks).toHaveTextContent('Скарга');
+    // Visual only: inside the aria-hidden tile.
+    await expect(marks?.closest('[aria-hidden="true"]')).not.toBeNull();
+  },
+};
+
+/** Hidden by the admin, and reported. */
+export const Hidden: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, скарга, приховано',
+    marks: (
+      <>
+        <Badge variant="warning">Скарга</Badge>
+        <Badge variant="neutral">Приховано</Badge>
+      </>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-slot="frame-marks"]')).toHaveTextContent(
+      'СкаргаПриховано',
+    );
+  },
+};
+
+/** A wish hidden by moderation, in a phone-sized tile: the marks wrap, never overflow. */
+export const ModeratedText: Story = {
+  args: {
+    kind: 'text',
+    media: undefined,
+    text: 'Вітаємо молодят! Нехай кожен день буде світлим, а дім — повним сміху.',
+    name: 'Ірина',
+    accessibleName: 'Кадр 86, побажання, Ірина, приховано модерацією',
+    marks: <Badge variant="danger">Приховано модерацією</Badge>,
+  },
+  render: (args) => (
+    <div className="w-28">
+      <Frame {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const marks = canvasElement.querySelector<HTMLElement>('[data-slot="frame-marks"]');
+    const tile = canvasElement.querySelector<HTMLElement>('[data-slot="frame-media"]');
+    await expect(marks!.getBoundingClientRect().right).toBeLessThanOrEqual(
+      tile!.getBoundingClientRect().right,
+    );
+  },
+};
+
+export const ReportedDark: Story = {
+  ...Reported,
+  globals: { theme: 'dark' },
 };
