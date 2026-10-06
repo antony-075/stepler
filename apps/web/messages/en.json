@@ -317,6 +317,8 @@
       "appearance": "Guest page",
       "settings": "Collection settings"
     },
+    "navCollapse": "Collapse the collection panel",
+    "navExpand": "Expand the collection panel",
     "descriptionMore": "Show more",
     "descriptionLess": "Show less"
   },

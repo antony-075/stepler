@@ -8,7 +8,7 @@ import { cn } from '@stepler/ui/lib/utils';
 import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
 import { CollectionMark } from '../../collection-mark';
 import { AccessBadge, CollectionStatusBadge } from '../../collection-row';
-import { ShareButton } from './share-dialog';
+import { ShareButton, ShareIconButton } from './share-dialog';
 
 /**
  * The collection page's header (DESIGN-SYSTEM.md §0.9; owner reviews 2026-10-02, 2026-10-06): the
@@ -19,13 +19,17 @@ import { ShareButton } from './share-dialog';
  * `layout="nav"` (from 1500px, V1): the top of the collection's mini-nav, in a 350px column: the
  * collection image as a full-width picture (or its initials), the title and description, the
  * status with the date, and «Поділитися» (the main link's QR and link; active collections only).
+ *
+ * `layout="rail"`: the same mini-nav folded to its 64px rail (owner remark 176–177): the picture
+ * or initials as a 44px tile and «Поділитися» as an icon button with its name in a tooltip; the
+ * title stays the page's h1 for screen readers.
  */
 export function CollectionHeader({
   collection,
   layout = 'page',
 }: {
   collection: Collection;
-  layout?: 'page' | 'nav';
+  layout?: 'page' | 'nav' | 'rail';
 }) {
   const tList = useTranslations('collections');
   const format = useFormatter();
@@ -39,6 +43,26 @@ export function CollectionHeader({
       <span className="text-[0.875rem] tabular-nums">{dated}</span>
     </p>
   );
+
+  if (layout === 'rail') {
+    return (
+      <header data-slot="page-header" className="grid justify-items-center gap-2">
+        <CollectionBreadcrumbs collection={collection} />
+        <h1 data-slot="page-header-title" className="sr-only">
+          {collection.title}
+        </h1>
+        <CollectionMark collection={collection} size="sm" className="rounded-control text-sm" />
+        {archived ? null : (
+          <ShareIconButton
+            collection={collection}
+            label={tList('card.share')}
+            tooltipSide="right"
+            className="text-primary hover:bg-info-soft hover:text-primary"
+          />
+        )}
+      </header>
+    );
+  }
 
   if (layout === 'nav') {
     return (

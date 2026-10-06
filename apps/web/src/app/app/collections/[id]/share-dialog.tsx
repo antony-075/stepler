@@ -92,10 +92,13 @@ export function ShareButton({
 export function ShareIconButton({
   collection,
   label,
+  tooltipSide,
   className,
 }: {
   collection: Collection;
   label: string;
+  /** Where the tooltip opens (Radix's default: above). */
+  tooltipSide?: 'top' | 'right';
   className?: string;
 }) {
   return (
@@ -115,7 +118,7 @@ export function ShareIconButton({
           </TooltipTrigger>
         }
       />
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent side={tooltipSide}>{label}</TooltipContent>
     </Tooltip>
   );
 }

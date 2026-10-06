@@ -731,6 +731,73 @@ test.describe('admin navigation (owner decisions 2026-10-02)', () => {
     await expect(page.getByRole('button', { name: 'Згорнути меню' })).toBeVisible();
   });
 
+  test('the collection mini-nav folds to a rail, is remembered, and starts folded in the editor under 1700px @desktop', async ({
+    page,
+  }) => {
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Весілля Олі та Тараса');
+    const miniNav = page.locator('#collection-mini-nav');
+    const tab = (name: string) => miniNav.getByRole('tab', { name });
+    const sidebarBefore = async () => (await page.locator('#admin-sidebar').boundingBox())!;
+
+    // 1512×982 (a 14-inch laptop): the content tab starts expanded.
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await page.goto(`/app/collections/${id}`);
+    const fold = page.getByRole('button', { name: 'Згорнути панель колекції' });
+    await expect(fold).toHaveAttribute('aria-expanded', 'true');
+    await expect(fold).toHaveAttribute('aria-controls', 'collection-mini-nav');
+    await expect(miniNav.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
+    const expandedWidth = (await miniNav.boundingBox())!.width;
+    expect(Math.round(expandedWidth)).toBe(350);
+    const sidebar = await sidebarBefore();
+
+    // From the keyboard; the rail keeps the tab names (tooltips), the h1 and «Поділитися».
+    await fold.focus();
+    await page.keyboard.press('Enter');
+    const unfold = page.getByRole('button', { name: 'Розгорнути панель колекції' });
+    await expect(unfold).toHaveAttribute('aria-expanded', 'false');
+    await expect.poll(async () => Math.round((await miniNav.boundingBox())!.width)).toBe(64);
+    await expect(miniNav.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
+    await expect(miniNav.getByRole('button', { name: 'Поділитися' })).toBeVisible();
+    await expect(tab('Вміст')).toHaveAttribute('aria-selected', 'true');
+    // The highlight sits on the active icon (the tab's own state, not the tooltip's).
+    await expect(tab('Вміст')).toHaveAttribute('data-state', 'active');
+    await expect(miniNav.locator('[data-slot="segment-thumb"]')).toHaveCSS('opacity', '1');
+    await tab('Посилання').focus();
+    await expect(page.getByRole('tooltip', { name: 'Посилання' })).toBeVisible();
+    // The admin sidebar never moves (remark 29), nor does the top bar's trail.
+    expect(await sidebarBefore()).toEqual(sidebar);
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Колекції' })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+
+    // Remembered on reload and on the other tabs.
+    await page.reload();
+    await expect(unfold).toBeVisible();
+    await tab('Посилання').click();
+    await expect(page).toHaveURL(/tab=links/);
+    await expect(unfold).toBeVisible();
+    await unfold.click();
+    await expect(fold).toBeVisible();
+
+    // The editor under 1700px starts folded, though the other tabs are expanded…
+    await tab('Гостьова сторінка').click();
+    await expect(unfold).toBeVisible();
+    // …until expanded there, which is remembered for the editor.
+    await unfold.click();
+    await expect(fold).toBeVisible();
+    await page.reload();
+    await expect(tab('Гостьова сторінка')).toHaveAttribute('aria-selected', 'true');
+    await expect(fold).toBeVisible();
+
+    // A fresh browser state at 1920: the editor follows the other tabs (expanded).
+    await page.evaluate(() => window.localStorage.clear());
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.reload();
+    await expect(fold).toBeVisible();
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await expect(unfold).toBeVisible();
+  });
+
   test('on phones the sections open from the menu button', async ({ page, isMobile }) => {
     test.skip(!isMobile, 'phones only');
     await signIn(page, newEmail());
