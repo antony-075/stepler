@@ -11,9 +11,9 @@ Golos Text 700 converted to outlines (no font needed), favicons and app icons:
 | **B «Степлер» (applied)** | a monogram tile: the white geometric S on a Stepler-blue rounded square, a red staple across its corner (stepler ≈ stapler); the most legible at 16px and as an app icon | `out/preview-b.png` |
 | C «Шпилька» | the geometric S alone with the red pin dot on its upper terminal | `out/preview-c.png` |
 
-The folded sidebar shows the wordmark's own «S» (`letter-s-*.svg`), the expanded sidebar the
-wordmark alone (HTML text in the same face), the public header and auth pages the mark and the
-wordmark.
+The loading screen shows the wordmark's own «S» (`letter-s-*.svg`); the expanded sidebar the
+wordmark alone (HTML text in the same face; the folded rail shows no logo); the public header
+and auth pages the mark and the wordmark.
 
 **Rebuild:** `python3 generate.py` (needs `pip install fonttools`, a docs-only tool), then
 `node render.mjs` (sharp, the API's dependency). Output goes to `out/` (not committed). To
