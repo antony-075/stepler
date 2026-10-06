@@ -10,10 +10,18 @@
 @import './templates/party/styles.css';
 @import './templates/minimal/styles.css';
 
-/* Geologica is the interface font (apps/web/src/app/fonts.ts sets --font-geologica on <html>),
-   so templates that use it need no font of their own. */
+/* apps/web/src/app/fonts.ts defines Geologica on <html> (--font-geologica), so templates that
+   use it need no font of their own. */
 :root {
   --font-tpl-geologica: var(--font-geologica, 'Geologica'), sans-serif;
+}
+
+/* The app's V1 redesign (2026-10-06) changed the shared radii; the templates keep the shapes
+   they were designed with. Zero specificity, like the bridge below. */
+:where([data-template], [data-template-surface]) {
+  --radius-frame: 2px;
+  --radius-sheet: 4px;
+  --radius-control: 8px;
 }
 
 /*

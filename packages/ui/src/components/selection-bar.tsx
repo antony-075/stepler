@@ -1,8 +1,7 @@
 // SelectionBar: what to do with the selected frames (DESIGN-SYSTEM.md §5.13, §7.3).
 // Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
-// - One quiet `--card` strip with a 1px edge and elevation 1: «Вибрано 3» in the data face on the
-//   left, the caller's actions (outline, «Видалити» with its icon) and «Скасувати вибір» (ghost)
-//   on the right. No pencil fill: selection is already pencil on the frames.
+// - V1: a dark inverse dock (`--inverse`) that rises in (160ms): «Вибрано 3» on the left, the
+//   caller's actions (e.g. a destructive «Видалити») and «Скасувати вибір» on the right.
 // - Sticky to the bottom of the grid column at every width, full-bleed on phones (the caller
 //   gives the negative margin) with the safe area below. Sticky instead of the spec's fixed
 //   below 1024: it keeps its place in the flow, so it never covers the last row of frames.
@@ -72,21 +71,24 @@ function SelectionBar({
       data-count={count}
       data-toast-avoid=""
       className={cn(
-        'sticky bottom-0 z-(--z-dock) flex min-w-0 items-center gap-2 border-t bg-card px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-card',
-        'lg:bottom-3 lg:rounded-control lg:border lg:py-2 lg:pr-2 lg:pl-4',
-        'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]',
+        'sticky bottom-0 z-(--z-dock) flex min-w-0 items-center gap-2 bg-inverse px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] text-inverse-foreground shadow-dock [--ring:var(--inverse-ring)]',
+        'lg:bottom-4 lg:mx-auto lg:w-fit lg:max-w-full lg:rounded-sheet lg:py-1.5 lg:pr-1.5 lg:pl-4',
+        'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-3 motion-safe:animation-duration-[var(--duration-base)] ease-out',
         className,
       )}
     >
-      <p
-        aria-live="polite"
-        className="min-w-0 flex-1 truncate type-data font-medium text-foreground"
-      >
+      <p aria-live="polite" className="min-w-0 flex-1 truncate text-sm font-semibold lg:mr-2">
         {countLabel}
       </p>
       <div className="flex shrink-0 items-center gap-2">
         {actions}
-        <Button type="button" variant="ghost" size="adaptive" onClick={onClear}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="adaptive"
+          onClick={onClear}
+          className="text-inverse-muted hover:bg-inverse-hover hover:text-inverse-foreground active:bg-inverse-hover"
+        >
           <X aria-hidden="true" className="sm:hidden" />
           <span className="sr-only sm:not-sr-only">{clearLabel}</span>
         </Button>

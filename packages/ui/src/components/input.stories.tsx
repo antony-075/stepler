@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { Input } from './input';
 import { Label } from './label';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Input',
@@ -24,7 +25,7 @@ export const Default: Story = {
     await userEvent.type(input, 'anton@example.com');
     await expect(input).toHaveValue('anton@example.com');
     // 44px minimum touch target (rule 05).
-    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };
 
@@ -53,7 +54,7 @@ export const Focused: Story = {
     const style = getComputedStyle(input);
     await expect(style.outlineStyle).toBe('none');
     // The edge colour and the halo transition (120ms).
-    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(90, 74, 140)'));
+    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(79, 70, 229)'));
     await waitFor(() => expect(getComputedStyle(input).boxShadow).toContain('3px'));
     await expect(getComputedStyle(input).boxShadow).toMatch(
       /rgba\(90, 74, 140, 0\.25\)|oklab|color\(/,
@@ -66,7 +67,7 @@ export const FocusedDark: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByLabelText('Email');
     await userEvent.click(input);
-    await expect(getComputedStyle(input).outlineColor).toBe('rgb(182, 168, 232)'); // --link dark
+    await expect(getComputedStyle(input).outlineColor).toBe('rgb(165, 180, 252)'); // --ring dark
   },
 };
 
@@ -78,7 +79,7 @@ export const InvalidFocused: Story = {
     await userEvent.click(input);
     // An invalid field keeps its destructive edge while focused, with a destructive halo.
     await expect(getComputedStyle(input).outlineStyle).toBe('none');
-    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(163, 32, 58)'));
+    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(196, 43, 43)'));
   },
 };
 

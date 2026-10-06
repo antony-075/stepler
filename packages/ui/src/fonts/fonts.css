@@ -1,15 +1,17 @@
 /*
  * The interface fonts as plain @font-face, for Storybook (.storybook/preview.tsx). apps/web loads
- * the same files with next/font/local (apps/web/src/app/fonts.ts), which sets --font-geologica
+ * the same files with next/font/local (apps/web/src/app/fonts.ts), which sets --font-golos
  * and --font-geist-mono; globals.css falls back to these family names when those are unset.
  *
- * Geologica (wght 100–900, SHRP 0–100) and Geist Mono (wght 100–900), latin + cyrillic, OFL 1.1
- * (licences next to the files). Built from the google/fonts variable TTFs; recipe in ADR 0015.
+ * Golos Text (wght 400–900; the same file as apps/templates/fonts/golos-text.woff2) and Geist
+ * Mono (wght 100–900), latin + cyrillic, OFL 1.1 (licences next to the files). Built from the
+ * google/fonts variable TTFs; recipe in ADR 0015. Geologica stays in this folder because the web
+ * app still defines it for the guest page templates; Storybook does not need it.
  */
 @font-face {
-  font-family: 'Geologica';
-  src: url('./geologica-wght-shrp.woff2') format('woff2');
-  font-weight: 100 900;
+  font-family: 'Golos Text';
+  src: url('./golos-text-wght.woff2') format('woff2');
+  font-weight: 400 900;
   font-style: normal;
   font-display: swap;
 }

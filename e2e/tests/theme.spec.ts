@@ -5,8 +5,8 @@ import { acceptLegalOnCard, newEmail, signIn } from '../support/auth.js';
 // /app/account; public pages have none, so anonymous tests set the `st_theme` cookie directly.
 test.use({ locale: 'de-DE', viewport: { width: 1024, height: 768 } });
 
-const DARK_BACKGROUND = 'rgb(20, 22, 21)';
-const LIGHT_BACKGROUND = 'rgb(240, 241, 238)';
+const DARK_BACKGROUND = 'rgb(12, 12, 14)';
+const LIGHT_BACKGROUND = 'rgb(244, 244, 245)';
 const T = { group: 'Вигляд', light: 'Світла', dark: 'Темна', system: 'Системна' };
 
 async function setThemeCookie(context: BrowserContext, baseURL: string, value: string) {

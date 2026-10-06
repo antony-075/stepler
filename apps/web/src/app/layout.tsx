@@ -6,15 +6,15 @@ import type { ReactNode } from 'react';
 import { QueryProvider } from '@/api/query-provider';
 import { THEME_COOKIE, parseTheme, themeAttribute } from '@/theme/theme';
 import { ThemeProvider } from '@/theme/theme-provider';
-import { geistMono, geologica } from './fonts';
+import { geistMono, geologica, golosText } from './fonts';
 import './globals.css';
 
 // Browser chrome in the page colour (--background, light and dark). It follows the system
 // setting; an explicit theme choice in the cookie is not reflected here.
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f0f1ee' },
-    { media: '(prefers-color-scheme: dark)', color: '#141615' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f5' },
+    { media: '(prefers-color-scheme: dark)', color: '#0c0c0e' },
   ],
 };
 
@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     <html
       lang={locale}
       data-theme={themeAttribute(theme)}
-      className={`${geologica.variable} ${geistMono.variable}`}
+      className={`${golosText.variable} ${geologica.variable} ${geistMono.variable}`}
     >
       <body>
         <NextIntlClientProvider>

@@ -4,6 +4,7 @@ import { Button } from './button';
 import { Frame } from './frame';
 import { samplePhoto } from '../stories/sample-photo';
 import { FrameGrid } from './frame-grid';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Frame',
@@ -109,10 +110,9 @@ export const Selected: Story = {
   play: async ({ canvas, canvasElement, args }) => {
     const frame = canvas.getByRole('button', { name: /вибрано/ });
     await expect(frame).toHaveAttribute('aria-pressed', 'true');
-    const ring = canvasElement.querySelector<HTMLElement>(
-      '[data-slot="frame-media"] > .rounded-control',
-    )!;
-    await expect(getComputedStyle(ring).boxShadow).toContain('inset');
+    // Selected, the picture steps back to 90% (V1).
+    const face = canvasElement.querySelector<HTMLElement>('[data-slot="frame-face"]')!;
+    await expect(getComputedStyle(face).scale).toBe('0.9');
     await expect(canvasElement.querySelector('[data-slot="frame-check"]')).toBeNull();
     await userEvent.click(frame);
     await expect(args.onToggleSelect).toHaveBeenCalledOnce();
@@ -217,7 +217,7 @@ export const WithAction: Story = {
   play: async ({ canvas }) => {
     const retry = canvas.getByRole('button', { name: 'Повторити' });
     await expect(retry.closest('[data-slot="frame-actions"]')).not.toBeNull();
-    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };
 

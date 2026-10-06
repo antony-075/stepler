@@ -26,15 +26,15 @@ function DialogClose(props: ComponentProps<typeof DialogPrimitive.Close>) {
 // AlertDialog) so both dialogs match.
 const dialogOverlayClassName = cn(
   'fixed inset-0 z-(--z-overlay) bg-overlay',
-  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
+  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[120ms]',
   'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
 );
 
-// A 19px/600 heading with SHRP 60 (DESIGN-SYSTEM.md §5.4), fixed at every width.
+// A 17px/650 heading (DESIGN-SYSTEM.md §0.3), fixed at every width.
 const dialogTitleClassName =
-  "text-[1.1875rem] leading-[1.2] font-semibold text-balance [font-variation-settings:'SHRP'_60]";
+  'text-[1.0625rem] leading-[1.25] font-[650] tracking-[-0.01em] text-balance';
 
-const dialogDescriptionClassName = 'text-[0.9375rem] leading-normal text-muted-foreground';
+const dialogDescriptionClassName = 'text-sm leading-normal text-muted-foreground';
 
 function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
@@ -46,13 +46,13 @@ function DialogOverlay({ className, ...props }: ComponentProps<typeof DialogPrim
   );
 }
 
-// The modal layer: `--popover`, a 12px radius, `--shadow-dialog` in light (dark relies on the
-// lighter popover and the edge), over `--overlay`. Opens with a fade and a 0.98 → 1 scale (240ms),
-// closes with a fade (160ms); no motion under reduced motion.
+// The modal layer: `--popover`, a 12px radius, `--shadow-dialog`, over `--overlay`. Opens with a
+// fade, an 8px rise and a 0.98 → 1 scale (180ms); leaves faster (120ms, fade and 0.98); no
+// motion under reduced motion.
 const dialogContentClassName = cn(
   'fixed top-1/2 left-1/2 z-(--z-modal) grid ease-out max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-5 overflow-y-auto rounded-dialog border bg-popover p-5 text-popover-foreground shadow-dialog outline-none [overflow-wrap:anywhere] sm:max-w-[480px] sm:p-6',
-  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
-  'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-98 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0',
+  'animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[120ms]',
+  'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=open]:zoom-in-98 motion-safe:data-[state=open]:slide-in-from-bottom-2 motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=closed]:zoom-out-98',
 );
 
 type DialogContentProps = ComponentProps<typeof DialogPrimitive.Content> & {

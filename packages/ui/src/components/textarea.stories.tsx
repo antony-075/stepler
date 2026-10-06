@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent } from 'storybook/test';
 import { Label } from './label';
 import { Textarea } from './textarea';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Textarea',
@@ -22,7 +23,7 @@ export const Default: Story = {
   play: async ({ canvas }) => {
     const textarea = canvas.getByLabelText('Note');
     // 44px minimum touch target (rule 05).
-    await expect(textarea.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(textarea.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     const initialHeight = textarea.clientHeight;
     await userEvent.type(
       textarea,

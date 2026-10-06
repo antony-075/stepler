@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
 import { RadioGroup, RadioGroupItem } from './radio-group';
+import { minTarget } from '../stories/target';
 
 // Gallery visibility mode (PRODUCT §7). Each item is a full-row label at least 44px tall.
 const meta = {
@@ -32,7 +33,7 @@ async function expectRowsAreTouchTargets(radios: HTMLElement[]) {
     const row = radio.closest('label');
     await expect(row).not.toBeNull();
     // 44px minimum touch target (rule 05).
-    await expect(row?.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(row?.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   }
 }
 

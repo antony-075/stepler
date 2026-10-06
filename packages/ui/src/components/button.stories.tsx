@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { Button, type ButtonProps } from './button';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Button',
@@ -46,7 +47,7 @@ export const AriaDisabled: Story = {
     // The primary button turns solid muted rather than half-transparent, so its label stays
     // readable.
     await expect(getComputedStyle(button).opacity).toBe('1');
-    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(228, 230, 225)'); // --muted
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(241, 241, 243)'); // --muted
   },
 };
 
@@ -56,7 +57,7 @@ export const AriaDisabledOutline: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Upload photos' });
     await expect(getComputedStyle(button).opacity).toBe('1');
-    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(228, 230, 225)'); // --muted
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(241, 241, 243)'); // --muted
   },
 };
 
@@ -70,7 +71,7 @@ export const FocusRing: Story = {
     await expect(style.outlineStyle).toBe('solid');
     await expect(style.outlineWidth).toBe('2px');
     await expect(style.outlineOffset).toBe('2px');
-    await expect(style.outlineColor).toBe('rgb(90, 74, 140)'); // --link, never the pencil
+    await expect(style.outlineColor).toBe('rgb(79, 70, 229)'); // --ring, the accent
   },
 };
 
@@ -87,7 +88,7 @@ export const Guest: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Додати фото' });
     await expect(button.getBoundingClientRect().height).toBe(56);
-    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(184, 62, 38)'); // --pencil
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(79, 70, 229)'); // --pencil, the accent since V1
   },
 };
 
@@ -97,7 +98,7 @@ export const GuestDark: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Додати фото' });
     // Dark text on the peach pencil.
-    await expect(getComputedStyle(button).color).toBe('rgb(20, 22, 21)');
+    await expect(getComputedStyle(button).color).toBe('rgb(12, 12, 14)');
   },
 };
 
@@ -114,7 +115,7 @@ export const IconOnly: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Close' });
     // 44px minimum touch target (rule 05).
-    await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };
 
@@ -195,7 +196,7 @@ export const GhostOnPage: Story = {
     // fill, so assert it there.
     button.dataset.state = 'open';
     await waitFor(() =>
-      expect(getComputedStyle(button).backgroundColor).toBe('rgb(231, 232, 229)'),
+      expect(getComputedStyle(button).backgroundColor).toBe('rgba(24, 24, 27, 0.06)'),
     );
     delete button.dataset.state;
   },
@@ -207,7 +208,9 @@ export const GhostOnPageDark: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'anna@example.com' });
     button.dataset.state = 'open';
-    await waitFor(() => expect(getComputedStyle(button).backgroundColor).toBe('rgb(31, 33, 31)'));
+    await waitFor(() =>
+      expect(getComputedStyle(button).backgroundColor).toBe('rgba(244, 244, 245, 0.08)'),
+    );
     delete button.dataset.state;
   },
 };

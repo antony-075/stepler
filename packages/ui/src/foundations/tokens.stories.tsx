@@ -9,24 +9,27 @@ const GROUPS: { title: string; tokens: Token[] }[] = [
   {
     title: 'Surfaces and text',
     tokens: [
-      { name: '--background', role: 'the light table: page' },
-      { name: '--card', role: 'sheet: grids, panels, fields' },
+      { name: '--background', role: 'graphite chrome: page, sidebar' },
+      { name: '--card', role: 'panel: the main panel, cards, fields' },
       { name: '--popover', role: 'raised: menus, select, toast, dialog' },
       { name: '--foreground', role: 'text, ink' },
       { name: '--muted-foreground', role: 'secondary text, time, hints' },
       { name: '--muted', role: 'fill: skeleton, disabled, frame placeholder' },
       { name: '--border', role: 'grid lines, hairlines (decorative)' },
-      { name: '--input', role: 'field, checkbox and outline-button edges' },
+      { name: '--input', role: 'field, checkbox and radio edges (3:1)' },
+      { name: '--border-strong', role: 'outline-button and chip edges' },
+      { name: '--foreground-soft', role: 'secondary body text' },
+      { name: '--track', role: 'segmented-control track' },
     ],
   },
   {
     title: 'Actions',
     tokens: [
-      { name: '--primary', role: 'ink: admin primary button' },
-      { name: '--primary-hover', role: 'ink on hover' },
-      { name: '--primary-active', role: 'ink pressed' },
-      { name: '--primary-foreground', role: 'text on ink' },
-      { name: '--pencil', role: 'wax pencil: guest primary, selection, new (never focus)' },
+      { name: '--primary', role: 'indigo accent: primary button, current place' },
+      { name: '--primary-hover', role: 'accent on hover' },
+      { name: '--primary-active', role: 'accent pressed' },
+      { name: '--primary-foreground', role: 'text on the accent' },
+      { name: '--pencil', role: 'the accent (alias): guest primary, selection, new' },
       { name: '--pencil-hover', role: 'pencil on hover' },
       { name: '--pencil-active', role: 'pencil pressed' },
       { name: '--pencil-foreground', role: 'text on pencil' },
@@ -51,7 +54,9 @@ const GROUPS: { title: string; tokens: Token[] }[] = [
       { name: '--hover', role: 'hover on the page' },
       { name: '--hover-card', role: 'hover inside a sheet' },
       { name: '--hover-popover', role: 'hover inside a popover' },
-      { name: '--ring', role: 'focus ring (= link)' },
+      { name: '--ring', role: 'focus ring (the accent)' },
+      { name: '--hover-ghost', role: 'ghost control hover, any surface' },
+      { name: '--inverse', role: 'tooltip, selection bar' },
     ],
   },
   {
@@ -133,8 +138,8 @@ export const Dark: Story = {
     for (const { name } of ALL_TOKENS) {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
     }
-    await expect(await tokenRow(canvasElement, '--background').findByText('#141615')).toBeVisible();
-    await expect(await tokenRow(canvasElement, '--pencil').findByText('#f08766')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--background').findByText('#0c0c0e')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#818cf8')).toBeVisible();
   },
 };
 
@@ -146,7 +151,7 @@ export const Light: Story = {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
     }
     // The values are read live from the page, not copied into the story.
-    await expect(await tokenRow(canvasElement, '--background').findByText('#f0f1ee')).toBeVisible();
-    await expect(await tokenRow(canvasElement, '--pencil').findByText('#b83e26')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--background').findByText('#f4f4f5')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#4f46e5')).toBeVisible();
   },
 };
