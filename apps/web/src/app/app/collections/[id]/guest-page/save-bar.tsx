@@ -12,7 +12,7 @@ import {
   TooltipTrigger,
 } from '@stepler/ui/components/tooltip';
 import { cn } from '@stepler/ui/lib/utils';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Save } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { HistoryButtons } from './history-buttons';
@@ -27,8 +27,8 @@ import type { GuestPageEditorApi } from './use-guest-page-editor';
  * `layout="panel"` is the desktop settings panel's sticky top bar (owner remarks 71, 105): one
  * row in the panel's 300–600px, always in view while the settings scroll. The status is a dot and
  * one word («Чернетка», «Збережено») with the full sentence in a tooltip (and for screen readers);
- * «Скинути зміни» becomes an icon button with a tooltip in a narrow panel; «Зберегти» stays the
- * full primary with its unsaved dot. `stacked` is the phone sheet's foot.
+ * «Скинути зміни» and «Зберегти» become icon buttons with tooltips in a narrow panel (owner
+ * 2026-10-06); «Зберегти» keeps its unsaved dot. `stacked` is the phone sheet's foot.
  */
 export function SaveBar({
   editor,
@@ -67,6 +67,35 @@ export function SaveBar({
       setPublishing(false);
     }
   }
+
+  // In the panel the save button shows only its icon when the panel is narrow (its tooltip and
+  // name say «Зберегти»); the spinner takes the icon's place while saving.
+  const narrow = header
+    ? '@max-[26rem]/settings:size-9 @max-[26rem]/settings:px-0 pointer-coarse:@max-[26rem]/settings:size-11'
+    : '';
+  const saveButton = (
+    <Button
+      className={cn('relative', header && 'px-3', narrow, touch)}
+      aria-disabled={idle || publishing || status === 'conflict' || undefined}
+      onClick={() => void publish()}
+      data-slot="save-button"
+    >
+      {publishing ? <Spinner label={t('status.saving')} className="size-4" /> : null}
+      {header && !publishing ? (
+        <Save aria-hidden="true" className="hidden @max-[26rem]/settings:block" />
+      ) : null}
+      <span className={cn({ '@max-[26rem]/settings:sr-only': header })}>{t('actions.save')}</span>
+      {dirty && !readOnly ? (
+        <>
+          <span className="sr-only">{t('actions.saveDirty')}</span>
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 size-2.5 rounded-full border-2 border-background bg-pencil"
+          />
+        </>
+      ) : null}
+    </Button>
+  );
 
   const dot = (
     <span
@@ -187,24 +216,16 @@ export function SaveBar({
             {t('actions.reset')}
           </Button>
         )}
-        <Button
-          className={cn('relative', header && 'px-3', touch)}
-          aria-disabled={idle || publishing || status === 'conflict' || undefined}
-          onClick={() => void publish()}
-          data-slot="save-button"
-        >
-          {publishing ? <Spinner label={t('status.saving')} className="size-4" /> : null}
-          {t('actions.save')}
-          {dirty && !readOnly ? (
-            <>
-              <span className="sr-only">{t('actions.saveDirty')}</span>
-              <span
-                aria-hidden="true"
-                className="absolute -top-1 -right-1 size-2.5 rounded-full border-2 border-background bg-pencil"
-              />
-            </>
-          ) : null}
-        </Button>
+        {header ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>{saveButton}</TooltipTrigger>
+              <TooltipContent>{t('actions.save')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          saveButton
+        )}
       </div>
       <ConfirmDialog
         open={confirming}
