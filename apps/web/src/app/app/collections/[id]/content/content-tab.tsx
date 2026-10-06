@@ -42,6 +42,7 @@ import type { AdminContentItem, AdminContentPage, Collection } from '@stepler/co
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -537,17 +538,23 @@ export function ContentTab({
             <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
             {/* «Вибрати» turns selection on and off (pressed while on); «Вибрати все
                 завантажене» is in the selection bar (owner 2026-10-06). Icon only on phones. */}
-            <Button
-              ref={selectButton}
-              variant="outline"
-              aria-pressed={selecting}
-              disabled={items.length === 0 && !selecting}
-              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
-              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
-            >
-              <CheckSquare aria-hidden="true" className="size-4" />
-              <span className="max-sm:sr-only">{t('select.start')}</span>
-            </Button>
+            {/* Icon only (F3, owner 2026-10-06): the word is its name and its tooltip. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  ref={selectButton}
+                  variant="outline"
+                  aria-label={t('select.start')}
+                  aria-pressed={selecting}
+                  disabled={items.length === 0 && !selecting}
+                  onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+                  className="h-11 w-11 shrink-0 px-0 md:h-9 md:w-9 pointer-coarse:h-11 pointer-coarse:w-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
+                >
+                  <CheckSquare aria-hidden="true" className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('select.start')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
