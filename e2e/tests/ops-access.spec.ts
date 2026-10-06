@@ -14,10 +14,13 @@ test.use({ locale: 'de-DE' });
 test.describe('ops console access', () => {
   test('a signed-in admin gets the 404 page, with nothing of the console', async ({ page }) => {
     await signIn(page, newEmail());
-    for (const path of ['/ops', `/ops/reports/${randomUUID()}`]) {
+    // The same generic page as any unknown address: nothing says the console exists.
+    for (const path of ['/ops', `/ops/reports/${randomUUID()}`, '/no-such-page']) {
       const res = await page.goto(path);
       expect(res?.status(), path).toBe(404);
       await expect(page.getByRole('banner', { name: OPS_UK.title })).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: 'Сторінку не знайдено' })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'На головну' })).toHaveAttribute('href', '/app');
     }
   });
 

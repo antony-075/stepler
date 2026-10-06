@@ -1394,5 +1394,11 @@
         "done": "Account unblocked"
       }
     }
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "text": "The link may be out of date or mistyped.",
+    "home": "Go to the home page"
   }
 }
