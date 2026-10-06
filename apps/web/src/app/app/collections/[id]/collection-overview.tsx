@@ -352,13 +352,28 @@ function RailTab({
 }
 
 /**
- * Folds the mini-nav to its rail and back (remarks 176–177): an icon button at the column's foot,
- * named for what it does now (its tooltip too), `aria-expanded` and `aria-controls` on the column.
+ * Folds the mini-nav to its rail and back (remarks 176–177): a button at the column's foot, named
+ * for what it does now, `aria-expanded` and `aria-controls` on the column. Expanded it shows its
+ * label so it is easy to find (owner 2026-10-06); on the rail it is an icon with a tooltip.
  */
 function MiniNavToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const t = useTranslations('collection');
   const label = collapsed ? t('navExpand') : t('navCollapse');
   const Icon = collapsed ? PanelLeftOpen : PanelLeftClose;
+  if (!collapsed) {
+    return (
+      <Button
+        variant="ghost"
+        aria-expanded
+        aria-controls={MINI_NAV_ID}
+        onClick={onToggle}
+        className="justify-start gap-2 px-2 text-muted-foreground hover:bg-hover hover:text-foreground"
+      >
+        <Icon aria-hidden="true" />
+        {label}
+      </Button>
+    );
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -366,7 +381,7 @@ function MiniNavToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
           variant="ghost"
           size="icon"
           aria-label={label}
-          aria-expanded={!collapsed}
+          aria-expanded={false}
           aria-controls={MINI_NAV_ID}
           onClick={onToggle}
           className="text-muted-foreground hover:bg-hover hover:text-foreground"
