@@ -264,7 +264,7 @@ function Frame({
       <div
         data-slot="frame-face"
         className={cn(
-          'absolute inset-0 overflow-hidden rounded-frame transition-[transform,border-radius] duration-(--duration-menu) ease-out motion-reduce:transition-none',
+          'absolute inset-0 overflow-hidden rounded-frame transition-transform duration-(--duration-menu) ease-out motion-reduce:transition-none',
           kind === 'empty' ? 'bg-transparent' : 'bg-muted',
           selected && 'scale-90 rounded-control',
         )}
