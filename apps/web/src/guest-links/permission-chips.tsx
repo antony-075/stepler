@@ -50,9 +50,7 @@ export function PermissionChips({
       {allowed.length === 0 ? (
         <li className={CHIP[size]} {...(size === 'icons' ? { title: t('viewOnlyChip') } : {})}>
           <Eye aria-hidden="true" />
-          <span className={cn({ 'sr-only': size === 'icons' })}>
-            {t('viewOnlyChip')}
-          </span>
+          <span className={cn({ 'sr-only': size === 'icons' })}>{t('viewOnlyChip')}</span>
         </li>
       ) : (
         allowed.map(({ name, icon: Icon }) => {

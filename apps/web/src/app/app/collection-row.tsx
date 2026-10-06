@@ -171,11 +171,7 @@ export function CollectionRow({ collection }: { collection: Collection }) {
           <Badge variant={archived ? 'neutral' : 'success'} title={status}>
             {status}
           </Badge>
-          {archived ? (
-            <span className="truncate text-xs text-muted-foreground">{t('guestsClosed')}</span>
-          ) : (
-            <LinkStatusBadge status={collection.defaultLinkStatus} />
-          )}
+          <AccessBadge collection={collection} />
         </span>
       </div>
 
@@ -188,8 +184,25 @@ export function CollectionRow({ collection }: { collection: Collection }) {
 }
 
 /**
- * The main link's state as a badge beside the collection's (owner 2026-10-06): green while guests
- * can use it, amber while it is paused; nothing without a live main link.
+ * Whether guests can get in, as a badge beside the collection's status (owner 2026-10-06: every
+ * status is a badge): an archived collection is «Доступ закрито» (neutral); otherwise the main
+ * link's state.
+ */
+export function AccessBadge({ collection }: { collection: Collection }) {
+  const t = useTranslations('collections');
+  if (collection.status === 'ARCHIVED') {
+    return (
+      <Badge data-slot="collection-access" variant="neutral" title={t('guestsClosed')}>
+        {t('guestsClosed')}
+      </Badge>
+    );
+  }
+  return <LinkStatusBadge status={collection.defaultLinkStatus} />;
+}
+
+/**
+ * The main link's state as a badge: green while guests can use it, amber while it is paused;
+ * nothing without a live main link.
  */
 export function LinkStatusBadge({ status }: { status: Collection['defaultLinkStatus'] }) {
   const t = useTranslations('collections');

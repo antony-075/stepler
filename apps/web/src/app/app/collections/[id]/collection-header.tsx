@@ -5,6 +5,7 @@ import { Badge } from '@stepler/ui/components/badge';
 import { useFormatter, useTranslations } from 'next-intl';
 import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
 import { CollectionCoverImage } from '../../collection-cover-image';
+import { AccessBadge } from '../../collection-row';
 import { ShareButton } from './share-dialog';
 
 /**
@@ -35,6 +36,7 @@ export function CollectionHeader({
       <Badge variant={archived ? 'neutral' : 'success'} title={status}>
         {status}
       </Badge>
+      <AccessBadge collection={collection} />
       <span className="text-[0.875rem] tabular-nums">{dated}</span>
     </p>
   );

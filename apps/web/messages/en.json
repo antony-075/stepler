@@ -249,7 +249,7 @@
       "last": "Latest frame",
       "created": "Created"
     },
-    "guestsClosed": "Guests can’t open it",
+    "guestsClosed": "Access closed",
     "cellName": "{name}:",
     "none": "—"
   },

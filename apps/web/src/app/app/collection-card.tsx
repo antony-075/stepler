@@ -8,7 +8,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
 import { CollectionCoverImage } from './collection-cover-image';
 import { formatBytes } from '@/format/bytes';
-import { LinkStatusBadge } from './collection-row';
+import { AccessBadge } from './collection-row';
 import { ShareIconButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
 
@@ -79,7 +79,7 @@ export function CollectionCard({
       <span className="whitespace-nowrap tabular-nums">
         {archived ? t('archivedOn', { date }) : t('createdOn', { date })}
       </span>
-      {archived ? null : <LinkStatusBadge status={collection.defaultLinkStatus} />}
+      <AccessBadge collection={collection} />
     </p>
   );
   const chips =
