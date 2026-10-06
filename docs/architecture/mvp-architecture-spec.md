@@ -182,6 +182,7 @@ Collection
   blockedAt?, blockedReason?, createdAt, updatedAt
   SQL CHECK ((status = 'ARCHIVED') = (archivedAt IS NOT NULL))
   SQL CHECK ((status = 'DELETING') = (deletionRequestedAt IS NOT NULL))
+  SQL CHECK ((blockedAt IS NULL) = (blockedReason IS NULL)), blockedReason 1–500   (slice 9)
   INDEX (ownerId, status, createdAt DESC, id DESC)
 
 Collection (additions, guest page templates, PR I, 2026-10-05; ADR 0017)
@@ -257,6 +258,13 @@ ContentItem                                         (as built in slice 3, 2026-1
   INDEX (deletedAt) WHERE deletedAt IS NOT NULL                                 -- purge
   Collection.nextFrameNo (≥ 1)
 
+ContentItem (additions, slice 9, 2026-10-06; ADR 0013)
+  hiddenAt?, hiddenBy? (ADMIN|OPERATOR), hiddenByUserId? (uuid, no FK), hiddenReason? (1–500)
+  SQL CHECK hiddenAt, hiddenBy, hiddenByUserId all set or all NULL ("ContentItem_hidden_consistent")
+  SQL CHECK (hiddenBy = 'OPERATOR' ⇒ hiddenReason set)            ("ContentItem_operator_hide_reason")
+  INDEX (collectionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL AND hiddenAt IS NULL -- guest feed
+  the own index above is re-created with … AND hiddenAt IS NULL (only the guest «own» scope reads it)
+
 MediaObject
   id, contentItemId → ContentItem (cascade), role (ORIGINAL|THUMBNAIL|PREVIEW|POSTER),
   storageKey (unique), mimeType, sizeBytes (bigint), width?, height?, durationMs?, createdAt
@@ -282,7 +290,7 @@ UploadSession                                       (as built in PR C and slice 
 - One table for all content kinds: the gallery is a single mixed, cursor-paginated feed. The cost is nullable columns guarded by CHECKs. Alternatives rejected: table-per-kind (UNION feeds), EAV (loses integrity).
 - `contributorName` is stored per submission (D6), never exposed in guest DTOs.
 - `contributorUserId` was drafted so admin uploads are not structurally forbidden later (D14); it does not exist on `ContentItem` ([C19]). The admin identity lands on `UploadSession.uploaderUserId` instead (the draft's `userId?`), used by the collection cover (slice 8a): an admin's upload is a cover, never content.
-- `hiddenAt` is the first moderation state (operator/admin "hide"). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
+- `hiddenAt` is the first moderation state (operator/admin "hide"), *implemented in slice 9*: every guest content read spreads `GUEST_VISIBLE = { deletedAt: null, hiddenAt: null }`; admin reads do not (the admin sees hidden frames with their state). Hidden frames still count towards usage. Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
 - **Frame numbers (ADR 0015), implemented in slice 3 [C8]:** `UPDATE "Collection" SET "nextFrameNo" = "nextFrameNo" + 1 WHERE id = $1 AND status = 'ACTIVE' RETURNING "nextFrameNo" - 1` inside the transaction that creates the item; that statement row-locks the collection (so concurrent creations get consecutive numbers, and a rolled-back one gives its number back) and is the "still active" re-check. Texts and files share the sequence; gaps after deletion are never filled. The owner sees every number; a guest only their own. Lock order [C9]: a transaction that locks both takes the owner's `User` row first, then the `Collection`.
@@ -291,13 +299,19 @@ UploadSession                                       (as built in PR C and slice 
 ### 7.4 Reports and audit
 
 ```text
-ContentReport
-  id, contentId (uuid, no FK), collectionId (uuid, no FK),
-  reporterGuestSessionId?, reporterUserId?, reason (ILLEGAL|INAPPROPRIATE|PRIVACY|SPAM|OTHER),
-  description? (≤ 1000), requestId, status (OPEN|DISMISSED|ACTIONED),
-  resolvedByUserId?, resolvedAt?, resolutionNote?, createdAt
-  INDEX (collectionId, status, createdAt)
-  INDEX (status, createdAt)
+ContentReport                                       (as built in slice 9, 2026-10-06)
+  id, contentId, collectionId, reporterGuestSessionId (uuids, no FKs), idempotencyKey (uuid),
+  reason (ILLEGAL|INAPPROPRIATE|PRIVACY|SPAM|OTHER), description? (1–1000 code points),
+  reporterEmail? (citext, ≤ 254), reporterLocale? (uk|en; set with the e-mail), requestId?,
+  status (OPEN|DISMISSED|ACTIONED), resolvedByUserId?, resolvedAt?, resolutionNote? (1–500),
+  adminDismissedAt?, operatorNotifiedAt?, reporterNotifiedAt?, createdAt
+  UNIQUE (reporterGuestSessionId, idempotencyKey)
+  UNIQUE (reporterGuestSessionId, contentId) WHERE status = 'OPEN'   -- one open report per session and item
+  INDEX (status, createdAt DESC, id DESC)                            -- operator queue
+  INDEX (contentId, status); INDEX (collectionId)                    -- per item; scope checks
+  INDEX (collectionId, contentId) WHERE status = 'OPEN' AND adminDismissedAt IS NULL -- admin marks
+  SQL CHECK (status = 'OPEN') ⇔ no resolvedAt/resolvedByUserId/resolutionNote
+  SQL CHECK (reporterEmail IS NULL) = (reporterLocale IS NULL)
 
 AuditEvent (append-only)
   id, collectionId?, actorType (ADMIN|OPERATOR|GUEST|SYSTEM), actorId?, action, targetType,
@@ -309,7 +323,9 @@ AuditEvent (append-only)
 
 *`AuditEvent` implemented in slice 1* (Phase 4), with a second index `(actorId, action, createdAt)` for the collection creation limit (§13.1). Slice 1 records `collection.create`, `collection.archive`, `collection.unarchive` and `collection.delete`.
 
-Audited actions: link create / permission change / deactivate / activate / revoke / delete / rotate; content delete / hide; collection archive / unarchive / delete; report status change; account/collection block.
+Audited actions: link create / permission change / deactivate / activate / revoke / delete / rotate; content delete / hide / unhide; collection archive / unarchive / delete; report create / admin dismiss / resolve; account and collection block / unblock (slice 9: `content.hide`, `content.unhide`, `report.create`, `report.admin_dismiss`, `report.resolve`, `collection.block`, `collection.unblock`, `account.block`, `account.unblock`; target types `report` and `user`; the operator's reason is kept as `reason`, never a reporter's address or description).
+
+*Slice 9:* the reporter's `reporterEmail` is the only personal data in the table; it never leaves it except to the worker's decision mail, and is deleted with the locale once that mail is sent or after `REPORT_EMAIL_RETENTION_DAYS` (90). `reporterUserId` from the draft was dropped: admins cannot report in the MVP. No IP is stored.
 
 ---
 
@@ -319,7 +335,7 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 
 | Action | Admin (owner) | Operator | Guest |
 |---|---|---|---|
-| Collection metadata | own only | reported items' collections | public fields via any active link |
+| Collection metadata | own only | reported items' collections (title, state, the owner's e-mail and state) | public fields via any active link |
 | List gallery | own collections | — | `canViewGallery` → all visible items; otherwise own items only |
 | Get item / signed URL | own collections | reported items | same visibility rule as list |
 | Upload files | admin images only (a photo): the guest page draft's cover and background, the collection image (PR I) | — | `canUploadPhotos` / `canUploadVideos` / `canUploadDocuments`, by the file's type |
@@ -328,13 +344,15 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 | Collection image | own collection; never in any guest response | — | — |
 | Submit text | — (MVP) | — | `canSubmitText` |
 | Delete item | any in own collection | any | `canDeleteOwn` AND contributor = this session |
-| Hide item | own collection | any | — |
-| Report item | — | — | any item visible to the guest |
+| Hide item | own collection; cannot show an operator-hidden one | reported items | — |
+| Report item | — | — | another guest's item visible to the guest |
 | Manage links | own collections | — | — |
-| View reports | own collections | all | — |
-| Block collection / account | — | yes | — |
+| View reports | own collections (reasons and descriptions, never the reporter's contact) | all | — |
+| Decide a report | dismiss for themselves only ([Q1]) | dismiss / actioned, per item | — |
+| Block collection / account | — | reported scope only | — |
 
 - Access to a resource outside the principal's scope returns **404**, not 403 (no existence disclosure).
+- *Slice 9:* the operator's "reported items" are enforced in SQL (`OperatorScope`): a frame with a report, a collection with a report, an account owning such a collection; anything else, and every `/operator/*` route for a non-operator, is `404`. A hidden item is `404` on every guest path, the contributor's own delete and report included. A blocked collection or owner is `410 COLLECTION_UNAVAILABLE` on every guest route (one choke point, `assertLinkUsable`); upload cancel still runs, since it only frees space.
 - `contributorName` and other guests' metadata are excluded from guest DTOs.
 - Signed URLs are issued only after the same policy check as the item itself.
 - A view-only link (`canViewGallery` only) is a full capability (F3).
@@ -391,14 +409,18 @@ Admin
   GET                 /collections/{id}/content/counts                                   (slice 3)
   GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
   POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
-  POST                /content/{id}/hide | /unhide            (slice 9)
-  GET                 /collections/{id}/reports
-  PATCH               /reports/{id}
+  POST                /content/{id}/hide | /unhide            (slice 9; unhide of an operator hide → 409 CONTENT_MODERATED)
+  POST                /content/{id}/reports/dismiss           (slice 9; for the admin only, [Q1])
+  -- the admin's reports are read through the content routes: `?reported=true`, `counts.reported`,
+  -- `moderation` on each item and `reports` on GET /content/{id} (the drafted /collections/{id}/reports
+  -- and PATCH /reports/{id} were not built)
 
 Operator
-  GET                 /operator/reports?status=&cursor=
-  PATCH               /operator/reports/{id}
-  POST                /operator/content/{id}/hide     DELETE /operator/content/{id}
+  GET                 /operator/session                                 (slice 9)
+  GET                 /operator/reports?status=&cursor=&limit=
+  GET                 /operator/reports/{id}
+  PATCH               /operator/reports/{id}           {status, note}: every open report on the item
+  POST                /operator/content/{id}/hide | /unhide | /delete   {reason} (delete is a POST: the reason is a body)
   POST                /operator/collections/{id}/block | /unblock
   POST                /operator/users/{id}/block | /unblock
 
@@ -415,7 +437,7 @@ Guest (cookie scoped per collection, see §9.1)
   POST   /guest/collections/{cid}/uploads/{uid}/parts
   POST   /guest/collections/{cid}/uploads/{uid}/complete
   DELETE /guest/collections/{cid}/uploads/{uid}
-  POST   /guest/collections/{cid}/content/{id}/reports
+  POST   /guest/collections/{cid}/content/{id}/reports   Idempotency-Key; 201 / repeat 200 (slice 9)
 
 Health
   GET /health/live   GET /health/ready
@@ -540,7 +562,8 @@ Decision details: ADR 0009.
   - `cover.purge` `{collectionId, coverId}` — *removed in PR L*, as above. The prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
   - `media.collection-image` `{collectionId, imageId}` — an admin image's renditions for its slot: cover 480 + 1600 px, background 480 + 1600 + 2400 px (q 72), collection image 480 px (PR I). The two slice 8a names ran the new handlers until PR L removed them.
   - `collection-image.purge` `{collectionId, imageId, slot}` — the image's prefix, unless its row is live (PR I).
-  - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I).
+  - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I), and deletes reporters' addresses older than `REPORT_EMAIL_RETENTION_DAYS` (slice 9).
+  - `mail.report-received` / `mail.report-decision` `{reportId}` — the report e-mails (slice 9, ADR 0009 addendum): to each `OPERATOR_EMAILS` address, and to a reporter who left an address; stamped `operatorNotifiedAt` / `reporterNotifiedAt` after the send, so a rerun sends nothing (at least once). The worker needs the API's SMTP settings, `APP_ORIGIN` and `OPERATOR_EMAILS`.
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
 - Extension points: transcoding, compression, extra formats become new job types without changing the upload flow.
@@ -556,8 +579,8 @@ Decision details: ADR 0009.
   - *Implemented in slice 1:* archive, unarchive and delete from `ACTIVE` or `ARCHIVED`. Delete sets `DELETING` and `deletionRequestedAt` with an audit event; from then on the collection is a 404 for the admin and excluded from lists and limits. The admin can still edit an archived collection. The `410` for guests comes with slice 3.
   - *Implemented in Phase 4 PR B:* the purge. Deleting content or a collection enqueues `content.purge` / `collection.purge` in the same transaction; the worker deletes the objects, then the rows (content: derived objects now, the original with the upload slice; collection: its whole prefix in resumable batches, then the cascade). Audit events stay. The hourly sweep re-enqueues anything older than an hour, which also purges collections left `DELETING` since slice 1. Aborting active uploads joins with the upload slice.
   - *Implemented in PR E:* every content deletion (admin single, admin bulk, guest own) goes through one `ContentDeletion.softDelete`: a conditional `UPDATE … WHERE deletedAt IS NULL RETURNING`, then one audit event and one `content.purge` job per returned row, in the caller's transaction, so a retry or a concurrent delete audits once.
-- **Operator block collection:** `blockedAt`; guest access denied; the admin sees a blocked banner and cannot unblock.
-- **Operator block account:** `User.status = BLOCKED`; sessions revoked; sign-in refused; guest access to the owner's collections denied.
+- **Operator block collection:** `blockedAt` + `blockedReason`; guest access denied (`410 COLLECTION_UNAVAILABLE`, the theme `404`); the admin sees a blocked banner with the reason and cannot unblock. Everything else stays the admin's ([Q2]). *Implemented in slice 9 (API).*
+- **Operator block account:** `User.status = BLOCKED` + reason; sessions revoked in the same transaction; sign-in refused (`403 ACCOUNT_BLOCKED`); guest access to the owner's collections denied. *Implemented in slice 9 (API).*
 - No automatic retention in MVP.
 
 ---
@@ -581,6 +604,7 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 | Guest texts | 60 / hour per guest session and 60 / minute per IP |
 | Guest reads (context, content list, one item) | 600 / minute per IP and route |
 | Collection creation | 10 per rolling 24 hours per account |
+| Guest reports (slice 9) | 10 / hour per guest session (rows) and 60 / hour per IP (`LIMIT_REPORTS_*`) |
 | Per-file size | §10.1 |
 
 *Implemented in slice 8a (2026-10-04):* the admin's cover routes are rate limited per route, per client IP (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, 120) and per signed-in user (`LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`, 60, keyed by the principal), plus at most 3 cover uploads open per collection (rows, `429`).
@@ -609,11 +633,12 @@ MVP computes usage with indexed aggregate queries under a row lock. Counter colu
 
 Decision details: ADR 0013.
 
-- A guest can report any item visible to them; the report stores content/collection IDs, reason, optional description, timestamp, reporter principal and request ID.
-- The collection admin sees reports for their collections and can delete/hide content.
-- The operator (config `OPERATOR_EMAILS`) sees all reports and can hide/delete content, block/unblock collections and accounts, dismiss reports or change their status. MVP surface: operator API endpoints plus a minimal protected page in the web app — no full admin panel.
+- A guest can report another guest's item visible to them (R1); the report stores content/collection IDs, reason, optional description, an optional e-mail for the decision (with the interface language), timestamp, the guest session ID and request ID. No pre-moderation, no automatic action.
+- The collection admin sees reports for their collections in the app only (never by e-mail, never the reporter's contact), and can delete, hide or dismiss (for themselves, [Q1]).
+- The operator — a dedicated service account in `OPERATOR_EMAILS` on the API and the worker — sees all reports and can hide/delete content, block/unblock collections and accounts, and dismiss or action reports; every action needs a reason and is audited. MVP surface: operator API endpoints (`OperatorModule`, *implemented in slice 9 M1*) plus the console at `/ops` (M2) — no full admin panel.
+- E-mails go through the worker (ADR 0009 addendum): «нова скарга» to the operator with the reason and a console link only; the decision to a reporter who left an address.
 - A public abuse contact email is published in the legal documents.
-- **Open (legal):** whether reporter IP is stored, and whether reported illegal content must be preserved (evidence hold) instead of purged. Default until decided: no IP stored; normal purge.
+- **Open (legal):** whether reported illegal content must be preserved (evidence hold) instead of purged ([Q7]). Decided: no reporter IP is stored. Default until decided: normal purge.
 - The applicability of specific DSA obligations to Stepler is not assumed; it requires legal review before public launch.
 
 ---
@@ -644,7 +669,7 @@ Decision details: ADR 0011.
 - Structured JSON logs (nestjs-pino) with request ID (`x-request-id` in/out) in api and worker; job logs carry the job ID and the originating request ID.
 - Redaction: cookies, `Authorization`, magic-link tokens, guest link tokens, signed URL query strings, text content.
 - Error monitoring behind an adapter; provider chosen later (open).
-- Logged with reason codes: upload rejections/expiries, processing failures, storage errors, quota denials, rate-limit hits, report creation, operator actions.
+- Logged with reason codes: upload rejections/expiries, processing failures, storage errors, quota denials, rate-limit hits, report creation (`report.created` with `{reportId, collectionId, reason, hasContact}`), operator actions (`{action, targetType, targetId}`), report mail failures (the SMTP code only). Never a reporter's address, a description or an IP.
 - Health: `/health/live` (process), `/health/ready` (DB + storage reachability).
 
 ---

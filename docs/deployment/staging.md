@@ -41,7 +41,7 @@ While the app is in Testing mode, only the listed test users can sign in.
    | `SMTP_URL`, `MAIL_FROM` | from step 3 |
    | `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | from step 2 |
    | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | from step 4 (leave both empty to hide Google) |
-   | `OPERATOR_EMAILS` | your email, or empty |
+   | `OPERATOR_EMAILS` | the operator's service mailbox, e.g. `moderation@<domain>` (section 10); never a personal address |
    | `S3_ENDPOINT` | `https://<account-id>.eu.r2.cloudflarestorage.com` |
    | `S3_BUCKET` | `stepler-staging` |
    | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | from step 1 |
@@ -166,5 +166,15 @@ Browsers upload straight to the bucket with short-lived signed URLs (ADR 0003, 0
    ```
    If the staging host is different (step 5), use the real one. No wildcard origins or headers: uploads send only `Content-Type`, and the browser must be able to read `ETag` for multipart parts.
 2. Same bucket → **Settings → Object lifecycle rules → Add rule**: name `abort-incomplete-multipart`, applies to the whole bucket (no prefix), action **Abort incomplete multipart uploads** after **2 days**. This is the safety net for uploads the app could not abort itself (spec §10.5); the app aborts cancelled and expired uploads on its own.
+
+## 10. Content reports and the operator (before promoting slice 9 M1 to `stage`)
+
+Guests report frames; the Stepler operator decides in the console at `/ops` (ADR 0013). The operator is a **dedicated service account**, not your personal account.
+
+1. **O1.** Create a mailbox that can receive mail, e.g. `moderation@<domain>`. Sign in to staging with it once (magic link) and accept the documents.
+2. **O2.** In Render, set on **both** `stepler-staging-api` and `stepler-staging-worker`: `OPERATOR_EMAILS=<service address>`. Remove your personal address if it was there. On the worker also set, copied from the API: `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, and optionally `LEGAL_CONTACT_EMAIL` (the appeal address in the reporter's decision mail). The worker refuses to start without the first three, so do this **before** the deploy that contains slice 9.
+3. **O3.** After the deploy: `GET /api/v1/operator/session` signed in as the service account → `200` with its address; as your own account → `404`.
+
+A new report sends «Stepler: нова скарга (…)» to the service mailbox with a link to `/ops/reports/<id>`; the collection's admin gets no e-mail.
 
 Last full verification: 2026-09-30 (ADR 0014, "Staging verified").
