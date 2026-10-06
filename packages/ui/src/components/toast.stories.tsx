@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { expect, screen, userEvent, waitFor } from 'storybook/test';
 import { cn } from '../lib/utils';
 import { Button } from './button';
-import { Toaster, ToastProvider, useToast } from './toast';
+import { Toaster, type ToasterPosition, ToastProvider, useToast } from './toast';
 import { minTarget } from '../stories/target';
 
 type TriggerProps = {
@@ -13,6 +13,8 @@ type TriggerProps = {
   count?: number;
   durationMs?: number;
   actionLabel?: string;
+  /** The Toaster's, set by the decorator (top centre by default). */
+  position?: ToasterPosition;
 };
 
 function Trigger({
@@ -52,10 +54,14 @@ function Trigger({
   );
 }
 
-const withToaster: Decorator = (Story) => (
+const withToaster: Decorator = (Story, context) => (
   <ToastProvider announcementLabel="Notification">
     <Story />
-    <Toaster label="Notifications" closeLabel="Close" />
+    <Toaster
+      label="Notifications"
+      closeLabel="Close"
+      position={(context.args as TriggerProps).position ?? 'top-center'}
+    />
   </ToastProvider>
 );
 
@@ -170,12 +176,39 @@ function overlaps(a: DOMRect, b: DOMRect): boolean {
 }
 
 /**
- * Review Focus 4: on a 360px phone the toast sits above the bottom gutter and does not cover a
- * fixed bottom primary action (marked `data-toast-avoid`).
+ * The default (owner 2026-10-06): centred at the top, `--toast-top` (the page's top bar) plus 8px
+ * from the top, within the 16px gutters on a 360px phone.
+ */
+export const TopCenter: Story = {
+  globals: { viewport: { value: 'phone' } },
+  args: { title: 'Collection saved' },
+  play: async ({ canvas }) => {
+    // The app sets the variable on the page's root (apps/web globals.css).
+    document.documentElement.style.setProperty('--toast-top', '56px');
+    try {
+      await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+      await waitFor(() => expect(toasts()).toHaveLength(1));
+      const toast = toasts()[0]!;
+      await waitFor(() => expect(toast.getAnimations()).toHaveLength(0));
+      const box = toast.getBoundingClientRect();
+      await expect(box.top).toBeGreaterThanOrEqual(56 + 8);
+      await expect(box.top).toBeLessThanOrEqual(56 + 8 + 1);
+      await expect(box.left).toBeGreaterThanOrEqual(16);
+      await expect(box.right).toBeLessThanOrEqual(window.innerWidth - 16);
+      await expect(Math.abs(box.left - (window.innerWidth - box.right))).toBeLessThanOrEqual(1);
+    } finally {
+      document.documentElement.style.removeProperty('--toast-top');
+    }
+  },
+};
+
+/**
+ * Review Focus 4 (`position="bottom"`, the guest pages): on a 360px phone the toast sits above
+ * the bottom gutter and does not cover a fixed bottom primary action (marked `data-toast-avoid`).
  */
 export const Phone: Story = {
   globals: { viewport: { value: 'phone' } },
-  args: { title: 'Collection saved' },
+  args: { title: 'Collection saved', position: 'bottom' },
   render: (args) => (
     <>
       <Trigger {...args} />
@@ -274,7 +307,7 @@ async function expectAboveBar(canvasElement: HTMLElement) {
  */
 export const AvoidChangingBar: Story = {
   globals: { viewport: { value: 'phone' } },
-  args: { title: 'Collection saved', durationMs: 60_000 },
+  args: { title: 'Collection saved', durationMs: 60_000, position: 'bottom' },
   render: (args) => <BarDemo {...args} />,
   play: async ({ canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
@@ -307,7 +340,7 @@ function MountedBarDemo(args: TriggerProps) {
 /** A bottom bar that mounts while a toast is open (not just unhides) also lifts the toast. */
 export const AvoidMountedBar: Story = {
   globals: { viewport: { value: 'phone' } },
-  args: { title: 'Collection saved', durationMs: 60_000 },
+  args: { title: 'Collection saved', durationMs: 60_000, position: 'bottom' },
   render: (args) => <MountedBarDemo {...args} />,
   play: async ({ canvas, canvasElement }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));

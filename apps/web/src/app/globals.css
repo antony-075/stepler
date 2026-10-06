@@ -58,6 +58,15 @@
   }
 }
 
+/* Toasts sit at the top centre, 8px under the admin top bar (owner 2026-10-06): its height,
+   56px on phones; from `lg` the 8px panel margin and the 48px bar with its edges. */
+:root:has([data-slot='admin-panel']) {
+  --toast-top: 57px;
+  @media (min-width: 64rem) {
+    --toast-top: 58px;
+  }
+}
+
 /* A laptop (owner remark 104): wide enough for the desktop layout, short enough that the page
    header must not eat the editor's height. 1280×800, 1366×768, 1440×900, 1512×982… */
 @custom-variant laptop (@media (min-width: 64rem) and (max-height: 62.5rem));
