@@ -1,6 +1,12 @@
 'use client';
 
 import {
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+} from '@stepler/ui/components/dropdown-menu';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -143,5 +149,68 @@ export function PreviewStateControls({
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+/**
+ * The same two choices inside the narrow pane's «⋯» menu (owner 2026-10-06: no selects inside a
+ * menu): two radio groups, «Доступ за посиланням» then «Вміст», with the same disabled reasons.
+ * Rendered inside a `DropdownMenuContent`.
+ */
+export function PreviewStateMenuItems({
+  value,
+  onChange,
+}: {
+  value: PreviewState;
+  onChange: (state: PreviewState) => void;
+}) {
+  const t = useTranslations('guestPage.preview');
+  const contentLocked = value.access === 'paused' || value.access === 'closed';
+  return (
+    <>
+      <DropdownMenuLabel>{t('access.label')}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={value.access}
+        onValueChange={(next) => onChange(withAccess(value, next as PreviewAccess))}
+      >
+        {PREVIEW_ACCESS.map((access) => {
+          const Icon = ACCESS_ICONS[access];
+          return (
+            <DropdownMenuRadioItem key={access} value={access}>
+              <Icon aria-hidden="true" />
+              {t(`access.${access}`)}
+            </DropdownMenuRadioItem>
+          );
+        })}
+      </DropdownMenuRadioGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel>{t('content.label')}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={value.content}
+        onValueChange={(next) => onChange({ ...value, content: next as PreviewContent })}
+      >
+        {PREVIEW_CONTENT.map((content) => {
+          const Icon = CONTENT_ICONS[content];
+          const refusal = contentRefusal(value.access, content);
+          return (
+            <DropdownMenuRadioItem
+              key={content}
+              value={content}
+              disabled={contentLocked || refusal !== null}
+            >
+              <Icon aria-hidden="true" />
+              <span className="grid">
+                <span>{t(`content.${content}`)}</span>
+                {contentLocked || refusal === null ? null : (
+                  <span className="type-caption text-pretty text-muted-foreground">
+                    {t(`content.refusal.${refusal}`)}
+                  </span>
+                )}
+              </span>
+            </DropdownMenuRadioItem>
+          );
+        })}
+      </DropdownMenuRadioGroup>
+    </>
   );
 }

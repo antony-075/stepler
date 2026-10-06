@@ -263,6 +263,10 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
                 collapsed ? 'items-center px-2.5' : 'px-(--admin-gutter)',
               )}
             >
+              {/* Above the cover, so it is easy to find (owner 2026-10-06). */}
+              <div className={cn('flex -mt-1', collapsed ? 'justify-center' : '-mx-2.5')}>
+                <MiniNavToggle collapsed={collapsed} onToggle={miniNav.toggle} />
+              </div>
               <CollectionHeader collection={collection} layout={collapsed ? 'rail' : 'nav'} />
               <div aria-hidden="true" className="w-full border-t" />
               {/* The rows' icons and labels start on the cover's edge; their highlight bleeds
@@ -274,14 +278,6 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
               >
                 {collapsed ? railTriggers : triggers}
               </TabsList>
-            </div>
-            <div
-              className={cn(
-                'flex shrink-0 pt-1 pb-3',
-                collapsed ? 'justify-center px-2.5' : 'px-[calc(var(--admin-gutter)-0.625rem)]',
-              )}
-            >
-              <MiniNavToggle collapsed={collapsed} onToggle={miniNav.toggle} />
             </div>
           </aside>
           <div
@@ -352,7 +348,7 @@ function RailTab({
 }
 
 /**
- * Folds the mini-nav to its rail and back (remarks 176–177): a button at the column's foot, named
+ * Folds the mini-nav to its rail and back (remarks 176–177): a button above the cover, named
  * for what it does now, `aria-expanded` and `aria-controls` on the column. Expanded it shows its
  * label so it is easy to find (owner 2026-10-06); on the rail it is an icon with a tooltip.
  */

@@ -2,7 +2,11 @@
 
 import type { GuestPageVersion } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@stepler/ui/components/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@stepler/ui/components/dropdown-menu';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import {
   Tooltip,
@@ -19,7 +23,7 @@ import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'rea
 import { isPreviewReady, previewMessage } from '@/guest-page/preview-protocol';
 import { DEFAULT_PREVIEW_STATE, type PreviewState } from '@/guest-page/preview-state';
 import { DeviceFrame, type PreviewDevice, viewportOf } from './device-frame';
-import { PreviewStateControls } from './preview-state-controls';
+import { PreviewStateControls, PreviewStateMenuItems } from './preview-state-controls';
 
 export type { PreviewDevice } from './device-frame';
 
@@ -136,18 +140,18 @@ type ToolbarProps = {
   device: PreviewDevice;
   onDevice: (device: PreviewDevice) => void;
   guestUrl: string | null;
-  /** In the «⋯» popover: stacked, every name shown. */
-  stacked?: boolean;
+  /** Beside the narrow pane's «⋯»: icons only, the names in tooltips and for screen readers. */
+  compact?: boolean;
 };
 
 /** The device toggle and «Відкрити як гість». */
-function DeviceControls({ device, onDevice, guestUrl, stacked = false }: ToolbarProps) {
+function DeviceControls({ device, onDevice, guestUrl, compact = false }: ToolbarProps) {
   const t = useTranslations('guestPage.preview');
   const deviceLabelId = useId();
-  // In the toolbar the names give way to icons as the pane narrows; in the popover they show.
-  const name = cn({ '@max-[64rem]/pane:sr-only': !stacked });
+  // The names give way to icons as the pane narrows (always icons when compact).
+  const name = cn({ 'sr-only': compact, '@max-[64rem]/pane:sr-only': !compact });
   return (
-    <div className={cn('flex shrink-0 items-center gap-1.5', stacked && 'flex-wrap')}>
+    <div className="flex shrink-0 items-center gap-1.5">
       <span id={deviceLabelId} className="sr-only">
         {t('device')}
       </span>
@@ -162,7 +166,7 @@ function DeviceControls({ device, onDevice, guestUrl, stacked = false }: Toolbar
             <ToggleGroupItem
               value={value}
               icon={<Icon />}
-              className={cn({ 'px-2': stacked, '@max-[64rem]/pane:px-2.5': !stacked })}
+              className={cn({ 'px-2.5': compact, '@max-[64rem]/pane:px-2.5': !compact })}
             >
               <span className={name}>{t(value)}</span>
             </ToggleGroupItem>
@@ -180,7 +184,7 @@ function DeviceControls({ device, onDevice, guestUrl, stacked = false }: Toolbar
               focusRing,
             )}
           >
-            <span className={cn({ '@max-[50rem]/pane:sr-only': !stacked })}>
+            <span className={cn({ 'sr-only': compact, '@max-[50rem]/pane:sr-only': !compact })}>
               {t('openAsGuest')}
             </span>
             <span className="sr-only">{t('newTab')}</span>
@@ -198,7 +202,8 @@ function DeviceControls({ device, onDevice, guestUrl, stacked = false }: Toolbar
  * «Відкрити як гість»; then the device, as large as the pane allows (the frame is scaled to the
  * pane's width and height, never cut). The save bar is the settings panel's own top bar. As the
  * pane narrows the toggle shows icons (~64rem) and «Відкрити як гість» an icon (~50rem), each with
- * a tooltip and its accessible name; below ~30rem the whole toolbar folds into one «⋯» popover.
+ * a tooltip and its accessible name; below ~30rem the device icons and «Відкрити як гість» stay and
+ * the page state folds into a «⋯» menu of radio groups.
  * The pane never scrolls.
  */
 export function PreviewPane({
@@ -242,21 +247,22 @@ export function PreviewPane({
             <PreviewStateControls value={state} onChange={setState} className="flex-nowrap" />
             <DeviceControls {...toolbar} />
           </div>
-          {/* A very narrow pane (remark 107): everything behind one «⋯». */}
-          <div className="hidden w-full justify-end @max-[30rem]/pane:flex">
-            <Popover>
+          {/* A very narrow pane (remark 107; owner 2026-10-06): the device icons and «Відкрити як
+              гість» stay in the row, the page state moves into the «⋯» menu as two radio groups. */}
+          <div className="hidden w-full items-center justify-end gap-1.5 @max-[30rem]/pane:flex">
+            <DeviceControls {...toolbar} compact />
+            <DropdownMenu>
               <Tip label={t('more')}>
-                <PopoverTrigger asChild>
+                <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" aria-label={t('more')}>
                     <MoreHorizontal aria-hidden="true" />
                   </Button>
-                </PopoverTrigger>
+                </DropdownMenuTrigger>
               </Tip>
-              <PopoverContent className="grid w-[min(23rem,calc(100vw-2rem))] gap-3">
-                <PreviewStateControls value={state} onChange={setState} className="grid" />
-                <DeviceControls {...toolbar} stacked />
-              </PopoverContent>
-            </Popover>
+              <DropdownMenuContent align="end" className="w-[min(18rem,calc(100vw-2rem))]">
+                <PreviewStateMenuItems value={state} onChange={setState} />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </TooltipProvider>
