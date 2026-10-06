@@ -28,7 +28,7 @@ test.describe('collection files', () => {
   test('frames, viewer, download as attachment, delete @desktop', async ({ page, browser }) => {
     const id = await withFiles(page, browser);
     const grid = page.getByRole('list', { name: 'Кадри колекції' });
-    await expect(grid.getByRole('button')).toHaveCount(3);
+    await expect(grid.getByRole('button', { name: /^Кадр / })).toHaveCount(3);
     // No original in the grid: photos and videos show the worker's thumbnails (or wait for
     // them); the document is a tile.
     await expect(grid.locator('img[src*="/uploads/"]')).toHaveCount(0);
@@ -64,7 +64,8 @@ test.describe('collection files', () => {
     await doc.getByRole('button', { name: 'Видалити' }).click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Видалити' }).click();
     await expect(page.getByRole('dialog', { name: /#002/ })).toBeHidden();
-    await expect(grid.getByRole('button')).toHaveCount(2);
+    // Frames by name: the focused tile also shows its two quick actions (V1, owner remark 8).
+    await expect(grid.getByRole('button', { name: /^Кадр / })).toHaveCount(2);
     const counts = await page.request.get(`/api/v1/collections/${id}/content/counts`);
     expect(await counts.json()).toMatchObject({ total: 2, document: 0 });
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
