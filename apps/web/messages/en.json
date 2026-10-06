@@ -435,8 +435,6 @@
       "downloadFailed": "Couldn’t get the file. Try again."
     },
     "moderation": {
-      "filter": "Reports",
-      "emptyFilter": "No reports",
       "marks": {
         "reported": "Report",
         "hidden": "Hidden",
@@ -464,6 +462,24 @@
       "cancel": "Cancel",
       "pending": "Saving…",
       "failed": "Could not save. Try again."
+    },
+    "state": {
+      "label": "State",
+      "prefix": "State:",
+      "all": "All",
+      "active": "Active",
+      "hidden-admin": "Hidden by admin",
+      "hidden-operator": "Hidden by moderation",
+      "reported": "Reported",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "clear": "Clear",
+      "empty": {
+        "active": "No active frames",
+        "hidden-admin": "No frames hidden by the admin",
+        "hidden-operator": "No frames hidden by moderation",
+        "reported": "No reported frames",
+        "several": "No frames in the chosen states"
+      }
     }
   },
   "guestLinks": {
@@ -1211,7 +1227,9 @@
       "frameName": "Frame {number}, photo",
       "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen",
       "unusable": "Cannot be used",
-      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen"
+      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen",
+      "frameHidden": "Frame {number}, photo hidden from guests — cannot be chosen",
+      "frameReported": "Frame {number}, photo, reported"
     },
     "splitLabel": "Settings panel width",
     "statusShort": {

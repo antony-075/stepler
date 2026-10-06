@@ -1,5 +1,6 @@
 import type { AdminContentItem } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
+import type { FrameRing } from '@stepler/ui/components/frame';
 import { useTranslations } from 'next-intl';
 
 export type ModerationMark = 'reported' | 'hidden' | 'moderated';
@@ -18,6 +19,14 @@ export function moderationMarks(item: Pick<AdminContentItem, 'moderation'>): Mod
 }
 
 const VARIANT = { reported: 'warning', hidden: 'neutral', moderated: 'danger' } as const;
+
+/** The tile's inner ring (F2): a hide's colour wins over a report's. */
+export function moderationRing(marks: readonly ModerationMark[]): FrameRing | undefined {
+  if (marks.includes('moderated')) return 'destructive';
+  if (marks.includes('hidden')) return 'muted';
+  if (marks.includes('reported')) return 'warning';
+  return undefined;
+}
 
 /** The marks as Badges for `Frame.marks`; the same words go into the tile's name. */
 export function ModerationMarks({ marks }: { marks: ModerationMark[] }) {

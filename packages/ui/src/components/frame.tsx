@@ -24,6 +24,10 @@
 // - Moderation marks (slice 9): `marks` are the caller's Badges («Скарга», «Приховано»), at the
 //   top-left over the picture (the top-right belongs to the selection check and the quick
 //   actions). They are visual only: the caller puts the same words into `accessibleName`.
+// - A marked tile also gets a 2px inner ring in its mark's colour (`ring`, owner F2): amber for a
+//   report, muted for the admin's hide, red for the operator's. An inset box-shadow overlay on the
+//   tile (not the face), so it never moves layout and stays at full size while the selected face
+//   steps back to 90%. Never colour alone: the mark and the name carry the meaning.
 import { Check, FileText, ImageIcon, Play, Quote } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { focusRing } from '../lib/focus';
@@ -75,7 +79,17 @@ type FrameProps = {
    * booleans; aria-hidden with the tile, so add their words to `accessibleName`.
    */
   marks?: ReactNode;
+  /** A 2px inner ring in the marks' colour (`warning` report, `muted` admin hide, `destructive` operator hide). */
+  ring?: FrameRing;
   className?: string;
+};
+
+type FrameRing = 'warning' | 'muted' | 'destructive';
+
+const RING: Record<FrameRing, string> = {
+  warning: 'shadow-[inset_0_0_0_2px_var(--warning)]',
+  muted: 'shadow-[inset_0_0_0_2px_var(--border-strong)]',
+  destructive: 'shadow-[inset_0_0_0_2px_var(--destructive)]',
 };
 
 /** The dark pill over a picture: white mono text, legible on any photo in both themes. */
@@ -268,6 +282,7 @@ function Frame({
   overlay,
   outlined = false,
   marks,
+  ring,
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
@@ -308,6 +323,16 @@ function Frame({
           className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame shadow-[inset_0_0_0_1px_var(--border)]"
         />
       ) : null}
+      {ring === undefined ? null : (
+        <span
+          data-slot="frame-ring"
+          data-ring={ring}
+          className={cn(
+            'pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame',
+            RING[ring],
+          )}
+        />
+      )}
       {marks ? (
         <span
           data-slot="frame-marks"
@@ -368,4 +393,4 @@ function Frame({
   );
 }
 
-export { Frame, type FrameKind, type FrameProps };
+export { Frame, type FrameKind, type FrameProps, type FrameRing };

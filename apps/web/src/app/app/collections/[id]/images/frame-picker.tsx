@@ -37,6 +37,7 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { contentListKey, listContent } from '@/api/content';
+import { ModerationMarks, moderationMarks, moderationRing } from '../content/moderation-marks';
 import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 import { usePendingPreviews } from '../content/use-pending-previews';
@@ -203,6 +204,37 @@ function PickerFrame({
   const t = useTranslations('guestPage.picker');
   const queryClient = useQueryClient();
   const picture = gridPicture(item);
+  const marks = moderationMarks(item);
+  const ring = moderationRing(marks);
+  const moderation = {
+    marks: <ModerationMarks marks={marks} />,
+    ...(ring === undefined ? {} : { ring }),
+  };
+  // A hidden frame (slice 9) would put the picture back in front of guests: the API refuses it
+  // (`COVER_SOURCE_INVALID`), so it is shown with its marks, never selectable.
+  if (item.moderation.hidden !== null && picture.kind === 'thumbnail') {
+    return (
+      <Frame
+        kind="photo"
+        number={item.frameNo}
+        accessibleName={t('frameHidden', { number: item.frameNo })}
+        media={
+          <MediaImg
+            src={picture.url}
+            alt={DECORATIVE}
+            loading="lazy"
+            decoding="async"
+            onExpired={() =>
+              void queryClient.invalidateQueries({
+                queryKey: contentListKey(collectionId, 'PHOTO', 'newest'),
+              })
+            }
+          />
+        }
+        {...moderation}
+      />
+    );
+  }
   // Only a photo the worker finished (its location metadata removed, its previews made) can be
   // used: `READY` (owner remark 75). One it gave up on may still have a thumbnail, but the API
   // refuses it (`COVER_SOURCE_INVALID`): it is shown, dimmed, with the reason, never selectable.
@@ -224,7 +256,12 @@ function PickerFrame({
       selectable
       selected={selected}
       onToggleSelect={onSelect}
-      accessibleName={t('frameName', { number: item.frameNo })}
+      accessibleName={
+        marks.length === 0
+          ? t('frameName', { number: item.frameNo })
+          : t('frameReported', { number: item.frameNo })
+      }
+      {...moderation}
       media={
         <MediaImg
           src={picture.url}
