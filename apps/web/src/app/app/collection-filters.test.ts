@@ -16,6 +16,7 @@ const collection = (title: string, createdAt: string, archived = false): Collect
   defaultLinkPermissions: null,
   contentCount: 0,
   lastContentAt: null,
+  storageBytes: 0,
   welcomeMessage: null,
   cover: null,
   image: null,
