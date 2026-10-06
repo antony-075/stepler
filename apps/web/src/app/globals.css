@@ -58,8 +58,8 @@
     margin-top: 2.5rem;
     font-size: 1.1875rem;
     line-height: 1.2;
-    font-weight: 600;
-    font-variation-settings: 'SHRP' 60;
+    font-weight: 650;
+    letter-spacing: -0.01em;
     text-wrap: balance;
     @variant md {
       font-size: 1.5rem;
