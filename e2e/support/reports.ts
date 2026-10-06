@@ -27,16 +27,12 @@ export async function guestApi(
   return api;
 }
 
-/**
- * As the signed-in admin of `admin`: a collection whose main link shares the gallery, a text by
- * guest A, and guest B's report on it (slice 9). Everything through the public API.
- */
-export async function seedReport(
+/** As the signed-in admin of `admin`: a collection whose main link shares the gallery. */
+export async function sharedCollection(
   admin: Page,
-  options: { title?: string; reason?: string; email?: string } = {},
-): Promise<SeededReport> {
+  title = `Скарги ${randomUUID().slice(0, 8)}`,
+): Promise<{ collectionId: string; title: string; linkPath: string }> {
   const baseURL = new URL(admin.url()).origin;
-  const title = options.title ?? `Скарги ${randomUUID().slice(0, 8)}`;
   const { id: collectionId } = await createCollectionViaApi(admin, title);
   const main = (await guestLinks(admin, collectionId)).find((link) => link.isDefault);
   const patched = await admin.request.patch(`/api/v1/guest-links/${main!.id}`, {
@@ -53,8 +49,19 @@ export async function seedReport(
     headers: { origin: baseURL },
   });
   expect(patched.status()).toBe(200);
-  const linkPath = new URL(main!.url!).pathname;
+  return { collectionId, title, linkPath: new URL(main!.url!).pathname };
+}
 
+/**
+ * As the signed-in admin of `admin`: a shared-gallery collection, a text by guest A, and guest
+ * B's report on it (slice 9). Everything through the public API.
+ */
+export async function seedReport(
+  admin: Page,
+  options: { title?: string; reason?: string; email?: string } = {},
+): Promise<SeededReport> {
+  const baseURL = new URL(admin.url()).origin;
+  const { collectionId, title, linkPath } = await sharedCollection(admin, options.title);
   const a = await guestApi(baseURL, collectionId, linkPath);
   const text = await a.post(`/api/v1/guest/collections/${collectionId}/texts`, {
     data: { body: 'Привітання від гостя' },

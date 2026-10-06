@@ -804,7 +804,39 @@
     },
     "refresh": "Refresh",
     "refreshed": "Refreshed",
-    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>."
+    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>.",
+    "report": {
+      "more": "More actions",
+      "menuItem": "Report",
+      "title": "Report",
+      "reasonsLegend": "What’s wrong?",
+      "reasons": {
+        "ILLEGAL": "Illegal content",
+        "INAPPROPRIATE": "Indecent or offensive",
+        "PRIVACY": "Violates privacy",
+        "SPAM": "Spam or advertising",
+        "OTHER": "Other"
+      },
+      "reasonRequired": "Choose what’s wrong",
+      "descriptionLabel": "Describe what’s wrong",
+      "descriptionHint": "Optional",
+      "descriptionTooLong": "At most {max} characters",
+      "emailLabel": "Your email",
+      "emailHint": "Optional — to tell you the decision",
+      "emailInvalid": "Check the address",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "sentTitle": "Report sent",
+      "sentText": "Stepler moderation will review it. The frame stays in the gallery for now.",
+      "close": "Close",
+      "counter": "{count}/{max}",
+      "errors": {
+        "rateLimited": "Too many reports. Try again later.",
+        "gone": "This frame is no longer available.",
+        "failed": "Could not send the report. Try again."
+      }
+    }
   },
   "account": {
     "pageTitle": "Account",

@@ -10,11 +10,15 @@ async function search(to: string): Promise<MailpitSummary[]> {
   return ((await res.json()) as { messages: MailpitSummary[] }).messages;
 }
 
-/** Polls Mailpit for the newest sign-in link sent to `to` and returns its URL. */
+/**
+ * Polls Mailpit for the newest sign-in link sent to `to` and returns its URL. Other mail to the
+ * same address (the operator's «нова скарга», slice 9) is skipped: only sign-in mail counts.
+ */
 export async function latestMagicLink(to: string, timeoutMs = 15_000): Promise<string> {
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const [newest] = await search(to);
+    const signIns = (await search(to)).filter((m) => !m.Subject.includes('скарг'));
+    const newest = signIns[0];
     if (newest !== undefined) {
       const res = await fetch(`${MAILPIT}/api/v1/message/${newest.ID}`);
       const text = ((await res.json()) as { Text: string }).Text;
