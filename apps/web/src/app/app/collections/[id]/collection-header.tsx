@@ -2,6 +2,9 @@
 
 import type { Collection } from '@stepler/contracts';
 import { useFormatter, useTranslations } from 'next-intl';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { cn } from '@stepler/ui/lib/utils';
 import { CollectionBreadcrumbs } from '@/components/breadcrumbs';
 import { CollectionCoverImage } from '../../collection-cover-image';
 import { AccessBadge, CollectionStatusBadge } from '../../collection-row';
@@ -56,9 +59,7 @@ export function CollectionHeader({
             {collection.title}
           </h1>
           {collection.description === null ? null : (
-            <p className="text-[0.875rem] leading-[1.45] whitespace-pre-line text-foreground-soft [overflow-wrap:anywhere]">
-              {collection.description}
-            </p>
+            <ClampedDescription text={collection.description} />
           )}
         </div>
         {badge}
@@ -85,6 +86,55 @@ export function CollectionHeader({
         )}
         <div className="mt-1">{badge}</div>
       </header>
+    </div>
+  );
+}
+
+/**
+ * The mini-nav's description, at most 4 lines (owner 2026-10-06: a long one pushed the tabs
+ * down), with «Показати більше / менше» when it is cut. The button exists only then.
+ */
+function ClampedDescription({ text }: { text: string }) {
+  const t = useTranslations('collection');
+  const id = useId();
+  const box = useRef<HTMLParagraphElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (element === null || expanded) return;
+    const measure = () => setCut(element.scrollHeight > element.clientHeight + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text, expanded]);
+  return (
+    <div className="grid justify-items-start gap-0.5">
+      <p
+        id={id}
+        ref={box}
+        className={cn(
+          'text-[0.875rem] leading-[1.45] whitespace-pre-line text-foreground-soft [overflow-wrap:anywhere]',
+          { 'line-clamp-4': !expanded },
+        )}
+      >
+        {text}
+      </p>
+      {cut || expanded ? (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={id}
+          onClick={() => setExpanded((value) => !value)}
+          className={cn(
+            '-mx-1 inline-flex min-h-8 items-center rounded-control px-1 text-[0.875rem] font-medium text-link hover:text-link-hover pointer-coarse:min-h-11',
+            focusRing,
+          )}
+        >
+          {expanded ? t('descriptionLess') : t('descriptionMore')}
+        </button>
+      ) : null}
     </div>
   );
 }

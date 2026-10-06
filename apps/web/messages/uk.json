@@ -306,7 +306,9 @@
       "links": "Посилання",
       "appearance": "Гостьова сторінка",
       "settings": "Параметри колекції"
-    }
+    },
+    "descriptionMore": "Показати більше",
+    "descriptionLess": "Показати менше"
   },
   "content": {
     "filterLabel": "Тип вмісту",

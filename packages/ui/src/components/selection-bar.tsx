@@ -78,7 +78,16 @@ function SelectionBar({
       )}
     >
       <p aria-live="polite" className="min-w-0 flex-1 truncate text-sm font-semibold lg:mr-2">
-        {countLabel}
+        {/* The number in mono, the words as they are (the label stays one string to read). */}
+        {countLabel.split(/(\d[\d\s]*)/).map((part, index) =>
+          index % 2 === 1 ? (
+            <span key={index} className="font-mono tabular-nums">
+              {part}
+            </span>
+          ) : (
+            part
+          ),
+        )}
       </p>
       <div className="flex shrink-0 items-center gap-2">
         {actions}

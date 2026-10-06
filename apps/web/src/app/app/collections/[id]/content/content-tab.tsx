@@ -136,6 +136,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
     setAnchor(null);
   }
   const grid = useRef<HTMLDivElement>(null);
+  const column = useColumnBox(grid, selecting);
   const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
@@ -404,28 +405,19 @@ export function ContentTab({ collection }: { collection: Collection }) {
               </SelectContent>
             </Select>
             <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
-            {/* «Вибрати», then «Вибрати все завантажене» while selecting; icon only on phones. */}
-            {selecting ? (
-              <Button
-                variant="outline"
-                onClick={() => setSelected(new Set(items.map((item) => item.id)))}
-                className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-              >
-                <ListChecks aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">{t('select.all')}</span>
-              </Button>
-            ) : (
-              <Button
-                ref={selectButton}
-                variant="outline"
-                disabled={items.length === 0}
-                onClick={() => setSelecting(true)}
-                className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-              >
-                <CheckSquare aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">{t('select.start')}</span>
-              </Button>
-            )}
+            {/* «Вибрати» turns selection on and off (pressed while on); «Вибрати все
+                завантажене» is in the selection bar (owner 2026-10-06). Icon only on phones. */}
+            <Button
+              ref={selectButton}
+              variant="outline"
+              aria-pressed={selecting}
+              disabled={items.length === 0 && !selecting}
+              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
+            >
+              <CheckSquare aria-hidden="true" className="size-4" />
+              <span className="max-sm:sr-only">{t('select.start')}</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -485,7 +477,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
           />
         </Panel>
       ) : (
-        <div ref={grid} className="grid gap-4">
+        // While the bar is up, room under the last row so it never covers a frame.
+        <div ref={grid} className={cn('grid gap-4', { 'pb-24': selecting })}>
           <FrameGrid ariaLabel={t('listLabel')} density="dense">
             {items.map((item) => (
               <div
@@ -531,26 +524,43 @@ export function ContentTab({ collection }: { collection: Collection }) {
             </Button>
           ) : null}
           {selecting ? (
-            <SelectionBar
-              count={selected.size}
-              countLabel={t('select.count', { count: selected.size })}
-              label={t('select.barLabel')}
-              clearLabel={t('select.clear')}
-              onClear={exitSelection}
-              className="max-lg:-mx-(--stepler-gutter)"
-              actions={
-                <Button
-                  variant="destructive"
-                  aria-disabled={selected.size === 0 || undefined}
-                  onClick={() => {
-                    if (selected.size > 0) setConfirmingBulk(true);
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  {t('select.delete')}
-                </Button>
-              }
-            />
+            // Docked to the window's bottom (owner 2026-10-06), centred over the content column
+            // (measured, so it never covers the sidebar or the mini-nav); full width on phones.
+            <div
+              className="pointer-events-none fixed bottom-0 z-(--z-dock) max-lg:inset-x-0 lg:bottom-[max(1.25rem,env(safe-area-inset-bottom))] lg:flex lg:justify-center"
+              style={column === null ? undefined : { left: column.left, width: column.width }}
+            >
+              <SelectionBar
+                count={selected.size}
+                countLabel={t('select.count', { count: selected.size })}
+                label={t('select.barLabel')}
+                clearLabel={t('select.clear')}
+                onClear={exitSelection}
+                className="pointer-events-auto static lg:mx-0"
+                actions={
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setSelected(new Set(items.map((item) => item.id)))}
+                      className="text-inverse-muted hover:bg-inverse-hover hover:text-inverse-foreground"
+                    >
+                      <ListChecks aria-hidden="true" />
+                      <span className="max-sm:sr-only">{t('select.all')}</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      aria-disabled={selected.size === 0 || undefined}
+                      onClick={() => {
+                        if (selected.size > 0) setConfirmingBulk(true);
+                      }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      {t('select.delete')}
+                    </Button>
+                  </>
+                }
+              />
+            </div>
           ) : null}
         </div>
       )}
@@ -846,4 +856,38 @@ function TileAction({
       {children}
     </button>
   );
+}
+
+/**
+ * Where the content column is on the screen (left and width), while `active`, following window
+ * resizes and the column's own size (a folded sidebar): the selection bar centres over it. From
+ * `lg` only; on phones the bar spans the window.
+ */
+function useColumnBox(
+  ref: { current: HTMLElement | null },
+  active: boolean,
+): { left: number; width: number } | null {
+  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!active || element === null) return;
+    const wide = window.matchMedia('(min-width: 64rem)');
+    const measure = () => {
+      if (!wide.matches) {
+        setBox(null);
+        return;
+      }
+      const rect = element.getBoundingClientRect();
+      setBox({ left: rect.left, width: rect.width });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [ref, active]);
+  return active ? box : null;
 }

@@ -306,7 +306,9 @@
       "links": "Links",
       "appearance": "Guest page",
       "settings": "Collection settings"
-    }
+    },
+    "descriptionMore": "Show more",
+    "descriptionLess": "Show less"
   },
   "content": {
     "filterLabel": "Content type",
