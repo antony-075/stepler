@@ -342,16 +342,61 @@ describe('admin content API', () => {
       ).toMatchObject({ contentCount: 3 });
     });
 
+    test('storageBytes counts live items only, matching the storage line', async () => {
+      const { cookie, userId, collectionId } = await ownerWithCollection();
+      const { collectionId: emptyId } = await seedCollection(prisma, tokens, { ownerId: userId });
+      await seedItems(collectionId, 2, { kind: 'PHOTO' });
+      const items = await prisma.contentItem.findMany({
+        where: { collectionId },
+        orderBy: { frameNo: 'asc' },
+      });
+      for (const [index, item] of items.entries()) {
+        for (const [role, bytes] of [
+          ['ORIGINAL', 1_000_000n * BigInt(index + 1)],
+          ['THUMBNAIL', 30_000n],
+        ] as const) {
+          await prisma.mediaObject.create({
+            data: {
+              contentItemId: item.id,
+              role,
+              storageKey: `collections/${collectionId}/derived/${item.id}/${role}`,
+              mimeType: 'image/jpeg',
+              sizeBytes: bytes,
+            },
+          });
+        }
+      }
+      // The second frame is deleted: its files stop counting at once.
+      await prisma.contentItem.update({
+        where: { id: items[1]!.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const list = collectionListResponseSchema.parse(
+        (await get(cookie, '/collections').expect(200)).body,
+      );
+      const byId = new Map(list.items.map((c) => [c.id, c]));
+      expect(byId.get(collectionId)?.storageBytes).toBe(1_030_000);
+      expect(byId.get(emptyId)?.storageBytes).toBe(0);
+      const detail = collectionDetailSchema.parse(
+        (await get(cookie, `/collections/${collectionId}`).expect(200)).body,
+      );
+      // The same definition as the collection's storage line.
+      expect(detail.storageBytes).toBe(detail.storage.usedBytes);
+    });
+
     test('one grouped content query per page, however many collections (no N+1)', async () => {
       const owner = await signInAs(app, prisma, 'olena@example.com');
       for (let i = 0; i < 20; i++) {
         const { collectionId } = await seedCollection(prisma, tokens, { ownerId: owner.userId });
         await seedItems(collectionId, 1);
       }
-      const delegate = app.get(PrismaService).contentItem;
+      const service = app.get(PrismaService);
+      const delegate = service.contentItem;
       const spies = (['groupBy', 'aggregate', 'count', 'findFirst', 'findMany'] as const).map(
         (method) => vi.spyOn(delegate, method),
       );
+      const raw = vi.spyOn(service, '$queryRaw');
       try {
         const list = collectionListResponseSchema.parse(
           (await get(owner.cookie, '/collections?limit=20').expect(200)).body,
@@ -359,8 +404,14 @@ describe('admin content API', () => {
         expect(list.items).toHaveLength(20);
         expect(list.items.every((c) => c.contentCount === 1)).toBe(true);
         expect(spies.reduce((sum, spy) => sum + spy.mock.calls.length, 0)).toBe(1);
+        // The page's sizes: one query too.
+        const sizeQueries = raw.mock.calls.filter(([strings]) =>
+          (strings as readonly string[]).join('').includes('"MediaObject"'),
+        );
+        expect(sizeQueries).toHaveLength(1);
       } finally {
         for (const spy of spies) spy.mockRestore();
+        raw.mockRestore();
       }
     });
   });

@@ -7,6 +7,7 @@ import { Button } from './button';
 import { Frame } from './frame';
 import { FrameGrid } from './frame-grid';
 import { SelectionBar } from './selection-bar';
+import { minTarget } from '../stories/target';
 
 const FRAMES = Array.from({ length: 24 }, (_, index) => index + 1);
 
@@ -77,7 +78,7 @@ export const Selected: Story = {
     const remove = canvas.getByRole('button', { name: 'Видалити' });
     const clear = canvas.getByRole('button', { name: 'Скасувати вибір' });
     for (const button of [remove, clear]) {
-      await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     }
     await userEvent.click(remove);
     await expect(args.onDelete).toHaveBeenCalledWith([3, 5, 8, 1]);
@@ -104,7 +105,7 @@ export const Phone: Story = {
   play: async ({ canvas, canvasElement }) => {
     const bar = canvas.getByRole('region', { name: 'Дії з вибраними кадрами' });
     const clear = canvas.getByRole('button', { name: 'Скасувати вибір' });
-    await expect(clear.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+    await expect(clear.getBoundingClientRect().width).toBeGreaterThanOrEqual(minTarget());
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
     window.scrollTo(0, document.documentElement.scrollHeight);
     await waitFor(async () => {

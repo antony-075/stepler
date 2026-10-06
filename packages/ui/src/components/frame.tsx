@@ -15,8 +15,9 @@
 // - One interactive target per tile (a button: open, or toggle in selection mode with
 //   `aria-pressed`), named by the caller ("Кадр 86, фото, 21:10, Ірина"); the picture is
 //   aria-hidden. Actions (e.g. «Повторити») sit below it, never inside the button.
-// - Selection is never colour alone: a 3px pencil ring inside the tile, a pencil disc with ✓ at
-//   the top-left (an empty white circle on every tile while selecting), and `aria-pressed`.
+// - Selection is never colour alone (V1): the picture steps back to 90% on the soft accent, an
+//   accent disc with ✓ pops in at the top-right (an empty white circle on every tile while
+//   selecting), and `aria-pressed`.
 //   Focus is the violet ring outside the tile. Hover lifts the picture slightly (scale 1.03),
 //   not under reduced motion.
 // - Long content never widens the tile: text clamps, titles break anywhere.
@@ -57,12 +58,21 @@ type FrameProps = {
   onToggleSelect?: (event: MouseEvent<HTMLButtonElement>) => void;
   /** Below the frame's button, e.g. «Повторити» (a full-width 44px button). */
   actions?: ReactNode;
+  /**
+   * Quick actions over the tile's top-right corner (the admin's «Завантажити», «Видалити»):
+   * shown on hover and keyboard focus with a mouse (hidden otherwise, also from screen readers
+   * and the Tab order until the tile has focus), never on touch screens (no hover there), so
+   * they must also be reachable another way (the viewer, selection mode). Not in selection mode.
+   */
+  overlay?: ReactNode;
+  /** A 1px inner edge over the picture, so a white photo keeps its outline on a white page. */
+  outlined?: boolean;
   className?: string;
 };
 
 /** The dark pill over a picture: white mono text, legible on any photo in both themes. */
 const PILL =
-  'inline-flex h-5 items-center gap-1 rounded-full bg-[rgb(0_0_0/0.55)] px-1.5 type-data text-[0.75rem] leading-none font-medium text-[#FFFFFF]';
+  'inline-flex h-5 items-center gap-1 rounded-[4px] bg-[rgb(24_24_27/0.66)] px-1.5 type-data text-[0.75rem] leading-none font-medium text-[#FFFFFF]';
 
 /** The number with its "new" underline, in the pill or on a card. */
 function FrameNumber({
@@ -247,6 +257,8 @@ function Frame({
   onOpen,
   onToggleSelect,
   actions,
+  overlay,
+  outlined = false,
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
@@ -255,34 +267,47 @@ function Frame({
       data-slot="frame-media"
       aria-hidden="true"
       className={cn(
-        'relative aspect-square w-full overflow-hidden rounded-control',
-        kind === 'empty' ? 'bg-transparent' : 'bg-muted',
+        'relative aspect-square w-full rounded-frame',
+        selected ? 'bg-info-soft' : 'bg-transparent',
       )}
     >
-      <FrameFace
-        kind={kind}
-        media={media}
-        number={number}
-        meta={meta}
-        text={text}
-        name={name}
-        docType={docType}
-        docTitle={docTitle}
-        placeholderLabel={placeholderLabel}
-        isNew={isNew}
-      />
+      {/* Selected, the picture steps back to 90% (V1): the tile's soft accent shows around it. */}
+      <div
+        data-slot="frame-face"
+        className={cn(
+          'absolute inset-0 overflow-hidden rounded-frame transition-transform duration-(--duration-menu) ease-out motion-reduce:transition-none',
+          kind === 'empty' ? 'bg-transparent' : 'bg-muted',
+          selected && 'scale-90 rounded-control',
+        )}
+      >
+        <FrameFace
+          kind={kind}
+          media={media}
+          number={number}
+          meta={meta}
+          text={text}
+          name={name}
+          docType={docType}
+          docTitle={docTitle}
+          placeholderLabel={placeholderLabel}
+          isNew={isNew}
+        />
+      </div>
+      {outlined ? (
+        <span
+          data-slot="frame-edge"
+          className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame shadow-[inset_0_0_0_1px_var(--border)]"
+        />
+      ) : null}
       {selected ? (
-        <>
-          <span className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-control shadow-[inset_0_0_0_3px_var(--pencil)]" />
-          <span className="absolute top-1.5 left-1.5 z-(--z-frame-mark) grid size-6 place-items-center rounded-full bg-pencil text-pencil-foreground shadow-[0_0_0_2px_#FFFFFF]">
-            <Check className="size-4" strokeWidth={3} />
-          </span>
-        </>
+        <span className="absolute top-1.5 right-1.5 z-(--z-frame-mark) grid size-[1.375rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_0_2px_#FFFFFF] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:animation-duration-[var(--duration-fast)]">
+          <Check className="size-3.5" strokeWidth={3} />
+        </span>
       ) : selectable ? (
         // In selection mode every tile shows its empty check (never hover-only, §5.13).
         <span
           data-slot="frame-check"
-          className="absolute top-1.5 left-1.5 z-(--z-frame-mark) size-6 rounded-full border-2 border-[#FFFFFF] bg-[rgb(0_0_0/0.2)] shadow-[0_0_0_1px_rgb(0_0_0/0.3)]"
+          className="absolute top-1.5 right-1.5 z-(--z-frame-mark) size-[1.375rem] rounded-full border-[1.5px] border-[rgb(24_24_27/0.45)] bg-[rgb(255_255_255/0.85)]"
         />
       ) : null}
     </div>
@@ -302,7 +327,7 @@ function Frame({
           aria-pressed={selectable ? selected : undefined}
           onClick={selectable ? onToggleSelect : onOpen}
           className={cn(
-            'block w-full min-w-0 cursor-pointer touch-manipulation rounded-control text-left',
+            'block w-full min-w-0 cursor-pointer touch-manipulation rounded-frame text-left',
             focusRing,
           )}
         >
@@ -313,6 +338,14 @@ function Frame({
           {tile}
         </div>
       )}
+      {overlay && !selectable ? (
+        <div
+          data-slot="frame-overlay"
+          className="invisible absolute top-1.5 right-1.5 z-(--z-frame-mark) flex gap-1 opacity-0 transition-[opacity,visibility] duration-(--duration-fast) group-focus-within/frame:visible group-focus-within/frame:opacity-100 group-hover/frame:visible group-hover/frame:opacity-100 motion-reduce:transition-none [@media(hover:none)]:hidden"
+        >
+          {overlay}
+        </div>
+      ) : null}
       {actions ? <div data-slot="frame-actions">{actions}</div> : null}
     </div>
   );

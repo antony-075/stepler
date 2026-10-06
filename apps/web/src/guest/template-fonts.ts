@@ -108,8 +108,8 @@ const font = (id: FontId, loaded: { variable: string }): TemplateFont => ({
 });
 
 export const TEMPLATE_FONTS: Record<FontId, TemplateFont> = {
-  // The interface font, already on <html> (app/fonts.ts); @stepler/templates/styles.css maps
-  // --font-tpl-geologica to it, so it costs nothing extra.
+  // Already defined on <html> (app/fonts.ts, for the templates); @stepler/templates/styles.css
+  // maps --font-tpl-geologica to it, so it costs nothing extra.
   geologica: { variable: '--font-tpl-geologica', className: '' },
   manrope: font('manrope', manrope),
   unbounded: font('unbounded', unbounded),

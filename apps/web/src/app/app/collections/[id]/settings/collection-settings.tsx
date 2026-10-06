@@ -1,30 +1,48 @@
 'use client';
 
-// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02): the «Параметри колекції» tab of the collection
-// page. Two cards: «Архівування» (asks once; bringing it back just happens) and the danger zone
+// Design (DESIGN-SYSTEM.md §6.8; owner reviews 2026-10-02, 2026-10-06): the «Параметри колекції» tab
+// of the collection page. Three cards: «Назва й опис» (the only place they are edited, owner
+// 2026-10-06), «Архівування» (asks once; bringing it back just happens) and the danger zone
 // (the only red on the page; a destructive ConfirmDialog names the collection). Guest access is
 // not here: permissions belong to each link, on «Посилання» (owner 2026-10-03). Errors stay
 // inline; toasts only confirm.
 
-import type { Collection } from '@stepler/contracts';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { Collection, CollectionDetail } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
+import { Field } from '@stepler/ui/components/field';
+import { Input } from '@stepler/ui/components/input';
+import { Textarea } from '@stepler/ui/components/textarea';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Archive, ArchiveRestore, Trash2, TriangleAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { isApiError } from '@/api/client';
-import { collectionKey, deleteCollection, useInvalidateCollections } from '@/api/collections';
+import {
+  collectionKey,
+  deleteCollection,
+  updateCollection,
+  useInvalidateCollections,
+} from '@/api/collections';
 import { errorMessageKey } from '@/errors/error-message';
+import {
+  type CollectionFormValues,
+  collectionFormSchema,
+  DESCRIPTION_MAX,
+  TITLE_MAX,
+  toCollectionRequest,
+} from '../../../collection-form';
 import { useArchiveToggle } from '../../use-archive';
 import { SectionCard } from '../section-card';
 
 /**
- * The collection's «Параметри колекції» tab (owner 2026-10-02: one page, no separate settings page; the
- * title and description are edited in place in the header): archiving and the danger zone.
+ * The collection's «Параметри колекції» tab (owner 2026-10-02: one page, no separate settings
+ * page): the title and description, archiving and the danger zone.
  */
 export function CollectionSettingsPanel({
   collection,
@@ -35,9 +53,130 @@ export function CollectionSettingsPanel({
 }) {
   return (
     <div className="grid min-w-0 gap-6">
+      <DetailsCard key={collection.id} collection={collection} />
       <ArchiveCard collection={collection} />
       <DangerCard collection={collection} onDeleted={onDeleted} />
     </div>
+  );
+}
+
+const valuesOf = (collection: Collection): CollectionFormValues => ({
+  title: collection.title,
+  description: collection.description ?? '',
+});
+
+/**
+ * «Назва й опис»: the title (required, up to 100 characters) and the description (optional, up
+ * to 1000, line breaks kept), with visible labels, React Hook Form and the contract's own rules.
+ * «Зберегти» is usable only for a changed, valid form; «Скасувати» puts the saved values back.
+ * The answer updates the page's header and the dashboard. Archived collections stay editable
+ * (D9). A refusal is said under the form; a success is a toast.
+ */
+function DetailsCard({ collection }: { collection: Collection }) {
+  const t = useTranslations('collection.settingsPage');
+  const tForm = useTranslations('collections.form');
+  const tRoot = useTranslations();
+  const queryClient = useQueryClient();
+  const invalidate = useInvalidateCollections();
+  const { toast } = useToast();
+  const form = useForm<CollectionFormValues>({
+    resolver: zodResolver(collectionFormSchema),
+    mode: 'onChange',
+    defaultValues: valuesOf(collection),
+  });
+  const save = useMutation({
+    mutationFn: (values: CollectionFormValues) =>
+      updateCollection(collection.id, toCollectionRequest(values)),
+    onSuccess: async (saved) => {
+      // The detail also holds the storage line, which a mutation's answer leaves out.
+      queryClient.setQueryData<CollectionDetail>(collectionKey(saved.id), (previous) =>
+        previous === undefined ? undefined : { ...previous, ...saved },
+      );
+      form.reset(valuesOf(saved));
+      toast({ variant: 'success', title: t('saved') });
+      await invalidate();
+    },
+  });
+  const { errors, isDirty, isValid } = form.formState;
+  const descriptionLength = useWatch({ control: form.control, name: 'description' }).length;
+  const failure = isApiError(save.error) ? save.error.code : save.error ? 'INTERNAL' : null;
+  const canSave = isDirty && isValid && !save.isPending;
+
+  return (
+    <SectionCard id="collection-details" title={t('detailsTitle')} hint={t('detailsHint')}>
+      <form
+        noValidate
+        aria-labelledby="collection-details"
+        className="grid max-w-[44rem] gap-5"
+        onSubmit={(event) =>
+          void form.handleSubmit((values) => {
+            if (canSave) save.mutate(values);
+          })(event)
+        }
+      >
+        <Field
+          id="collection-settings-title"
+          label={tForm('title')}
+          error={
+            errors.title === undefined
+              ? undefined
+              : errors.title.type === 'too_big'
+                ? tForm('titleTooLong', { max: TITLE_MAX })
+                : tForm('titleRequired')
+          }
+        >
+          {(control) => (
+            <Input
+              {...control}
+              autoComplete="off"
+              maxLength={TITLE_MAX}
+              {...form.register('title')}
+            />
+          )}
+        </Field>
+        <Field
+          id="collection-settings-description"
+          label={
+            <>
+              {tForm('description')}{' '}
+              <span className="font-normal text-muted-foreground">{tForm('optional')}</span>
+            </>
+          }
+          description={
+            <span className="type-data block text-right">
+              {tForm('counter', { count: descriptionLength, max: DESCRIPTION_MAX })}
+            </span>
+          }
+          error={
+            errors.description === undefined
+              ? undefined
+              : tForm('descriptionTooLong', { max: DESCRIPTION_MAX })
+          }
+        >
+          {(control) => (
+            <Textarea {...control} maxLength={DESCRIPTION_MAX} {...form.register('description')} />
+          )}
+        </Field>
+        {failure === null ? null : <Alert variant="error">{tRoot(errorMessageKey(failure))}</Alert>}
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            aria-disabled={!isDirty || save.isPending || undefined}
+            onClick={() => {
+              if (!isDirty || save.isPending) return;
+              save.reset();
+              form.reset(valuesOf(collection));
+            }}
+          >
+            {t('cancel')}
+          </Button>
+          <Button type="submit" aria-disabled={!canSave || undefined}>
+            {save.isPending ? t('saving') : t('save')}
+          </Button>
+        </div>
+      </form>
+    </SectionCard>
   );
 }
 

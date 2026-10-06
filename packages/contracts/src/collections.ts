@@ -50,6 +50,11 @@ export const collectionSchema = z
     contentCount: z.number().int().min(0),
     /** When the newest non-deleted frame was added; `null` while there is none. */
     lastContentAt: z.iso.datetime().nullable(),
+    /**
+     * Bytes the collection holds, by the storage line's definition (its frames' files and
+     * renditions, its admin images, open upload reservations), so the cards add up to it.
+     */
+    storageBytes: z.number().int().min(0),
     /** Shown to guests above their main action; `null` = hidden [A5]. */
     welcomeMessage: z.string().nullable(),
     /** The cover (an upload or a guest photo frame); `null` = the initials tile [A2]. */

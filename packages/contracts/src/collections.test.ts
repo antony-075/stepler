@@ -112,6 +112,7 @@ describe('collectionSchema', () => {
     },
     contentCount: 0,
     lastContentAt: null,
+    storageBytes: 0,
     welcomeMessage: null,
     cover: null,
     image: null,
@@ -145,6 +146,14 @@ describe('collectionSchema', () => {
     const withoutWelcome: Partial<typeof collection> = { ...collection };
     delete withoutWelcome.welcomeMessage;
     expect(collectionSchema.safeParse(withoutWelcome).success).toBe(false);
+  });
+
+  test('carries the bytes it holds: a whole, non-negative number', () => {
+    expect(collectionSchema.parse({ ...collection, storageBytes: 128_000_000 })).toMatchObject({
+      storageBytes: 128_000_000,
+    });
+    expect(collectionSchema.safeParse({ ...collection, storageBytes: -1 }).success).toBe(false);
+    expect(collectionSchema.safeParse({ ...collection, storageBytes: 1.5 }).success).toBe(false);
   });
 
   test('carries the frame count and the newest frame time', () => {

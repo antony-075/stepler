@@ -23,9 +23,14 @@ const BOX = {
   cover: 'size-20 rounded-frame sm:size-32',
   /** The full width of its column at 16:10: the guest page and the «Гостьова сторінка» tab. */
   hero: 'aspect-[16/10] w-full rounded-sheet',
+  /**
+   * The full width of a card at 16:9, from the 480px thumbnail (V1, 2026-10-06): the dashboard's
+   * tiles and the collection's mini-nav. The caller sets the radius.
+   */
+  band: 'aspect-[16/9] w-full',
 } as const;
 
-const TILE_SIZE = { sm: 'sm', cover: 'cover', hero: 'fill' } as const;
+const TILE_SIZE = { sm: 'sm', cover: 'cover', hero: 'fill', band: 'fill' } as const;
 
 type CollectionCoverSize = keyof typeof BOX;
 
@@ -54,6 +59,7 @@ function CollectionCover({ tint, initials, image, size, className }: CollectionC
         data-state="initials"
         className={cn(
           size === 'hero' && 'aspect-[16/10] rounded-sheet text-5xl sm:text-6xl',
+          size === 'band' && 'aspect-[16/9] text-4xl',
           className,
         )}
       >

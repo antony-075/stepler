@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './dropdown-menu';
+import { minTarget } from '../stories/target';
 
 type DemoProps = {
   onConfirm: () => Promise<void>;
@@ -188,7 +189,7 @@ export const Phone: Story = {
     await expect(Math.round(box.right)).toBe(window.innerWidth - 16);
     for (const name of ['Delete', 'Cancel']) {
       const button = screen.getByRole('button', { name });
-      await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      await expect(button.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     }
   },
 };

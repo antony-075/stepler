@@ -4,6 +4,7 @@ import { expect, fn, screen, userEvent, waitFor } from 'storybook/test';
 import { samplePhoto } from '../stories/sample-photo';
 import { Button } from './button';
 import { FrameViewer } from './frame-viewer';
+import { minTarget } from '../stories/target';
 
 const FRAMES = [
   { number: 85, hue: 30 },
@@ -129,8 +130,8 @@ export const Buttons: Story = {
     await expect(screen.queryByRole('button', { name: 'Попередній кадр' })).toBeNull();
     for (const button of [next, screen.getByRole('button', { name: 'Закрити' })]) {
       const box = button.getBoundingClientRect();
-      await expect(box.width).toBeGreaterThanOrEqual(44);
-      await expect(box.height).toBeGreaterThanOrEqual(44);
+      await expect(box.width).toBeGreaterThanOrEqual(minTarget());
+      await expect(box.height).toBeGreaterThanOrEqual(minTarget());
     }
     await userEvent.click(next);
     await expect(args.onNext).toHaveBeenCalledOnce();

@@ -1,7 +1,15 @@
 import { Tabs as TabsPrimitive } from 'radix-ui';
-import { type ComponentProps, createContext, useContext } from 'react';
+import {
+  Children,
+  type ComponentProps,
+  createContext,
+  isValidElement,
+  type ReactNode,
+  useContext,
+} from 'react';
 import { focusRingInset } from '../lib/focus';
 import { cn } from '../lib/utils';
+import { SegmentThumb } from './segment-thumb';
 
 // Based on shadcn/ui (new-york).
 function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>) {
@@ -14,50 +22,86 @@ function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>
   );
 }
 
-type TabsVariant = 'line' | 'segmented';
+type TabsVariant = 'line' | 'segmented' | 'nav';
 
 const VariantContext = createContext<TabsVariant>('line');
+
+/** The `value` of each direct trigger child, in order (for the sliding thumb). */
+function triggerValues(children: ReactNode): string[] {
+  return Children.toArray(children).flatMap((child) =>
+    isValidElement<{ value?: unknown }>(child) && typeof child.props.value === 'string'
+      ? [child.props.value]
+      : [],
+  );
+}
 
 // `line` (default; deviation from shadcn: no grey track): a row of text tabs on a 1px `--border`
 // base line; it never widens the page: it is capped at its container and scrolls horizontally
 // inside itself when the triggers do not fit (phones, long labels).
-// `segmented` (owner review 2026-10-02: tabs that obviously click): a track on the page colour
-// with a 1px edge, a 10px radius and 4px padding; full width with equal segments below `md`
-// (where the collection page shows icon + count only), its own width from `md`.
+// `segmented` (V1, DESIGN-SYSTEM.md §0.5): equal segments on the grey track with a white thumb
+// that slides to the active one; full width below `md` (where the collection page shows icon +
+// count only), its own width from `md`.
+// `nav` (V1): a vertical list of equal rows (the collection page's mini-nav from 1440px) with a
+// soft accent highlight that slides to the active row. Give its Tabs `orientation="vertical"`.
+// The thumb follows the active trigger by CSS alone (SegmentThumb).
 function TabsList({
   className,
   variant = 'line',
+  children,
   ...props
 }: ComponentProps<typeof TabsPrimitive.List> & { variant?: TabsVariant }) {
+  const values = variant === 'line' ? [] : triggerValues(children);
   return (
     <VariantContext value={variant}>
       <TabsPrimitive.List
         data-slot="tabs-list"
         data-variant={variant}
         className={cn(
-          variant === 'line'
-            ? 'flex w-full max-w-full items-stretch gap-1 overflow-x-auto border-b text-muted-foreground [scrollbar-width:thin]'
-            : 'grid w-full auto-cols-[minmax(0,1fr)] grid-flow-col gap-1 rounded-[10px] border bg-background p-1 text-muted-foreground md:inline-grid md:w-auto md:auto-cols-auto md:self-start',
+          variant === 'line' &&
+            'flex w-full max-w-full items-stretch gap-1 overflow-x-auto border-b text-muted-foreground [scrollbar-width:thin]',
+          variant === 'segmented' &&
+            'relative isolate grid w-full auto-cols-[minmax(0,1fr)] grid-flow-col rounded-[7px] bg-track p-0.5 text-foreground-soft shadow-[inset_0_0_0_1px_var(--track-edge)] md:inline-grid md:w-auto md:auto-cols-fr md:self-start',
+          variant === 'nav' && 'relative isolate flex flex-col text-foreground-soft',
           className,
         )}
         {...props}
-      />
+      >
+        {variant === 'segmented' ? <SegmentThumb count={values.length} /> : null}
+        {variant === 'nav' ? (
+          <SegmentThumb
+            count={values.length}
+            orientation="vertical"
+            inset="0px"
+            className="rounded-control bg-info-soft shadow-none"
+          />
+        ) : null}
+        {children}
+      </TabsPrimitive.List>
     </VariantContext>
   );
 }
 
-// A segment: 44px, icon and label (and a count as data), muted until active; hover takes the
-// page's hover fill; active is a raised sheet (`--card`, a 1px edge, a soft shadow in light)
-// with foreground text. The violet ring is drawn inside. Side padding is 10px from `sm` and 16px
-// from `xl`, so the collection page's four labels («Гостьова сторінка», «Параметри колекції»)
-// fit its 720px column at 768 and 1024 untruncated.
+// A segment: 44px on phones and touch, transparent over the track (the thumb shows the active
+// one), icon and label (and a count as data), the active one in foreground at 600. The ring is
+// drawn inside. 8px side padding (16px from `xl`): the segments are equal, so the collection
+// page's four labels («Гостьова сторінка», «Параметри колекції») fit 768px untruncated.
 const SEGMENT = cn(
-  'inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-2 text-[0.9375rem] sm:gap-2 sm:px-2.5 xl:px-4 font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
+  'relative z-1 inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-[0.875rem] md:pointer-fine:min-h-9 whitespace-nowrap xl:px-4 transition-colors duration-(--duration-fast) motion-reduce:transition-none',
   focusRingInset,
-  'hover:bg-hover hover:text-foreground',
-  'data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_1px_2px_rgb(20_22_20/0.08)] data-[state=active]:hover:bg-card',
+  'hover:text-foreground data-[state=active]:font-semibold data-[state=active]:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',
-  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground data-[state=active]:[&_svg]:text-primary",
+);
+
+// A row of the vertical `nav`: equal heights (the highlight moves by its own height), icon,
+// label and an optional count pushed right; the active row on the soft accent with accent ink.
+const NAV_ROW = cn(
+  'relative z-1 flex min-h-11 w-full min-w-0 items-center gap-2.5 rounded-control px-2.5 md:pointer-fine:min-h-9 text-left text-[0.875rem] whitespace-nowrap transition-colors duration-(--duration-fast) motion-reduce:transition-none',
+  focusRingInset,
+  'hover:text-foreground data-[state=active]:font-semibold data-[state=active]:text-link',
+  'disabled:pointer-events-none disabled:text-muted-foreground',
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground data-[state=active]:[&_svg]:text-primary",
+  '[&_[data-slot=tabs-count]]:ml-auto',
 );
 
 // Direction C (DESIGN-SYSTEM.md §5.6): 48px tabs, 15px/600 text, muted until active; the active
@@ -72,9 +116,13 @@ function TabsTrigger({
   ...props
 }: ComponentProps<typeof TabsPrimitive.Trigger>) {
   const variant = useContext(VariantContext);
-  if (variant === 'segmented') {
+  if (variant === 'segmented' || variant === 'nav') {
     return (
-      <TabsPrimitive.Trigger data-slot="tabs-trigger" className={cn(SEGMENT, className)} {...props}>
+      <TabsPrimitive.Trigger
+        data-slot="tabs-trigger"
+        className={cn(variant === 'nav' ? NAV_ROW : SEGMENT, className)}
+        {...props}
+      >
         {children}
       </TabsPrimitive.Trigger>
     );
@@ -128,13 +176,13 @@ function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitiv
   );
 }
 
-/** A count inside a segment, as data (Geist Mono) on a quiet fill. */
+/** A count inside a segment or nav row, as data (Geist Mono). */
 function TabsCount({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       data-slot="tabs-count"
       className={cn(
-        'type-data inline-grid h-5 min-w-5 place-items-center rounded-sheet bg-muted px-1.5 text-muted-foreground',
+        'type-data inline-grid h-5 min-w-5 place-items-center rounded-[4px] px-1 text-muted-foreground',
         className,
       )}
       {...props}

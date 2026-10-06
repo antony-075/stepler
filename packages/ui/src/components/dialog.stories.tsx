@@ -13,6 +13,7 @@ import {
 } from './dialog';
 import { Field } from './field';
 import { Input } from './input';
+import { minTarget } from '../stories/target';
 
 function Demo() {
   return (
@@ -64,7 +65,7 @@ export const Default: Story = {
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     await settled(dialog);
     const close = screen.getByRole('button', { name: 'Close' });
-    await expect(close.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(close.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(trigger).toHaveFocus());

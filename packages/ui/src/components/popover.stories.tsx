@@ -30,7 +30,9 @@ export const OpenAndEscape: Story = {
     const trigger = canvas.getByRole('button', { name: 'Параметри перегляду' });
     await userEvent.click(trigger);
     const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByRole('button', { name: 'Телефон' })).toBeVisible();
+    // The surface fades in; wait for the end of the enter animation.
+    const phone = await body.findByRole('button', { name: 'Телефон' });
+    await waitFor(() => expect(phone).toBeVisible());
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(body.queryByRole('button', { name: 'Телефон' })).toBeNull());
     await expect(trigger).toHaveFocus();
