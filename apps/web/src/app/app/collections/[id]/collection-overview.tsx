@@ -200,15 +200,18 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           onValueChange={selectTab}
           orientation="vertical"
           // Out to the panel's edges: the mini-nav's line runs from the top bar to the bottom.
-          // `data-page-top="tight"`: the shell's --page-top shrinks to the mini-nav's own inset,
-          // so the sidebar's «Колекції» lines up with the mini-nav's first line.
+          // `data-page-top="tight"`: an edge-to-edge page, so the shell lifts the column cap
+          // (--admin-max) for it and the top bar. The mini-nav's first line is at --page-top,
+          // where every page starts, so the sidebar's «Колекції» stays put.
           data-page-top="tight"
           className="-mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start gap-0"
         >
-          {/* 58px: under the top bar (the panel's 8px margin and the 50px bar with its edges). */}
+          {/* 58px: under the top bar (the panel's 8px margin and the 50px bar with its edges). Both
+              columns use the page gutter, so the top bar's breadcrumbs and account block line up
+              with them. */}
           <aside
             aria-label={collection.title}
-            className="sticky top-[58px] flex h-[calc(100dvh-58px-var(--shell-inset-bottom))] min-w-0 flex-col gap-4 overflow-y-auto border-r px-4 pt-(--page-top) pb-4"
+            className="sticky top-[58px] flex h-[calc(100dvh-58px-var(--shell-inset-bottom))] min-w-0 flex-col gap-4 overflow-y-auto border-r px-(--admin-gutter) pt-(--page-top) pb-4"
           >
             <CollectionHeader collection={collection} layout="nav" />
             <div aria-hidden="true" className="border-t" />
@@ -220,7 +223,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           </aside>
           <div
             data-slot="tab-column"
-            className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 px-6 pt-5 pb-16 laptop:pt-4"
+            className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 px-(--admin-gutter) pt-(--page-top) pb-16"
           >
             {notice}
             {panels}
@@ -319,7 +322,7 @@ function OverviewSkeleton({ label }: { label: string }) {
         data-page-top="tight"
         className="loading-delayed -mx-(--admin-gutter) -mt-(--page-top) -mb-16 grid grid-cols-[17.5rem_minmax(0,1fr)] items-start"
       >
-        <div className="grid gap-3 border-r px-4 pt-(--page-top) pb-4">
+        <div className="grid gap-3 border-r px-(--admin-gutter) pt-(--page-top) pb-4">
           <Skeleton className="aspect-[16/9] w-full rounded-sheet" />
           <Skeleton className="h-6 w-4/5" />
           <Skeleton className="h-4 w-3/5" />
@@ -330,7 +333,7 @@ function OverviewSkeleton({ label }: { label: string }) {
             ))}
           </div>
         </div>
-        <div className="grid gap-4 px-6 pt-5 pb-16">
+        <div className="grid gap-4 px-(--admin-gutter) pt-(--page-top) pb-16">
           <Skeleton className="h-9 w-full max-w-xl" />
           {grid}
         </div>
