@@ -1,6 +1,6 @@
 # ADR 0013 — Content Reports and Platform Operator Role
 
-Status: Accepted (discovery D15, F2); implementing in slice 9 (M1 API done, M2 console and M3 UI in progress; plan `docs/superpowers/plans/2026-10-06-content-reports-and-operator.md`); legal specifics open
+Status: Implemented (slice 9, M1–M3, 2026-10-06; plan `docs/superpowers/plans/2026-10-06-content-reports-and-operator.md`); legal specifics open (evidence hold, DSA)
 Date: 2026-09-29, updated 2026-10-06
 
 ## Context
