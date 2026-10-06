@@ -58,6 +58,15 @@ type FrameProps = {
   onToggleSelect?: (event: MouseEvent<HTMLButtonElement>) => void;
   /** Below the frame's button, e.g. «Повторити» (a full-width 44px button). */
   actions?: ReactNode;
+  /**
+   * Quick actions over the tile's top-right corner (the admin's «Завантажити», «Видалити»):
+   * shown on hover and keyboard focus with a mouse (hidden otherwise, also from screen readers
+   * and the Tab order until the tile has focus), never on touch screens (no hover there), so
+   * they must also be reachable another way (the viewer, selection mode). Not in selection mode.
+   */
+  overlay?: ReactNode;
+  /** A 1px inner edge over the picture, so a white photo keeps its outline on a white page. */
+  outlined?: boolean;
   className?: string;
 };
 
@@ -248,6 +257,8 @@ function Frame({
   onOpen,
   onToggleSelect,
   actions,
+  overlay,
+  outlined = false,
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
@@ -282,6 +293,12 @@ function Frame({
           isNew={isNew}
         />
       </div>
+      {outlined ? (
+        <span
+          data-slot="frame-edge"
+          className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame shadow-[inset_0_0_0_1px_var(--border)]"
+        />
+      ) : null}
       {selected ? (
         <span className="absolute top-1.5 right-1.5 z-(--z-frame-mark) grid size-[1.375rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_0_2px_#FFFFFF] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:animation-duration-[var(--duration-fast)]">
           <Check className="size-3.5" strokeWidth={3} />
@@ -321,6 +338,14 @@ function Frame({
           {tile}
         </div>
       )}
+      {overlay && !selectable ? (
+        <div
+          data-slot="frame-overlay"
+          className="invisible absolute top-1.5 right-1.5 z-(--z-frame-mark) flex gap-1 opacity-0 transition-[opacity,visibility] duration-(--duration-fast) group-focus-within/frame:visible group-focus-within/frame:opacity-100 group-hover/frame:visible group-hover/frame:opacity-100 motion-reduce:transition-none [@media(hover:none)]:hidden"
+        >
+          {overlay}
+        </div>
+      ) : null}
       {actions ? <div data-slot="frame-actions">{actions}</div> : null}
     </div>
   );

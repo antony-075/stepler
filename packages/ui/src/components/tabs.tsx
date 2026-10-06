@@ -86,7 +86,7 @@ function TabsList({
 // drawn inside. 8px side padding (16px from `xl`): the segments are equal, so the collection
 // page's four labels («Гостьова сторінка», «Параметри колекції») fit 768px untruncated.
 const SEGMENT = cn(
-  'relative z-1 inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-sm md:pointer-fine:min-h-9 whitespace-nowrap xl:px-4 transition-colors duration-(--duration-fast) motion-reduce:transition-none',
+  'relative z-1 inline-flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-2 text-[0.875rem] md:pointer-fine:min-h-9 whitespace-nowrap xl:px-4 transition-colors duration-(--duration-fast) motion-reduce:transition-none',
   focusRingInset,
   'hover:text-foreground data-[state=active]:font-semibold data-[state=active]:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',

@@ -54,8 +54,8 @@ export const Focused: Story = {
     const style = getComputedStyle(input);
     await expect(style.outlineStyle).toBe('none');
     // The edge colour and the halo transition (120ms).
-    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(79, 70, 229)'));
-    await waitFor(() => expect(getComputedStyle(input).boxShadow).toContain('3px'));
+    await waitFor(() => expect(getComputedStyle(input).borderColor).toBe('rgb(54, 87, 255)'));
+    await waitFor(() => expect(getComputedStyle(input).boxShadow).toContain('2px'));
     await expect(getComputedStyle(input).boxShadow).toMatch(
       /rgba\(90, 74, 140, 0\.25\)|oklab|color\(/,
     );
@@ -67,7 +67,7 @@ export const FocusedDark: Story = {
   play: async ({ canvas }) => {
     const input = canvas.getByLabelText('Email');
     await userEvent.click(input);
-    await expect(getComputedStyle(input).outlineColor).toBe('rgb(165, 180, 252)'); // --ring dark
+    await expect(getComputedStyle(input).outlineColor).toBe('rgb(143, 160, 255)'); // --ring dark
   },
 };
 

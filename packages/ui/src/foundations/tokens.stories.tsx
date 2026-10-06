@@ -139,7 +139,7 @@ export const Dark: Story = {
       await expect(canvas.getByText(name, { selector: 'code' })).toBeVisible();
     }
     await expect(await tokenRow(canvasElement, '--background').findByText('#0c0c0e')).toBeVisible();
-    await expect(await tokenRow(canvasElement, '--pencil').findByText('#818cf8')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#8fa0ff')).toBeVisible();
   },
 };
 
@@ -152,6 +152,6 @@ export const Light: Story = {
     }
     // The values are read live from the page, not copied into the story.
     await expect(await tokenRow(canvasElement, '--background').findByText('#f4f4f5')).toBeVisible();
-    await expect(await tokenRow(canvasElement, '--pencil').findByText('#4f46e5')).toBeVisible();
+    await expect(await tokenRow(canvasElement, '--pencil').findByText('#2a47e0')).toBeVisible();
   },
 };

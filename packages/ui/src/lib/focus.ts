@@ -10,8 +10,8 @@
  * - `focusHalo`: elements with a border (outline buttons, chips, cards, checkboxes): the border
  *   itself turns violet and a 3px halo of violet at 25% surrounds it, on `:focus-visible`. No gap,
  *   no second line.
- * - `fieldFocus`: text fields and select triggers: the same as `focusHalo`, on any focus (a click
- *   into a field shows where typing goes).
+ * - `fieldFocus`: text fields and select triggers: the edge turns the accent with a faint 2px
+ *   halo, on any focus (a click into a field shows where typing goes).
  */
 export const focusRing =
   'outline-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-ring';
@@ -24,5 +24,8 @@ export const focusRingInset =
 export const focusHalo =
   'outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/25';
 
-/** Text fields and select triggers: a violet border and a soft halo on any focus. */
-export const fieldFocus = 'outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/25';
+/**
+ * Text fields and select triggers, on any focus: the edge turns the accent (≥ 3:1 against the
+ * panel and the page) with a faint 2px halo (owner 2026-10-06: calm, never a thick ring).
+ */
+export const fieldFocus = 'outline-none focus:border-ring focus:ring-2 focus:ring-ring/15';

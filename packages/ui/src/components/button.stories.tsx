@@ -71,7 +71,7 @@ export const FocusRing: Story = {
     await expect(style.outlineStyle).toBe('solid');
     await expect(style.outlineWidth).toBe('2px');
     await expect(style.outlineOffset).toBe('2px');
-    await expect(style.outlineColor).toBe('rgb(79, 70, 229)'); // --ring, the accent
+    await expect(style.outlineColor).toBe('rgb(54, 87, 255)'); // --ring, Stepler blue
   },
 };
 
@@ -88,7 +88,7 @@ export const Guest: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: 'Додати фото' });
     await expect(button.getBoundingClientRect().height).toBe(56);
-    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(79, 70, 229)'); // --pencil, the accent since V1
+    await expect(getComputedStyle(button).backgroundColor).toBe('rgb(42, 71, 224)'); // --pencil, the accent's text step
   },
 };
 

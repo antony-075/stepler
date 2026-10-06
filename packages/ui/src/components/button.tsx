@@ -39,7 +39,7 @@ const buttonVariants = cva(
       size: {
         default:
           'h-11 px-4 text-[0.9375rem] has-[>svg]:px-3.5 md:pointer-fine:h-9 md:pointer-fine:px-3.5 md:pointer-fine:text-sm md:pointer-fine:has-[>svg]:px-3',
-        sm: 'h-9 gap-1.5 px-3 text-sm has-[>svg]:px-2.5 md:pointer-fine:h-8 md:pointer-fine:text-[0.8125rem]',
+        sm: 'h-9 gap-1.5 px-3 text-sm has-[>svg]:px-2.5 md:pointer-fine:h-8 md:pointer-fine:text-[0.875rem]',
         lg: 'h-12 px-5 text-base has-[>svg]:px-4',
         guest: 'h-14 px-6 type-body-lg font-semibold',
         icon: 'size-11 md:pointer-fine:size-9',
