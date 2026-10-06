@@ -426,6 +426,37 @@
       "download": "Завантажити кадр {number}",
       "delete": "Видалити кадр {number}",
       "downloadFailed": "Не вдалося отримати файл. Спробуйте ще."
+    },
+    "moderation": {
+      "filter": "Скарги",
+      "emptyFilter": "Скарг немає",
+      "marks": {
+        "reported": "Скарга",
+        "hidden": "Приховано",
+        "moderated": "Приховано модерацією"
+      },
+      "title": "Модерація",
+      "visible": "Гості бачать цей кадр.",
+      "hiddenByAdmin": "Гості не бачать цей кадр.",
+      "hide": "Приховати від гостей",
+      "show": "Показати гостям",
+      "hiddenDone": "Кадр приховано від гостей",
+      "shownDone": "Кадр знову бачать гості",
+      "moderatedTitle": "Приховано модерацією",
+      "moderatedReason": "Причина: {reason}",
+      "moderatedContact": "Якщо ви не згодні, напишіть на <email></email>.",
+      "moderatedConflict": "Кадр приховала модерація — показати його не можна",
+      "reportsTitle": "Скарги ({count})",
+      "noDescription": "Без опису",
+      "dismiss": "Відхилити скарги",
+      "dismissHint": "Позначка зникне. Модерація Stepler усе одно розгляне скарги.",
+      "dismissTitle": "Відхилити скарги на цей кадр?",
+      "dismissText": "Позначка зникне.",
+      "dismissConfirm": "Відхилити",
+      "dismissDone": "Скарги відхилено",
+      "cancel": "Скасувати",
+      "pending": "Зберігаємо…",
+      "failed": "Не вдалося зберегти. Спробуйте ще."
     }
   },
   "guestLinks": {

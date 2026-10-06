@@ -426,6 +426,37 @@
       "download": "Download frame {number}",
       "delete": "Delete frame {number}",
       "downloadFailed": "Couldn’t get the file. Try again."
+    },
+    "moderation": {
+      "filter": "Reports",
+      "emptyFilter": "No reports",
+      "marks": {
+        "reported": "Report",
+        "hidden": "Hidden",
+        "moderated": "Hidden by moderation"
+      },
+      "title": "Moderation",
+      "visible": "Guests see this frame.",
+      "hiddenByAdmin": "Guests don’t see this frame.",
+      "hide": "Hide from guests",
+      "show": "Show to guests",
+      "hiddenDone": "Frame hidden from guests",
+      "shownDone": "Guests see the frame again",
+      "moderatedTitle": "Hidden by moderation",
+      "moderatedReason": "Reason: {reason}",
+      "moderatedContact": "If you disagree, write to <email></email>.",
+      "moderatedConflict": "Moderation hid this frame — it can’t be shown",
+      "reportsTitle": "Reports ({count})",
+      "noDescription": "No description",
+      "dismiss": "Dismiss reports",
+      "dismissHint": "The mark goes away. Stepler moderation still reviews the reports.",
+      "dismissTitle": "Dismiss the reports on this frame?",
+      "dismissText": "The mark goes away.",
+      "dismissConfirm": "Dismiss",
+      "dismissDone": "Reports dismissed",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "failed": "Could not save. Try again."
     }
   },
   "guestLinks": {

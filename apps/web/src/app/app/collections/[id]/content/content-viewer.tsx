@@ -13,6 +13,7 @@ import { getContent } from '@/api/content';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { contentDetailKey } from './use-pending-previews';
 import { FileStage, TextStage, viewerButton } from '@/media/viewer-stage';
+import { ModerationPanel } from './moderation-panel';
 
 /** Media links are signed for at least an hour (spec §10.6); refetch well before. */
 const DETAIL_STALE_MS = 30 * 60_000;
@@ -37,6 +38,8 @@ export function ContentViewer({
   onNavigate,
   onClose,
   onDelete,
+  contactEmail,
+  onModerationChanged,
 }: {
   items: AdminContentItem[];
   frameNo: number | undefined;
@@ -44,6 +47,10 @@ export function ContentViewer({
   onClose: () => void;
   /** Deletes the frame; the caller updates the grid and closes the viewer. */
   onDelete: (item: AdminContentItem) => Promise<void>;
+  /** `LEGAL_CONTACT_EMAIL` for the operator-hide note (slice 9); `null` when unset. */
+  contactEmail: string | null;
+  /** After a hide, show or dismissal: the caller refreshes this frame, the lists and counts. */
+  onModerationChanged: (item: AdminContentItem) => Promise<void>;
 }) {
   const t = useTranslations('content');
   const format = useFormatter();
@@ -59,7 +66,8 @@ export function ContentViewer({
   const detail = useQuery({
     queryKey: contentDetailKey(item?.id ?? ''),
     queryFn: () => getContent(item?.id ?? ''),
-    enabled: isFile,
+    // Texts too (slice 9): the detail carries the frame's open reports.
+    enabled: item !== undefined,
     staleTime: DETAIL_STALE_MS,
   });
 
@@ -147,6 +155,13 @@ export function ContentViewer({
                   </Detail>
                 )}
               </DetailGroup>
+            )}
+            {detail.data === undefined ? null : (
+              <ModerationPanel
+                detail={detail.data}
+                contactEmail={contactEmail}
+                onChanged={() => onModerationChanged(item)}
+              />
             )}
             <p className="border-t border-[rgb(255_255_255/0.12)] pt-4 text-sm leading-snug text-[var(--viewer-muted)]">
               {t('viewer.numberHint')}

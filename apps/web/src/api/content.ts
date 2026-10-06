@@ -1,5 +1,6 @@
 import {
   adminContentDetailSchema,
+  adminContentItemSchema,
   adminContentPageSchema,
   type AdminContentSort,
   bulkDeleteContentResponseSchema,
@@ -17,7 +18,14 @@ export const contentListKey = (
   collectionId: string,
   kind: ContentKind | undefined,
   sort: AdminContentSort,
-) => [...collectionKey(collectionId), 'content', kind ?? 'all', sort] as const;
+  reported = false,
+) =>
+  [
+    ...collectionKey(collectionId),
+    'content',
+    reported ? 'reported' : (kind ?? 'all'),
+    sort,
+  ] as const;
 
 /** Every list of the collection, whatever the filter and order. */
 export const contentListsKey = (collectionId: string) =>
@@ -28,11 +36,19 @@ export const contentCountsKey = (collectionId: string) =>
 
 export function listContent(
   collectionId: string,
-  query: { kind?: ContentKind; sort: AdminContentSort; cursor?: string; limit?: number },
+  query: {
+    kind?: ContentKind;
+    sort: AdminContentSort;
+    cursor?: string;
+    limit?: number;
+    /** Only frames with open reports («Скарги», slice 9). */
+    reported?: boolean;
+  },
 ) {
   const params = new URLSearchParams();
   if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.kind !== undefined) params.set('kind', query.kind);
+  if (query.reported === true) params.set('reported', 'true');
   if (query.sort !== 'newest') params.set('sort', query.sort);
   if (query.cursor !== undefined) params.set('cursor', query.cursor);
   const search = params.toString();
@@ -64,3 +80,21 @@ export const bulkDeleteContent = (
     body: { ids },
     schema: bulkDeleteContentResponseSchema,
   });
+
+/** «Приховати від гостей» (slice 9): idempotent; returns the frame as the grid shows it. */
+export const hideContent = (id: string) =>
+  apiRequest(`/content/${encodeURIComponent(id)}/hide`, {
+    method: 'POST',
+    schema: adminContentItemSchema,
+  });
+
+/** «Показати гостям»: only what the admin hid (`409 CONTENT_MODERATED` otherwise). */
+export const unhideContent = (id: string) =>
+  apiRequest(`/content/${encodeURIComponent(id)}/unhide`, {
+    method: 'POST',
+    schema: adminContentItemSchema,
+  });
+
+/** «Відхилити скарги»: clears the admin's mark; the operator still reviews them. */
+export const dismissReports = (id: string): Promise<void> =>
+  apiRequest(`/content/${encodeURIComponent(id)}/reports/dismiss`, { method: 'POST' });

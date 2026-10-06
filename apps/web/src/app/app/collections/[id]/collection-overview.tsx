@@ -70,7 +70,14 @@ const MINI_NAV_ID = 'collection-mini-nav';
  * «Параметри колекції» (`?tab=settings`).
  * A link's settings open in a sheet (`?link=`).
  */
-export function CollectionOverview({ id }: { id: string }) {
+export function CollectionOverview({
+  id,
+  contactEmail,
+}: {
+  id: string;
+  /** `LEGAL_CONTACT_EMAIL` (slice 9): the appeal address for moderation notes; may be unset. */
+  contactEmail: string | null;
+}) {
   const t = useTranslations('collection');
   const tList = useTranslations('collections');
   // Once deleted (the «Параметри колекції» tab), the page is on its way to /app: stop refetching.
@@ -78,7 +85,13 @@ export function CollectionOverview({ id }: { id: string }) {
   const query = useCollection(id, !deleted);
 
   if (query.data !== undefined) {
-    return <Overview collection={query.data} onDeleted={() => setDeleted(true)} />;
+    return (
+      <Overview
+        collection={query.data}
+        contactEmail={contactEmail}
+        onDeleted={() => setDeleted(true)}
+      />
+    );
   }
   if (query.isPending) return <OverviewSkeleton label={t('loading')} />;
   if (query.isError) {
@@ -106,7 +119,15 @@ export function CollectionOverview({ id }: { id: string }) {
   return <OverviewSkeleton label={t('loading')} />;
 }
 
-function Overview({ collection, onDeleted }: { collection: Collection; onDeleted: () => void }) {
+function Overview({
+  collection,
+  contactEmail,
+  onDeleted,
+}: {
+  collection: Collection;
+  contactEmail: string | null;
+  onDeleted: () => void;
+}) {
   const t = useTranslations('collection');
   const tLinks = useTranslations('links');
   const router = useRouter();
@@ -183,7 +204,7 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           <h2 id="collection-content" className="sr-only">
             {t('content')}
           </h2>
-          <ContentTab collection={collection} />
+          <ContentTab collection={collection} contactEmail={contactEmail} />
         </section>
       </TabsContent>
       <TabsContent value="links">

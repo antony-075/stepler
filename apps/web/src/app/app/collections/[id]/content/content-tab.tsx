@@ -30,6 +30,10 @@
 //   or the order clears the selection.
 // - An empty collection keeps the calm tinted panel; an empty filter says what is missing and
 //   offers «Показати все». Archived collections look the same: their frames are kept.
+// - Slice 9 (R2, R3): a «Скарги» chip with its count after the types, shown while there are open
+//   reports or it is chosen (exclusive with a type: `?reported=1`); tiles carry their marks
+//   («Скарга», «Приховано», «Приховано модерацією») and say them in their names; the viewer's
+//   details hold the moderation panel.
 
 import type { AdminContentItem, AdminContentPage, Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
@@ -92,9 +96,11 @@ import {
   type KindFilter,
   kindFromParam,
   lockedFilters,
+  reportedFromParam,
   sortFromParam,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
+import { ModerationMarks, moderationMarks } from './moderation-marks';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
@@ -104,14 +110,24 @@ import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 
 const SORTS = ['newest', 'frame'] as const;
+/** The «Скарги» chip's value in the type chips' group (exclusive with a type). */
+const REPORTED = 'reported';
 
-export function ContentTab({ collection }: { collection: Collection }) {
+export function ContentTab({
+  collection,
+  contactEmail,
+}: {
+  collection: Collection;
+  /** `LEGAL_CONTACT_EMAIL` (slice 9), for the operator-hide note; `null` when unset. */
+  contactEmail: string | null;
+}) {
   const t = useTranslations('content');
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const sortId = useId();
-  const kind = kindFromParam(params.get('kind'));
+  const reported = reportedFromParam(params.get('reported'));
+  const kind = reported ? undefined : kindFromParam(params.get('kind'));
   const sort = sortFromParam(params.get('sort'));
   const frameNo = frameFromParam(params.get('frame'));
   const { counts, newCount, showNew, rebase, refresh } = useNewContent(collection.id);
@@ -128,7 +144,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
   // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
   const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
-  const view = `${kind ?? 'all'}:${sort}`;
+  const view = `${reported ? 'reported' : (kind ?? 'all')}:${sort}`;
   const [selectionView, setSelectionView] = useState(view);
   if (selectionView !== view) {
     setSelectionView(view);
@@ -140,10 +156,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
   const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
-    queryKey: contentListKey(collection.id, kind, sort),
+    queryKey: contentListKey(collection.id, kind, sort, reported),
     queryFn: ({ pageParam }) =>
       listContent(collection.id, {
         ...(kind === undefined ? {} : { kind }),
+        ...(reported ? { reported: true } : {}),
         sort,
         ...(pageParam === null ? {} : { cursor: pageParam }),
       }),
@@ -236,6 +253,15 @@ export function ContentTab({ collection }: { collection: Collection }) {
     } catch {
       toast({ variant: 'error', title: t('tile.downloadFailed') });
     }
+  }
+
+  /** After a hide, show or dismissal: this frame's detail, every list and the counts again. */
+  async function moderationChanged(item: AdminContentItem) {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: contentDetailKey(item.id) }),
+      queryClient.invalidateQueries({ queryKey: contentListsKey(collection.id) }),
+      queryClient.invalidateQueries({ queryKey: contentCountsKey(collection.id) }),
+    ]);
   }
 
   async function removeFrame(item: AdminContentItem) {
@@ -331,6 +357,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
   const filter = filterOf(kind);
   const countOf = (value: KindFilter) =>
     counts.data === undefined ? undefined : counts.data[value === 'all' ? 'total' : value];
+  const reportedCount = counts.data?.reported ?? 0;
+  const showReportedChip = reported || reportedCount > 0;
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -341,10 +369,18 @@ export function ContentTab({ collection }: { collection: Collection }) {
           <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
             <ToggleGroup
               aria-label={t('filterLabel')}
-              value={filter}
-              onValueChange={(value) =>
-                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
-              }
+              value={reported ? REPORTED : filter}
+              onValueChange={(value) => {
+                // Radix gives '' when the pressed chip is pressed again: keep the view.
+                if (value === '') return;
+                if (value === REPORTED)
+                  navigate({ reported: '1', kind: null, frame: null }, 'replace');
+                else
+                  navigate(
+                    { kind: value === 'all' ? null : value, reported: null, frame: null },
+                    'replace',
+                  );
+              }}
             >
               {KIND_FILTERS.map((value) => (
                 <ToggleGroupItem
@@ -360,6 +396,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
                   {t(`filter.${value}`)}
                 </ToggleGroupItem>
               ))}
+              {showReportedChip ? (
+                <ToggleGroupItem value={REPORTED} count={reportedCount}>
+                  {t('moderation.filter')}
+                </ToggleGroupItem>
+              ) : null}
             </ToggleGroup>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
@@ -461,6 +502,18 @@ export function ContentTab({ collection }: { collection: Collection }) {
         >
           {t('loadFailed')}
         </Alert>
+      ) : items.length === 0 && reported ? (
+        <Panel className="py-6">
+          <EmptyState
+            headingLevel={3}
+            title={t('moderation.emptyFilter')}
+            action={
+              <Button variant="outline" onClick={() => navigate({ reported: null }, 'replace')}>
+                {t('showAll')}
+              </Button>
+            }
+          />
+        </Panel>
       ) : items.length === 0 && filter === 'all' ? (
         <EmptyCollection collection={collection} />
       ) : items.length === 0 && filter !== 'all' ? (
@@ -583,6 +636,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
         onClose={closeViewer}
         onDelete={removeFrame}
+        contactEmail={contactEmail}
+        onModerationChanged={moderationChanged}
       />
       <ConfirmDialog
         open={deleting !== null}
@@ -627,12 +682,18 @@ function AdminFrame({
   const format = useFormatter();
   const time = format.dateTime(new Date(item.createdAt), { hour: '2-digit', minute: '2-digit' });
   const name = item.contributorName ?? t('noName');
-  const baseName = t('frameName', {
+  const marks = moderationMarks(item);
+  const frameName = t('frameName', {
     number: item.frameNo,
     kind: t(`kind.${item.kind}`),
     time,
     name,
   });
+  // The marks are visual on the tile; their words go into its name (slice 9).
+  const baseName =
+    marks.length === 0
+      ? frameName
+      : `${frameName}, ${marks.map((mark) => t(`moderation.marks.${mark}`).toLowerCase()).join(', ')}`;
   const accessibleName = selection?.selected
     ? t('select.selectedName', { name: baseName })
     : baseName;
@@ -643,6 +704,7 @@ function AdminFrame({
   // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
   const quick = {
     outlined: true,
+    marks: <ModerationMarks marks={marks} />,
     overlay: (
       <>
         {item.kind === 'TEXT' ? null : (

@@ -28,6 +28,11 @@ export function filterOf(kind: ContentKind | undefined): KindFilter {
   return kind === undefined ? 'all' : (kind.toLowerCase() as KindFilter);
 }
 
+/** `?reported=1`: only frames with open reports («Скарги», slice 9); anything else is all. */
+export function reportedFromParam(value: string | null): boolean {
+  return value === '1';
+}
+
 /** `?frame=86` opens the viewer on frame 86; anything but a positive integer is nothing. */
 export function frameFromParam(value: string | null): number | undefined {
   if (value === null || !/^[1-9]\d{0,8}$/.test(value)) return undefined;
