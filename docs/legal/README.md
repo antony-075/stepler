@@ -36,6 +36,18 @@ One PR, one commit:
 
 Replacing a text **without** a new version (a typo) is an edit of the current file pair; the version and date stay.
 
+## Version history
+
+- **v1** (2026-10-04, draft): the first placeholder texts (slice 10).
+- **v2** (2026-10-06, draft, `requireReacceptance: true`; slice 9, owner decision R8): a copy of v1 with only these changes, each paragraph marked `[ПЕРЕВІРИТИ ЮРИСТОМ]` / `[LAWYER TO CONFIRM]`:
+  - Terms §7: reports in the app («Поскаржитися» in another guest's frame) or by e-mail; the e-mail address is optional and used only for the decision; the administrator sees reports in the app, without the reporter's contact; the operator may hide or delete content and block a collection or an account, and the administrator cannot undo that; the acknowledgement promise is removed (no receipt is sent), the decision goes to the reporter only if they left an address, and the administrator is told in the app.
+  - Terms §12: a blocked collection is unavailable to guests and its administrator sees the reason; a blocked account cannot sign in and its collections are unavailable; the appeal address is unchanged.
+  - Privacy «Дані зі скарг» / «Report data»: what an in-app report stores (no IP address), the e-mail kept until the decision is sent and 90 days at most, never shown to the administrator; e-mail reports still accepted.
+  - Privacy §9: retention lines for reports (`[СТРОК ЗБЕРІГАННЯ]`) and for the reporter's address.
+  - Privacy §14: both report channels and the operator's measures.
+
+  Everyone who accepted v1 accepts v2 once at the next sign-in or page load (the existing `/accept-terms` flow).
+
 ## What the app does with it
 
 - **Web:** `/legal/<slug>` renders the current version for the request's locale with the meta line «Версія vN · діє з <date>»; the draft banner shows exactly while `draft: true`; the «Контакти» block shows `LEGAL_CONTACT_EMAIL` (omitted only when the variable is unset, which is possible only with drafts allowed). The footer links and the guest notice point at the pages.

@@ -31,6 +31,21 @@ describe('LEGAL_DOCUMENTS', () => {
     }
   });
 
+  test('v2 (slice 9): both documents, everyone accepts again (R8)', () => {
+    for (const entry of LEGAL_DOCUMENTS) {
+      expect(entry).toMatchObject({ version: 'v2', draft: true, requireReacceptance: true });
+    }
+  });
+
+  test('an account that accepted v1 must accept v2', () => {
+    const at = '2026-10-04T10:00:00.000Z';
+    const status = legalStatus([
+      { document: 'TERMS', version: 'v1', acceptedAt: at },
+      { document: 'PRIVACY', version: 'v1', acceptedAt: at },
+    ]);
+    expect(status.accepted).toBe(false);
+  });
+
   test('LEGAL_VERSION_PATTERN accepts v1…v9999 only', () => {
     for (const ok of ['v1', 'v12', 'v9999']) expect(ok).toMatch(LEGAL_VERSION_PATTERN);
     for (const bad of ['1', 'v0', 'v01', 'v10000', 'V1', 'v1 ', '<script>']) {
@@ -55,13 +70,16 @@ describe('legalStatus', () => {
     }
   });
 
+  const terms = currentLegalVersion('TERMS').version;
+  const privacy = currentLegalVersion('PRIVACY').version;
+
   test('one document accepted is not enough', () => {
-    const status = legalStatus([{ document: 'TERMS', version: 'v1', acceptedAt: at }]);
+    const status = legalStatus([{ document: 'TERMS', version: terms, acceptedAt: at }]);
     expect(status.accepted).toBe(false);
     expect(status.documents[0]).toEqual({
       document: 'TERMS',
-      requiredVersion: 'v1',
-      acceptedVersion: 'v1',
+      requiredVersion: terms,
+      acceptedVersion: terms,
       acceptedAt: at,
     });
     expect(status.documents[1]!.acceptedVersion).toBeNull();
@@ -69,8 +87,8 @@ describe('legalStatus', () => {
 
   test('both accepted', () => {
     const status = legalStatus([
-      { document: 'TERMS', version: 'v1', acceptedAt: at },
-      { document: 'PRIVACY', version: 'v1', acceptedAt: at },
+      { document: 'TERMS', version: terms, acceptedAt: at },
+      { document: 'PRIVACY', version: privacy, acceptedAt: at },
     ]);
     expect(status.accepted).toBe(true);
     for (const doc of status.documents) expect(doc.acceptedAt).toBe(at);

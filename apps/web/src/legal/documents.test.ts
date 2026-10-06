@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from 'node:fs';
-import { LEGAL_DOCUMENTS } from '@stepler/contracts';
+import { currentLegalVersion, LEGAL_DOCUMENTS } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
 import { LOCALES } from '@/i18n/locales';
 import { fillLegalPlaceholders, legalDocumentFile, loadLegalDocument } from './documents';
@@ -42,7 +42,7 @@ describe.each(LEGAL_DOCUMENTS)('$document $version', (entry) => {
 describe('loadLegalDocument', () => {
   test('renders the Markdown to HTML with the registry entry', async () => {
     const { meta, html } = await loadLegalDocument('TERMS', 'uk');
-    expect(meta.version).toBe('v1');
+    expect(meta.version).toBe(currentLegalVersion('TERMS').version);
     expect(meta.document).toBe('TERMS');
     expect(html).toContain('<h2');
     expect(html).toContain('<blockquote');
@@ -85,7 +85,27 @@ describe('slugs', () => {
   });
 
   test('file names carry slug, locale and version', () => {
-    expect(legalDocumentFile('TERMS', 'uk')).toMatch(/content\/legal\/terms\.uk\.v1\.md$/);
-    expect(legalDocumentFile('PRIVACY', 'en')).toMatch(/content\/legal\/privacy\.en\.v1\.md$/);
+    expect(legalDocumentFile('TERMS', 'uk')).toMatch(/content\/legal\/terms\.uk\.v2\.md$/);
+    expect(legalDocumentFile('PRIVACY', 'en')).toMatch(/content\/legal\/privacy\.en\.v2\.md$/);
+  });
+});
+
+// v2 (slice 9, R8): every changed paragraph keeps its lawyer marker, and the promise the product
+// does not keep (acknowledging receipt) is gone.
+describe('v2 drafts', () => {
+  const REVIEW = { uk: '[ПЕРЕВІРИТИ ЮРИСТОМ]', en: '[LAWYER TO CONFIRM]' } as const;
+  test.each(LEGAL_DOCUMENTS.flatMap((entry) => LOCALES.map((locale) => [entry, locale] as const)))(
+    '%o %s carries the lawyer marker',
+    (entry, locale) => {
+      expect(readFileSync(legalDocumentFile(entry.document, locale), 'utf8')).toContain(
+        REVIEW[locale],
+      );
+    },
+  );
+
+  test('the uk terms no longer promise to acknowledge receipt', () => {
+    const text = readFileSync(legalDocumentFile('TERMS', 'uk'), 'utf8');
+    expect(text).not.toContain('підтверджуємо отримання');
+    expect(text).toContain('Поскаржитися');
   });
 });
