@@ -30,15 +30,27 @@
 //   or the order clears the selection.
 // - An empty collection keeps the calm tinted panel; an empty filter says what is missing and
 //   offers «Показати все». Archived collections look the same: their frames are kept.
-// - Slice 9 (R2, R3): a «Скарги» chip with its count after the types, shown while there are open
-//   reports or it is chosen (exclusive with a type: `?reported=1`); tiles carry their marks
-//   («Скарга», «Приховано», «Приховано модерацією») and say them in their names; the viewer's
-//   details hold the moderation panel.
+// - Slice 9 (R2, R3): tiles carry their marks («Скарга», «Приховано», «Приховано модерацією») and
+//   say them in their names; the viewer's details hold the moderation panel.
+// - State filter (F1, owner 2026-10-06): a «Стан: …» Select beside the order, the same height, each
+//   option (owner: labels and mono counts only, no icons) a checkbox, so several states combine
+//   (OR), the whole ANDed with the type chips (`?state=a&state=b`); the counts are per collection,
+//   like the type counts. Nothing is persisted. An empty result says what was filtered and offers
+//   «Показати все».
 
 import type { AdminContentItem, AdminContentPage, Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@stepler/ui/components/dropdown-menu';
 import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
@@ -62,7 +74,16 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { CheckSquare, Download, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  CheckSquare,
+  ChevronDown,
+  Download,
+  ImagePlus,
+  ListChecks,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
@@ -96,11 +117,14 @@ import {
   type KindFilter,
   kindFromParam,
   lockedFilters,
-  reportedFromParam,
   sortFromParam,
+  STATE_FILTERS,
+  stateCount,
+  stateFilterOf,
+  statesFromParams,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
-import { ModerationMarks, moderationMarks } from './moderation-marks';
+import { ModerationMarks, moderationMarks, moderationRing } from './moderation-marks';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
@@ -110,8 +134,13 @@ import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 
 const SORTS = ['newest', 'frame'] as const;
-/** The «Скарги» chip's value in the type chips' group (exclusive with a type). */
-const REPORTED = 'reported';
+/** The menu's option values to the API's states, for the checks. */
+const STATES_OF = {
+  active: 'ACTIVE',
+  'hidden-admin': 'HIDDEN_ADMIN',
+  'hidden-operator': 'HIDDEN_OPERATOR',
+  reported: 'REPORTED',
+} as const;
 
 export function ContentTab({
   collection,
@@ -126,8 +155,8 @@ export function ContentTab({
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const sortId = useId();
-  const reported = reportedFromParam(params.get('reported'));
-  const kind = reported ? undefined : kindFromParam(params.get('kind'));
+  const kind = kindFromParam(params.get('kind'));
+  const states = statesFromParams(params.getAll('state'));
   const sort = sortFromParam(params.get('sort'));
   const frameNo = frameFromParam(params.get('frame'));
   const { counts, newCount, showNew, rebase, refresh } = useNewContent(collection.id);
@@ -144,7 +173,7 @@ export function ContentTab({
   // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
   const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
-  const view = `${reported ? 'reported' : (kind ?? 'all')}:${sort}`;
+  const view = `${kind ?? 'all'}:${states.join('+')}:${sort}`;
   const [selectionView, setSelectionView] = useState(view);
   if (selectionView !== view) {
     setSelectionView(view);
@@ -156,11 +185,11 @@ export function ContentTab({
   const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
-    queryKey: contentListKey(collection.id, kind, sort, reported),
+    queryKey: contentListKey(collection.id, kind, sort, states),
     queryFn: ({ pageParam }) =>
       listContent(collection.id, {
         ...(kind === undefined ? {} : { kind }),
-        ...(reported ? { reported: true } : {}),
+        states,
         sort,
         ...(pageParam === null ? {} : { cursor: pageParam }),
       }),
@@ -176,12 +205,16 @@ export function ContentTab({
   });
   const locked = lockedFilters(links.data?.items, counts.data);
 
-  /** Updates the URL; `null` removes a parameter. */
-  function navigate(changes: Record<string, string | null>, mode: 'push' | 'replace') {
+  /** Updates the URL; `null` removes a parameter, an array repeats it (`?state=a&state=b`). */
+  function navigate(
+    changes: Record<string, string | readonly string[] | null>,
+    mode: 'push' | 'replace',
+  ) {
     const query = new URLSearchParams(params.toString());
     for (const [key, value] of Object.entries(changes)) {
-      if (value === null) query.delete(key);
-      else query.set(key, value);
+      query.delete(key);
+      if (typeof value === 'string') query.set(key, value);
+      else if (value !== null) for (const one of value) query.append(key, one);
     }
     const search = query.toString();
     const href = `/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`;
@@ -357,8 +390,6 @@ export function ContentTab({
   const filter = filterOf(kind);
   const countOf = (value: KindFilter) =>
     counts.data === undefined ? undefined : counts.data[value === 'all' ? 'total' : value];
-  const reportedCount = counts.data?.reported ?? 0;
-  const showReportedChip = reported || reportedCount > 0;
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -369,17 +400,11 @@ export function ContentTab({
           <div className="-mx-4 min-w-0 overflow-x-auto px-4 md:mx-0 md:px-0">
             <ToggleGroup
               aria-label={t('filterLabel')}
-              value={reported ? REPORTED : filter}
+              value={filter}
               onValueChange={(value) => {
                 // Radix gives '' when the pressed chip is pressed again: keep the view.
                 if (value === '') return;
-                if (value === REPORTED)
-                  navigate({ reported: '1', kind: null, frame: null }, 'replace');
-                else
-                  navigate(
-                    { kind: value === 'all' ? null : value, reported: null, frame: null },
-                    'replace',
-                  );
+                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace');
               }}
             >
               {KIND_FILTERS.map((value) => (
@@ -396,11 +421,6 @@ export function ContentTab({
                   {t(`filter.${value}`)}
                 </ToggleGroupItem>
               ))}
-              {showReportedChip ? (
-                <ToggleGroupItem value={REPORTED} count={reportedCount}>
-                  {t('moderation.filter')}
-                </ToggleGroupItem>
-              ) : null}
             </ToggleGroup>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
@@ -420,6 +440,75 @@ export function ContentTab({
               />
               <span className="max-sm:sr-only">{t('refresh')}</span>
             </Button>
+            {/* The state (F1a): a menu of checkboxes that stays open while toggling (OR between
+                states); the trigger says what is chosen; «Скинути» at the foot when something is. */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  // Non-modal: the grid stays live and visible while the admin ticks states.
+                  // `shrink`: the Button base is `shrink-0`; this one shares the row on phones.
+                  className="h-11 w-full min-w-0 shrink justify-between font-normal sm:min-w-44 md:h-9 md:w-auto pointer-coarse:h-11"
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="text-muted-foreground">{t('state.prefix')}</span>{' '}
+                    {states.length === 0
+                      ? t('state.all')
+                      : states.length === 1
+                        ? t(`state.${stateFilterOf(states[0]!)}`)
+                        : t('state.selected', { count: states.length })}
+                  </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-72">
+                <DropdownMenuLabel>{t('state.label')}</DropdownMenuLabel>
+                {STATE_FILTERS.map((value) => {
+                  const checked = states.includes(STATES_OF[value]);
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={value}
+                      checked={checked}
+                      // Stays open: the admin usually ticks more than one.
+                      onSelect={(event) => event.preventDefault()}
+                      onCheckedChange={(next) => {
+                        const nextFilters = STATE_FILTERS.filter((other) =>
+                          other === value ? next === true : states.includes(STATES_OF[other]),
+                        );
+                        navigate({ state: nextFilters, frame: null }, 'replace');
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                        {t(`state.${value}`)}
+                      </span>
+                      {counts.data === undefined ? null : (
+                        <span className="type-data ml-3 text-muted-foreground tabular-nums">
+                          {stateCount(counts.data, value)}
+                        </span>
+                      )}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+                {states.length === 0 ? null : (
+                  <>
+                    <DropdownMenuSeparator />
+                    {/* The same gutter as the checkboxes, so the labels line up. */}
+                    <DropdownMenuItem
+                      className="pl-9 md:pointer-fine:pl-9"
+                      onSelect={() => navigate({ state: null, frame: null }, 'replace')}
+                    >
+                      <span className="pointer-events-none absolute left-3 flex size-4 items-center justify-center">
+                        <X aria-hidden="true" />
+                      </span>
+                      {t('state.clear')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span id={sortId} className="sr-only">
               {t('sortLabel')}
             </span>
@@ -502,13 +591,21 @@ export function ContentTab({
         >
           {t('loadFailed')}
         </Alert>
-      ) : items.length === 0 && reported ? (
+      ) : items.length === 0 && states.length > 0 ? (
         <Panel className="py-6">
           <EmptyState
             headingLevel={3}
-            title={t('moderation.emptyFilter')}
+            title={
+              states.length === 1
+                ? t(`state.empty.${stateFilterOf(states[0]!)}`)
+                : t('state.empty.several')
+            }
+            {...(filter === 'all' ? {} : { description: t('emptyFilterText') })}
             action={
-              <Button variant="outline" onClick={() => navigate({ reported: null }, 'replace')}>
+              <Button
+                variant="outline"
+                onClick={() => navigate({ state: null, kind: null }, 'replace')}
+              >
                 {t('showAll')}
               </Button>
             }
@@ -702,9 +799,11 @@ function AdminFrame({
       ? {}
       : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
   // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
+  const ring = moderationRing(marks);
   const quick = {
     outlined: true,
     marks: <ModerationMarks marks={marks} />,
+    ...(ring === undefined ? {} : { ring }),
     overlay: (
       <>
         {item.kind === 'TEXT' ? null : (

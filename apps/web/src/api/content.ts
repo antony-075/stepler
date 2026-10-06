@@ -7,6 +7,7 @@ import {
   type BulkDeleteContentResponse,
   contentCountsSchema,
   type ContentKind,
+  type ContentState,
 } from '@stepler/contracts';
 import { apiRequest } from './client';
 import { collectionKey } from './collections';
@@ -18,12 +19,13 @@ export const contentListKey = (
   collectionId: string,
   kind: ContentKind | undefined,
   sort: AdminContentSort,
-  reported = false,
+  states: readonly ContentState[] = [],
 ) =>
   [
     ...collectionKey(collectionId),
     'content',
-    reported ? 'reported' : (kind ?? 'all'),
+    kind ?? 'all',
+    states.length === 0 ? 'any' : [...states].sort().join('+'),
     sort,
   ] as const;
 
@@ -41,14 +43,14 @@ export function listContent(
     sort: AdminContentSort;
     cursor?: string;
     limit?: number;
-    /** Only frames with open reports («Скарги», slice 9). */
-    reported?: boolean;
+    /** The state filter (slice 9 F1): OR between states, ANDed with the kind. */
+    states?: readonly ContentState[];
   },
 ) {
   const params = new URLSearchParams();
   if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.kind !== undefined) params.set('kind', query.kind);
-  if (query.reported === true) params.set('reported', 'true');
+  for (const state of query.states ?? []) params.append('state', state);
   if (query.sort !== 'newest') params.set('sort', query.sort);
   if (query.cursor !== undefined) params.set('cursor', query.cursor);
   const search = params.toString();

@@ -257,7 +257,7 @@ describe('guest reports', () => {
     const listRes = await admin(sc, `/collections/${sc.collectionId}/content`).expect(200);
     expect(listRes.text).not.toContain(REPORTER_EMAIL);
     const reportedOnly = adminContentPageSchema.parse(
-      (await admin(sc, `/collections/${sc.collectionId}/content?reported=true`).expect(200)).body,
+      (await admin(sc, `/collections/${sc.collectionId}/content?state=REPORTED`).expect(200)).body,
     );
     expect(reportedOnly.items.map((i) => [i.id, i.moderation.openReports])).toEqual([
       [sc.first, 1],

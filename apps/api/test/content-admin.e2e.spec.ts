@@ -171,6 +171,9 @@ describe('admin content API', () => {
       document: 1,
       text: 2,
       lastAddedAt: new Date(BASE_TIME + 6000).toISOString(),
+      active: 5,
+      hiddenByAdmin: 0,
+      hiddenByOperator: 0,
       reported: 0,
     });
     const empty = await ownerWithCollectionFor('second@example.com');
@@ -184,6 +187,9 @@ describe('admin content API', () => {
       document: 0,
       text: 0,
       lastAddedAt: null,
+      active: 0,
+      hiddenByAdmin: 0,
+      hiddenByOperator: 0,
       reported: 0,
     });
   });

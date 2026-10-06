@@ -44,12 +44,9 @@ export class AdminContentService {
     query: AdminContentListQuery,
   ): Promise<AdminContentPage> {
     await this.assertOwnedCollection(a, collectionId);
-    const reported =
-      query.reported === undefined
-        ? {}
-        : { id: { in: await this.moderation.reportedContentIds(collectionId) } };
+    const state = await this.stateWhere(collectionId, query.state);
     const { rows, nextCursor } = await this.queries.page(
-      { collectionId, ...(query.kind === undefined ? {} : { kind: query.kind }), ...reported },
+      { collectionId, ...(query.kind === undefined ? {} : { kind: query.kind }), ...state },
       query.cursor,
       query.limit,
       query.sort,
@@ -69,11 +66,40 @@ export class AdminContentService {
 
   async counts(a: AccountPrincipal, collectionId: string): Promise<ContentCounts> {
     await this.assertOwnedCollection(a, collectionId);
-    const [counts, reported] = await Promise.all([
+    const [counts, states] = await Promise.all([
       this.queries.counts(collectionId),
-      this.moderation.reportedCount(collectionId),
+      this.moderation.stateCounts(collectionId),
     ]);
-    return { ...counts, reported };
+    return { ...counts, ...states };
+  }
+
+  /**
+   * The state filter (slice 9 F1): OR between the chosen states (deduped), ANDed with the kind by
+   * the caller. Open reports are looked up once when a state needs them.
+   */
+  private async stateWhere(
+    collectionId: string,
+    state: AdminContentListQuery['state'],
+  ): Promise<Prisma.ContentItemWhereInput> {
+    if (state === undefined) return {};
+    const states = [...new Set(Array.isArray(state) ? state : [state])];
+    const reportedIds =
+      states.includes('REPORTED') || states.includes('ACTIVE')
+        ? await this.moderation.reportedContentIds(collectionId)
+        : [];
+    const clauses = states.map((one): Prisma.ContentItemWhereInput => {
+      switch (one) {
+        case 'HIDDEN_ADMIN':
+          return { hiddenBy: 'ADMIN' };
+        case 'HIDDEN_OPERATOR':
+          return { hiddenBy: 'OPERATOR' };
+        case 'REPORTED':
+          return { id: { in: reportedIds } };
+        case 'ACTIVE':
+          return { hiddenAt: null, id: { notIn: reportedIds } };
+      }
+    });
+    return clauses.length === 1 ? clauses[0]! : { OR: clauses };
   }
 
   async get(a: AccountPrincipal, id: string): Promise<AdminContentDetail> {

@@ -176,11 +176,22 @@ describe('list queries', () => {
     ).toEqual({ kind: 'TEXT', sort: 'frame', limit: 100 });
     expect(adminContentListQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
     expect(adminContentListQuerySchema.safeParse({ kind: 'AUDIO' }).success).toBe(false);
-    // «Скарги» (slice 9): only the literal `true`.
-    expect(adminContentListQuerySchema.parse({ reported: 'true' })).toMatchObject({
-      reported: 'true',
+    // The state filter (slice 9 F1): one state or several (OR), with a kind.
+    expect(adminContentListQuerySchema.parse({ state: 'REPORTED', kind: 'PHOTO' })).toMatchObject({
+      state: 'REPORTED',
+      kind: 'PHOTO',
     });
-    expect(adminContentListQuerySchema.safeParse({ reported: '1' }).success).toBe(false);
+    expect(adminContentListQuerySchema.parse({ state: ['ACTIVE', 'REPORTED'] })).toMatchObject({
+      state: ['ACTIVE', 'REPORTED'],
+    });
+    expect(adminContentListQuerySchema.safeParse({ state: 'reported' }).success).toBe(false);
+    expect(adminContentListQuerySchema.safeParse({ state: [] }).success).toBe(false);
+    expect(
+      adminContentListQuerySchema.safeParse({
+        state: ['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE'],
+      }).success,
+    ).toBe(false);
+    expect(adminContentListQuerySchema.safeParse({ reported: 'true' }).success).toBe(false);
   });
 
   test('guest: the scope is required', () => {

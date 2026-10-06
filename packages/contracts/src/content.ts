@@ -154,13 +154,25 @@ export type AdminContentSort = z.infer<typeof adminContentSortSchema>;
 const cursor = z.string().min(1).max(200).optional();
 const limit = z.coerce.number().int().min(1).max(100).default(48);
 
+/**
+ * The admin's state filter (slice 9 F1): `ACTIVE` = not hidden and no open report the admin has
+ * not dismissed; the two hides by who hid; `REPORTED` = open reports. Several states are OR
+ * (`?state=ACTIVE&state=REPORTED`, which Express hands over as an array; one is a string), and
+ * the whole is ANDed with `kind`. The service dedupes.
+ */
+export const contentStateSchema = z.enum(['ACTIVE', 'HIDDEN_ADMIN', 'HIDDEN_OPERATOR', 'REPORTED']);
+export type ContentState = z.infer<typeof contentStateSchema>;
+export const contentStatesSchema = z.union([
+  contentStateSchema,
+  z.array(contentStateSchema).min(1).max(4),
+]);
+
 /** `GET /api/v1/collections/:id/content`. */
 export const adminContentListQuerySchema = z
   .object({
     kind: contentKindSchema.optional(),
     sort: adminContentSortSchema.default('newest'),
-    /** Only frames with open reports the admin has not dismissed («Скарги», R2). */
-    reported: z.enum(['true']).optional(),
+    state: contentStatesSchema.optional(),
     cursor,
     limit,
   })
@@ -184,7 +196,14 @@ export const contentCountsSchema = z
     document: count,
     text: count,
     lastAddedAt: z.iso.datetime().nullable(),
-    /** Non-deleted frames with open reports the admin has not dismissed. */
+    /**
+     * By state (slice 9 F1), per collection like the kinds, not per the current kind filter:
+     * `active` + `hiddenByAdmin` + `hiddenByOperator` + (reported and not hidden) = `total`.
+     */
+    active: count,
+    hiddenByAdmin: count,
+    hiddenByOperator: count,
+    /** Non-deleted frames with open reports the admin has not dismissed (hidden ones included). */
     reported: count,
   })
   .strict();

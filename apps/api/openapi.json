@@ -1869,13 +1869,34 @@
           },
           {
             "in": "query",
-            "name": "reported",
+            "name": "state",
             "required": false,
             "schema": {
-              "enum": [
-                "true"
-              ],
-              "type": "string"
+              "anyOf": [
+                {
+                  "enum": [
+                    "ACTIVE",
+                    "HIDDEN_ADMIN",
+                    "HIDDEN_OPERATOR",
+                    "REPORTED"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "items": {
+                    "enum": [
+                      "ACTIVE",
+                      "HIDDEN_ADMIN",
+                      "HIDDEN_OPERATOR",
+                      "REPORTED"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "minItems": 1,
+                  "type": "array"
+                }
+              ]
             }
           },
           {
@@ -2238,7 +2259,22 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "active": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "document": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "hiddenByAdmin": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "hiddenByOperator": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
                       "type": "integer"
@@ -2282,6 +2318,9 @@
                     "document",
                     "text",
                     "lastAddedAt",
+                    "active",
+                    "hiddenByAdmin",
+                    "hiddenByOperator",
                     "reported"
                   ],
                   "type": "object"

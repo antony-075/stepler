@@ -198,17 +198,19 @@ describe('admin hide and unhide (R3)', () => {
     expect((await read()).blocked).toEqual({ at: at.toISOString(), reason: 'Порушення умов' });
   });
 
-  test('counts and the «Скарги» filter follow open reports the admin has not dismissed', async () => {
+  test('state counts and the state filter (F1), per collection and ANDed with the kind', async () => {
     const { owner, itemId, collectionId } = await scene();
-    const other = await prisma.contentItem.create({
-      data: {
-        collectionId,
-        frameNo: 2,
-        kind: 'TEXT',
-        textBody: 'Ще',
-        processingStatus: 'NOT_REQUIRED',
-      },
-    });
+    const frame = (frameNo: number, kind: 'TEXT' | 'PHOTO', extra: Record<string, unknown> = {}) =>
+      prisma.contentItem.create({
+        data: {
+          collectionId,
+          frameNo,
+          kind,
+          textBody: kind === 'TEXT' ? 'Ще' : null,
+          processingStatus: kind === 'TEXT' ? 'NOT_REQUIRED' : 'PENDING',
+          ...extra,
+        },
+      });
     const report = (contentId: string, extra: Record<string, unknown> = {}) =>
       prisma.contentReport.create({
         data: {
@@ -220,23 +222,80 @@ describe('admin hide and unhide (R3)', () => {
           ...extra,
         },
       });
+    const hide = (by: 'ADMIN' | 'OPERATOR') => ({
+      hiddenAt: new Date(),
+      hiddenBy: by,
+      hiddenByUserId: owner.userId,
+      hiddenReason: by === 'OPERATOR' ? 'Спам' : null,
+    });
+    // #1 reported twice; #2 its report dismissed (active); #3 hidden by the admin and reported;
+    // #4 a photo hidden by the operator; #5 deleted (counts nowhere).
+    const dismissed = await frame(2, 'TEXT');
+    const hiddenAdmin = await frame(3, 'TEXT', hide('ADMIN'));
+    const hiddenOperator = await frame(4, 'PHOTO', hide('OPERATOR'));
+    const deleted = await frame(5, 'TEXT', { deletedAt: new Date() });
     await report(itemId);
     await report(itemId);
-    await report(other.id, { adminDismissedAt: new Date() });
+    await report(dismissed.id, { adminDismissedAt: new Date() });
+    await report(hiddenAdmin.id);
+    await report(deleted.id);
 
     const counts = await request(server())
       .get(`/api/v1/collections/${collectionId}/content/counts`)
       .set('Cookie', owner.cookie)
       .expect(200);
-    expect(counts.body).toMatchObject({ total: 2, reported: 1 });
-    const page = adminContentPageSchema.parse(
+    expect(counts.body).toMatchObject({
+      total: 4,
+      active: 1,
+      hiddenByAdmin: 1,
+      hiddenByOperator: 1,
+      reported: 2,
+    });
+
+    const ids = async (query: string) =>
+      adminContentPageSchema
+        .parse(
+          (
+            await request(server())
+              .get(`/api/v1/collections/${collectionId}/content?${query}`)
+              .set('Cookie', owner.cookie)
+              .expect(200)
+          ).body,
+        )
+        .items.map((i) => i.id);
+    expect(await ids('state=REPORTED')).toEqual([hiddenAdmin.id, itemId]);
+    expect(await ids('state=ACTIVE')).toEqual([dismissed.id]);
+    expect(await ids('state=HIDDEN_ADMIN')).toEqual([hiddenAdmin.id]);
+    expect(await ids('state=HIDDEN_OPERATOR')).toEqual([hiddenOperator.id]);
+    expect(await ids('state=HIDDEN_OPERATOR&kind=TEXT')).toEqual([]);
+    expect(await ids('state=REPORTED&kind=TEXT')).toEqual([hiddenAdmin.id, itemId]);
+    // Several states are OR (deduped); five values are refused.
+    expect(await ids('state=HIDDEN_ADMIN&state=HIDDEN_OPERATOR')).toEqual([
+      hiddenOperator.id,
+      hiddenAdmin.id,
+    ]);
+    expect(await ids('state=ACTIVE&state=ACTIVE&state=HIDDEN_OPERATOR')).toEqual([
+      hiddenOperator.id,
+      dismissed.id,
+    ]);
+    await request(server())
+      .get(
+        `/api/v1/collections/${collectionId}/content?state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE`,
+      )
+      .set('Cookie', owner.cookie)
+      .expect(400);
+    await request(server())
+      .get(`/api/v1/collections/${collectionId}/content?state=hidden`)
+      .set('Cookie', owner.cookie)
+      .expect(400);
+    const reported = adminContentPageSchema.parse(
       (
         await request(server())
-          .get(`/api/v1/collections/${collectionId}/content?reported=true`)
+          .get(`/api/v1/collections/${collectionId}/content?state=REPORTED`)
           .set('Cookie', owner.cookie)
           .expect(200)
       ).body,
     );
-    expect(page.items.map((i) => [i.id, i.moderation.openReports])).toEqual([[itemId, 2]]);
+    expect(reported.items.find((i) => i.id === itemId)?.moderation.openReports).toBe(2);
   });
 });

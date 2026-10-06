@@ -2,6 +2,7 @@ import type {
   AdminContentSort,
   ContentCounts,
   ContentKind,
+  ContentState,
   GuestLink,
   GuestLinkPermissions,
 } from '@stepler/contracts';
@@ -28,9 +29,42 @@ export function filterOf(kind: ContentKind | undefined): KindFilter {
   return kind === undefined ? 'all' : (kind.toLowerCase() as KindFilter);
 }
 
-/** `?reported=1`: only frames with open reports («Скарги», slice 9); anything else is all. */
-export function reportedFromParam(value: string | null): boolean {
-  return value === '1';
+/** The state menu's options in order (slice 9 F1); none checked = every frame. */
+export const STATE_FILTERS = ['active', 'hidden-admin', 'hidden-operator', 'reported'] as const;
+export type StateFilter = (typeof STATE_FILTERS)[number];
+
+const STATES: Record<StateFilter, ContentState> = {
+  active: 'ACTIVE',
+  'hidden-admin': 'HIDDEN_ADMIN',
+  'hidden-operator': 'HIDDEN_OPERATOR',
+  reported: 'REPORTED',
+};
+
+/** Every `?state=…` value to the API's states (OR), deduped and in the menu's order; unknown ones are dropped. */
+export function statesFromParams(values: readonly string[]): ContentState[] {
+  const chosen = new Set(values);
+  return STATE_FILTERS.filter((filter) => chosen.has(filter)).map((filter) => STATES[filter]);
+}
+
+export function stateFilterOf(state: ContentState): StateFilter {
+  return STATE_FILTERS.find((filter) => STATES[filter] === state)!;
+}
+
+/** The count a state option shows. */
+export function stateCount(
+  counts: Pick<ContentCounts, 'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'reported'>,
+  filter: StateFilter,
+): number {
+  switch (filter) {
+    case 'active':
+      return counts.active;
+    case 'hidden-admin':
+      return counts.hiddenByAdmin;
+    case 'hidden-operator':
+      return counts.hiddenByOperator;
+    case 'reported':
+      return counts.reported;
+  }
 }
 
 /** `?frame=86` opens the viewer on frame 86; anything but a positive integer is nothing. */

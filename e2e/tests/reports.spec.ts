@@ -86,10 +86,11 @@ test.describe('guest reports', () => {
     await b.dispose();
 
     await page.goto(`/app/collections/${collectionId}`);
-    const chip = page
-      .getByRole('radio', { name: /Скарги/ })
-      .or(page.getByRole('button', { name: /Скарги/ }));
-    await expect(chip.first()).toContainText('1');
+    // The state menu (F1a) counts the report; the option carries its mono count.
+    const stateMenu = page.getByRole('button', { name: /^Стан:/ });
+    await stateMenu.click();
+    await expect(page.getByRole('menuitemcheckbox', { name: /^Зі скаргою/ })).toContainText('1');
+    await page.keyboard.press('Escape');
     const tile = page.getByRole('button', { name: /^Кадр 1, .*скарга/ });
     await expect(tile).toBeVisible();
     await tile.click();
@@ -120,7 +121,9 @@ test.describe('guest reports', () => {
     await expect(viewer.getByRole('button', { name: 'Відхилити скарги' })).toHaveCount(0);
     await viewer.getByRole('button', { name: 'Закрити' }).click();
     await expect(page.getByRole('button', { name: /^Кадр 1, .*скарга/ })).toHaveCount(0);
-    await expect(chip).toHaveCount(0);
+    await stateMenu.click();
+    await expect(page.getByRole('menuitemcheckbox', { name: /^Зі скаргою/ })).toContainText('0');
+    await page.keyboard.press('Escape');
     await a.dispose();
     await guest.context().close();
   });
@@ -215,5 +218,113 @@ test.describe('guest reports', () => {
 
     await b.dispose();
     for (const p of [a, ops]) await p.context().close();
+  });
+
+  test('the state filter (F1): every state, ANDed with the type @desktop', async ({
+    page,
+    browser,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    await signIn(page, newEmail());
+    const { collectionId, linkPath } = await sharedCollection(page);
+    const baseURL = new URL(page.url()).origin;
+    const a = await guestApi(baseURL, collectionId, linkPath);
+    const texts: string[] = [];
+    for (const body of ['Активний', 'Зі скаргою', 'Схований адміном', 'Схований оператором']) {
+      const res = await a.post(`/api/v1/guest/collections/${collectionId}/texts`, {
+        data: { body },
+        headers: { 'idempotency-key': crypto.randomUUID() },
+      });
+      texts.push(((await res.json()) as { id: string }).id);
+    }
+    const [, reported, hiddenAdmin, hiddenOperator] = texts as [string, string, string, string];
+    const b = await guestApi(baseURL, collectionId, linkPath);
+    for (const id of [reported, hiddenOperator]) {
+      const res = await b.post(`/api/v1/guest/collections/${collectionId}/content/${id}/reports`, {
+        data: { reason: 'SPAM', locale: 'uk' },
+        headers: { 'idempotency-key': crypto.randomUUID() },
+      });
+      expect(res.status()).toBe(201);
+    }
+    await b.dispose();
+    await a.dispose();
+    expect(
+      (
+        await page.request.post(`/api/v1/content/${hiddenAdmin}/hide`, {
+          headers: { origin: baseURL },
+        })
+      ).status(),
+    ).toBe(200);
+    const ops = await (await browser.newContext({ locale: 'de-DE' })).newPage();
+    await signInAsOperator(ops, testInfo);
+    expect(
+      (
+        await ops.request.post(`/api/v1/operator/content/${hiddenOperator}/hide`, {
+          data: { reason: 'Спам' },
+          headers: { origin: baseURL },
+        })
+      ).status(),
+    ).toBe(204);
+    await ops.context().close();
+
+    await page.goto(`/app/collections/${collectionId}`);
+    const tiles = page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button');
+    await expect(tiles).toHaveCount(4);
+    // F2: marked tiles carry a ring in the mark's colour; a hide's colour wins over a report's.
+    const ringOf = (frame: number) =>
+      page.locator(`[data-frame="${frame}"] [data-slot="frame-ring"]`);
+    await expect(ringOf(1)).toHaveCount(0);
+    await expect(ringOf(2)).toHaveAttribute('data-ring', 'warning');
+    await expect(ringOf(3)).toHaveAttribute('data-ring', 'muted');
+    await expect(ringOf(4)).toHaveAttribute('data-ring', 'destructive');
+    const menu = page.getByRole('button', { name: /^Стан:/ });
+    await expect(menu).toHaveText('Стан: Усі');
+    const toggle = async (option: RegExp, count: string) => {
+      const item = page.getByRole('menuitemcheckbox', { name: option });
+      await expect(item).toContainText(count);
+      await item.click();
+    };
+    // One state: «Активні» is the one plain frame; the menu stays open while toggling.
+    await expect(menu).toHaveAttribute('aria-haspopup', 'menu');
+    await menu.click();
+    await expect(menu).toHaveAttribute('aria-expanded', 'true');
+    await toggle(/^Активні/, '1');
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expect(page).toHaveURL(/state=active/);
+    await expect(tiles).toHaveCount(1);
+    await expect(tiles.first()).toHaveAccessibleName(/^Кадр 1, /);
+    // Two states are OR: active + hidden by moderation.
+    await toggle(/^Приховано модерацією/, '1');
+    await expect(page).toHaveURL(/state=active.*state=hidden-operator/);
+    await expect(tiles).toHaveCount(2);
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveText('Стан: 2 вибрано');
+    // Clear from the menu's foot (the last item, by keyboard): everything again.
+    await menu.click();
+    await expect(page.getByRole('menuitem', { name: 'Скинути' })).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(page.getByRole('menuitem', { name: 'Скинути' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).not.toHaveURL(/state=/);
+    await expect(menu).toHaveText('Стан: Усі');
+    await expect(tiles).toHaveCount(4);
+    // «Зі скаргою» counts hidden frames too; «Приховано адміністратором» names its frame.
+    await menu.click();
+    await toggle(/^Зі скаргою/, '2');
+    await expect(tiles).toHaveCount(2);
+    await toggle(/^Зі скаргою/, '2');
+    await toggle(/^Приховано адміністратором/, '1');
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveText('Стан: Приховано адміністратором');
+    await expect(tiles).toHaveCount(1);
+    await expect(tiles.first()).toHaveAccessibleName(/^Кадр 3, .*приховано$/);
+    // ANDed with the type: no hidden photos → the empty state names the state, «Показати все».
+    await page.getByRole('radio', { name: /^Фото/ }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Немає кадрів, прихованих адміністратором' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Показати все' }).click();
+    await expect(page).not.toHaveURL(/state=/);
+    await expect(tiles).toHaveCount(4);
   });
 });

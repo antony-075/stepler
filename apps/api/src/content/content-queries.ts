@@ -28,6 +28,9 @@ function decodeFrameCursor(cursor: string): number | null {
   }
 }
 
+/** The kind counts and the newest time; the state counts come from the moderation module. */
+type KindCounts = Omit<ContentCounts, 'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'reported'>;
+
 const invalidCursor = () =>
   new AppError('VALIDATION_FAILED', 400, {
     errors: [{ path: ['cursor'], message: 'Invalid cursor' }],
@@ -92,17 +95,17 @@ export class ContentQueries {
   }
 
   /**
-   * Non-deleted items by kind and the newest one's time, in one grouped query. `reported` is the
-   * moderation module's (`ModerationReads.reportedCount`).
+   * Non-deleted items by kind and the newest one's time, in one grouped query. The state counts
+   * are the moderation module's (`ModerationReads.stateCounts`).
    */
-  async counts(collectionId: string): Promise<Omit<ContentCounts, 'reported'>> {
+  async counts(collectionId: string): Promise<KindCounts> {
     const groups = await this.prisma.contentItem.groupBy({
       by: ['kind'],
       where: { collectionId, deletedAt: null },
       _count: { _all: true },
       _max: { createdAt: true },
     });
-    const counts: Omit<ContentCounts, 'reported'> = {
+    const counts: KindCounts = {
       total: 0,
       photo: 0,
       video: 0,

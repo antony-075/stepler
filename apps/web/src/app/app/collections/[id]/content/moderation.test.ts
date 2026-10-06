@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { reportedFromParam } from './content-filters';
+import { stateCount, stateFilterOf, statesFromParams } from './content-filters';
 import { moderationMarks } from './moderation-marks';
 
 const at = '2026-10-06T10:00:00.000Z';
@@ -20,9 +20,18 @@ describe('moderation marks', () => {
     ).toEqual(['moderated']);
   });
 
-  test('?reported=1 is the «Скарги» filter; nothing else is', () => {
-    expect(reportedFromParam('1')).toBe(true);
-    expect(reportedFromParam('true')).toBe(false);
-    expect(reportedFromParam(null)).toBe(false);
+  test('?state=… (repeatable) is the state filter (F1a); unknown values are dropped', () => {
+    expect(statesFromParams(['active'])).toEqual(['ACTIVE']);
+    expect(statesFromParams(['reported', 'hidden-admin', 'reported', 'x'])).toEqual([
+      'HIDDEN_ADMIN',
+      'REPORTED',
+    ]);
+    expect(statesFromParams(['REPORTED'])).toEqual([]);
+    expect(statesFromParams([])).toEqual([]);
+    expect(stateFilterOf('HIDDEN_OPERATOR')).toBe('hidden-operator');
+    const counts = { active: 3, hiddenByAdmin: 1, hiddenByOperator: 2, reported: 4 };
+    expect(stateCount(counts, 'active')).toBe(3);
+    expect(stateCount(counts, 'hidden-operator')).toBe(2);
+    expect(stateCount(counts, 'reported')).toBe(4);
   });
 });

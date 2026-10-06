@@ -55,16 +55,33 @@ export class ModerationReads {
     return rows.map((row) => row.contentId);
   }
 
-  /** Non-deleted frames of a collection with open reports (the «Скарги» chip's count). */
-  async reportedCount(collectionId: string): Promise<number> {
-    const [row] = await this.prisma.$queryRaw<[{ count: number }]>`
-      SELECT count(DISTINCT r."contentId")::int AS "count"
-        FROM "ContentReport" r
-        JOIN "ContentItem" c ON c."id" = r."contentId" AND c."deletedAt" IS NULL
-       WHERE r."collectionId" = ${collectionId}::uuid
-         AND r."status" = 'OPEN' AND r."adminDismissedAt" IS NULL`;
-    return row.count;
+  /**
+   * The admin's state counts (slice 9 F1), per collection in one query: every live frame once,
+   * by who hid it and whether it has an open report the admin has not dismissed.
+   */
+  async stateCounts(collectionId: string): Promise<StateCounts> {
+    const [row] = await this.prisma.$queryRaw<[StateCounts]>`
+      SELECT count(*) FILTER (WHERE c."hiddenAt" IS NULL AND NOT r."open")::int AS "active",
+             count(*) FILTER (WHERE c."hiddenBy" = 'ADMIN')::int AS "hiddenByAdmin",
+             count(*) FILTER (WHERE c."hiddenBy" = 'OPERATOR')::int AS "hiddenByOperator",
+             count(*) FILTER (WHERE r."open")::int AS "reported"
+        FROM "ContentItem" c
+        CROSS JOIN LATERAL (
+          SELECT EXISTS (
+            SELECT 1 FROM "ContentReport" r
+             WHERE r."contentId" = c."id" AND r."status" = 'OPEN' AND r."adminDismissedAt" IS NULL
+          ) AS "open"
+        ) r
+       WHERE c."collectionId" = ${collectionId}::uuid AND c."deletedAt" IS NULL`;
+    return row;
   }
+}
+
+export interface StateCounts {
+  active: number;
+  hiddenByAdmin: number;
+  hiddenByOperator: number;
+  reported: number;
 }
 
 /** A frame's moderation state for its admin, from its row and `forItems`. */
