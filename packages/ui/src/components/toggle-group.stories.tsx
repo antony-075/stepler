@@ -3,6 +3,8 @@ import { Monitor, Moon, Sun } from 'lucide-react';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { Panel, PanelContent } from './panel';
 import { ToggleGroup, ToggleGroupItem } from './toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
+import { minTarget } from '../stories/target';
 
 // Direction C's filter chips (content type, grid or rows); not used by the app yet.
 const meta = {
@@ -32,15 +34,16 @@ function checked(radios: HTMLElement[]) {
 }
 
 /**
- * Chips are 44px on a coarse pointer (touch, rule 05) and 36px for a fine pointer, where the
- * filter row is dense; at least 44px wide either way.
+ * Chips are 44px on a coarse pointer (touch, rule 05), 36px for a fine pointer and 32px with a
+ * mouse from `md`, where the filter row is dense (V1).
  */
 async function expectItemsAreTouchTargets(radios: HTMLElement[]) {
   const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const dense = window.matchMedia('(min-width: 768px) and (pointer: fine)').matches;
   for (const radio of radios) {
     const box = radio.getBoundingClientRect();
-    await expect(box.height).toBe(coarse ? 44 : 36);
-    await expect(box.width).toBeGreaterThanOrEqual(44);
+    await expect(box.height).toBe(coarse ? 44 : dense ? 32 : 36);
+    await expect(box.width).toBeGreaterThanOrEqual(minTarget());
   }
 }
 
@@ -133,20 +136,31 @@ export const Language: Story = {
   },
 };
 
+/** A token's computed colour, read through a probe element. */
+function tokenColour(token: string, property: 'color' | 'backgroundColor' = 'color'): string {
+  const probe = document.createElement('span');
+  probe.style[property] = `var(${token})`;
+  document.body.append(probe);
+  const value = getComputedStyle(probe)[property];
+  probe.remove();
+  return value;
+}
+
 /**
- * On a sheet the selected chip has a 1px foreground edge and foreground text; the others have no
- * visible edge and muted text.
+ * On a panel (V1) the selected chip sits on the soft accent with accent text; the others keep
+ * the quiet edge, the card fill and softer text.
  */
 async function expectReadsOnPanel(canvasElement: HTMLElement) {
   const group = canvasElement.querySelector<HTMLElement>('[data-slot="toggle-group"]')!;
   const radios = Array.from(group.querySelectorAll<HTMLElement>('[role="radio"]'));
   const selected = radios.find((radio) => radio.getAttribute('aria-checked') === 'true')!;
-  const foreground = getComputedStyle(document.body).color;
-  await expect(getComputedStyle(selected).borderTopColor).toBe(foreground);
-  await expect(getComputedStyle(selected).color).toBe(foreground);
+  await expect(getComputedStyle(selected).color).toBe(tokenColour('--link'));
+  await expect(getComputedStyle(selected).backgroundColor).toBe(
+    tokenColour('--info-soft', 'backgroundColor'),
+  );
   for (const radio of radios.filter((radio) => radio !== selected)) {
-    await expect(getComputedStyle(radio).borderTopColor).toBe('rgba(0, 0, 0, 0)');
-    await expect(getComputedStyle(radio).color).not.toBe(foreground);
+    await expect(getComputedStyle(radio).borderTopColor).toBe(tokenColour('--border-strong'));
+    await expect(getComputedStyle(radio).color).toBe(tokenColour('--foreground-soft'));
   }
 }
 
@@ -190,6 +204,8 @@ export const OnPanelDark: Story = {
   play: async ({ canvas, canvasElement }) => {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await userEvent.click(canvas.getByRole('radio', { name: 'Videos 21' }));
+    // Focus would show as the violet edge (owner remark 103); the resting look is what is read.
+    (document.activeElement as HTMLElement | null)?.blur();
     // The edge and text colour fade between chips (120ms): check once settled.
     await waitFor(() => expectReadsOnPanel(canvasElement));
   },
@@ -242,4 +258,92 @@ export const Locked: Story = {
     await expect(args.onValueChange).not.toHaveBeenCalled();
     await expect(document.querySelector('[data-slot="tooltip-content"]')).toBeVisible();
   },
+};
+
+/**
+ * Items wrapped in a Tooltip trigger (`asChild`) still show the selection: the trigger overwrites
+ * the item's `data-state`, so the selected style also follows `aria-checked` (owner bug,
+ * 2026-10-06: the editor's device toggle switched but never highlighted).
+ */
+export const WithTooltips: Story = {
+  render: (args) => (
+    <TooltipProvider>
+      <ToggleGroup {...args}>
+        {(['system', 'light', 'dark'] as const).map((value) => (
+          <Tooltip key={value}>
+            <TooltipTrigger asChild>
+              <ToggleGroupItem value={value}>{value}</ToggleGroupItem>
+            </TooltipTrigger>
+            <TooltipContent>{value}</TooltipContent>
+          </Tooltip>
+        ))}
+      </ToggleGroup>
+    </TooltipProvider>
+  ),
+  play: async ({ canvas }) => {
+    const radios = canvas.getAllByRole('radio');
+    const [system, light] = radios as [HTMLElement, HTMLElement];
+    await expect(system).toHaveAttribute('aria-checked', 'true');
+    // Compared by fill and text colour: the clicked item also gets the violet focus edge.
+    const selected = (el: HTMLElement) =>
+      `${getComputedStyle(el).backgroundColor} ${getComputedStyle(el).color}`;
+    const selectedLook = selected(system);
+    await expect(selectedLook).not.toBe(selected(light));
+    await userEvent.click(light);
+    await waitFor(() => expect(light).toHaveAttribute('aria-checked', 'true'));
+    // The colours transition; wait for them to settle.
+    await waitFor(() => expect(selected(light)).toBe(selectedLook));
+  },
+};
+
+/** The thumb's index, as the `:has()` rules in globals.css compute it. */
+function thumbIndex(canvasElement: HTMLElement): string {
+  const thumb = canvasElement.querySelector<HTMLElement>('[data-slot="segment-thumb"]')!;
+  return getComputedStyle(thumb).getPropertyValue('--thumb-index').trim();
+}
+
+/**
+ * V1's segmented control (the dashboard's «Усі / Активні / Архів» and «Таблиця / Плитки»):
+ * equal segments on the grey track, a white thumb that slides to the chosen one (CSS only).
+ */
+export const Segmented: Story = {
+  args: { defaultValue: 'all', 'aria-label': 'Show' },
+  render: (args) => (
+    <ToggleGroup {...args} variant="segmented">
+      <ToggleGroupItem value="all" count={6}>
+        All
+      </ToggleGroupItem>
+      <ToggleGroupItem value="active" count={2}>
+        Active
+      </ToggleGroupItem>
+      <ToggleGroupItem value="archived" count={4}>
+        Archive
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const [all, , archived] = canvas.getAllByRole('radio') as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
+    await expect(all).toHaveAttribute('aria-checked', 'true');
+    await expect(thumbIndex(canvasElement)).toBe('0');
+    await userEvent.click(archived);
+    await waitFor(() => expect(archived).toHaveAttribute('aria-checked', 'true'));
+    await expect(thumbIndex(canvasElement)).toBe('2');
+    // Equal segments: the thumb is exactly one segment wide.
+    const thumb = canvasElement.querySelector<HTMLElement>('[data-slot="segment-thumb"]')!;
+    await expect(Math.round(thumb.getBoundingClientRect().width)).toBe(
+      Math.round(archived.getBoundingClientRect().width),
+    );
+    for (const radio of canvas.getAllByRole('radio')) {
+      await expect(radio.getBoundingClientRect().height).toBeGreaterThanOrEqual(28);
+    }
+  },
+};
+
+export const SegmentedDark: Story = {
+  ...Segmented,
+  globals: { theme: 'dark' },
 };

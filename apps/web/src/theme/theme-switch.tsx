@@ -43,8 +43,8 @@ export function ThemeSwitch({
 // The two themes' page, sheet, edge and ink (globals.css :root and dark), fixed here because a
 // preview shows a theme other than the current one. System is both, split on the diagonal.
 const PALETTE = {
-  light: { page: '#f0f1ee', sheet: '#ffffff', edge: '#d6d8d2', ink: '#d6d8d2', dot: '#83877f' },
-  dark: { page: '#141615', sheet: '#1c1f1d', edge: '#2d312e', ink: '#3a3f3b', dot: '#6c716b' },
+  light: { page: '#f4f4f5', sheet: '#ffffff', edge: '#e4e4e7', ink: '#d4d4d8', dot: '#a1a1aa' },
+  dark: { page: '#0c0c0e', sheet: '#18181b', edge: '#2a2a2f', ink: '#3f3f46', dot: '#52525b' },
 } as const;
 
 /** A tiny window: a sidebar of dots and a sheet with two lines. Decorative. */

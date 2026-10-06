@@ -10,9 +10,9 @@ import { apiRequest } from '@/api/client';
 import { accountInitial } from './account-initial';
 
 /**
- * Who is signed in, always visible in the top bar (owner 2026-10-02: no dropdown): a violet
- * avatar initial, the name (600) above the email (muted, truncated, full address in `title`),
- * then a separate «Вийти». Without a name, the email alone on one line and the avatar takes its
+ * Who is signed in, always visible in the top bar (owner 2026-10-02: no dropdown): a soft accent
+ * avatar initial centred against two lines, the name (14px, 500) over the email (13px, muted,
+ * truncated, full address in `title`; owner 2026-10-06), a hairline, then a separate «Вийти». Without a name, the email alone on one line and the avatar takes its
  * first letter. On phones only the avatar shows (the name and email stay for screen readers)
  * and «Вийти» is an icon button named by its `aria-label`.
  */
@@ -45,22 +45,22 @@ export function AccountBlock({
       <div className="flex min-w-0 items-center gap-2.5">
         <span
           aria-hidden="true"
-          className="grid size-8 shrink-0 place-items-center rounded-full bg-link text-sm font-semibold text-primary-foreground"
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-info-soft text-[0.875rem] font-semibold text-link md:size-7 md:text-xs"
         >
           {accountInitial(displayName, email)}
         </span>
-        <p className="sr-only grid min-w-0 leading-tight md:not-sr-only md:max-w-[30ch]">
+        <p className="sr-only grid min-w-0 gap-px leading-tight md:not-sr-only md:max-w-[30ch]">
           <span className="sr-only">{t('signedInAs')} </span>
           {displayName === null ? null : (
-            <span className="truncate text-sm font-semibold" title={displayName}>
+            <span className="min-w-0 truncate text-[0.875rem] font-medium" title={displayName}>
               {displayName}
             </span>
           )}
           <span
             className={
               displayName === null
-                ? 'truncate text-sm font-medium'
-                : 'truncate text-[0.8125rem] text-muted-foreground'
+                ? 'min-w-0 truncate text-[0.875rem] font-medium'
+                : 'min-w-0 truncate text-xs text-muted-foreground'
             }
             title={email}
           >
@@ -68,7 +68,8 @@ export function AccountBlock({
           </span>
         </p>
       </div>
-      {/* Phones: a 44px icon button; from `md` a quiet 36px ghost with the word. */}
+      <span aria-hidden="true" className="hidden h-[1.125rem] w-px bg-border md:block" />
+      {/* Phones: a 44px icon button; from `md` a quiet ghost with the word. */}
       <Button
         variant="ghost"
         size="icon"
@@ -84,7 +85,7 @@ export function AccountBlock({
         size="sm"
         aria-disabled={logout.isPending || undefined}
         onClick={signOut}
-        className="hidden gap-2 font-normal md:inline-flex"
+        className="hidden gap-1.5 font-normal text-foreground-soft md:inline-flex"
       >
         <LogOut aria-hidden="true" />
         {t('logout')}

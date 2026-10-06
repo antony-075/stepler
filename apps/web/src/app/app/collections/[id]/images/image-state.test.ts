@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest';
 import { imageState } from './image-state';
 
 const cover = (status: 'PENDING' | 'READY' | 'FAILED'): AdminImage => ({
+  id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
   status,
   thumbnailUrl: status === 'READY' ? 'https://s3.test/t' : null,
   previewUrl: status === 'READY' ? 'https://s3.test/p' : null,

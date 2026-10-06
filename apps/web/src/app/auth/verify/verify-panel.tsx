@@ -14,6 +14,7 @@ import { apiRequest, isApiError } from '@/api/client';
 import { ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 import { LegalDocumentLink } from '@/legal/legal-consent';
+import { BrandLoading } from '@/components/brand-loading';
 
 /**
  * Loading this page only previews the link (read-only), so email scanners that open it do
@@ -101,9 +102,7 @@ export function VerifyPanel({ token }: { token: string | null }) {
 
   if (preview.data === undefined) {
     return (
-      <p role="status" className="text-muted-foreground">
-        {t('verify.checking')}
-      </p>
+      <BrandLoading label={t('verify.checking')} message={t('verify.checking')} className="py-6" />
     );
   }
 

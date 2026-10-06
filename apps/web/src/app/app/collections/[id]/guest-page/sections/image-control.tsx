@@ -9,30 +9,52 @@ import type {
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Progress } from '@stepler/ui/components/progress';
-import { Spinner } from '@stepler/ui/components/spinner';
 import { useToast } from '@stepler/ui/components/toast';
 import { cn } from '@stepler/ui/lib/utils';
-import { useMutation } from '@tanstack/react-query';
-import { ImageOff, Images, RotateCw, Trash2, Upload } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  ImageOff,
+  Images,
+  LoaderCircle,
+  RotateCw,
+  Trash2,
+  TriangleAlert,
+  Upload,
+} from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useMemo, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
-import { draftImageApi, removeDraftImage, setDraftImageFromFrame } from '@/api/collections';
+import { contentListKey } from '@/api/content';
+import {
+  draftImageApi,
+  guestPageKey,
+  removeDraftImage,
+  setDraftImageFromFrame,
+} from '@/api/collections';
 import { FramePicker } from '../../images/frame-picker';
 import { imageErrorKey } from '../../images/image-errors';
 import { imageState } from '../../images/image-state';
+import { ImageProcessing, StatusLine as Line } from '../../images/image-status';
 import { useImageUpload } from '../../images/use-image-upload';
 
 /** What the file picker offers: the photo types the API takes for an admin image. */
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,.heic,.heif';
 
 /**
- * One draft image (cover or background), as in E-editor: a small 16:10 picture with its status,
- * «Завантажити» (ink), «Вибрати з кадрів» (outline) and a red icon button to remove it, then the
- * file types. Every state keeps the picture's box in place: none (a quiet tile), uploading (the
- * progress line, «Скасувати»), a failed transfer (why, «Повторити»), processing («Готується…»;
- * the editor polls), failed, ready. Each change answers the whole editor state (`onEditor`); the
- * working copy is not touched, and the draft's revision does not move.
+ * One draft image (cover or background), as in E-editor, redesigned for owner remarks 74 and 81
+ * (2026-10-05). A 16:10 tile with the picture or its state on the left; beside it what is
+ * happening in words, with «Видалити» once there is an image (a quiet destructive text button,
+ * aligned with the words, never on a line of its own); under them «Завантажити» (ink) and
+ * «Вибрати з кадрів» (outline), then the file types. The states keep the tile's box in place:
+ * - none: a quiet tile, «Немає обкладинки» and what guests see without one;
+ * - uploading: the tile dims, the percent in mono, a progress line and «Скасувати»;
+ * - a failed transfer: why, with «Повторити»;
+ * - processing: a spinner on the tile, «Готується…» (the editor asks again every 10 s); after
+ *   `SLOW_PROCESSING_MS`, «Обробка триває довше, ніж зазвичай» with «Перевірити ще раз»;
+ * - failed: a warning on the tile, «Не вдалося обробити — спробуйте інше зображення»;
+ * - ready: the picture.
+ * Each change answers the whole editor state (`onEditor`); the working copy is not touched, and
+ * the draft's revision does not move.
  */
 export function ImageControl({
   collectionId,
@@ -53,6 +75,7 @@ export function ImageControl({
   const tRoot = useTranslations();
   const format = useFormatter();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const fileInput = useRef<HTMLInputElement>(null);
   const [picking, setPicking] = useState(false);
   const api = useMemo(() => draftImageApi(collectionId, slot), [collectionId, slot]);
@@ -73,11 +96,20 @@ export function ImageControl({
     try {
       onEditor(await setDraftImageFromFrame(collectionId, slot, item.id));
     } catch (error) {
+      const code = isApiError(error) ? error.code : 'INTERNAL';
       toast({
         variant: 'error',
         title: t('setFailed'),
-        description: tRoot(imageErrorKey(isApiError(error) ? error.code : 'INTERNAL', 'frame')),
+        description: tRoot(imageErrorKey(code, 'frame')),
       });
+      // The frame is gone or cannot be used: the picker shows the photos as they are now, and
+      // the editor the draft as the server has it (nothing changed there).
+      if (code === 'NOT_FOUND' || code === 'COVER_SOURCE_INVALID') {
+        void queryClient.invalidateQueries({
+          queryKey: contentListKey(collectionId, 'PHOTO', 'newest'),
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: guestPageKey(collectionId) });
       throw error;
     }
   }
@@ -89,55 +121,89 @@ export function ImageControl({
         : tRoot(imageErrorKey(upload.phase.code, 'upload'))
       : null;
   const thumbnail = image?.status === 'READY' ? image.thumbnailUrl : null;
+  const canRemove = image !== null && !readOnly && state !== 'uploading';
+  const removeButton = canRemove ? (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="-ml-2 justify-self-start text-destructive hover:text-destructive pointer-coarse:min-h-11"
+      aria-label={removeLabel}
+      aria-disabled={remove.isPending || undefined}
+      onClick={() => {
+        if (!remove.isPending) remove.mutate();
+      }}
+    >
+      <Trash2 aria-hidden="true" />
+      {t('remove')}
+    </Button>
+  ) : null;
 
   return (
-    <div className="grid gap-3" data-slot="image-control" data-image={slot} data-state={state}>
-      <div className="flex items-center gap-3">
+    <div className="grid gap-4" data-slot="image-control" data-image={slot} data-state={state}>
+      <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-start gap-3">
         <div
           aria-hidden="true"
+          data-slot="image-tile"
           className={cn(
-            'grid aspect-[16/10] w-[7.5rem] shrink-0 place-items-center overflow-hidden rounded-frame bg-muted text-muted-foreground',
-            state === 'uploading' && 'opacity-50',
+            'relative grid aspect-[16/10] w-full place-items-center overflow-hidden rounded-frame border bg-muted text-muted-foreground',
+            state === 'failed' && 'border-destructive/40 bg-destructive-soft text-destructive',
           )}
         >
           {thumbnail === null ? (
-            <ImageOff className="size-5" />
+            state === 'failed' ? (
+              <TriangleAlert className="size-5" />
+            ) : state === 'processing' ? (
+              <LoaderCircle className="size-5 motion-safe:animate-spin" />
+            ) : (
+              <ImageOff className="size-5" />
+            )
           ) : (
             // A presigned thumbnail: nothing for next/image to optimise.
             // eslint-disable-next-line @next/next/no-img-element
             <img src={thumbnail} alt={DECORATIVE} className="size-full object-cover" />
           )}
+          {state === 'uploading' ? <span className="absolute inset-0 bg-(--veil)" /> : null}
         </div>
-        <p className="min-w-0 text-sm" role="status">
+        <div className="grid min-w-0 gap-1 pt-0.5" role="status">
           {state === 'uploading' && upload.phase.kind === 'uploading' ? (
-            <span className="font-semibold">
-              {t('uploading')}{' '}
-              <span className="type-data tabular-nums">
-                {format.number(upload.phase.progress / 100, { style: 'percent' })}
-              </span>
-            </span>
+            <>
+              <Line strong>
+                {t('uploading')}{' '}
+                <span className="type-data tabular-nums">
+                  {format.number(upload.phase.progress / 100, { style: 'percent' })}
+                </span>
+              </Line>
+              <Progress value={upload.phase.progress} label={t('uploading')} />
+            </>
           ) : state === 'processing' ? (
-            <span className="inline-flex items-center gap-2 font-semibold">
-              <Spinner label={t('processing')} className="size-4 text-muted-foreground" />
-              <span aria-hidden="true">{t('processing')}</span>
-            </span>
+            <ImageProcessing
+              onCheck={() =>
+                void queryClient.invalidateQueries({ queryKey: guestPageKey(collectionId) })
+              }
+            />
           ) : state === 'failed' ? (
-            <span className="text-destructive">{t('failed')}</span>
+            <Line tone="destructive" strong>
+              {t('failed')}
+            </Line>
           ) : state === 'ready' ? (
-            <span className="text-muted-foreground">{t('ready')}</span>
+            <Line strong>{t('ready')}</Line>
+          ) : state === 'none' ? (
+            <>
+              <Line strong>{t(NONE[slot])}</Line>
+              {slot === 'cover' ? <Line tone="muted">{t('noneCoverText')}</Line> : null}
+            </>
           ) : (
-            <span className="text-muted-foreground">{t('none')}</span>
+            // A failed transfer: the alert below says why; the image the draft has stays.
+            <Line strong>{image !== null ? t('ready') : t(NONE[slot])}</Line>
           )}
-        </p>
+          {state === 'uploading' ? null : removeButton}
+        </div>
       </div>
 
-      {state === 'uploading' && upload.phase.kind === 'uploading' ? (
-        <div className="grid gap-2">
-          <Progress value={upload.phase.progress} label={t('uploading')} />
-          <Button variant="outline" className="justify-self-start" onClick={upload.cancel}>
-            {t('cancel')}
-          </Button>
-        </div>
+      {state === 'uploading' ? (
+        <Button variant="outline" className="justify-self-start" onClick={upload.cancel}>
+          {t('cancel')}
+        </Button>
       ) : null}
 
       {state === 'failed-upload' ? (
@@ -162,32 +228,20 @@ export function ImageControl({
       ) : null}
 
       {readOnly || state === 'uploading' ? null : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => fileInput.current?.click()}>
-            <Upload aria-hidden="true" />
-            {t('upload')}
-          </Button>
-          <Button variant="outline" onClick={() => setPicking(true)}>
-            <Images aria-hidden="true" />
-            {t('pickFrame')}
-          </Button>
-          {image === null ? null : (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={removeLabel}
-              className="text-destructive hover:text-destructive"
-              aria-disabled={remove.isPending || undefined}
-              onClick={() => {
-                if (!remove.isPending) remove.mutate();
-              }}
-            >
-              <Trash2 aria-hidden="true" />
+        <div className="grid gap-2">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2">
+            <Button onClick={() => fileInput.current?.click()}>
+              <Upload aria-hidden="true" />
+              {image === null ? t('upload') : t('replace')}
             </Button>
-          )}
+            <Button variant="outline" onClick={() => setPicking(true)}>
+              <Images aria-hidden="true" />
+              {t('pickFrame')}
+            </Button>
+          </div>
+          <p className="type-caption text-muted-foreground">{t('helper')}</p>
         </div>
       )}
-      {readOnly ? null : <p className="text-sm text-muted-foreground">{t('helper')}</p>}
 
       <input
         ref={fileInput}
@@ -216,5 +270,11 @@ export function ImageControl({
   );
 }
 
-/** Decorative: the section's heading and status line say what the picture is. */
+/** The empty state's line per slot. */
+const NONE = { cover: 'noneCover', background: 'noneBackground' } as const satisfies Record<
+  ImageSlotParam,
+  string
+>;
+
+/** Decorative: the status line says what the picture is. */
 const DECORATIVE = '';

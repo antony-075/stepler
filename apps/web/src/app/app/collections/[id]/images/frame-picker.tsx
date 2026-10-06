@@ -10,9 +10,9 @@
 //   480px thumbnails, the number pill): the admin recognises the frame they mean. 48 at a time
 //   with «Показати ще».
 // - Single choice: tapping a tile selects it (the pencil ring and ✓, `aria-pressed`; tapping
-//   another moves the choice). A photo without a thumbnail yet is shown «Готується прев’ю» and
-//   cannot be chosen (the API would refuse a photo the worker failed on); it is asked for again
-//   every 10 s like in «Вміст», and becomes selectable in place.
+//   another moves the choice). Only a `READY` photo can be chosen (remark 75): one still being
+//   prepared shows «Готується прев’ю» (asked for again every 10 s like in «Вміст», and becomes
+//   selectable in place); one the worker failed on shows «Не можна використати».
 // - The line under the title says what the copy means where it goes (`description`).
 // - The footer never scrolls: «Вибрати» (ink, 44px, waits for a choice) and
 //   «Скасувати». Empty: «Гості ще не додали фото»; a failed load: an alert with «Спробувати ще».
@@ -203,13 +203,17 @@ function PickerFrame({
   const t = useTranslations('guestPage.picker');
   const queryClient = useQueryClient();
   const picture = gridPicture(item);
-  if (picture.kind !== 'thumbnail') {
+  // Only a photo the worker finished (its location metadata removed, its previews made) can be
+  // used: `READY` (owner remark 75). One it gave up on may still have a thumbnail, but the API
+  // refuses it (`COVER_SOURCE_INVALID`): it is shown, dimmed, with the reason, never selectable.
+  if (picture.kind !== 'thumbnail' || item.processingStatus !== 'READY') {
+    const failed = item.processingStatus === 'FAILED';
     return (
       <Frame
         kind="pending-preview"
         number={item.frameNo}
-        placeholderLabel={t(picture.kind === 'failed' ? 'unavailable' : 'notReady')}
-        accessibleName={t('frameNotReady', { number: item.frameNo })}
+        placeholderLabel={t(failed ? 'unusable' : 'notReady')}
+        accessibleName={t(failed ? 'frameUnusable' : 'frameNotReady', { number: item.frameNo })}
       />
     );
   }

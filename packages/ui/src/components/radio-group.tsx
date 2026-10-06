@@ -1,6 +1,6 @@
 import { RadioGroup as RadioGroupPrimitive } from 'radix-ui';
 import type { ComponentProps } from 'react';
-import { focusRing } from '../lib/focus';
+import { focusHalo } from '../lib/focus';
 import { cn } from '../lib/utils';
 
 // Based on shadcn/ui (new-york). Vertical by default; the checked dot is ink.
@@ -39,10 +39,11 @@ function RadioGroupItem({
         data-slot="radio-group-item"
         className={cn(
           'aspect-square size-5 shrink-0 rounded-full border border-input bg-card transition-[border-color] duration-(--duration-fast) motion-reduce:transition-none',
-          focusRing,
+          focusHalo,
+          'data-[state=checked]:focus-visible:border-ring',
           'hover:border-foreground data-[state=checked]:border-primary',
           'disabled:cursor-not-allowed disabled:bg-muted',
-          'aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive',
+          'aria-invalid:border-destructive aria-invalid:focus-visible:border-destructive aria-invalid:focus-visible:ring-destructive/25',
         )}
         {...props}
       >

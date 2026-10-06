@@ -5,97 +5,117 @@
 @source '../';
 
 /*
- * Design tokens, direction C «Контактний аркуш» (owner decision 2026-10-02; specification in
- * docs/design/DESIGN-SYSTEM.md §2, implemented state and contrast in docs/ux/design-system.md).
- * A light table with white sheets, ink for admin actions, a rare red-orange wax pencil for
- * selection, "new", the active tab and the guest's main action, dusty violet for links,
- * information and focus (never the pencil). Dark is "the light table at night": greenish
- * black, sheets half a tone lighter, popovers lighter still instead of a shadow. Every text pair passes 4.5:1 and every control edge 3:1 (Foundations/Contrast).
- * shadcn names are kept, so `bg-card`, `text-muted-foreground` and friends keep working.
+ * Design tokens, V1 «Графіт» (owner decision 2026-10-06; docs/design/DESIGN-SYSTEM.md §0).
+ * Zinc greys and one accent, Stepler blue (the logo's; brand assets 2026-10-06): the chrome is
+ * #F4F4F5 grey, panels are white, ink is #18181B; blue is for primary actions, selection, focus
+ * and the current place, used sparingly. Fills are #3657FF (dark #4864FF: the brand's dark blue
+ * one step deeper so white text passes); accent text is #2A47E0 (dark #8FA0FF). Every text pair passes 4.5:1 and every control edge 3:1
+ * (Foundations/Contrast). shadcn names are kept, so `bg-card`, `text-muted-foreground` and
+ * friends keep working; `--pencil` survives as an alias of the accent.
  */
 :root {
   color-scheme: light;
 
   /* Surfaces and text */
-  --background: #f0f1ee;
-  --foreground: #141614;
+  --background: #f4f4f5;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #141614;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #141614;
-  --muted: #e4e6e1;
-  --muted-foreground: #5a5d58;
-  --border: #d6d8d2;
-  --input: #83877f;
+  --popover-foreground: #18181b;
+  --muted: #f1f1f3;
+  --muted-foreground: #5f5f68;
+  /* Secondary text that is still body text (descriptions, table cells). */
+  --foreground-soft: #3f3f46;
+  --border: #e4e4e7;
+  /* The edge of buttons and chips that carry their own label (no 3:1 needed, WCAG 1.4.11). */
+  --border-strong: #d4d4d8;
+  /* The edge of fields, checkboxes and radios: 3:1 on every surface. */
+  --input: #8a8a93;
+  /* Quiet fills: the table header; the segmented track. */
+  --subtle: #fafafa;
+  --track: #e4e4e7;
+  --track-edge: transparent;
+  /* The sliding thumb of a segmented control. */
+  --thumb: #ffffff;
+  --thumb-edge: #d9d9de;
 
-  /* Actions */
-  --primary: #141614;
-  --primary-hover: #2e312d;
-  --primary-active: #454944;
+  /* Actions: one indigo accent for primary actions, selection, focus and the current place. */
+  --primary: #3657ff;
+  --primary-hover: #2a47e0;
+  --primary-active: #2440d4;
   --primary-foreground: #ffffff;
-  --pencil: #b83e26;
-  --pencil-hover: #a33520;
-  --pencil-active: #8e2d1b;
+  /* The former red-orange pencil is the accent too (selection, "new", the guest's main action),
+     one step darker than the fill so it also reads as text on every surface. */
+  --pencil: #2a47e0;
+  --pencil-hover: #2440d4;
+  --pencil-active: #2038c2;
   --pencil-foreground: #ffffff;
-  --pencil-soft: #fbece8;
-  --link: #5a4a8c;
-  --link-hover: #463870;
-  --info-soft: #eeebf5;
-  --destructive: #a3203a;
-  --destructive-hover: #8a1a31;
-  --destructive-active: #731429;
+  --pencil-soft: #eef1ff;
+  /* Accent text: Stepler blue's darker step (#3657FF itself is 4.3:1 on the hover fill). */
+  --link: #2a47e0;
+  --link-hover: #1e36b8;
+  --info-soft: #eef1ff;
+  --destructive: #c42b2b;
+  --destructive-hover: #a82323;
+  --destructive-active: #8f1d1d;
   --destructive-foreground: #ffffff;
-  --destructive-soft: #f8e7ea;
+  --destructive-soft: #fdecec;
 
   /* Status */
-  --success: #2c7350;
-  --success-soft: #e5f1ea;
-  --warning: #8a6100;
-  --warning-soft: #f7eeda;
+  --success: #166534;
+  --success-soft: #ecf8f0;
+  --success-dot: #16a34a;
+  --warning: #8a5300;
+  --warning-soft: #fdf3e2;
 
-  /* Frame tints: the calm fill of empty frame slots, one per collection, chosen from its id
-     (DESIGN-SYSTEM.md §2.1 «Відтінки кадрів»). Fill, edge and ink (the frame number on the fill,
-     ≥ 5.7:1). Never status, never a large surface: only empty frames and step markers. */
+  /* Frame tints: the calm fill of empty frames and initials, one per collection, chosen from its
+     id (fill, edge, ink). Never status, never a large surface. */
   --tint-sage: #d8eadf;
   --tint-sage-edge: #b1d0bd;
   --tint-sage-ink: #2b5f46;
-  --tint-lavender: #e5dff6;
-  --tint-lavender-edge: #c5bbe8;
-  --tint-lavender-ink: #52438a;
-  --tint-sand: #f2e4ca;
-  --tint-sand-edge: #d9c39b;
-  --tint-sand-ink: #71501a;
-  --tint-sky: #d9e7f3;
-  --tint-sky-edge: #b2cbe1;
-  --tint-sky-ink: #2a5876;
+  --tint-lavender: #e4e4fb;
+  --tint-lavender-edge: #c3c3ef;
+  --tint-lavender-ink: #3f3a8c;
+  --tint-sand: #fce8da;
+  --tint-sand-edge: #ecc6aa;
+  --tint-sand-ink: #8a3f12;
+  --tint-sky: #e3f0fb;
+  --tint-sky-edge: #b6d3ec;
+  --tint-sky-ink: #1e5a8c;
 
-  /* Interactive states: foreground at 4% (light) / 5% (dark) over the page, a sheet, a popover. */
-  --hover: #e7e8e5;
-  --hover-card: #f6f6f6;
-  --hover-popover: #f6f6f6;
-  /* Focus is violet, never the pencil: red-orange around a field reads as an error. */
-  --ring: var(--link);
+  /* Interactive states over the page, a panel, a popover. */
+  --hover: #e9e9ec;
+  --hover-card: #f4f4f5;
+  --hover-popover: #f4f4f5;
+  /* A ghost control's hover and open state: translucent, so it reads on any surface. */
+  --hover-ghost: rgb(24 24 27 / 0.06);
+  --ring: #3657ff;
 
   /* Overlays and media */
-  --overlay: rgb(20 22 20 / 0.48);
+  --overlay: rgb(24 24 27 / 0.48);
   --scrim: linear-gradient(to top, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 70%);
   --veil: rgb(255 255 255 / 0.68);
-  --viewer: #0f110f;
-  --viewer-foreground: #e9ebe6;
-  /* Focus in the viewer: the dark theme's violet, on `--viewer` in both themes (8.81:1). */
-  --viewer-ring: #b6a8e8;
-  /* Secondary text in the viewer (7.14:1 on `--viewer`). */
-  --viewer-muted: #9ca099;
+  --viewer: #0c0c0e;
+  --viewer-foreground: #f4f4f5;
+  /* Focus and secondary text in the viewer, on `--viewer` in both themes. */
+  --viewer-ring: #8fa0ff;
+  --viewer-muted: #a1a1aa;
+  /* Inverse docks (the selection bar). */
+  --inverse: #18181b;
+  --inverse-foreground: #ffffff;
+  --inverse-muted: #e4e4e7;
+  --inverse-hover: #27272a;
+  --inverse-ring: #8fa0ff;
 
-  /* Elevation: flat by default; only layers above the content get depth. */
-  --shadow-popover: 0 8px 24px -12px rgb(20 22 20 / 0.24), 0 0 0 1px rgb(20 22 20 / 0.06);
-  --shadow-dialog: 0 24px 48px -16px rgb(20 22 20 / 0.32);
-  --shadow-print: 0 1px 1px rgb(20 22 20 / 0.1), 0 8px 18px -8px rgb(20 22 20 / 0.28);
-  /* Cards and panels lift off the table like paper (owner 2026-10-02): two soft layers; a little
-     more for an interactive card under the pointer. Nested cards (inside a card or a dialog)
-     carry none: never stacked shadows. */
-  --shadow-card: 0 1px 2px rgb(20 22 20 / 0.04), 0 2px 8px rgb(20 22 20 / 0.05);
-  --shadow-card-hover: 0 1px 2px rgb(20 22 20 / 0.06), 0 4px 14px rgb(20 22 20 / 0.08);
+  /* Elevation: flat; only what lies above the content gets depth. */
+  --shadow-popover: 0 10px 28px rgb(24 24 27 / 0.12), 0 2px 6px rgb(24 24 27 / 0.06);
+  --shadow-dialog: 0 24px 48px -16px rgb(24 24 27 / 0.3), 0 2px 6px rgb(24 24 27 / 0.06);
+  --shadow-print: 0 1px 1px rgb(24 24 27 / 0.1), 0 8px 18px -8px rgb(24 24 27 / 0.28);
+  /* Raised sheets (cards, the table, panels): soft and layered, more under the pointer. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.05), 0 2px 6px rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 2px 4px rgb(0 0 0 / 0.06), 0 6px 16px rgb(0 0 0 / 0.07);
+  --shadow-dock: 0 14px 34px rgb(24 24 27 / 0.28), 0 2px 6px rgb(24 24 27 / 0.12);
 
   /* Layers */
   --z-base: 0;
@@ -108,11 +128,12 @@
   --z-toast: 70;
   --z-skip: 80;
 
-  /* Motion */
+  /* Motion: short, transform and opacity only, no overshoot. */
   --duration-instant: 0ms;
   --duration-fast: 120ms;
-  --duration-base: 180ms;
-  --duration-slow: 240ms;
+  --duration-menu: 140ms;
+  --duration-base: 160ms;
+  --duration-slow: 180ms;
   --duration-develop: 300ms;
   --duration-stack: 400ms;
 }
@@ -122,137 +143,180 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --background: #141615;
-    --foreground: #e9ebe6;
-    --card: #1c1f1d;
-    --card-foreground: #e9ebe6;
-    --popover: #232724;
-    --popover-foreground: #e9ebe6;
-    --muted: #262a27;
-    --muted-foreground: #9ca099;
-    --border: #2d312e;
-    --input: #6c716b;
-    --primary: #e9ebe6;
-    --primary-hover: #ffffff;
-    --primary-active: #cdd0ca;
-    --primary-foreground: #141615;
-    --pencil: #f08766;
-    --pencil-hover: #f59b7e;
-    --pencil-active: #dd7556;
-    --pencil-foreground: #141615;
-    --pencil-soft: #33201a;
-    --link: #b6a8e8;
-    --link-hover: #cabff0;
-    --info-soft: #242036;
-    --destructive: #ff8da0;
-    --destructive-hover: #ffa3b3;
-    --destructive-active: #f07a8e;
-    --destructive-foreground: #141615;
-    --destructive-soft: #33191e;
-    --success: #77c79c;
-    --success-soft: #172a20;
-    --warning: #e2b550;
-    --warning-soft: #2b2414;
+    --background: #0c0c0e;
+    --foreground: #f4f4f5;
+    --card: #18181b;
+    --card-foreground: #f4f4f5;
+    --popover: #222226;
+    --popover-foreground: #f4f4f5;
+    --muted: #222226;
+    --muted-foreground: #a1a1aa;
+    --foreground-soft: #d4d4d8;
+    --border: #2a2a2f;
+    --border-strong: #3f3f46;
+    --input: #75757e;
+    --subtle: #141417;
+    --track: #18181b;
+    --track-edge: #2a2a2f;
+    --thumb: #2e2e33;
+    --thumb-edge: #46464e;
+    --primary: #4864ff;
+    --primary-hover: #3657ff;
+    --primary-active: #2a47e0;
+    --primary-foreground: #ffffff;
+    --pencil: #8fa0ff;
+    --pencil-hover: #a3b2ff;
+    --pencil-active: #6f86ff;
+    --pencil-foreground: #0c0c0e;
+    --pencil-soft: #1b1f3d;
+    --link: #8fa0ff;
+    --link-hover: #b4c0ff;
+    --info-soft: #1b1f3d;
+    --destructive: #ff7a7a;
+    --destructive-hover: #ff9494;
+    --destructive-active: #f06262;
+    --destructive-foreground: #0c0c0e;
+    --destructive-soft: #2e1416;
+    --success: #4ade80;
+    --success-soft: #13261a;
+    --success-dot: #4ade80;
+    --warning: #fbbf24;
+    --warning-soft: #2b2210;
     --tint-sage: #22352b;
     --tint-sage-edge: #355544;
     --tint-sage-ink: #9ad3b2;
-    --tint-lavender: #2d2746;
-    --tint-lavender-edge: #463d6c;
-    --tint-lavender-ink: #c4b8f0;
-    --tint-sand: #352e1e;
-    --tint-sand-edge: #55492e;
-    --tint-sand-ink: #e2c688;
-    --tint-sky: #20303c;
-    --tint-sky-edge: #35505f;
-    --tint-sky-ink: #9cc6e3;
-    --hover: #1f211f;
-    --hover-card: #262927;
-    --hover-popover: #2d312e;
-    --overlay: rgb(0 0 0 / 0.64);
-    --veil: rgb(20 22 21 / 0.68);
-    --shadow-popover: none;
-    --shadow-dialog: none;
-    --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
-    /* At night a shadow muddies the dark table: the 1px edge and the lighter sheet do the work. */
-    --shadow-card: none;
-    --shadow-card-hover: none;
+    --tint-lavender: #26244a;
+    --tint-lavender-edge: #3d3a6e;
+    --tint-lavender-ink: #c3c8fb;
+    --tint-sand: #3a2416;
+    --tint-sand-edge: #5a3b26;
+    --tint-sand-ink: #ffc9a3;
+    --tint-sky: #14283a;
+    --tint-sky-edge: #284563;
+    --tint-sky-ink: #a8d4fa;
+    --hover: #18181b;
+    --hover-card: #222226;
+    --hover-popover: #2a2a2f;
+    --hover-ghost: rgb(244 244 245 / 0.08);
+    --ring: #8fa0ff;
+    --overlay: rgb(5 5 9 / 0.62);
+    --veil: rgb(12 12 14 / 0.68);
+    --inverse: #2a2a2f;
+    --inverse-foreground: #ffffff;
+    --inverse-muted: #d4d4d8;
+    --inverse-hover: #3f3f46;
+    --shadow-popover: 0 12px 32px rgb(0 0 0 / 0.45);
+    --shadow-dialog: 0 16px 40px rgb(0 0 0 / 0.45);
+    --shadow-print: inset 0 1px 0 rgb(244 244 245 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+    /* At night a lift needs a faint top light and a deeper shade. */
+    --shadow-card:
+      inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.25);
+    --shadow-card-hover:
+      inset 0 1px 0 rgb(255 255 255 / 0.04), 0 2px 4px rgb(0 0 0 / 0.45),
+      0 8px 20px rgb(0 0 0 / 0.35);
+    --shadow-dock: 0 14px 34px rgb(0 0 0 / 0.5);
   }
 }
 
 /* An explicit choice (the theme switch) wins over the system setting. */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --background: #141615;
-  --foreground: #e9ebe6;
-  --card: #1c1f1d;
-  --card-foreground: #e9ebe6;
-  --popover: #232724;
-  --popover-foreground: #e9ebe6;
-  --muted: #262a27;
-  --muted-foreground: #9ca099;
-  --border: #2d312e;
-  --input: #6c716b;
-  --primary: #e9ebe6;
-  --primary-hover: #ffffff;
-  --primary-active: #cdd0ca;
-  --primary-foreground: #141615;
-  --pencil: #f08766;
-  --pencil-hover: #f59b7e;
-  --pencil-active: #dd7556;
-  --pencil-foreground: #141615;
-  --pencil-soft: #33201a;
-  --link: #b6a8e8;
-  --link-hover: #cabff0;
-  --info-soft: #242036;
-  --destructive: #ff8da0;
-  --destructive-hover: #ffa3b3;
-  --destructive-active: #f07a8e;
-  --destructive-foreground: #141615;
-  --destructive-soft: #33191e;
-  --success: #77c79c;
-  --success-soft: #172a20;
-  --warning: #e2b550;
-  --warning-soft: #2b2414;
-  --hover: #1f211f;
-  --hover-card: #262927;
-  --hover-popover: #2d312e;
+  --background: #0c0c0e;
+  --foreground: #f4f4f5;
+  --card: #18181b;
+  --card-foreground: #f4f4f5;
+  --popover: #222226;
+  --popover-foreground: #f4f4f5;
+  --muted: #222226;
+  --muted-foreground: #a1a1aa;
+  --foreground-soft: #d4d4d8;
+  --border: #2a2a2f;
+  --border-strong: #3f3f46;
+  --input: #75757e;
+  --subtle: #141417;
+  --track: #18181b;
+  --track-edge: #2a2a2f;
+  --thumb: #2e2e33;
+  --thumb-edge: #46464e;
+  --primary: #4864ff;
+  --primary-hover: #3657ff;
+  --primary-active: #2a47e0;
+  --primary-foreground: #ffffff;
+  --pencil: #8fa0ff;
+  --pencil-hover: #a3b2ff;
+  --pencil-active: #6f86ff;
+  --pencil-foreground: #0c0c0e;
+  --pencil-soft: #1b1f3d;
+  --link: #8fa0ff;
+  --link-hover: #b4c0ff;
+  --info-soft: #1b1f3d;
+  --destructive: #ff7a7a;
+  --destructive-hover: #ff9494;
+  --destructive-active: #f06262;
+  --destructive-foreground: #0c0c0e;
+  --destructive-soft: #2e1416;
+  --success: #4ade80;
+  --success-soft: #13261a;
+  --success-dot: #4ade80;
+  --warning: #fbbf24;
+  --warning-soft: #2b2210;
   --tint-sage: #22352b;
   --tint-sage-edge: #355544;
   --tint-sage-ink: #9ad3b2;
-  --tint-lavender: #2d2746;
-  --tint-lavender-edge: #463d6c;
-  --tint-lavender-ink: #c4b8f0;
-  --tint-sand: #352e1e;
-  --tint-sand-edge: #55492e;
-  --tint-sand-ink: #e2c688;
-  --tint-sky: #20303c;
-  --tint-sky-edge: #35505f;
-  --tint-sky-ink: #9cc6e3;
-  --overlay: rgb(0 0 0 / 0.64);
-  --veil: rgb(20 22 21 / 0.68);
-  --shadow-popover: none;
-  --shadow-dialog: none;
-  --shadow-print: inset 0 1px 0 rgb(233 235 230 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
-  --shadow-card: none;
-  --shadow-card-hover: none;
+  --tint-lavender: #26244a;
+  --tint-lavender-edge: #3d3a6e;
+  --tint-lavender-ink: #c3c8fb;
+  --tint-sand: #3a2416;
+  --tint-sand-edge: #5a3b26;
+  --tint-sand-ink: #ffc9a3;
+  --tint-sky: #14283a;
+  --tint-sky-edge: #284563;
+  --tint-sky-ink: #a8d4fa;
+  --hover: #18181b;
+  --hover-card: #222226;
+  --hover-popover: #2a2a2f;
+  --hover-ghost: rgb(244 244 245 / 0.08);
+  --ring: #8fa0ff;
+  --overlay: rgb(5 5 9 / 0.62);
+  --veil: rgb(12 12 14 / 0.68);
+  --inverse: #2a2a2f;
+  --inverse-foreground: #ffffff;
+  --inverse-muted: #d4d4d8;
+  --inverse-hover: #3f3f46;
+  --shadow-popover: 0 12px 32px rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 16px 40px rgb(0 0 0 / 0.45);
+  --shadow-print: inset 0 1px 0 rgb(244 244 245 / 0.08), 0 10px 24px -10px rgb(0 0 0 / 0.6);
+  /* At night a lift needs a faint top light and a deeper shade. */
+  --shadow-card:
+    inset 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.25);
+  --shadow-card-hover:
+    inset 0 1px 0 rgb(255 255 255 / 0.04), 0 2px 4px rgb(0 0 0 / 0.45), 0 8px 20px rgb(0 0 0 / 0.35);
+  --shadow-dock: 0 14px 34px rgb(0 0 0 / 0.5);
 }
 
 @theme {
   --breakpoint-3xl: 120rem;
-  /* Almost square shapes: paper and film. No pills except dots, avatars and switch thumbs. */
-  --radius-frame: 2px;
-  --radius-sheet: 4px;
-  --radius-control: 8px;
+  /* One step up from Tailwind's (owner 2026-10-06): dense admin text 15px, small text 13px. */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: calc(1.125 / 0.8125);
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: calc(1.375 / 0.9375);
+  /* Radii: frames 4, controls 6, panels and menus 8, dialogs 12. Pills only for dots and
+     avatars. */
+  --radius-frame: 4px;
+  --radius-sheet: 8px;
+  --radius-control: 6px;
   --radius-dialog: 12px;
-  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @theme inline {
-  /* next/font/local sets --font-geologica / --font-geist-mono in apps/web; Storybook declares the
+  /* next/font/local sets --font-golos / --font-geist-mono in apps/web; Storybook declares the
      same files under these family names (src/fonts/fonts.css). */
-  --font-sans: var(--font-geologica, 'Geologica'), system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-sans:
+    var(--font-golos, 'Golos Text'), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --font-mono:
     var(--font-geist-mono, 'Geist Mono'), ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --color-background: var(--background);
@@ -263,6 +327,16 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-foreground-soft: var(--foreground-soft);
+  --color-border-strong: var(--border-strong);
+  --color-subtle: var(--subtle);
+  --color-track: var(--track);
+  --color-thumb: var(--thumb);
+  --color-success-dot: var(--success-dot);
+  --color-inverse: var(--inverse);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-inverse-muted: var(--inverse-muted);
+  --color-inverse-hover: var(--inverse-hover);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-primary: var(--primary);
@@ -301,6 +375,7 @@
   --color-hover: var(--hover);
   --color-hover-card: var(--hover-card);
   --color-hover-popover: var(--hover-popover);
+  --color-hover-ghost: var(--hover-ghost);
   --color-ring: var(--ring);
   --color-overlay: var(--overlay);
   --color-veil: var(--veil);
@@ -311,6 +386,7 @@
   --shadow-print: var(--shadow-print);
   --shadow-card: var(--shadow-card);
   --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-dock: var(--shadow-dock);
 }
 
 @layer base {
@@ -367,78 +443,71 @@
 }
 
 /*
- * Type scale (DESIGN-SYSTEM.md §3.2): Geologica for all text, the SHRP axis (sharp terminals)
- * only at 19px and above, Geist Mono only for data (frame numbers, times, sizes, counters).
- * Sizes step up at md (768px) and xl (1280px). Each `type-*` utility sets size, line height and,
- * for headings, weight and sharpness, so a heading is one class.
+ * Type scale (DESIGN-SYSTEM.md §0.3): Golos Text for all text, Geist Mono only for data (frame
+ * numbers, counts, sizes, tabular dates). Dense and calm: the admin h1 is 24/26px, sections
+ * 18/19px, body 16px on phones and 15px from md (owner 2026-10-06: one step up). Each `type-*` utility sets size, line height and,
+ * for headings, weight and tracking, so a heading is one class.
  */
+/* The wordmark «stepler», as drawn in the logo files: Golos Text 700, tracked -0.035em. */
 @utility font-wordmark {
-  font-weight: 600;
-  font-variation-settings: 'SHRP' 100;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.035em;
 }
 
-/* Sharp terminals for display text without a size (e.g. a heading sized by its context). */
+/* Display text without a size (e.g. a heading sized by its context). */
 @utility font-display {
-  font-variation-settings: 'SHRP' 80;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 
-/* h1 of guest pages and the sign-in landing: 28 (under 360px) / 32 / 44 / 64px. */
+/* h1 of the sign-in landing and guest chrome: 28 (under 360px) / 32 / 40 / 52px. */
 @utility type-display {
   font-size: 2rem;
   line-height: 1.12;
-  font-weight: 600;
-  font-variation-settings: 'SHRP' 80;
+  font-weight: 650;
+  letter-spacing: -0.02em;
   text-wrap: balance;
   @media (width < 360px) {
     font-size: 1.75rem;
   }
   @variant md {
-    font-size: 2.75rem;
-    letter-spacing: -0.01em;
+    font-size: 2.5rem;
   }
   @variant xl {
-    font-size: 4rem;
+    font-size: 3.25rem;
   }
 }
 
-/* h1 of admin pages: 28 / 32 / 44px. */
+/* h1 of admin pages: 24 / 26px. */
 @utility type-h1 {
-  font-size: 1.75rem;
-  line-height: 1.15;
-  font-weight: 600;
-  font-variation-settings: 'SHRP' 80;
-  text-wrap: balance;
-  @variant md {
-    font-size: 2rem;
-  }
-  @variant xl {
-    font-size: 2.75rem;
-    letter-spacing: -0.01em;
-  }
-}
-
-/* Section headings: 19 / 24px. */
-@utility type-h2 {
-  font-size: 1.1875rem;
+  font-size: 1.5rem;
   line-height: 1.2;
-  font-weight: 600;
-  font-variation-settings: 'SHRP' 60;
+  font-weight: 650;
+  letter-spacing: -0.015em;
   text-wrap: balance;
   @variant md {
-    font-size: 1.5rem;
+    font-size: 1.625rem;
   }
 }
 
-/* Panel headings: 16 / 17px; too small for SHRP. */
+/* Section headings: 18 / 19px. */
+@utility type-h2 {
+  font-size: 1.125rem;
+  line-height: 1.25;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  @variant md {
+    font-size: 1.1875rem;
+  }
+}
+
+/* Panel headings: 16px. */
 @utility type-h3 {
   font-size: 1rem;
   line-height: 1.3;
   font-weight: 600;
   text-wrap: balance;
-  @variant md {
-    font-size: 1.0625rem;
-  }
 }
 
 /* Guest texts and the guest's main button: 17px. */
@@ -447,7 +516,7 @@
   line-height: 1.5;
 }
 
-/* Admin body: 16 / 15px. Fields stay 16px everywhere (no iOS zoom). */
+/* Admin body: 16px on phones, 15px from md. Fields stay 16px on phones (no iOS zoom). */
 @utility type-body {
   font-size: 1rem;
   line-height: 1.5;
@@ -457,20 +526,20 @@
 }
 
 @utility type-small {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   line-height: 1.45;
 }
 
 /* Captions under a frame, the terms line: the smallest size for words. */
 @utility type-caption {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.4;
 }
 
-/* Data in Geist Mono: frame number, time, duration, size. 12px only for digits. */
+/* Data in Geist Mono: frame number, time, duration, size. 13px only for digits. */
 @utility type-data {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
 }
@@ -508,6 +577,117 @@
   @media (width >= 100rem) {
     --stepler-content: 1320px;
   }
+}
+
+/* The sliding thumb (components/segment-thumb.tsx): its index is the position of the active item
+   among its next siblings, so no script has to know the value. Up to 8 segments. */
+[data-slot='segment-thumb'] {
+  --thumb-index: 0;
+  opacity: 0;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(1 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 0;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(2 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 1;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(3 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 2;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(4 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 3;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(5 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 4;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(6 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 5;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(7 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 6;
+  opacity: 1;
+}
+:where(
+    *:has(
+      > [data-slot='segment-thumb']
+        ~ :nth-child(8 of :not([data-slot='segment-thumb'])):is(
+          [data-state='active'],
+          [aria-checked='true']
+        )
+    )
+  )
+  > [data-slot='segment-thumb'] {
+  --thumb-index: 7;
+  opacity: 1;
 }
 
 /* The wax-pencil stroke drawing itself (DESIGN-SYSTEM.md §8). For an SVG path with

@@ -2,7 +2,7 @@
 // each checked by the same play function and by axe (`a11y: { test: 'error' }`).
 import type { StoryObj } from '@storybook/react-vite';
 import { expect } from 'storybook/test';
-import type { CoverPlacement, ThemeSettings } from '@stepler/contracts';
+import type { Align, CoverPlacement, Corners, ThemeSettings } from '@stepler/contracts';
 import { definitionOf } from '../core/registry.ts';
 import { GuestTemplateRoot } from '../react/root.tsx';
 import { type Fixture, FIXTURES, type FixtureName, onFiles, onText } from './models.tsx';
@@ -15,16 +15,34 @@ type TemplateStoryArgs = {
   fixture: FixtureName;
   /** Another cover placement than the template's default (where it allows it). */
   coverPlacement?: CoverPlacement;
+  /** Another alignment or corners than the template's defaults (owner remark 111). */
+  align?: Align;
+  corners?: Corners;
 };
 
 /** Renders one template with one fixture, as the guest page does (system fonts: no classes). */
-export function TemplateStory({ templateId, fixture, coverPlacement }: TemplateStoryArgs) {
+export function TemplateStory({
+  templateId,
+  fixture,
+  coverPlacement,
+  align,
+  corners,
+}: TemplateStoryArgs) {
   const { model, actions, slots } = FIXTURES[fixture];
   const def = { templateId, templateVersion: 1 };
+  const settings = settingsFor(templateId, FIXTURES[fixture], coverPlacement);
   return (
     <GuestTemplateRoot
       {...def}
-      settings={settingsFor(templateId, FIXTURES[fixture], coverPlacement)}
+      settings={
+        settings === undefined
+          ? undefined
+          : {
+              ...settings,
+              ...(align === undefined ? {} : { align }),
+              ...(corners === undefined ? {} : { corners }),
+            }
+      }
       fontClassName={() => ''}
       model={model}
       actions={actions}
@@ -75,10 +93,18 @@ export function storyAt(
     args: { templateId, fixture, ...(coverPlacement === undefined ? {} : { coverPlacement }) },
     globals: { viewport: { value: viewport } },
     play: async ({ canvasElement, userEvent }) => {
-      const { actions } = FIXTURES[fixture];
+      const { actions, model } = FIXTURES[fixture];
       await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
       await expect(canvasElement.querySelector('footer')).not.toBeNull();
       await expect(canvasElement.querySelector('h1')).not.toBeNull();
+      // The wordmark in the header at every width (owner remark 110).
+      await expect(visible(canvasElement.querySelectorAll('a[href="#home"]'))).toHaveLength(1);
+      // The welcome wherever the title is, in every phase (owner remark 109).
+      if (model.welcomeMessage !== null) {
+        const welcome = visible(canvasElement.querySelectorAll('[data-slot="guest-welcome"]'));
+        await expect(welcome).toHaveLength(1);
+        await expect(welcome[0]).toHaveTextContent(model.welcomeMessage);
+      }
       if (actions === null) {
         await expect(canvasElement.querySelector('[data-slot="guest-legal-notice"]')).toBeNull();
         return;
@@ -101,6 +127,52 @@ export function storyAt(
       spy.mockClear();
       await userEvent.click(primary!);
       await expect(spy).toHaveBeenCalledTimes(1);
+    },
+  };
+}
+
+const ALIGNS: readonly Align[] = ['start', 'center'];
+const CORNERS: readonly Corners[] = ['sharp', 'soft', 'round'];
+
+/** Every alignment × corners pair of one template, stacked, at phone width (owner remark 111). */
+export function TemplateMatrix({ templateId }: { templateId: string }) {
+  return (
+    <div style={{ display: 'grid', gap: 32 }}>
+      {ALIGNS.flatMap((align) =>
+        CORNERS.map((corners) => (
+          <section key={`${align}-${corners}`} aria-label={`${align} · ${corners}`}>
+            <TemplateStory
+              templateId={templateId}
+              fixture="FirstVisit"
+              align={align}
+              corners={corners}
+            />
+          </section>
+        )),
+      )}
+    </div>
+  );
+}
+
+/** The matrix story: each pair renders, fits the width, and applies the alignment it was given. */
+export function matrixStory(templateId: string): StoryObj<typeof TemplateStory> {
+  return {
+    args: { templateId, fixture: 'FirstVisit' },
+    globals: { viewport: { value: 'phone390' } },
+    // Six whole pages in one story repeat their landmarks and ids by construction; each page is
+    // checked by axe in the template's single-page stories.
+    parameters: { a11y: { test: 'off' } },
+    render: () => <TemplateMatrix templateId={templateId} />,
+    play: async ({ canvasElement }) => {
+      await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+      const roots = canvasElement.querySelectorAll<HTMLElement>('[data-template]');
+      await expect(roots).toHaveLength(6);
+      for (const [i, root] of [...roots].entries()) {
+        const align = ALIGNS[Math.floor(i / CORNERS.length)]!;
+        await expect(root.style.getPropertyValue('--tpl-align')).toBe(align);
+        const title = visible(root.querySelectorAll('h1'))[0]!;
+        await expect(getComputedStyle(title).textAlign).toBe(align);
+      }
     },
   };
 }

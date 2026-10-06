@@ -1,7 +1,9 @@
 'use client';
 
 import { ACCENT_PRESETS, hexColorSchema } from '@stepler/contracts';
+import { InfoTip } from '@stepler/ui/components/info-tip';
 import { Input } from '@stepler/ui/components/input';
+import { focusRing } from '@stepler/ui/lib/focus';
 import { accentContrast } from '@stepler/templates/core';
 import { cn } from '@stepler/ui/lib/utils';
 import { AlertTriangle, Check } from 'lucide-react';
@@ -14,7 +16,8 @@ import type { SectionProps } from './section-props';
 const HEX_INPUT = /^#?([0-9a-fA-F]{6})$/;
 
 /**
- * «Акцент»: the six presets (34px), «Свій колір» as a field with its chip, and the contrast hint
+ * «Акцент»: the six presets, «Свій колір» as a hex field whose chip is the system colour picker
+ * (owner remark 72), and the contrast hint
  * against the template's background (readability is never at stake: text colours are derived
  * [D3]; the hint says what happens). An invalid colour shows why and is never sent.
  */
@@ -26,6 +29,16 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
   const { accent } = editor.working.settings;
   const [custom, setCustom] = useState(accent);
   const [invalid, setInvalid] = useState(false);
+  // The accent changed elsewhere (a template switch keeps this section mounted): the field
+  // follows, unless it already says the same colour as typed.
+  const [shown, setShown] = useState(accent);
+  if (shown !== accent) {
+    setShown(accent);
+    if (custom.replace('#', '').toUpperCase() !== accent.slice(1)) {
+      setCustom(accent);
+      setInvalid(false);
+    }
+  }
   const preset = ACCENT_PRESETS.find((p) => p.hex === accent);
   const contrast = accentContrast(def, editor.working.settings);
   const ratio = format.number(contrast.ratio, {
@@ -33,10 +46,11 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
     minimumFractionDigits: 1,
   });
 
-  function choose(hex: string) {
+  /** `coalesce`: dragging in the colour picker is one undo step. */
+  function choose(hex: string, coalesce?: string) {
     setCustom(hex);
     setInvalid(false);
-    editor.dispatch({ type: 'settings', patch: { accent: hex } });
+    editor.dispatch({ type: 'settings', patch: { accent: hex } }, coalesce);
   }
 
   return (
@@ -52,7 +66,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
           value: p.hex,
           label: t(`names.${p.id}`),
           ariaLabel: t('swatch', { name: t(`names.${p.id}`) }),
-          icon: <span className="block size-7 rounded-full" style={{ backgroundColor: p.hex }} />,
+          swatch: p.hex,
         }))}
       />
       <div className="grid gap-1.5">
@@ -61,10 +75,19 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
             {t('custom')}
           </label>
           <div className="relative min-w-0 flex-1">
-            <span
-              aria-hidden="true"
-              className="absolute top-1/2 left-3 size-5 -translate-y-1/2 rounded-full border"
-              style={{ backgroundColor: accent }}
+            {/* The chip is the system colour picker: the same colour, chosen by eye. */}
+            <input
+              type="color"
+              aria-label={t('picker')}
+              value={accent.toLowerCase()}
+              disabled={readOnly}
+              onChange={(event) => choose(event.target.value.toUpperCase(), 'accent-picker')}
+              className={cn(
+                'absolute top-1/2 left-2.5 size-7 -translate-y-1/2 cursor-pointer appearance-none rounded-full border-0 bg-transparent p-0',
+                '[&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-0 [&::-webkit-color-swatch]:shadow-[inset_0_0_0_1px_rgb(0_0_0/0.14)] [&::-webkit-color-swatch-wrapper]:p-0',
+                '[&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-0',
+                focusRing,
+              )}
             />
             <Input
               id={fieldId}
@@ -73,7 +96,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
               spellCheck={false}
               autoComplete="off"
               inputMode="text"
-              className="pl-11 type-data uppercase"
+              className="pl-12 type-data uppercase"
               aria-invalid={invalid || undefined}
               aria-describedby={invalid ? errorId : undefined}
               onChange={(event) => {
@@ -87,7 +110,7 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
                 const hex = `#${match[1]!.toUpperCase()}`;
                 if (!hexColorSchema.safeParse(hex).success) return;
                 setInvalid(false);
-                editor.dispatch({ type: 'settings', patch: { accent: hex } });
+                editor.dispatch({ type: 'settings', patch: { accent: hex } }, 'accent-hex');
               }}
               onBlur={() => {
                 if (!HEX_INPUT.test(custom)) setInvalid(custom !== '');
@@ -114,15 +137,15 @@ export function AccentSection({ editor, def, readOnly }: SectionProps) {
         ) : (
           <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
         )}
-        <span>
+        <span className="min-w-0">
           {contrast.level === 'good'
             ? t('good', { ratio })
             : contrast.level === 'small-text'
               ? t('smallText', { ratio, direction: contrast.direction })
               : t('merges', { ratio, direction: contrast.direction })}
         </span>
+        <InfoTip text={t('footnote')} />
       </p>
-      <p className="text-sm text-muted-foreground">{t('footnote')}</p>
     </div>
   );
 }

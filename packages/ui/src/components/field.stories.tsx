@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent } from 'storybook/test';
 import { Field } from './field';
 import { Input } from './input';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Field',
@@ -31,7 +32,21 @@ export const Default: Story = {
     await expect(input).not.toHaveAttribute('aria-describedby');
     await expect(input).not.toHaveAttribute('aria-invalid');
     // 44px minimum touch target (rule 05).
-    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
+  },
+};
+
+export const WithHint: Story = {
+  args: { hint: 'Guests see this name when they open the link.' },
+  play: async ({ canvas }) => {
+    const input = canvas.getByLabelText('Collection name');
+    // The hint is a description of the control, and the tip's button is not part of its name.
+    await expect(input).toHaveAccessibleDescription(
+      'Guests see this name when they open the link.',
+    );
+    await expect(
+      canvas.getByRole('button', { name: 'Guests see this name when they open the link.' }),
+    ).toBeVisible();
   },
 };
 
@@ -61,7 +76,7 @@ export const WithError: Story = {
       'Enter a name of 80 characters or fewer.',
     );
     await expect(canvas.getByRole('alert')).toHaveAttribute('id', 'collection-name-error');
-    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(input.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };
 

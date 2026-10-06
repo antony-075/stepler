@@ -52,13 +52,17 @@ export type CollectionWithDefaultLink = CollectionRow & {
   image: ImageRow | null;
 };
 
-/** Non-deleted frames of a collection; read for a whole page in one grouped query. */
+/**
+ * Non-deleted frames of a collection and the bytes it holds (`UsageService`'s definition); read
+ * for a whole page in one grouped query each.
+ */
 export interface ContentStats {
   count: number;
   lastAt: Date | null;
+  storageBytes: number;
 }
 
-export const NO_CONTENT: ContentStats = { count: 0, lastAt: null };
+export const NO_CONTENT: ContentStats = { count: 0, lastAt: null, storageBytes: 0 };
 
 /** Explicit mapping: `ownerId` and `deletionRequestedAt` never reach the API. */
 export function toCollectionDto(
@@ -80,6 +84,7 @@ export function toCollectionDto(
     ...defaultLink(row.guestLinks[0]),
     contentCount: content.count,
     lastContentAt: content.lastAt?.toISOString() ?? null,
+    storageBytes: content.storageBytes,
     // The published guest page's.
     welcomeMessage: row.guestPageVersions[0]?.welcomeMessage ?? null,
     image,

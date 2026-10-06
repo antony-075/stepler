@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent } from 'storybook/test';
 import { Checkbox } from './checkbox';
 import { Label } from './label';
+import { minTarget } from '../stories/target';
 
 /**
  * The box itself is 20px. Wrap it in a `Label` row of at least 44px (`min-h-11`) so the whole
@@ -72,7 +73,7 @@ export const Disabled: Story = {
     await userEvent.click(canvas.getByText('Allow downloads'), { pointerEventsCheck: 0 });
     await expect(checkbox).toHaveAttribute('aria-checked', 'false');
     const row = canvas.getByTestId('row');
-    await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(row.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     // The label dims with its control.
     await expect(getComputedStyle(row).cursor).toBe('not-allowed');
     await expect(getComputedStyle(row).color).toBe(tokenColor('--muted-foreground'));

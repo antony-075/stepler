@@ -102,8 +102,8 @@
         "settings": "Collection settings"
       },
       "account": "Account",
-      "collapse": "Collapse the sidebar",
-      "expand": "Expand the sidebar"
+      "collapse": "Collapse the menu",
+      "expand": "Expand the menu"
     },
     "breadcrumbs": "Breadcrumb"
   },
@@ -212,7 +212,9 @@
     "sort": {
       "newest": "Newest",
       "oldest": "Oldest",
-      "title": "By title"
+      "title": "By title",
+      "largest": "Largest",
+      "smallest": "Smallest"
     },
     "nothingFound": "No collections with “{query}” in the title.",
     "noArchived": "The archive is empty.",
@@ -230,7 +232,27 @@
       "deletePhrase": "To confirm, type “{title}”",
       "menu": "Actions for “{title}”",
       "menuShort": "Actions"
-    }
+    },
+    "storageUsage": "{used} of {limit}",
+    "noDescription": "No description",
+    "view": {
+      "label": "View",
+      "table": "Table",
+      "tiles": "Tiles"
+    },
+    "columns": {
+      "collection": "Collection",
+      "guestsAdd": "Guests can add",
+      "frames": "Frames",
+      "status": "Status",
+      "size": "Size",
+      "last": "Latest frame",
+      "created": "Created"
+    },
+    "guestsClosed": "Access closed",
+    "cellName": "{name}:",
+    "none": "—",
+    "archiveGroup": "Archive · {count}"
   },
   "collection": {
     "pageTitle": "Collection",
@@ -283,7 +305,8 @@
       "imageRemoveConfirmText": "The dashboard shows the initials again. The guest page does not change.",
       "imageRemoveConfirm": "Remove",
       "imageRemovePending": "Removing",
-      "imagePickerDescription": "The photo is copied: if the guest deletes it, the collection image stays."
+      "imagePickerDescription": "The photo is copied: if the guest deletes it, the collection image stays.",
+      "detailsTitle": "Title and description"
     },
     "contentEmptyText": "Once you share the link, guests can add their photos and videos.",
     "share": "Share",
@@ -294,18 +317,8 @@
       "appearance": "Guest page",
       "settings": "Collection settings"
     },
-    "inline": {
-      "editTitle": "Edit title",
-      "editDescription": "Edit description",
-      "addDescription": "Add a description",
-      "titleField": "Collection title",
-      "descriptionField": "Collection description",
-      "descriptionHint": "Ctrl+Enter or ⌘+Enter saves, Esc cancels.",
-      "save": "Save",
-      "cancel": "Cancel",
-      "saved": "Saved",
-      "failed": "Couldn’t save"
-    }
+    "descriptionMore": "Show more",
+    "descriptionLess": "Show less"
   },
   "content": {
     "filterLabel": "Content type",
@@ -379,8 +392,7 @@
       "noPreviewYet": "The preview comes later",
       "documentOpen": "Documents open after you download them.",
       "photoAlt": "Frame {number}",
-      "dimensionsValue": "{width, number} × {height, number}",
-      "setCover": "Make it the cover"
+      "dimensionsValue": "{width, number} × {height, number}"
     },
     "delete": {
       "title": "Delete frame {frame}?",
@@ -405,6 +417,11 @@
       "confirm": "Delete",
       "failed": "Couldn’t delete every frame. Try again — the ones already deleted stay deleted.",
       "done": "{count, plural, one {# frame deleted} other {# frames deleted}}"
+    },
+    "tile": {
+      "download": "Download frame {number}",
+      "delete": "Delete frame {number}",
+      "downloadFailed": "Couldn’t get the file. Try again."
     }
   },
   "guestLinks": {
@@ -839,7 +856,6 @@
   "guestPage": {
     "preview": {
       "unavailable": "This collection’s preview could not be shown.",
-      "placeholder": "Guests’ frames will be here",
       "frame": "A guest’s frame",
       "title": "Preview",
       "subtitle": "The «{name}» template with your settings",
@@ -848,8 +864,39 @@
       "desktop": "Computer",
       "openAsGuest": "Open as a guest",
       "newTab": "(new tab, saved version)",
-      "caption": "Scroll the preview to see guests’ frames",
-      "frameTitle": "Guest page preview"
+      "frameTitle": "Guest page preview",
+      "tablet": "Tablet",
+      "sample": {
+        "guestName": "Olena",
+        "wishOwn": "Thank you for a wonderful evening! The best people around.",
+        "wishOther": "Happiness, love and many more evenings like this!",
+        "wishOther2": "Warmest wishes from the whole family.",
+        "docTitle": "Evening programme.pdf"
+      },
+      "access": {
+        "label": "Link access",
+        "trigger": "Link access: {name}. Change",
+        "all": "Sees everything",
+        "own": "Own only",
+        "view": "View only",
+        "paused": "Paused",
+        "closed": "Closed"
+      },
+      "content": {
+        "label": "Content",
+        "trigger": "Content: {name}. Change",
+        "empty": "Empty",
+        "mine": "Mine only",
+        "others": "Others’ only",
+        "both": "Mine and others’",
+        "uploading": "Uploading",
+        "refusal": {
+          "hidden-gallery": "The link does not show others’ frames",
+          "view-only": "Nothing can be added on this link",
+          "stopped": "The guest sees only a message"
+        }
+      },
+      "more": "Preview options"
     },
     "leave": "Your changes are still being saved. Leave the page?",
     "panelLabel": "Guest page settings",
@@ -859,7 +906,6 @@
     "archived": "An archived collection cannot be changed. Restore it from the archive to change its guest page.",
     "sections": {
       "template": "Template",
-      "cover": "Cover",
       "welcome": "Welcome",
       "background": "Background",
       "accent": "Accent",
@@ -880,7 +926,7 @@
       "retry": "Retry",
       "uploadFailed": "The image could not be uploaded",
       "processing": "Preparing…",
-      "failed": "The image could not be prepared. Try another one.",
+      "failed": "The image could not be processed — try another one",
       "ready": "Ready",
       "none": "None",
       "setFailed": "The image could not be chosen",
@@ -890,11 +936,20 @@
         "STORAGE_403": "Storage refused the file. Try again."
       },
       "archivedRefused": "The collection is archived — its images cannot be changed now.",
-      "frameGone": "The frame has been deleted."
+      "frameGone": "The frame has been deleted.",
+      "remove": "Remove",
+      "replace": "Replace",
+      "noneCover": "No cover",
+      "noneCoverText": "Guests will see the title without a picture.",
+      "noneBackground": "No image",
+      "processingText": "This usually takes a few seconds.",
+      "failedShort": "Failed",
+      "slow": "Processing is taking longer than usual",
+      "slowText": "You can check again, remove this image or upload another one.",
+      "check": "Check again"
     },
     "cover": {
       "remove": "Remove cover",
-      "none": "No cover. Guests will see the title without a picture.",
       "alt": "Cover"
     },
     "welcome": {
@@ -913,47 +968,49 @@
       "swatches": "Background colours",
       "gradients": "Background gradients",
       "colors": {
-        "F0F1EE": "light grey",
-        "FFFFFF": "white",
-        "EFE8DD": "sand",
-        "E4EAEE": "blue-grey",
-        "ECE6F0": "lilac",
-        "F1EADF": "linen",
-        "F4EEE4": "cream",
-        "FAF6EF": "paper",
-        "EFE6E6": "ash rose",
-        "E9ECE4": "sage",
-        "C9D7E8": "airmail blue",
-        "E3D9C6": "kraft",
-        "D9E4D4": "mint",
-        "EAD7D7": "powder",
-        "D8D3E6": "lavender",
-        "110F15": "night",
-        "141A22": "deep blue",
-        "1C1511": "coffee",
-        "0F1713": "dark forest",
-        "1D1020": "aubergine",
-        "F7F7F5": "warm white",
-        "F4F6FA": "cool white",
-        "FAF7F2": "ivory",
-        "F5F5F7": "pearl"
+        "F0F1EE": "Light grey",
+        "FFFFFF": "White",
+        "EFE8DD": "Sand",
+        "E4EAEE": "Blue-grey",
+        "ECE6F0": "Lilac",
+        "F1EADF": "Linen",
+        "F4EEE4": "Cream",
+        "FAF6EF": "Paper",
+        "EFE6E6": "Ash rose",
+        "E9ECE4": "Sage",
+        "C9D7E8": "Airmail blue",
+        "E3D9C6": "Kraft",
+        "D9E4D4": "Mint",
+        "EAD7D7": "Powder",
+        "D8D3E6": "Lavender",
+        "110F15": "Night",
+        "15233B": "Deep blue",
+        "2B1C14": "Coffee",
+        "0E2A20": "Dark forest",
+        "2D1236": "Aubergine",
+        "F2F1EC": "Warm white",
+        "EBF0F7": "Cool white",
+        "F8F1E4": "Ivory",
+        "F0EEF5": "Pearl"
       },
       "gradientNames": {
-        "mist": "mist",
-        "sand": "sand",
-        "lilac": "lilac",
-        "linen": "linen",
-        "blush": "blush",
-        "sage": "sage",
-        "night": "night",
-        "ocean": "ocean",
-        "forest": "forest"
+        "mist": "Mist",
+        "sand": "Sand",
+        "lilac": "Lilac",
+        "linen": "Linen",
+        "blush": "Blush",
+        "sage": "Sage",
+        "night": "Night",
+        "ocean": "Ocean",
+        "forest": "Forest"
       },
       "dim": "Dimming",
       "dimValue": "{value}%",
       "remove": "Remove image",
-      "coverAsBackground": "In this template the cover is the background. Dimming keeps the white text readable.",
-      "noImage": "Add an image for the background."
+      "noImage": "Add an image for the background.",
+      "coverInLayout": "The cover is changed in «Layout».",
+      "openLayout": "Open «Layout»",
+      "sampleText": "Aa"
     },
     "accent": {
       "swatch": "Accent: {name}",
@@ -971,7 +1028,8 @@
       "good": "Contrast {ratio}:1 — reads well on the template’s background",
       "smallText": "Contrast {ratio}:1 — small accent text becomes a little {direction, select, darker {darker} other {lighter}} so it reads.",
       "merges": "Contrast {ratio}:1 — the accent blends into the background. Buttons and text stay readable, but a {direction, select, darker {darker} other {lighter}} shade would be better.",
-      "footnote": "Button labels turn white or black, whichever reads better."
+      "footnote": "Button labels turn white or black, whichever reads better.",
+      "picker": "Pick your own colour"
     },
     "font": {
       "trigger": "Font: {name}. Change",
@@ -1018,7 +1076,10 @@
         "sharp": "Sharp",
         "soft": "Soft",
         "round": "Round"
-      }
+      },
+      "placement": "Placement",
+      "withCover": "with a cover",
+      "withoutCover": "no cover"
     },
     "status": {
       "draft": "Draft — guests see the previous version",
@@ -1053,7 +1114,7 @@
       "dirty": "there are unsaved changes",
       "fromFrame": "Picked from frames",
       "imageSummary": "Image, {dim}%",
-      "layoutSummary": "{placement}, {align, select, start {left} other {centred}}",
+      "layoutSummary": "{placement} · {cover}",
       "sectionsLabel": "Guest page settings",
       "previewLabel": "Guest page preview"
     },
@@ -1074,13 +1135,23 @@
       "notReady": "Preparing the preview",
       "unavailable": "Preview unavailable",
       "frameName": "Frame {number}, photo",
-      "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen"
+      "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen",
+      "unusable": "Cannot be used",
+      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen"
     },
-    "fromViewer": {
-      "added": "Cover added to the draft",
-      "addedText": "Guests will see it once you save the guest page.",
-      "open": "Open the guest page",
-      "openAlt": "Open the «Guest page» tab to save the changes."
+    "splitLabel": "Settings panel width",
+    "statusShort": {
+      "draft": "Draft",
+      "saved": "Saved",
+      "saving": "Saving…",
+      "error": "Not saved",
+      "conflict": "Conflict"
+    },
+    "history": {
+      "undo": "Undo",
+      "redo": "Redo",
+      "imageGone": "The previous image is gone — that step is skipped.",
+      "failed": "The step could not be undone. Try again."
     }
   },
   "templates": {
@@ -1098,18 +1169,12 @@
       }
     },
     "journal": {
-      "name": "Journal",
-      "locks": {
-        "align": "In «Journal» the text is always centred.",
-        "corners": "«Journal» keeps its own corners, like a printed album."
-      }
+      "name": "Journal"
     },
     "postcard": {
       "name": "Postcard",
       "locks": {
-        "background": "«Postcard» has a solid background only, dotted like paper.",
-        "align": "In «Postcard» the card lays out its own text.",
-        "corners": "«Postcard» keeps its own corners: stamps, polaroids and the envelope."
+        "background": "«Postcard» has a solid background only, dotted like paper."
       }
     },
     "party": {

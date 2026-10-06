@@ -112,6 +112,7 @@ describe('collectionSchema', () => {
     },
     contentCount: 0,
     lastContentAt: null,
+    storageBytes: 0,
     welcomeMessage: null,
     image: null,
   };
@@ -125,6 +126,7 @@ describe('collectionSchema', () => {
       ...collection,
       welcomeMessage: 'Вітаємо!',
       image: {
+        id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
         status: 'READY',
         thumbnailUrl: 'https://storage.example.com/t.webp',
         previewUrl: 'https://storage.example.com/p.webp',
@@ -142,6 +144,14 @@ describe('collectionSchema', () => {
     const withoutWelcome: Partial<typeof collection> = { ...collection };
     delete withoutWelcome.welcomeMessage;
     expect(collectionSchema.safeParse(withoutWelcome).success).toBe(false);
+  });
+
+  test('carries the bytes it holds: a whole, non-negative number', () => {
+    expect(collectionSchema.parse({ ...collection, storageBytes: 128_000_000 })).toMatchObject({
+      storageBytes: 128_000_000,
+    });
+    expect(collectionSchema.safeParse({ ...collection, storageBytes: -1 }).success).toBe(false);
+    expect(collectionSchema.safeParse({ ...collection, storageBytes: 1.5 }).success).toBe(false);
   });
 
   test('carries the frame count and the newest frame time', () => {

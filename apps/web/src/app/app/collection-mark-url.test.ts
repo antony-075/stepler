@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { collectionMarkUrl } from './collection-mark-url';
 
 const image = (status: AdminImage['status']): AdminImage => ({
+  id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
   status,
   thumbnailUrl: status === 'READY' ? 'https://storage.test/collection-image/thumbnail.webp' : null,
   previewUrl: null,

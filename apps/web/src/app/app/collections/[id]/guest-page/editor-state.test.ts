@@ -10,8 +10,10 @@ import { ApiError } from '@/api/client';
 import { guestPageVersionSchema } from '@stepler/contracts';
 import { Autosaver } from './autosave';
 import {
+  differsFromPublished,
   editorReducer,
   editorStatus,
+  sameWorking,
   initialEditorState,
   previewPage,
   type EditorState,
@@ -19,6 +21,7 @@ import {
 
 const classic = definitionOf('classic')!;
 const IMAGE = {
+  id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
   status: 'READY',
   thumbnailUrl: 'https://s.test/t.webp',
   previewUrl: 'https://s.test/p.webp',
@@ -99,11 +102,20 @@ describe('editorReducer', () => {
 
 describe('editorStatus', () => {
   const idle = { inFlight: false, failure: null };
-  it('published only → saved; a local change or a server draft → draft', () => {
+  it('by value (owner remark 113): a different draft or change → draft; equal → saved', () => {
     expect(editorStatus(initialEditorState(publishedOnly), idle)).toBe('saved');
-    expect(editorStatus(initialEditorState(withDraft(2)), idle)).toBe('draft');
+    // A draft equal to what guests see (changed and changed back) reads «Збережено».
+    expect(editorStatus(initialEditorState(withDraft(2)), idle)).toBe('saved');
+    expect(editorStatus(initialEditorState(withDraft(2, { welcomeMessage: 'Привіт' })), idle)).toBe(
+      'draft',
+    );
+    expect(editorStatus(initialEditorState(withDraft(2, { cover: IMAGE })), idle)).toBe('draft');
     const changed = reduce(initialEditorState(publishedOnly), { type: 'welcome', value: 'x' });
     expect(editorStatus(changed, idle)).toBe('draft');
+    const back = reduce(changed, { type: 'welcome', value: null });
+    expect(editorStatus(back, idle)).toBe('saved');
+    // Nothing to autosave either: no no-op save.
+    expect(back.pending).toBe(false);
   });
 
   it('in flight → saving; a 409 → conflict; another failure → error', () => {
@@ -218,5 +230,50 @@ describe('Autosaver', () => {
     await s.saver.flush();
     expect(s.saver.state).toEqual({ inFlight: false, failure: null });
     expect(s.saved).toEqual([1]);
+  });
+});
+
+describe('sameWorking (owner remark 113)', () => {
+  const base = { templateId: 'classic', settings: classic.defaults, welcomeMessage: null };
+  it('ignores key order, colour case and an all-space welcome', () => {
+    const reordered = {
+      welcomeMessage: '   ',
+      settings: Object.fromEntries(
+        Object.entries(classic.defaults).reverse(),
+      ) as unknown as typeof classic.defaults,
+      templateId: 'classic',
+    };
+    expect(sameWorking(base, reordered)).toBe(true);
+    const lower = {
+      ...base,
+      settings: { ...classic.defaults, accent: classic.defaults.accent.toLowerCase() },
+    };
+    expect(sameWorking(base, lower)).toBe(true);
+  });
+
+  it('sees a real change', () => {
+    expect(sameWorking(base, { ...base, welcomeMessage: 'Привіт' })).toBe(false);
+    expect(sameWorking(base, { ...base, templateId: 'fake' })).toBe(false);
+    expect(
+      sameWorking(base, { ...base, settings: { ...classic.defaults, corners: 'round' } }),
+    ).toBe(false);
+  });
+
+  it('differsFromPublished compares the draft images by id', () => {
+    const other = { ...IMAGE, id: '01a0ee76-0574-7fe5-a38b-53b07a9b40fa' };
+    const editor = {
+      published: version({ cover: IMAGE }),
+      draft: {
+        ...version({ cover: { ...IMAGE, thumbnailUrl: 'https://s.test/t2.webp' } }),
+        revision: 3,
+      },
+    };
+    // Same image, fresh links: equal.
+    expect(differsFromPublished(initialEditorState(editor))).toBe(false);
+    expect(
+      differsFromPublished(
+        initialEditorState({ ...editor, draft: { ...version({ cover: other }), revision: 3 } }),
+      ),
+    ).toBe(true);
   });
 });

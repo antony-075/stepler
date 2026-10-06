@@ -24,11 +24,11 @@ export const party: TemplateDefinition = {
   },
   options: {
     backgroundKinds: ['solid', 'gradient', 'image'],
-    swatches: ['#110F15', '#141A22', '#1C1511', '#0F1713', '#1D1020'],
+    swatches: ['#110F15', '#15233B', '#2B1C14', '#0E2A20', '#2D1236'],
     gradients: [
-      { id: 'night', stops: ['#110F15', '#1D1020'], angle: 180 },
-      { id: 'ocean', stops: ['#110F15', '#141A22'], angle: 180 },
-      { id: 'forest', stops: ['#0F1713', '#110F15'], angle: 180 },
+      { id: 'night', stops: ['#110F15', '#2D1236'], angle: 180 },
+      { id: 'ocean', stops: ['#110F15', '#15233B'], angle: 180 },
+      { id: 'forest', stops: ['#0E2A20', '#110F15'], angle: 180 },
     ],
     // The least dimming that keeps the light heading readable over any picture (whole percent).
     imageDim: { min: Math.round(minVeil(TEXT, VEIL) * 100), max: 90 },

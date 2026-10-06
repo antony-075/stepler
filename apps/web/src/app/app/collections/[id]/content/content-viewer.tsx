@@ -6,9 +6,9 @@ import { FrameViewer } from '@stepler/ui/components/frame-viewer';
 import { useToast } from '@stepler/ui/components/toast';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { useQuery } from '@tanstack/react-query';
-import { Download, ImageIcon, Trash2 } from 'lucide-react';
+import { Download, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { getContent } from '@/api/content';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { contentDetailKey } from './use-pending-previews';
@@ -20,14 +20,15 @@ const DETAIL_STALE_MS = 30 * 60_000;
 /**
  * One frame for the collection's owner (DESIGN-SYSTEM.md §5.12, [O3]): full screen on phones and
  * tablets, a large centred dialog from `lg`. The number, date and contributor's name on top,
- * «Зробити обкладинкою» (a photo with a thumbnail) and «Видалити» beside «Закрити», ←/→ across
+ * «Завантажити» and «Видалити» beside «Закрити» (the cover is chosen in the guest-page editor
+ * now, owner 2026-10-06), ←/→ across
  * the frames already loaded in the grid. A wish is a centred card in large type (20–24px, at
  * most 60 characters a line; a long one scrolls in its own focusable box). Files load their detail for presigned links: a photo shows its 1600px
  * preview (upright, HEIC included; before it exists, the original where the browser can show
  * it), a video plays natively over its poster (`preload="metadata"`, with a fallback line when
  * the browser cannot play it), a document or a photo without a preview is a type tile with
- * «Завантажити» (always an attachment). The details add size, type, dimensions
- * and duration. Deleting asks first, in plain
+ * «Завантажити» (always an attachment). The details panel groups the frame (added, type, from)
+ * and the file (name, size, dimensions, duration), each a small label over its value. Deleting asks first, in plain
  * words: guests stop seeing it and its number is never reused.
  */
 export function ContentViewer({
@@ -36,7 +37,6 @@ export function ContentViewer({
   onNavigate,
   onClose,
   onDelete,
-  onSetCover,
 }: {
   items: AdminContentItem[];
   frameNo: number | undefined;
@@ -44,15 +44,12 @@ export function ContentViewer({
   onClose: () => void;
   /** Deletes the frame; the caller updates the grid and closes the viewer. */
   onDelete: (item: AdminContentItem) => Promise<void>;
-  /** «Зробити обкладинкою» for a photo with a thumbnail; absent when the cover can't change. */
-  onSetCover?: (item: AdminContentItem) => Promise<void>;
 }) {
   const t = useTranslations('content');
   const format = useFormatter();
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [videoFailed, setVideoFailed] = useState<string | null>(null);
-  const [settingCover, setSettingCover] = useState(false);
   const index = frameNo === undefined ? -1 : items.findIndex((item) => item.frameNo === frameNo);
   const item = index === -1 ? undefined : items[index];
   const prev = index > 0 ? items[index - 1] : undefined;
@@ -109,26 +106,6 @@ export function ContentViewer({
                 <span className="max-sm:sr-only">{t('viewer.download')}</span>
               </a>
             ) : null}
-            {onSetCover !== undefined && item.kind === 'PHOTO' && item.thumbnailUrl !== null ? (
-              <button
-                type="button"
-                data-slot="viewer-set-cover"
-                aria-disabled={settingCover || undefined}
-                onClick={() => {
-                  if (settingCover) return;
-                  setSettingCover(true);
-                  onSetCover(item)
-                    .catch(() => {
-                      // The caller toasted why.
-                    })
-                    .finally(() => setSettingCover(false));
-                }}
-                className={viewerButton}
-              >
-                <ImageIcon aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">{t('viewer.setCover')}</span>
-              </button>
-            ) : null}
             <button type="button" onClick={() => setConfirming(true)} className={viewerButton}>
               <Trash2 aria-hidden="true" className="size-4" />
               <span className="max-sm:sr-only">{t('viewer.delete')}</span>
@@ -136,45 +113,45 @@ export function ContentViewer({
           </>
         }
         details={
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-6 gap-y-1">
-            <dt className="text-muted-foreground">{t('viewer.added')}</dt>
-            <dd className="tabular-nums">
-              {format.dateTime(created, { dateStyle: 'long', timeStyle: 'short' })}
-            </dd>
-            <dt className="text-muted-foreground">{t('viewer.type')}</dt>
-            <dd>{t(`kindTitle.${item.kind}`)}</dd>
-            <dt className="text-muted-foreground">{t('viewer.from')}</dt>
-            <dd className="[overflow-wrap:anywhere]">{name}</dd>
-            {item.originalFilename === null ? null : (
-              <>
-                <dt className="text-muted-foreground">{t('viewer.file')}</dt>
-                <dd className="[overflow-wrap:anywhere]">{item.originalFilename}</dd>
-              </>
+          <div className="grid gap-5">
+            <DetailGroup>
+              <Detail label={t('viewer.added')}>
+                <span className="block tabular-nums">
+                  {format.dateTime(created, { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+                <span className="block text-[var(--viewer-muted)] tabular-nums">
+                  {format.dateTime(created, { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </Detail>
+              <Detail label={t('viewer.type')}>{t(`kindTitle.${item.kind}`)}</Detail>
+              <Detail label={t('viewer.from')}>{name}</Detail>
+            </DetailGroup>
+            {item.kind === 'TEXT' ? null : (
+              <DetailGroup>
+                {item.originalFilename === null ? null : (
+                  <Detail label={t('viewer.file')}>{item.originalFilename}</Detail>
+                )}
+                {item.sizeBytes === null ? null : (
+                  <Detail label={t('viewer.size')} data>
+                    {formatBytes(format.number, item.sizeBytes)}
+                  </Detail>
+                )}
+                {item.width === null || item.height === null ? null : (
+                  <Detail label={t('viewer.dimensions')} data>
+                    {t('viewer.dimensionsValue', { width: item.width, height: item.height })}
+                  </Detail>
+                )}
+                {item.durationMs === null ? null : (
+                  <Detail label={t('viewer.duration')} data>
+                    {formatDuration(item.durationMs)}
+                  </Detail>
+                )}
+              </DetailGroup>
             )}
-            {item.sizeBytes === null ? null : (
-              <>
-                <dt className="text-muted-foreground">{t('viewer.size')}</dt>
-                <dd className="tabular-nums">{formatBytes(format.number, item.sizeBytes)}</dd>
-              </>
-            )}
-            {item.width === null || item.height === null ? null : (
-              <>
-                <dt className="text-muted-foreground">{t('viewer.dimensions')}</dt>
-                <dd className="tabular-nums">
-                  {t('viewer.dimensionsValue', { width: item.width, height: item.height })}
-                </dd>
-              </>
-            )}
-            {item.durationMs === null ? null : (
-              <>
-                <dt className="text-muted-foreground">{t('viewer.duration')}</dt>
-                <dd className="tabular-nums">{formatDuration(item.durationMs)}</dd>
-              </>
-            )}
-            <dd className="col-span-2 pt-2 text-sm text-muted-foreground">
+            <p className="border-t border-[rgb(255_255_255/0.12)] pt-4 text-sm leading-snug text-[var(--viewer-muted)]">
               {t('viewer.numberHint')}
-            </dd>
-          </dl>
+            </p>
+          </div>
         }
       >
         {item.kind === 'TEXT' ? (
@@ -208,5 +185,31 @@ export function ContentViewer({
         }}
       />
     </>
+  );
+}
+
+/** A group of details: label over value pairs, 14px apart. */
+function DetailGroup({ children }: { children: ReactNode }) {
+  return <dl className="grid gap-3.5">{children}</dl>;
+}
+
+/**
+ * One detail: a small muted label over its value, which may wrap anywhere (a long file name) but
+ * never squeezes beside its label. `data` sets the value in mono (sizes, dimensions, durations).
+ */
+function Detail({ label, data, children }: { label: string; data?: boolean; children: ReactNode }) {
+  return (
+    <div className="grid gap-0.5">
+      <dt className="text-xs text-[var(--viewer-muted)]">{label}</dt>
+      <dd
+        className={
+          data
+            ? 'font-mono text-sm tabular-nums'
+            : 'text-[0.9375rem] leading-snug [overflow-wrap:anywhere]'
+        }
+      >
+        {children}
+      </dd>
+    </div>
   );
 }

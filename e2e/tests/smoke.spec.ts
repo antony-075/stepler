@@ -47,7 +47,7 @@ test('the browser chrome follows the page colour in both themes', async ({ page 
       metas.map((meta) => [meta.getAttribute('media'), meta.getAttribute('content')]),
     );
   expect(colours).toEqual([
-    ['(prefers-color-scheme: light)', '#f0f1ee'],
-    ['(prefers-color-scheme: dark)', '#141615'],
+    ['(prefers-color-scheme: light)', '#f4f4f5'],
+    ['(prefers-color-scheme: dark)', '#0c0c0e'],
   ]);
 });

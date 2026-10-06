@@ -3,6 +3,7 @@ import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { samplePhoto } from '../stories/sample-photo';
 import { FrameGrid } from './frame-grid';
 import { UploadFrame, type UploadFrameLabels } from './upload-frame';
+import { minTarget } from '../stories/target';
 
 const labels: UploadFrameLabels = {
   queued: 'У черзі',
@@ -130,7 +131,7 @@ export const Failed: Story = {
     ).toBeVisible();
     await expect(canvas.getByText('Не вдалося')).toBeVisible();
     const retry = canvas.getByRole('button', { name: 'Повторити' });
-    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.tab();
     await expect(retry).toHaveFocus();
     await userEvent.keyboard('{Enter}');
@@ -144,8 +145,8 @@ export const Cancel: Story = {
   play: async ({ canvas, args }) => {
     const cancel = canvas.getByRole('button', { name: 'Скасувати' });
     const box = cancel.getBoundingClientRect();
-    await expect(box.width).toBeGreaterThanOrEqual(44);
-    await expect(box.height).toBeGreaterThanOrEqual(44);
+    await expect(box.width).toBeGreaterThanOrEqual(minTarget());
+    await expect(box.height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.click(cancel);
     await expect(args.onCancel).toHaveBeenCalledOnce();
   },

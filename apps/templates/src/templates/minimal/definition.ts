@@ -21,7 +21,7 @@ export const minimal: TemplateDefinition = {
   },
   options: {
     backgroundKinds: ['solid'],
-    swatches: ['#FFFFFF', '#F7F7F5', '#F4F6FA', '#FAF7F2', '#F5F5F7'],
+    swatches: ['#FFFFFF', '#F2F1EC', '#EBF0F7', '#F8F1E4', '#F0EEF5'],
     gradients: [],
     imageDim: { min: 0, max: 0 },
     backgroundImageSource: 'own',

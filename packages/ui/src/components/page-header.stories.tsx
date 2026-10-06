@@ -135,7 +135,7 @@ export const Compact: Story = {
   globals: { viewport: { value: 'laptop' } },
   play: async ({ canvas }) => {
     const title = canvas.getByRole('heading', { level: 1, name: 'Settings' });
-    await expect(getComputedStyle(title).fontSize).toBe('44px');
+    await expect(getComputedStyle(title).fontSize).toBe('26px');
     await expect(title).toHaveAttribute('data-size', 'compact');
   },
 };
@@ -145,7 +145,7 @@ export const CompactPhone: Story = {
   globals: { viewport: { value: 'phone' } },
   play: async ({ canvas }) => {
     const title = canvas.getByRole('heading', { level: 1, name: 'Settings' });
-    await expect(getComputedStyle(title).fontSize).toBe('28px');
+    await expect(getComputedStyle(title).fontSize).toBe('24px');
   },
 };
 

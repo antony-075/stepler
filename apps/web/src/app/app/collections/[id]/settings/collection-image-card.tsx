@@ -1,28 +1,32 @@
 'use client';
 
 // «Картинка колекції» in «Параметри колекції» (plan Task 24, ADR 0017; owner 2026-10-05).
-// Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design):
-// - A SectionCard like «Архівування»: the h2, then the helper as its first line, because the one
-//   thing to understand is who sees it (only the owner, on the dashboard; guests see the cover).
-// - The picture is the real mark at the dashboard card's size (80px on phones, 128px from `sm`),
-//   initials included, so the admin sees exactly what the card will show. Beside it: the status
-//   line (`role="status"`), then «Завантажити» (ink), «Вибрати з кадрів» (outline) and
-//   «Прибрати» (outline: the danger zone keeps the page's only red button) behind a destructive
-//   ConfirmDialog, then the file types.
-// - States: none (initials), uploading (progress line and «Скасувати»), a failed transfer (why,
-//   «Повторити»), processing («Готується…», asked for again every 10 s), failed, ready; archived
-//   is read-only with one line saying why. Phones: the buttons at full width, one under another
-//   (as «Архівувати»); from `sm` in a row. All ≥ 44px; nothing is hover-only.
+// Design pass (frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design; V1
+// «Графіт», DESIGN-SYSTEM.md §0): the same idiom as the guest page editor's image control.
+// - A SectionCard after «Назва й опис»: the h2 with the hint on the right from `md`, because the
+//   one thing to understand is who sees it (only the owner, on the dashboard; guests see the cover).
+// - The tile is the real mark as the dashboard's tiles and the collection's mini-nav show it (the
+//   16:9 band; initials included), so the admin sees exactly what those will show. Beside it what
+//   is happening in words (`role="status"`), with «Прибрати» once there is an image (a quiet
+//   destructive text button behind a destructive ConfirmDialog; the danger zone keeps the page's
+//   only red fill). Under them «Завантажити»/«Замінити» (ink) and «Вибрати з кадрів» (outline),
+//   then the file types.
+// - States keep the tile's box in place: none (the initials, «Поки що — ініціали»); uploading (the
+//   tile under a veil, the percent in mono, a progress line, «Скасувати»); a failed transfer (why,
+//   «Повторити»); processing (a spinner on the tile, «Готується…», asked for again every 10 s;
+//   after two minutes the slow state with «Перевірити ще раз»); failed (a warning on the tile);
+//   ready. Archived is read-only with one line saying why. Buttons share the row and wrap; all
+//   ≥ 44px on touch; nothing is hover-only.
 
 import type { AdminContentItem, Collection, CollectionDetail } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { Progress } from '@stepler/ui/components/progress';
-import { Spinner } from '@stepler/ui/components/spinner';
 import { useToast } from '@stepler/ui/components/toast';
+import { cn } from '@stepler/ui/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
-import { Images, RotateCw, Trash2, Upload } from 'lucide-react';
+import { Images, LoaderCircle, RotateCw, Trash2, TriangleAlert, Upload } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
@@ -37,6 +41,7 @@ import { CollectionMark } from '../../../collection-mark';
 import { FramePicker } from '../images/frame-picker';
 import { imageErrorKey } from '../images/image-errors';
 import { imageState } from '../images/image-state';
+import { ImageProcessing, StatusLine } from '../images/image-status';
 import { useImageUpload } from '../images/use-image-upload';
 import { SectionCard } from '../section-card';
 
@@ -97,55 +102,91 @@ export function CollectionImageCard({ collection }: { collection: Collection }) 
         ? tImage(`reason.${upload.phase.code}`)
         : tRoot(imageErrorKey(upload.phase.code, 'upload'))
       : null;
-  const hintId = 'collection-image-hint';
+
+  const canRemove = image !== null && !readOnly && state !== 'uploading';
 
   return (
-    <SectionCard id="collection-image" title={t('image')}>
+    <SectionCard id="collection-image" title={t('image')} hint={t('imageHint')}>
       <div
-        className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4 sm:gap-6"
+        className="grid grid-cols-[9rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-4"
         data-slot="collection-image"
         data-state={state}
       >
-        <CollectionMark
-          collection={collection}
-          size="cover"
-          className={state === 'uploading' ? 'opacity-50' : undefined}
-        />
-        <div className="grid min-w-0 gap-3">
-          <p id={hintId} className="max-w-[60ch] text-sm text-pretty text-muted-foreground">
-            {t('imageHint')}
-          </p>
-          <p className="text-sm" role="status">
-            {state === 'uploading' && upload.phase.kind === 'uploading' ? (
-              <span className="font-semibold">
+        <div aria-hidden="true" data-slot="image-tile" className="relative">
+          <CollectionMark
+            collection={collection}
+            size="band"
+            className={cn(
+              'rounded-frame border text-[1.75rem]',
+              state === 'failed' && 'border-destructive/40',
+            )}
+          />
+          {state === 'uploading' ? (
+            <span className="absolute inset-0 rounded-frame bg-(--veil)" />
+          ) : state === 'processing' || state === 'failed' ? (
+            <span
+              className={cn('absolute inset-0 grid place-items-center rounded-frame bg-(--veil)', {
+                'text-destructive': state === 'failed',
+              })}
+            >
+              {state === 'failed' ? (
+                <TriangleAlert className="size-5" />
+              ) : (
+                <LoaderCircle className="size-5 motion-safe:animate-spin" />
+              )}
+            </span>
+          ) : null}
+        </div>
+        <div className="grid min-w-0 gap-1 pt-0.5" role="status">
+          {state === 'uploading' && upload.phase.kind === 'uploading' ? (
+            <>
+              <StatusLine strong>
                 {tImage('uploading')}{' '}
                 <span className="type-data tabular-nums">
                   {format.number(upload.phase.progress / 100, { style: 'percent' })}
                 </span>
-              </span>
-            ) : state === 'processing' ? (
-              <span className="inline-flex items-center gap-2 font-semibold">
-                <Spinner label={tImage('processing')} className="size-4 text-muted-foreground" />
-                <span aria-hidden="true">{tImage('processing')}</span>
-              </span>
-            ) : state === 'failed' ? (
-              <span className="text-destructive">{tImage('failed')}</span>
-            ) : state === 'ready' ? (
-              <span className="font-semibold">{t('imageReady')}</span>
-            ) : state === 'none' ? (
-              <span className="text-muted-foreground">{t('imageNone')}</span>
-            ) : null}
-          </p>
+              </StatusLine>
+              <Progress value={upload.phase.progress} label={tImage('uploading')} />
+            </>
+          ) : state === 'processing' ? (
+            <ImageProcessing
+              onCheck={() =>
+                void queryClient.invalidateQueries({ queryKey: collectionKey(collection.id) })
+              }
+            />
+          ) : state === 'failed' ? (
+            <StatusLine tone="destructive" strong>
+              {tImage('failed')}
+            </StatusLine>
+          ) : state === 'ready' ? (
+            <StatusLine strong>{t('imageReady')}</StatusLine>
+          ) : state === 'none' ? (
+            <StatusLine tone="muted">{t('imageNone')}</StatusLine>
+          ) : (
+            // A failed transfer: the alert below says why; the image the collection has stays.
+            <StatusLine strong>{image !== null ? t('imageReady') : t('imageNone')}</StatusLine>
+          )}
+          {canRemove ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="-ml-2 justify-self-start text-destructive hover:text-destructive pointer-coarse:min-h-11"
+              onClick={() => {
+                setRemoveFailure(null);
+                setConfirming(true);
+              }}
+            >
+              <Trash2 aria-hidden="true" />
+              {t('imageRemove')}
+            </Button>
+          ) : null}
         </div>
       </div>
 
-      {state === 'uploading' && upload.phase.kind === 'uploading' ? (
-        <div className="grid gap-2">
-          <Progress value={upload.phase.progress} label={tImage('uploading')} />
-          <Button variant="outline" className="justify-self-start" onClick={upload.cancel}>
-            {tImage('cancel')}
-          </Button>
-        </div>
+      {state === 'uploading' ? (
+        <Button variant="outline" className="justify-self-start" onClick={upload.cancel}>
+          {tImage('cancel')}
+        </Button>
       ) : null}
 
       {state === 'failed-upload' ? (
@@ -173,34 +214,17 @@ export function CollectionImageCard({ collection }: { collection: Collection }) 
         <p className="text-sm text-muted-foreground">{tImage('archivedRefused')}</p>
       ) : state === 'uploading' ? null : (
         <div className="grid gap-2">
-          <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <Button
-              className="w-full sm:w-auto"
-              aria-describedby={hintId}
-              onClick={() => fileInput.current?.click()}
-            >
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2 sm:flex sm:flex-wrap">
+            <Button onClick={() => fileInput.current?.click()}>
               <Upload aria-hidden="true" />
-              {tImage('upload')}
+              {image === null ? tImage('upload') : tImage('replace')}
             </Button>
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setPicking(true)}>
+            <Button variant="outline" onClick={() => setPicking(true)}>
               <Images aria-hidden="true" />
               {tImage('pickFrame')}
             </Button>
-            {image === null ? null : (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  setRemoveFailure(null);
-                  setConfirming(true);
-                }}
-              >
-                <Trash2 aria-hidden="true" />
-                {t('imageRemove')}
-              </Button>
-            )}
           </div>
-          <p className="text-sm text-muted-foreground">{tImage('helper')}</p>
+          <p className="type-caption text-muted-foreground">{tImage('helper')}</p>
         </div>
       )}
 

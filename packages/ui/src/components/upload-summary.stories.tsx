@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent } from 'storybook/test';
 import { UploadSummary, type UploadSummaryLabels } from './upload-summary';
+import { minTarget } from '../stories/target';
 
 const mb = (bytes: number) => `${Math.round(bytes / 1_000_000)} МБ`;
 
@@ -72,7 +73,7 @@ export const Partial: Story = {
     // Everything has settled: nothing left to cancel.
     await expect(canvas.queryByRole('button', { name: 'Скасувати решту' })).toBeNull();
     const retry = canvas.getByRole('button', { name: 'Повторити невдалі' });
-    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.click(retry);
     await expect(args.onRetryFailed).toHaveBeenCalledOnce();
     await expect(canvas.getByText('Додано 27 з 30. 3 не вдалося')).toBeInTheDocument();

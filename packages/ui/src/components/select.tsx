@@ -59,8 +59,8 @@ function SelectValue(props: ComponentProps<typeof SelectPrimitive.Value>) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
-// Based on shadcn/ui (new-york). Deviations: the Input's field look and 48px height (a 16px
-// font so iOS Safari does not zoom), the edge stays dark while the list is open, and the
+// Based on shadcn/ui (new-york). Deviations: the Input's field look and height (44px with a 16px
+// font on phones so iOS Safari does not zoom, 36px with a mouse from `md`), the edge stays dark while the list is open, and the
 // trigger's icons are muted like the chevron.
 function SelectTrigger({
   className,
@@ -85,7 +85,7 @@ function SelectTrigger({
       }}
       className={cn(
         fieldClassName,
-        'flex h-12 items-center justify-between gap-2 px-3.5 text-left whitespace-nowrap data-[state=open]:border-foreground data-placeholder:text-muted-foreground',
+        'flex h-11 items-center justify-between gap-2 px-3 text-left whitespace-nowrap md:pointer-fine:h-9 data-[state=open]:border-muted-foreground data-placeholder:text-muted-foreground',
         '*:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 *:data-[slot=select-value]:truncate',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className,
@@ -180,7 +180,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        'relative flex min-h-11 w-full items-center gap-2 rounded-sheet py-2 pr-9 pl-3 text-base outline-none select-none [overflow-wrap:anywhere] focus:bg-hover-popover [[data-input=keyboard]_&]:focus-visible:outline-2 [[data-input=keyboard]_&]:focus-visible:outline-solid [[data-input=keyboard]_&]:focus-visible:-outline-offset-2 [[data-input=keyboard]_&]:focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:text-muted-foreground',
+        'relative flex min-h-11 w-full items-center gap-2 rounded-[5px] py-2 pr-9 pl-3 text-base outline-none md:pointer-fine:min-h-8 md:pointer-fine:py-1.5 md:pointer-fine:text-[0.875rem] select-none [overflow-wrap:anywhere] focus:bg-hover-popover [[data-input=keyboard]_&]:focus-visible:outline-2 [[data-input=keyboard]_&]:focus-visible:outline-solid [[data-input=keyboard]_&]:focus-visible:-outline-offset-2 [[data-input=keyboard]_&]:focus-visible:outline-ring data-disabled:pointer-events-none data-disabled:text-muted-foreground',
         'data-[state=checked]:font-semibold',
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className,

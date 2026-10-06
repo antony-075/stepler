@@ -2,7 +2,12 @@ import type { Collection } from '@stepler/contracts';
 import { describe, expect, it } from 'vitest';
 import { visibleCollections } from './collection-filters';
 
-const collection = (title: string, createdAt: string, archived = false): Collection => ({
+const collection = (
+  title: string,
+  createdAt: string,
+  archived = false,
+  storageBytes = 0,
+): Collection => ({
   id: `0198f0b0-0000-7000-8000-${String(Math.abs(hash(title)))
     .padStart(12, '0')
     .slice(0, 12)}`,
@@ -16,6 +21,7 @@ const collection = (title: string, createdAt: string, archived = false): Collect
   defaultLinkPermissions: null,
   contentCount: 0,
   lastContentAt: null,
+  storageBytes,
   welcomeMessage: null,
   image: null,
 });
@@ -68,6 +74,27 @@ describe('visibleCollections', () => {
       'Весілля Олі',
       'Випускний 2025',
       'Ювілей бабусі',
+    ]);
+  });
+
+  it('sorts by the content size, largest or smallest first; equal sizes newest first', () => {
+    const sized = [
+      collection('Мала', '2026-09-03T10:00:00.000Z', false, 1_000),
+      collection('Велика', '2026-09-01T10:00:00.000Z', false, 128_000_000),
+      collection('Порожня нова', '2026-09-05T10:00:00.000Z', false, 0),
+      collection('Порожня стара', '2026-09-02T10:00:00.000Z', false, 0),
+    ];
+    expect(titles(visibleCollections(sized, [], { ...base, sort: 'largest' }))).toEqual([
+      'Велика',
+      'Мала',
+      'Порожня нова',
+      'Порожня стара',
+    ]);
+    expect(titles(visibleCollections(sized, [], { ...base, sort: 'smallest' }))).toEqual([
+      'Порожня нова',
+      'Порожня стара',
+      'Мала',
+      'Велика',
     ]);
   });
 });

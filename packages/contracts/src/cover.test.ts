@@ -33,6 +33,7 @@ describe('collectionWelcomeMessageSchema', () => {
 describe('adminImageSchema', () => {
   test('a READY image has URLs and dimensions; a PENDING one has nulls', () => {
     const ready = {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
       status: 'READY',
       thumbnailUrl: URL_A,
       previewUrl: URL_B,
@@ -42,6 +43,7 @@ describe('adminImageSchema', () => {
     };
     expect(adminImageSchema.parse(ready)).toEqual(ready);
     const pending = {
+      id: '01a0ee76-0574-7fe5-a38b-53b07a9b40f9',
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,

@@ -1,14 +1,14 @@
 // T6 «Мінімалізм» (`minimal`), to its artboards (plan Task 22, Appendix A; T6-phone and
 // T6-desktop in docs/design/guest-templates). Design pass (frontend-design, ui-ux-pro-max,
 // web-design-guidelines, responsive-design):
-// - White space and type: a 52px header, 72px of air, the title in Golos Text 46/1.04 at
+// - White space and type: a 52px header, 72px of air, the title in Golos Text up to 46/1.04 at
 //   weight 500, the welcome at 17, the count at 14, then a ruled action row (hairlines above
 //   and below): one blue 48px button and the wish as an underlined text button. The notice
 //   follows; sections at 20/500 with 72px between them, 3-column grids with 12px gaps.
 // - No cover by default; above the title (`top`, 16:10), or beside it (`side`): a 4:5 picture
 //   40% wide on phones, at the right of the title block in the desktop column.
-// - From 1024px: a 576px left column that stays in view (title 76/1.02, welcome 19, the ruled
-//   actions, the footer at its bottom) and the frames on the right (padding 104/80, 3 columns
+// - From 1024px: a 576px left column that stays in view (title 64/1.02, so long words fit it
+//   whole; welcome 19, the ruled actions, the footer at its bottom) and the frames on the right (padding 104/80, 3 columns
 //   with 28px gaps, 88px between sections).
 // - A solid background only (locked); light only [D5]. Links are the text colour, underlined.
 

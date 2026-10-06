@@ -58,17 +58,28 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { CheckSquare, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
+import { CheckSquare, Download, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type MouseEvent, type PointerEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type MouseEvent,
+  type PointerEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import {
   bulkDeleteContent,
   contentCountsKey,
   contentListKey,
   contentListsKey,
   deleteContent,
+  getContent,
   listContent,
 } from '@/api/content';
 import { collectionsListKey } from '@/api/collections';
@@ -83,12 +94,11 @@ import {
   lockedFilters,
   sortFromParam,
 } from './content-filters';
-import { useDraftCoverFromFrame } from '../guest-page/use-draft-cover-from-frame';
 import { ContentViewer } from './content-viewer';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
-import { refreshFrames, usePendingPreviews } from './use-pending-previews';
+import { contentDetailKey, refreshFrames, usePendingPreviews } from './use-pending-previews';
 import { formatBytes, formatDuration } from '@/format/bytes';
 import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
@@ -110,12 +120,13 @@ export function ContentTab({ collection }: { collection: Collection }) {
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
   const { toast } = useToast();
-  const setCover = useDraftCoverFromFrame(collection.id);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   // The frame toggled last: the start of a Shift+click range.
   const [anchor, setAnchor] = useState<string | null>(null);
   const [confirmingBulk, setConfirmingBulk] = useState(false);
+  // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
+  const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
   const view = `${kind ?? 'all'}:${sort}`;
   const [selectionView, setSelectionView] = useState(view);
@@ -125,6 +136,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
     setAnchor(null);
   }
   const grid = useRef<HTMLDivElement>(null);
+  const column = useColumnBox(grid, selecting);
   const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
@@ -207,6 +219,23 @@ export function ContentTab({ collection }: { collection: Collection }) {
       queryClient.invalidateQueries({ queryKey: contentCountsKey(collection.id) }),
       queryClient.invalidateQueries({ queryKey: collectionsListKey(collection.status) }),
     ]);
+  }
+
+  /**
+   * A tile's «Завантажити»: the frame's signed download link (an attachment), from the detail
+   * the viewer reads too (cached for half an hour).
+   */
+  async function downloadFrame(item: AdminContentItem) {
+    try {
+      const detail = await queryClient.fetchQuery({
+        queryKey: contentDetailKey(item.id),
+        queryFn: () => getContent(item.id),
+        staleTime: 30 * 60_000,
+      });
+      if (detail.downloadUrl) window.location.assign(detail.downloadUrl);
+    } catch {
+      toast({ variant: 'error', title: t('tile.downloadFailed') });
+    }
   }
 
   async function removeFrame(item: AdminContentItem) {
@@ -333,8 +362,24 @@ export function ContentTab({ collection }: { collection: Collection }) {
               ))}
             </ToggleGroup>
           </div>
-          <div className="flex min-w-0 items-center gap-3">
-            <span id={sortId} className="shrink-0 text-sm text-muted-foreground max-sm:sr-only">
+          <div className="flex min-w-0 items-center gap-1.5">
+            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+            <Button
+              variant="ghost"
+              aria-disabled={refreshing || undefined}
+              onClick={() => void refreshAll()}
+              className="h-11 shrink-0 px-3 text-foreground-soft md:h-9 pointer-coarse:h-11"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={cn(
+                  'size-4',
+                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
+                )}
+              />
+              <span className="max-sm:sr-only">{t('refresh')}</span>
+            </Button>
+            <span id={sortId} className="sr-only">
               {t('sortLabel')}
             </span>
             <Select
@@ -345,7 +390,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
             >
               <SelectTrigger
                 aria-labelledby={sortId}
-                className="h-11 w-full min-w-0 sm:min-w-44 md:h-9 md:w-52 pointer-coarse:h-11"
+                className="h-11 w-full min-w-0 sm:min-w-40 md:h-9 md:w-auto pointer-coarse:h-11"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -359,43 +404,19 @@ export function ContentTab({ collection }: { collection: Collection }) {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            {/* «Вибрати», then «Вибрати все завантажене» while selecting; icon only on phones. */}
-            {selecting ? (
-              <Button
-                variant="outline"
-                onClick={() => setSelected(new Set(items.map((item) => item.id)))}
-                className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-              >
-                <ListChecks aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">{t('select.all')}</span>
-              </Button>
-            ) : (
-              <Button
-                ref={selectButton}
-                variant="outline"
-                disabled={items.length === 0}
-                onClick={() => setSelecting(true)}
-                className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
-              >
-                <CheckSquare aria-hidden="true" className="size-4" />
-                <span className="max-sm:sr-only">{t('select.start')}</span>
-              </Button>
-            )}
-            {/* Icon only on phones (the word stays as its name), icon and word from sm. */}
+            <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
+            {/* «Вибрати» turns selection on and off (pressed while on); «Вибрати все
+                завантажене» is in the selection bar (owner 2026-10-06). Icon only on phones. */}
             <Button
+              ref={selectButton}
               variant="outline"
-              aria-disabled={refreshing || undefined}
-              onClick={() => void refreshAll()}
-              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11"
+              aria-pressed={selecting}
+              disabled={items.length === 0 && !selecting}
+              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
             >
-              <RefreshCw
-                aria-hidden="true"
-                className={cn(
-                  'size-4',
-                  refreshing && 'motion-safe:animate-spin motion-safe:[animation-duration:900ms]',
-                )}
-              />
-              <span className="max-sm:sr-only">{t('refresh')}</span>
+              <CheckSquare aria-hidden="true" className="size-4" />
+              <span className="max-sm:sr-only">{t('select.start')}</span>
             </Button>
           </div>
         </div>
@@ -456,8 +477,9 @@ export function ContentTab({ collection }: { collection: Collection }) {
           />
         </Panel>
       ) : (
-        <div ref={grid} className="grid gap-4">
-          <FrameGrid ariaLabel={t('listLabel')}>
+        // While the bar is up, room under the last row so it never covers a frame.
+        <div ref={grid} className={cn('grid gap-4', { 'pb-24': selecting })}>
+          <FrameGrid ariaLabel={t('listLabel')} density="dense">
             {items.map((item) => (
               <div
                 key={item.id}
@@ -470,6 +492,8 @@ export function ContentTab({ collection }: { collection: Collection }) {
                 <AdminFrame
                   item={item}
                   collectionId={collection.id}
+                  onDownload={() => void downloadFrame(item)}
+                  onDelete={() => setDeleting(item)}
                   onOpen={() => {
                     if (!longPress.consume(item.id)) openFrame(item.frameNo);
                   }}
@@ -500,26 +524,43 @@ export function ContentTab({ collection }: { collection: Collection }) {
             </Button>
           ) : null}
           {selecting ? (
-            <SelectionBar
-              count={selected.size}
-              countLabel={t('select.count', { count: selected.size })}
-              label={t('select.barLabel')}
-              clearLabel={t('select.clear')}
-              onClear={exitSelection}
-              className="max-lg:-mx-(--stepler-gutter)"
-              actions={
-                <Button
-                  variant="outline"
-                  aria-disabled={selected.size === 0 || undefined}
-                  onClick={() => {
-                    if (selected.size > 0) setConfirmingBulk(true);
-                  }}
-                >
-                  <Trash2 aria-hidden="true" />
-                  {t('select.delete')}
-                </Button>
-              }
-            />
+            // Docked to the window's bottom (owner 2026-10-06), centred over the content column
+            // (measured, so it never covers the sidebar or the mini-nav); full width on phones.
+            <div
+              className="pointer-events-none fixed bottom-0 z-(--z-dock) max-lg:inset-x-0 lg:bottom-[max(1.25rem,env(safe-area-inset-bottom))] lg:flex lg:justify-center"
+              style={column === null ? undefined : { left: column.left, width: column.width }}
+            >
+              <SelectionBar
+                count={selected.size}
+                countLabel={t('select.count', { count: selected.size })}
+                label={t('select.barLabel')}
+                clearLabel={t('select.clear')}
+                onClear={exitSelection}
+                className="pointer-events-auto static lg:mx-0"
+                actions={
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setSelected(new Set(items.map((item) => item.id)))}
+                      className="text-inverse-muted hover:bg-inverse-hover hover:text-inverse-foreground"
+                    >
+                      <ListChecks aria-hidden="true" />
+                      <span className="max-sm:sr-only">{t('select.all')}</span>
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      aria-disabled={selected.size === 0 || undefined}
+                      onClick={() => {
+                        if (selected.size > 0) setConfirmingBulk(true);
+                      }}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      {t('select.delete')}
+                    </Button>
+                  </>
+                }
+              />
+            </div>
           ) : null}
         </div>
       )}
@@ -542,7 +583,25 @@ export function ContentTab({ collection }: { collection: Collection }) {
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
         onClose={closeViewer}
         onDelete={removeFrame}
-        {...(collection.status === 'ARCHIVED' ? {} : { onSetCover: setCover })}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleting(null);
+        }}
+        title={t('delete.title', { frame: formatFrameNumber(deleting?.frameNo ?? 0) })}
+        description={t('delete.text')}
+        confirmLabel={t('delete.confirm')}
+        cancelLabel={t('delete.cancel')}
+        pendingLabel={t('delete.pending')}
+        errorMessage={t('delete.failed')}
+        destructive
+        onConfirm={async () => {
+          if (deleting === null) return;
+          await deleteContent(deleting.id);
+          await dropFrames(new Set([deleting.id]));
+          toast({ variant: 'info', title: t('delete.done') });
+        }}
       />
     </div>
   );
@@ -552,11 +611,15 @@ function AdminFrame({
   item,
   collectionId,
   onOpen,
+  onDownload,
+  onDelete,
   selection,
 }: {
   item: AdminContentItem;
   collectionId: string;
   onOpen: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
   /** In selection mode: the frame toggles instead of opening. */
   selection?: { selected: boolean; onToggle: (event: MouseEvent<HTMLButtonElement>) => void };
 }) {
@@ -577,15 +640,31 @@ function AdminFrame({
     selection === undefined
       ? {}
       : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
+  // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
+  const quick = {
+    outlined: true,
+    overlay: (
+      <>
+        {item.kind === 'TEXT' ? null : (
+          <TileAction label={t('tile.download', { number: item.frameNo })} onClick={onDownload}>
+            <Download aria-hidden="true" />
+          </TileAction>
+        )}
+        <TileAction label={t('tile.delete', { number: item.frameNo })} onClick={onDelete}>
+          <Trash2 aria-hidden="true" />
+        </TileAction>
+      </>
+    ),
+  };
   if (item.kind === 'TEXT') {
     return (
       <Frame
         kind="text"
-        number={item.frameNo}
         text={item.text ?? ''}
         name={name}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -594,12 +673,12 @@ function AdminFrame({
     return (
       <Frame
         kind="document"
-        number={item.frameNo}
         {...(item.sizeBytes === null ? {} : { meta: formatBytes(format.number, item.sizeBytes) })}
         docType={documentType(item)}
         {...(item.originalFilename === null ? {} : { docTitle: item.originalFilename })}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -616,10 +695,10 @@ function AdminFrame({
         {...(picture.kind === 'thumbnail'
           ? { media: <Thumbnail url={picture.url} item={item} collectionId={collectionId} /> }
           : {})}
-        number={item.frameNo}
         {...duration}
         accessibleName={accessibleName}
         onOpen={onOpen}
+        {...quick}
         {...select}
       />
     );
@@ -627,11 +706,11 @@ function AdminFrame({
   return (
     <Frame
       kind="pending-preview"
-      number={item.frameNo}
       {...duration}
       placeholderLabel={t(picture.kind === 'failed' ? 'previewUnavailable' : 'pendingPreview')}
       accessibleName={accessibleName}
       onOpen={onOpen}
+      {...quick}
       {...select}
     />
   );
@@ -750,4 +829,65 @@ function useLongPress(onLongPress: (id: string) => void) {
       return true;
     },
   };
+}
+
+/** A 32px icon button over a tile's corner, on a dark disc so it reads on any picture. */
+function TileAction({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        'grid size-8 place-items-center rounded-control bg-[rgb(24_24_27/0.72)] text-[#FFFFFF] transition-colors duration-(--duration-fast) hover:bg-[rgb(24_24_27/0.9)] motion-reduce:transition-none [&_svg]:size-4',
+        focusRing,
+        'focus-visible:outline-[#FFFFFF]',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Where the content column is on the screen (left and width), while `active`, following window
+ * resizes and the column's own size (a folded sidebar): the selection bar centres over it. From
+ * `lg` only; on phones the bar spans the window.
+ */
+function useColumnBox(
+  ref: { current: HTMLElement | null },
+  active: boolean,
+): { left: number; width: number } | null {
+  const [box, setBox] = useState<{ left: number; width: number } | null>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!active || element === null) return;
+    const wide = window.matchMedia('(min-width: 64rem)');
+    const measure = () => {
+      if (!wide.matches) {
+        setBox(null);
+        return;
+      }
+      const rect = element.getBoundingClientRect();
+      setBox({ left: rect.left, width: rect.width });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [ref, active]);
+  return active ? box : null;
 }

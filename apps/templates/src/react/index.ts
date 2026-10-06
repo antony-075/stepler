@@ -8,4 +8,6 @@ export type {
 } from './model.ts';
 export { TEMPLATES } from './registry.ts';
 export { GuestTemplateRoot } from './root.tsx';
+export { templateSurfaceProps, type TemplateSurfaceProps } from './theme.ts';
+export { GuestTemplateScreen, type TemplateScreen, type TemplateStatusIcon } from './screen.tsx';
 export { classic } from '../templates/classic/index.ts';

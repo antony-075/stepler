@@ -7,4 +7,6 @@ export interface SectionProps {
   editor: GuestPageEditorApi;
   def: TemplateDefinition;
   readOnly: boolean;
+  /** Opens another section of the accordion and brings it into view (a cross-reference). */
+  openSection?: (id: 'template' | 'welcome' | 'background' | 'accent' | 'font' | 'layout') => void;
 }

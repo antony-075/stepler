@@ -1,6 +1,7 @@
 import { CircleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
+import { InfoTip } from './info-tip';
 import { Label } from './label';
 
 /** Props the control must spread so its label, description and error are wired up. */
@@ -14,6 +15,8 @@ type FieldProps = {
   id: string;
   label: ReactNode;
   description?: ReactNode;
+  /** A nice-to-know hint as an info tooltip beside the label (`InfoTip`); still a description. */
+  hint?: string;
   error?: ReactNode;
   className?: string;
   children: (control: FieldControlProps) => ReactNode;
@@ -29,14 +32,26 @@ type FieldProps = {
  * Do not wrap a RadioGroup in Field: it is a `role="radiogroup"` div, so name it with
  * `aria-labelledby` or a `fieldset`/`legend` instead.
  */
-function Field({ id, label, description, error, className, children }: FieldProps) {
+function Field({ id, label, description, hint, error, className, children }: FieldProps) {
   const descriptionId = description ? `${id}-description` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-  const describedBy = [descriptionId, errorId].filter(Boolean).join(' ') || undefined;
+  const describedBy = [descriptionId, hintId, errorId].filter(Boolean).join(' ') || undefined;
 
   return (
     <div data-slot="field" className={cn('grid gap-2', className)}>
-      <Label htmlFor={id}>{label}</Label>
+      {hint ? (
+        // The tip sits outside the <label>, so it is not part of the control's name.
+        <div className="flex items-center gap-1">
+          <Label htmlFor={id}>{label}</Label>
+          <InfoTip text={hint} />
+          <span id={hintId} hidden>
+            {hint}
+          </span>
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
       {children({
         id,
         ...(describedBy ? { 'aria-describedby': describedBy } : {}),

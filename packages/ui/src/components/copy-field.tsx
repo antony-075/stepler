@@ -78,8 +78,8 @@ function CopyField({
           className="flex-1"
         />
         <div className="flex gap-2 *:flex-1">
-          {/* \`lg\` matches the input's 48px height. */}
-          <Button type="button" variant="outline" size="lg" onClick={() => void copy(value)}>
+          {/* The default size matches the input's height (44px, 36px with a mouse from `md`). */}
+          <Button type="button" variant="outline" onClick={() => void copy(value)}>
             {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
             {/* Both labels share one grid cell, so the button is as wide as the longer one and
               the input does not shift when the label changes. `invisible` also removes the

@@ -134,6 +134,38 @@ export class CollectionImagesService {
     }
   }
 
+  /**
+   * Points the draft's cover or background back at an image the collection still has (the
+   * editor's undo, owner remark 113): a row of this collection and slot, which exists only while
+   * a version references it (`collectGarbage`). Gone → `404`. Its bytes already count, so no quota
+   * check; what it replaces is collected as usual.
+   */
+  async restore(
+    a: AccountPrincipal,
+    collectionId: string,
+    target: ImageTarget,
+    imageId: string,
+  ): Promise<void> {
+    await this.jobs.ready();
+    await this.prisma.$transaction(async (tx) => {
+      const locked = await this.lockMutable(tx, a, collectionId);
+      const image = await tx.collectionImage.findFirst({
+        where: { id: imageId, collectionId: locked.id, slot: target.slot },
+        select: { id: true },
+      });
+      if (image === null) throw new AppError('NOT_FOUND', 404);
+      const replaced = await this.point(tx, locked.id, target, image.id);
+      await this.collectGarbage(tx, locked.id, replaced);
+      this.logger.log({
+        msg: 'image restored',
+        collectionId: locked.id,
+        imageId: image.id,
+        slot: target.slot,
+        replacedImageIds: replaced,
+      });
+    });
+  }
+
   /** Removes the target's image; an image nothing else references goes. No image: no-op. */
   async remove(a: AccountPrincipal, collectionId: string, target: ImageTarget): Promise<void> {
     await this.jobs.ready();

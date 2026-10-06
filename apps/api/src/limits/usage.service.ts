@@ -75,6 +75,37 @@ export class UsageService {
     return row.bytes;
   }
 
+  /**
+   * `collectionStorageBytes` for many collections in one query (a dashboard page; no N+1), by
+   * the same definition, so a card's size and the account's storage line always agree. Ids
+   * that are not found are left out of the map.
+   */
+  async storageBytesByCollection(
+    collectionIds: readonly string[],
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<Map<string, bigint>> {
+    if (collectionIds.length === 0) return new Map();
+    const rows = await tx.$queryRaw<{ id: string; bytes: bigint }[]>`
+      SELECT
+        k."id"::text AS "id",
+        COALESCE((
+          SELECT SUM(m."sizeBytes") FROM "MediaObject" m
+          JOIN "ContentItem" c ON c."id" = m."contentItemId"
+          WHERE c."collectionId" = k."id" AND c."deletedAt" IS NULL
+        ), 0)::bigint
+        + COALESCE((
+          SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
+          WHERE v."collectionId" = k."id"
+        ), 0)::bigint
+        + COALESCE((
+          SELECT SUM(u."declaredSizeBytes") FROM "UploadSession" u
+          WHERE u."collectionId" = k."id" AND u."status" IN ('INITIATED', 'COMPLETING')
+        ), 0)::bigint AS "bytes"
+      FROM "Collection" k
+      WHERE k."id" = ANY(${[...collectionIds]}::uuid[])`;
+    return new Map(rows.map((row) => [row.id, row.bytes]));
+  }
+
   /** The same over every collection of the account that is not being deleted. */
   async accountStorageBytes(tx: Prisma.TransactionClient, userId: string): Promise<bigint> {
     const [row] = await tx.$queryRaw<[{ bytes: bigint }]>`

@@ -180,8 +180,9 @@ test.describe('admin multi-select', () => {
     await confirm.getByRole('button', { name: 'Видалити' }).click();
     await expect(page.getByText('Видалено 3 кадри', { exact: true })).toBeVisible();
     await expect(bar).toHaveCount(0);
+    // The frames themselves (the focused tile also shows its «Завантажити» / «Видалити»).
     await expect(
-      page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button'),
+      page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button', { name: /^Кадр / }),
     ).toHaveCount(1);
     await expect(page.getByRole('tab', { name: /^Вміст/ })).toHaveText('Вміст1');
     // Focus lands on the remaining frame, not on the page.

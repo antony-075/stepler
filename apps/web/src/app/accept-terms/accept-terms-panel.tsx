@@ -28,6 +28,7 @@ import { acceptLegal, fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 import { LegalConsent } from '@/legal/legal-consent';
 import { legalPath } from '@/legal/slugs';
+import { BrandLoading } from '@/components/brand-loading';
 
 const MUST_CHECK_ID = 'accept-terms-error';
 
@@ -73,11 +74,7 @@ export function AcceptTermsPanel() {
 
   if (me.data === undefined) {
     if (me.error === null || unauthenticated) {
-      return (
-        <p role="status" className="text-muted-foreground">
-          {t('app.loading')}
-        </p>
-      );
+      return <BrandLoading label={t('app.loading')} className="py-10" />;
     }
     const loadFailure = isApiError(me.error) ? me.error.code : 'INTERNAL';
     return (

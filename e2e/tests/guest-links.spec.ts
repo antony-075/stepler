@@ -95,8 +95,13 @@ test.describe('links tab', () => {
       'aria-selected',
       'true',
     );
+    // Laptop heights compact the tabs to 36px (owner remark 104; mouse pointer, above WCAG 2.5.8's
+    // 24px); everywhere else they keep the 44px touch target.
+    const laptop = await page.evaluate(
+      () => matchMedia('(min-width: 64rem) and (max-height: 62.5rem)').matches,
+    );
     for (const tab of await tabs.getByRole('tab').all()) {
-      expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(laptop ? 36 : 44);
     }
     const crumbs = page.getByRole('navigation', { name: 'Де ви зараз' });
     await expect(crumbs.getByRole('listitem')).toHaveText(['Колекції', 'Весілля Олі та Тараса']);
@@ -118,7 +123,8 @@ test.describe('links tab', () => {
       'Керувати',
     ]);
     const copyBox = await main.getByRole('button', { name: 'Копіювати посилання' }).boundingBox();
-    expect(copyBox!.height).toBeGreaterThanOrEqual(40);
+    // 44px on phones; V1's dense 36px with a mouse (above WCAG 2.5.8's 24px).
+    expect(copyBox!.height).toBeGreaterThanOrEqual(page.viewportSize()!.width < 768 ? 40 : 32);
     // The row itself is not a link: a click on its text stays put.
     await expect(main.getByRole('link')).toHaveCount(0);
     await main.getByText(/^Фото · Відео/).click();

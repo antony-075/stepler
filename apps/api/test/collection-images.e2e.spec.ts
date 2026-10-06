@@ -104,7 +104,9 @@ describe('admin cover upload [A1]', () => {
     const editor = guestPageEditorSchema.parse(res.body);
     // The draft gets the cover; guests (the published version) do not see it until a publish.
     expect(editor.published.cover).toBeNull();
-    expect(editor.draft?.cover).toEqual({
+    const { id: imageId, ...draftCover } = editor.draft?.cover ?? { id: '' };
+    expect(imageId).not.toBe('');
+    expect(draftCover).toEqual({
       status: 'PENDING',
       thumbnailUrl: null,
       previewUrl: null,

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent, waitFor } from 'storybook/test';
 import { CopyButton } from './copy-button';
+import { minTarget } from '../stories/target';
 
 const LINK = 'https://stepler.app/g/anna-and-taras';
 
@@ -69,7 +70,7 @@ export const IconOnly: Story = {
   },
   play: async ({ canvas, canvasElement }) => {
     const button = canvas.getByRole('button', { name: 'Copy link' });
-    await expect(button.getBoundingClientRect().width).toBeGreaterThanOrEqual(44);
+    await expect(button.getBoundingClientRect().width).toBeGreaterThanOrEqual(minTarget());
     await userEvent.click(button);
     await expect(writeText).toHaveBeenCalledWith(LINK);
     await waitFor(() => expect(canvas.getByRole('button', { name: 'Copied' })).toBeVisible());
