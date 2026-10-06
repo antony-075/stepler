@@ -1,5 +1,5 @@
 import { ESLint } from 'eslint';
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 
 // The ops console's import boundary (slice 9, plan "Console architecture"): it moves to its own
 // app alone, and the user app never reaches into it.
@@ -13,6 +13,12 @@ async function boundaryErrors(filePath: string, code: string): Promise<number> {
 }
 
 describe('ops console import boundary', () => {
+  // The first typed lint builds the TypeScript program (over a minute on a busy machine); do it
+  // once here, so each case below stays well inside its own timeout.
+  beforeAll(async () => {
+    await eslint.lintText('export {};\n', { filePath: 'src/ops/ops-shell.tsx' });
+  }, 300_000);
+
   test.each([
     ['src/ops/ops-shell.tsx', "import { x } from '@/app/app/admin-nav';"],
     ['src/app/ops/page.tsx', "import { apiRequest as x } from '@/api/client';"],
