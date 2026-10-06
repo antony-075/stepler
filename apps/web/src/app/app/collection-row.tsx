@@ -19,7 +19,7 @@ import { CollectionQuickActions } from './collections/collection-actions';
  * Every column is left-aligned, headers and values alike (owner 2026-10-06); numbers are mono.
  * Narrow: collection, frames, status, actions; then what guests may add (52rem, icons), the created
  * date (60rem), the size (68rem) and the latest frame (78rem): the latest frame goes first when
- * room runs out, then the size, then the date. From 86rem the chips have their labels.
+ * room runs out, then the size, then the date.
  */
 export const TABLE_COLUMNS = cn(
   '[--table-cols:minmax(0,1fr)_4.5rem_10rem_5.5rem]',
@@ -27,7 +27,6 @@ export const TABLE_COLUMNS = cn(
   '@min-[60rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_7.5rem_10rem_5.5rem]',
   '@min-[68rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_5.5rem_7.5rem_10rem_5.5rem]',
   '@min-[78rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_5.5rem_8.5rem_7.5rem_10rem_5.5rem]',
-  '@min-[86rem]/table:[--table-cols:minmax(16rem,1fr)_20rem_4.5rem_5.5rem_8.5rem_7.5rem_10.5rem_5.5rem]',
 );
 
 /** Cells shown only once the table is wide enough for their column. */

@@ -83,15 +83,16 @@
 
 /* The admin page column (DESIGN-SYSTEM.md §6.0; owner remark 102, 2026-10-05; V1): fluid, the
    full width of the white panel with gutters that grow with the screen (16px on a phone, 32px
-   from 1600px; `--admin-gutter`, so a child can bleed to the panel's edge), at most 1600px of
-   content on wide screens (owner 2026-10-06). The collection page's mini-nav layout opts out
-   (AdminPage), so the guest page editor keeps the width. One column for every admin page and the top bar;
+   from 1600px; `--admin-gutter`, so a child can bleed to the panel's edge), capped only on very
+   wide screens. One column for every admin page and the top bar;
    text-heavy pages cap their own form columns inside it. */
 @utility admin-container {
   --admin-gutter: clamp(16px, 2vw, 32px);
   width: 100%;
-  /* At most 1600px of content (owner 2026-10-06), centred in the panel on very wide screens. */
-  max-width: calc(100rem + 2 * var(--admin-gutter));
+  /* Capped only on very wide screens; the shell lifts the cap (`--admin-max`) for a page with
+     its own edge-to-edge layout (the collection's mini-nav), for the top bar and the page alike,
+     so the breadcrumbs and the account block line up with the content below. */
+  max-width: var(--admin-max, 2200px);
   margin-inline: auto;
   padding-inline: var(--admin-gutter);
   box-sizing: border-box;

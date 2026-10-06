@@ -13,12 +13,9 @@ const CHIP = {
   /** The dashboard's tiles and cards (V1): 22px. */
   compact:
     'inline-flex h-[1.375rem] items-center gap-1.5 rounded-[5px] bg-muted px-1.5 text-xs whitespace-nowrap text-foreground-soft [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
-  /**
-   * The dashboard's table: the icons only, each named (screen readers, the tooltip), until the
-   * table (`@container/table`) has room for the labels on one line (86rem), then labelled chips.
-   */
+  /** The dashboard's table: the icons only, each named (screen readers, the tooltip). */
   icons:
-    'inline-flex h-[1.625rem] min-w-[1.625rem] items-center justify-center gap-1.5 rounded-[5px] bg-muted text-xs whitespace-nowrap text-foreground-soft @min-[86rem]/table:h-[1.375rem] @min-[86rem]/table:px-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
+    'inline-grid size-[1.625rem] place-items-center rounded-[5px] bg-muted text-foreground-soft [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground',
 } as const;
 
 /**
@@ -53,7 +50,7 @@ export function PermissionChips({
       {allowed.length === 0 ? (
         <li className={CHIP[size]} {...(size === 'icons' ? { title: t('viewOnlyChip') } : {})}>
           <Eye aria-hidden="true" />
-          <span className={cn({ 'sr-only @min-[86rem]/table:not-sr-only': size === 'icons' })}>
+          <span className={cn({ 'sr-only': size === 'icons' })}>
             {t('viewOnlyChip')}
           </span>
         </li>
@@ -63,7 +60,7 @@ export function PermissionChips({
           return size === 'icons' ? (
             <li key={name} className={CHIP.icons} title={label}>
               <Icon aria-hidden="true" />
-              <span className="sr-only @min-[86rem]/table:not-sr-only">{label}</span>
+              <span className="sr-only">{label}</span>
             </li>
           ) : (
             <li key={name} className={CHIP[size]}>

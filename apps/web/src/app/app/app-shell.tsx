@@ -114,6 +114,8 @@ export function AppShell({
             // The space above a page's first line (its h1, or the collection's mini-nav), shared by
             // the page (AdminPage) and the sidebar's nav, so «Колекції» sits on the h1's line.
             '[--page-top:1.25rem] lg:[--page-top:1.5rem] laptop:[--page-top:1.25rem] has-[[data-page-top=tight]]:[--page-top:0.875rem]',
+          // The collection's mini-nav runs edge to edge: no cap for it or the top bar above it.
+          'has-[[data-page-top=tight]]:[--admin-max:none]',
             collapsed
               ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]'
               : 'lg:grid-cols-[14rem_minmax(0,1fr)]',

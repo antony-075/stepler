@@ -15,9 +15,6 @@ export function AdminPage({ children, className }: { children: ReactNode; classN
       tabIndex={-1}
       className={cn(
         'admin-container grid grid-cols-[minmax(0,1fr)] content-start gap-5 pt-(--page-top) pb-16 outline-none laptop:gap-4',
-        // A page with its own edge-to-edge layout (the collection's mini-nav) is never centred
-        // in a capped column: on a very wide screen that left a gap before the mini-nav.
-        'has-[[data-page-top=tight]]:max-w-none',
         className,
       )}
     >
