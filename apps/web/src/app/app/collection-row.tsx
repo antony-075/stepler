@@ -31,7 +31,7 @@ export const TABLE_COLUMNS = cn(
   '@min-[78rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_5.5rem_8.5rem_7.5rem_10rem_5.5rem]',
   // Wide tables share the extra room instead of handing it all to the collection column (owner
   // 2026-10-06): the collection keeps about a third, the data columns grow from their widths.
-  '@min-[96rem]/table:[--table-cols:minmax(0,2.4fr)_minmax(9rem,1fr)_minmax(4.5rem,0.6fr)_minmax(5.5rem,0.7fr)_minmax(8.5rem,1fr)_minmax(7.5rem,0.9fr)_minmax(10rem,1.1fr)_5.5rem]',
+  '@min-[96rem]/table:[--table-cols:minmax(0,2.4fr)_minmax(9rem,0.75fr)_minmax(4.5rem,0.45fr)_minmax(5.5rem,0.5fr)_minmax(8.5rem,0.75fr)_minmax(7.5rem,0.7fr)_minmax(10rem,0.85fr)_5.5rem]',
 );
 
 /** Cells shown only once the table is wide enough for their column. */
@@ -39,6 +39,8 @@ const FROM_CHIPS = 'hidden @min-[52rem]/table:flex';
 const FROM_CREATED = 'hidden @min-[60rem]/table:block';
 const FROM_SIZE = 'hidden @min-[68rem]/table:block';
 const FROM_LAST = 'hidden @min-[78rem]/table:block';
+/** On wide tables the collection column keeps a clear gap before the data columns. */
+const COLLECTION_CELL = '@min-[96rem]/table:pr-16';
 
 const ROW = cn(
   'group relative grid min-h-[4.75rem] grid-cols-(--table-cols) items-center gap-x-4 border-t py-3.5 pr-2.5 pl-4 text-[0.875rem]',
@@ -60,7 +62,7 @@ export function CollectionTableHeader() {
       aria-hidden="true"
       className="grid h-9 grid-cols-(--table-cols) items-center gap-x-4 rounded-t-sheet bg-subtle pr-2.5 pl-4 text-xs font-medium text-muted-foreground"
     >
-      <span>{t('collection')}</span>
+      <span className={COLLECTION_CELL}>{t('collection')}</span>
       <span className={FROM_CHIPS}>{t('guestsAdd')}</span>
       <span>{t('frames')}</span>
       <span className={FROM_SIZE}>{t('size')}</span>
@@ -123,7 +125,7 @@ export function CollectionRow({ collection }: { collection: Collection }) {
       data-status={collection.status}
       className={cn(ROW, archived && cn(ARCHIVED_SURFACE, 'hover:bg-hover-card'))}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <div className={cn('flex min-w-0 items-center gap-3', COLLECTION_CELL)}>
         <CollectionMark
           collection={collection}
           size="sm"
