@@ -65,10 +65,49 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
 
 ### Release notes
 
-- **Collection image and contraction (PR L, ADR 0017).** The migration `20261005130030_drop_slice_8a_cover` **drops** the slice 8a `CollectionCover` table, the `CoverStatus` and `CoverSource` types and `Collection.welcomeMessage`. Their data has lived in `CollectionImage` and `GuestPageVersion` since PR I. The worker no longer serves the slice 8a job names. Order: **suspend `stepler-staging-worker`**, deploy `stepler-staging-api` (its pre-deploy applies the migration), then **resume and deploy** `stepler-staging-worker`, then `stepler-staging` (web). The migration refuses to run, and changes nothing, if a `media.cover-derivatives` or `cover.purge` job is still waiting, if the PR I backfill did not cover the database, or if the old table or column was written after it. If it refuses, the API deploy fails before the new API starts. If this release also brings PR I, release PR I first, and let its worker finish the slice 8a jobs (Render logs: no `media.cover-derivatives` left). Otherwise read the error in the deploy log. There is no rollback of the dropped table: restore from the database backup if one is ever needed. No new env var and no bucket change. Check afterwards:
-  - a collection with a guest page cover still shows it on the guest page;
-  - in «Параметри колекції» → «Картинка колекції», an uploaded image becomes ready and shows on the dashboard card;
-  - after «Прибрати», the card shows the initials again.
+- **Collection image and contraction (PR L, ADR 0017).** The migration `20261005130030_drop_slice_8a_cover` **drops** the slice 8a `CollectionCover` table, the `CoverStatus` and `CoverSource` types and `Collection.welcomeMessage`. Their data has lived in `CollectionImage` and `GuestPageVersion` since PR I. The worker no longer serves the slice 8a job names. Order: **suspend `stepler-staging-worker`**, deploy `stepler-staging-api` (its pre-deploy applies the migration), then **resume and deploy** `stepler-staging-worker`, then `stepler-staging` (web). There is no rollback of the dropped table: restore from the database backup if one is ever needed. No new env var and no bucket change.
+  - **Together with PR I (#57) in one deploy** (e.g. from release #47): one `migrate deploy` applies `20261005072838_guest_page_templates` (the backfill), `20261005092956_original_location_stripping` and this migration in that order. That is fine when no slice 8a cover job is waiting, because this release's worker no longer runs them. Check first (Render → `stepler-staging-api` → Shell, `psql "$DATABASE_URL"`), with the worker already suspended; the answer must be empty:
+
+    ```sql
+    SELECT name, state, count(*) FROM pgboss.job
+    WHERE name IN ('media.cover-derivatives', 'cover.purge') AND state IN ('created', 'retry', 'active')
+    GROUP BY 1, 2;
+    ```
+
+    If it is not empty, release #57 first and let its worker finish them. The combined path was rehearsed locally (2026-10-06) from #47's schema with #47-era data (covers `READY` and `FAILED`, welcomes, finished pg-boss cover jobs): every cover became a `COVER` image with its id and every welcome went to the published guest page.
+  - **If it refuses.** The migration refuses, and changes nothing, if a `media.cover-derivatives` or `cover.purge` job is still waiting, if the PR I backfill did not cover the database, or if the old table or column was written after it (an old API wrote a cover during the deploy). The API deploy then fails before the new API starts; the migrations before it stay applied, and the old API keeps serving, so recover promptly:
+    1. Read the error in the API deploy log (`drop_slice_8a_cover: …`).
+    2. Mark the attempt rolled back, or every later deploy fails with `P3009`: `pnpm exec prisma migrate resolve --rolled-back 20261005130030_drop_slice_8a_cover` (in the `stepler-staging-api` shell).
+    3. *Jobs still queued:* deploy #57's API and worker (its worker serves the slice 8a names) and wait until the check above is empty. *Written after the backfill:* with no old API running any more (#57's API is fine), copy the late covers with the SQL below. *No published guest page, or a cover in the wrong collection or slot:* stop and investigate; the backfill did not run as expected.
+    4. Deploy this release again in the order above.
+
+    ```sql
+    -- Late covers: written after the PR I backfill started, so it did not copy them.
+    BEGIN;
+    CREATE TEMP TABLE late_cover ON COMMIT DROP AS
+      SELECT c.* FROM "CollectionCover" c
+      JOIN "_prisma_migrations" m ON m."migration_name" = '20261005072838_guest_page_templates'
+       AND m."finished_at" IS NOT NULL AND m."rolled_back_at" IS NULL
+      WHERE c."createdAt" >= m."started_at";
+    INSERT INTO "CollectionImage" ("id", "collectionId", "slot", "status", "source", "mimeType",
+      "originalSizeBytes", "derivedSizeBytes", "width", "height", "createdAt")
+    SELECT "id", "collectionId", 'COVER', "status"::text::"ImageStatus", "source"::text::"ImageSource",
+      "mimeType", "originalSizeBytes", "derivedSizeBytes", "width", "height", "createdAt"
+    FROM late_cover
+    ON CONFLICT ("id") DO UPDATE SET "status" = EXCLUDED."status", "mimeType" = EXCLUDED."mimeType",
+      "originalSizeBytes" = EXCLUDED."originalSizeBytes", "derivedSizeBytes" = EXCLUDED."derivedSizeBytes",
+      "width" = EXCLUDED."width", "height" = EXCLUDED."height";
+    UPDATE "GuestPageVersion" v SET "coverImageId" = l."id" FROM late_cover l
+    WHERE v."collectionId" = l."collectionId" AND v."state" = 'PUBLISHED';
+    DELETE FROM "CollectionCover" WHERE "id" IN (SELECT "id" FROM late_cover);
+    COMMIT;
+    ```
+
+    A late cover still `PENDING` has no renditions yet: the hourly sweep marks it `FAILED` after an hour, and the owner sets it again. The queued-job and late-cover refusals and both recoveries were rehearsed locally on the combined path (2026-10-06).
+  - Check afterwards:
+    - a collection with a guest page cover still shows it on the guest page;
+    - in «Параметри колекції» → «Картинка колекції», an uploaded image becomes ready and shows on the dashboard;
+    - after «Прибрати», the dashboard shows the initials again.
 
 - **Guest page templates storage (PR I, ADR 0017).** The migration `20261005072838_guest_page_templates` copies every cover into `CollectionImage` (same ids) and every collection's welcome into a published `GuestPageVersion`, and the API and worker read only the new tables from this release. A worker of the old version would process cover jobs against the old table while the new API writes the new one, so for this release: **suspend `stepler-staging-worker`** (Render → the service → Suspend), then deploy `stepler-staging-api` (its pre-deploy applies the migration), then **resume and deploy** `stepler-staging-worker`, then `stepler-staging` (web). Jobs queued meanwhile wait in PostgreSQL and run once the new worker starts (the slice 8a job names stay served). An image whose job was lost anyway is marked `FAILED` by the hourly sweep after an hour, and the owner can set it again. Check afterwards: a collection with a cover still shows it on the dashboard and the guest page, and a new cover set in «Гостьова сторінка» becomes ready.
 
