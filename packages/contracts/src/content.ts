@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  codePointLength,
   NO_CONTROL_CHARACTERS,
   NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS,
 } from './text.js';
@@ -17,11 +18,7 @@ export const TEXT_MAX_CHARS = 5000;
 /** A guest's optional name [O4]. Mirrored by `GuestSession_name_length`, `ContentItem_name_length`. */
 export const GUEST_NAME_MAX_CHARS = 80;
 
-/**
- * Length in Unicode code points, as PostgreSQL's `char_length` counts it: an emoji is one, while
- * `String.length` counts its two UTF-16 units.
- */
-export const codePointLength = (value: string): number => [...value].length;
+export { codePointLength } from './text.js';
 
 const codePoints = (max: number) => (value: string) => {
   const length = codePointLength(value);

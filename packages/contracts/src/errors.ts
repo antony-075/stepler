@@ -41,6 +41,8 @@ export const ERROR_CODES = [
   'LEGAL_VERSION_OUTDATED',
   'GUEST_PAGE_DRAFT_CONFLICT',
   'THEME_CONTRAST_TOO_LOW',
+  'CONTENT_MODERATED',
+  'REPORT_RESOLVED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

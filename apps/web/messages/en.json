@@ -35,7 +35,9 @@
     "LEGAL_ACCEPTANCE_REQUIRED": "To continue, accept the Terms of Service and the Privacy Policy.",
     "LEGAL_VERSION_OUTDATED": "The documents have changed. Review them and accept again.",
     "GUEST_PAGE_DRAFT_CONFLICT": "This page was just changed in another tab.",
-    "THEME_CONTRAST_TOO_LOW": "These colours are hard to read together."
+    "THEME_CONTRAST_TOO_LOW": "These colours are hard to read together.",
+    "CONTENT_MODERATED": "Moderation hid this frame — it can't be shown again.",
+    "REPORT_RESOLVED": "This report was already decided differently."
   },
   "login": {
     "pageTitle": "Sign in",
