@@ -76,11 +76,27 @@ test.describe('collection image', () => {
       await mark.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth),
     ).toBeGreaterThan(0);
     await expect(mark.locator('img')).toHaveAttribute('src', /\/collection-image\//);
+    // That is the table row (the default view); the tile's 16:9 band shows it too (V1).
+    await expect(card(page)).toHaveAttribute('data-view', 'table');
+    await page
+      .getByRole('radiogroup', { name: 'Вигляд' })
+      .getByRole('radio', { name: 'Плитки' })
+      .click();
+    await expect(card(page)).toHaveAttribute('data-view', 'tiles');
+    await expect(markOf(card(page))).toHaveAttribute('data-state', 'image');
 
     await card(page).getByRole('button', { name: 'Поділитися' }).click();
     const dialog = page.getByRole('dialog');
     await expect(markOf(dialog)).toHaveAttribute('data-state', 'image');
     await page.keyboard.press('Escape');
+
+    // The collection page's mini-nav (from 1440px) shows it above the title.
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/app/collections/${id}`);
+    await expect(markOf(page.locator('[data-slot="page-header"]'))).toHaveAttribute(
+      'data-state',
+      'image',
+    );
 
     await openSettings(page, id);
     await page.getByRole('button', { name: 'Прибрати' }).click();
@@ -133,6 +149,9 @@ test.describe('collection image', () => {
     await page.goto('/app');
     await expect(markOf(card(page))).toHaveText(INITIALS);
     await expect(markOf(card(page))).toHaveAttribute('data-state', 'initials');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/app/collections/${id}`);
+    await expect(markOf(page.locator('[data-slot="page-header"]'))).toHaveText(INITIALS);
   });
 
   test('guests never load the collection image', async ({ page, browser }) => {

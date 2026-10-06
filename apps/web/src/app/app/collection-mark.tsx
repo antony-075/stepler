@@ -6,8 +6,8 @@
 //   so cards and the share dialog never move when it is added, replaced or removed. The guest
 //   page's cover is never used here: it belongs to the guest page (owner 2026-10-05).
 // - Every size (`sm` 44px, `cover` 80/128px, the 16:9 `band` of the dashboard tiles and the
-//   collection's mini-nav) loads the 480px thumbnail, the only rendition the collection image has. One still `PENDING` or `FAILED` has no URL and shows the initials:
-//   never a broken `<img>`.
+//   collection's mini-nav) loads the 480px thumbnail, the only rendition the collection image
+//   has. One still `PENDING` or `FAILED` has no URL and shows the initials: never a broken `<img>`.
 // - The picture is decorative (`alt=""`): the title next to it names the collection.
 // - A link that expired while the page stayed open asks for the collections again, once.
 
