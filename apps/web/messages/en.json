@@ -1199,6 +1199,52 @@
     "signOut": "Sign out",
     "signOutFailed": "Could not sign out. Try again.",
     "unavailable": "Could not load the console.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "statuses": {
+      "OPEN": "New",
+      "ACTIONED": "Actioned",
+      "DISMISSED": "Dismissed"
+    },
+    "reasons": {
+      "ILLEGAL": "Illegal content",
+      "INAPPROPRIATE": "Indecent or offensive",
+      "PRIVACY": "Violates privacy",
+      "SPAM": "Spam or advertising",
+      "OTHER": "Other"
+    },
+    "states": {
+      "VISIBLE": "Visible",
+      "HIDDEN": "Hidden",
+      "DELETED": "Deleted"
+    },
+    "kinds": {
+      "PHOTO": "Photo",
+      "VIDEO": "Video",
+      "DOCUMENT": "Document",
+      "TEXT": "Text"
+    },
+    "queue": {
+      "title": "Reports",
+      "tabsLabel": "Report status",
+      "loading": "Loading…",
+      "more": "Show more",
+      "error": "Could not load the reports.",
+      "contentGone": "Content deleted",
+      "collectionGone": "Collection deleted",
+      "columns": {
+        "received": "Received",
+        "reason": "Reason",
+        "content": "Content",
+        "state": "State",
+        "collection": "Collection",
+        "openReports": "Reports on frame"
+      },
+      "empty": {
+        "OPEN": "No new reports",
+        "ACTIONED": "No actioned reports yet",
+        "DISMISSED": "No dismissed reports yet"
+      },
+      "openReportsCount": "Reports on frame: {count}"
+    }
   }
 }
