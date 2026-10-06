@@ -8,10 +8,12 @@ export interface SoftDeleteOptions {
   /** One request deleting several frames (the admin's multi-select) [C7]. */
   bulk: boolean;
   requestId?: string;
+  /** The Stepler operator's reason (slice 9), kept in the audit event; never user content. */
+  reason?: string;
 }
 
 /**
- * The one way content is deleted, by the admin or by a guest: the rows are soft-deleted (gone
+ * The one way content is deleted, by the admin, a guest or the Stepler operator: the rows are soft-deleted (gone
  * from every view and from usage at once), and each gets one `content.delete` audit event and
  * one `content.purge` job, all in the caller's transaction. Callers decide who may delete what;
  * the caller also calls `jobs.ready()` before opening that transaction.
@@ -50,7 +52,12 @@ export class ContentDeletion {
         action: 'content.delete',
         targetType: 'content',
         targetId: row.id,
-        metadata: { kind: row.kind, frameNo: row.frameNo, bulk: options.bulk },
+        metadata: {
+          kind: row.kind,
+          frameNo: row.frameNo,
+          bulk: options.bulk,
+          ...(options.reason === undefined ? {} : { reason: options.reason }),
+        },
         ...requestId,
       });
       await this.jobs.enqueue(tx, 'content.purge', { contentItemId: row.id, ...requestId });
