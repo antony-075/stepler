@@ -37,6 +37,8 @@ import {
 } from '@stepler/ui/components/select';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
+import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Copy, Download, ExternalLink, Share2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -79,6 +81,42 @@ export function ShareButton({
         </Button>
       }
     />
+  );
+}
+
+/**
+ * «Поділитися» as an icon button with its name in a tooltip (the dashboard's table rows and
+ * cards, owner 2026-10-06): 44px on phones and touch, 36px with a mouse; `label` is its
+ * accessible name.
+ */
+export function ShareIconButton({
+  collection,
+  label,
+  className,
+}: {
+  collection: Collection;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <ShareDialog
+        collection={collection}
+        trigger={
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={label}
+              className={cn('text-muted-foreground hover:text-foreground', className)}
+            >
+              <Share2 aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

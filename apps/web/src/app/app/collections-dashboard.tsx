@@ -64,6 +64,7 @@ import {
   visibleCollections,
 } from './collection-filters';
 import { CreateCollectionDialog } from './create-collection-dialog';
+import { meterPercent } from './usage-meter';
 
 // The view this tab chose, so a storage that cannot keep it (private windows) still switches.
 let chosenView: DashboardView | null = null;
@@ -156,22 +157,21 @@ export function CollectionsDashboard() {
         description={
           slots === undefined || usage.data === undefined ? (
             // Holds the line's height until usage arrives.
-            <span aria-hidden="true" className="invisible text-[0.8125rem]">
+            <span aria-hidden="true" className="invisible text-[0.875rem]">
               {t('usage', { used: 0, limit: 0 })}
             </span>
           ) : (
             <UsageLine
               collections={t('usage', { used: slots.used, limit: slots.limit })}
-              collectionsShare={slots.limit === 0 ? 0 : slots.used / slots.limit}
+              slots={slots}
               storage={t('storageUsage', {
                 used: formatBytes(format.number, usage.data.storage.usedBytes),
                 limit: formatBytes(format.number, usage.data.storage.limitBytes),
               })}
-              storageShare={
-                usage.data.storage.limitBytes === 0
-                  ? 0
-                  : usage.data.storage.usedBytes / usage.data.storage.limitBytes
-              }
+              bytes={{
+                used: usage.data.storage.usedBytes,
+                limit: usage.data.storage.limitBytes,
+              }}
             />
           )
         }
@@ -204,22 +204,29 @@ export function CollectionsDashboard() {
           {t('loadFailed')}
         </Alert>
       ) : loading ? (
-        <div className="grid gap-3" aria-busy="true">
+        // The shapes of the toolbar and the table (cards on phones), so nothing jumps when the
+        // list arrives; shown only after 180ms.
+        <div className="loading-delayed grid gap-4" aria-busy="true">
           <span role="status" className="sr-only">
             {t('loading')}
           </span>
-          <Skeleton className="h-9 w-full max-w-xl" />
-          <div className="overflow-hidden rounded-sheet border">
-            {[0, 1, 2].map((key) => (
+          <div className="flex flex-wrap items-center gap-2 max-md:flex-col max-md:items-stretch">
+            <Skeleton className="h-11 w-full rounded-[7px] md:h-9 md:w-72" />
+            <Skeleton className="h-11 w-full md:ml-auto md:h-9 md:w-80" />
+          </div>
+          <div className="overflow-hidden rounded-sheet border bg-card shadow-card">
+            <div className="hidden h-9 bg-subtle md:block" />
+            {[0, 1, 2, 3].map((key) => (
               <div
                 key={key}
-                className="flex items-center gap-3 border-t px-3.5 py-3 first:border-t-0"
+                className="flex min-h-[4.75rem] items-center gap-3 border-t px-4 py-3.5 first:border-t-0 md:first:border-t"
               >
-                <Skeleton className="size-10 shrink-0 rounded-control" />
-                <div className="grid flex-1 gap-1.5">
+                <Skeleton className="size-11 shrink-0 rounded-control" />
+                <div className="grid flex-1 gap-2">
                   <Skeleton className="h-4 w-2/3 max-w-72" />
                   <Skeleton className="h-3.5 w-1/2 max-w-52" />
                 </div>
+                <Skeleton className="hidden h-[1.375rem] w-28 md:block" />
               </div>
             ))}
           </div>
@@ -279,7 +286,7 @@ export function CollectionsDashboard() {
             <div
               key="table"
               data-slot="collections-table"
-              className="@container/table rounded-sheet border bg-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
+              className="@container/table rounded-sheet border bg-card shadow-card motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:animation-duration-[var(--duration-base)]"
             >
               <div className={TABLE_COLUMNS}>
                 <CollectionTableHeader />
@@ -484,12 +491,12 @@ function monoDigits(text: string): ReactNode[] {
 }
 
 /** A thin decorative meter beside a usage figure: the share used, in the accent. */
-function Meter({ share }: { share: number }) {
+function Meter({ used, limit }: { used: number; limit: number }) {
   return (
     <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-track">
       <span
         className="block h-full rounded-full bg-primary"
-        style={{ width: `${Math.min(100, Math.max(0, Math.round(share * 100)))}%` }}
+        style={{ width: `${meterPercent(used, limit)}%` }}
       />
     </span>
   );
@@ -501,25 +508,25 @@ function Meter({ share }: { share: number }) {
  */
 function UsageLine({
   collections,
-  collectionsShare,
   storage,
-  storageShare,
+  slots,
+  bytes,
 }: {
   collections: string;
-  collectionsShare: number;
   storage: string;
-  storageShare: number;
+  slots: { used: number; limit: number };
+  bytes: { used: number; limit: number };
 }) {
   return (
-    <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[0.8125rem]">
+    <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[0.875rem]">
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(collections)}</span>
-        <Meter share={collectionsShare} />
+        <Meter {...slots} />
       </span>
       <span aria-hidden="true" className="h-3 w-px bg-border-strong max-sm:hidden" />
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(storage)}</span>
-        <Meter share={storageShare} />
+        <Meter {...bytes} />
       </span>
     </span>
   );
