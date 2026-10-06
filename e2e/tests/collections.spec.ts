@@ -133,7 +133,6 @@ test.describe('dashboard', () => {
       'В архіві1',
       'Заблоковані0',
     ]);
-    await page.keyboard.press('Escape');
     const archivedCard = card(page, 'Випускний 2025');
     await expect(archivedCard.getByText(T.archived, { exact: true })).toBeVisible();
     await expect(
@@ -144,8 +143,8 @@ test.describe('dashboard', () => {
       `/app/collections/${kept.id}`,
     );
 
-    // One state: only its collections, no group heading, the URL carries it.
-    await filter.click();
+    // One state: only its collections, no group heading, the URL carries it. The menu stays
+    // open while ticking (the admin usually ticks more than one).
     await page.getByRole('menuitemcheckbox', { name: /^В архіві/ }).click();
     await expect(filter).toHaveText('Стан: В архіві');
     await expect(page).toHaveURL(/[?&]state=archived/);

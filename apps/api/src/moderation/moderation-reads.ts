@@ -64,6 +64,7 @@ export class ModerationReads {
       SELECT count(*) FILTER (WHERE c."hiddenAt" IS NULL AND NOT r."open")::int AS "active",
              count(*) FILTER (WHERE c."hiddenBy" = 'ADMIN')::int AS "hiddenByAdmin",
              count(*) FILTER (WHERE c."hiddenBy" = 'OPERATOR')::int AS "hiddenByOperator",
+             0::int AS "quarantined",
              count(*) FILTER (WHERE r."open")::int AS "reported"
         FROM "ContentItem" c
         CROSS JOIN LATERAL (
@@ -81,6 +82,8 @@ export interface StateCounts {
   active: number;
   hiddenByAdmin: number;
   hiddenByOperator: number;
+  /** Slice 9b (plan Task 3): deleted by the operator, until the purge date. */
+  quarantined: number;
   reported: number;
 }
 
@@ -94,6 +97,8 @@ export function moderationOf(
       row.hiddenAt === null || row.hiddenBy === null
         ? null
         : { by: row.hiddenBy, at: row.hiddenAt.toISOString(), reason: row.hiddenReason },
+    // Slice 9b (plan Task 3): the quarantine state, once the columns exist.
+    quarantined: null,
     openReports,
   };
 }

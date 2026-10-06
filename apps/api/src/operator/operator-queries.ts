@@ -128,6 +128,7 @@ export class OperatorQueries {
         frameNo: item.frameNo,
         createdAt: item.createdAt.toISOString(),
         hidden: moderationOf(item, 0).hidden,
+        quarantined: moderationOf(item, 0).quarantined,
         deleted,
         text: deleted ? null : item.textBody,
         media,

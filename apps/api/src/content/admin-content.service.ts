@@ -95,6 +95,9 @@ export class AdminContentService {
           return { hiddenBy: 'OPERATOR' };
         case 'REPORTED':
           return { id: { in: reportedIds } };
+        case 'QUARANTINED':
+          // Slice 9b (plan Task 3): matches quarantined frames once the column exists.
+          return { id: { in: [] } };
         case 'ACTIVE':
           return { hiddenAt: null, id: { notIn: reportedIds } };
       }
@@ -108,6 +111,8 @@ export class AdminContentService {
       ...item,
       ...(await this.media.original(row, { viewer: 'admin' })),
       reports: await this.moderation.openReports(row.id),
+      // Slice 9b (plan Task 4): the latest appeal on the frame, once appeals exist.
+      appeal: null,
     };
   }
 

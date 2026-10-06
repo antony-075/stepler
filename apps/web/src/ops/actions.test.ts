@@ -23,6 +23,7 @@ const detail = (overrides: Partial<OperatorReportDetail> = {}): OperatorReportDe
     frameNo: 86,
     createdAt: at,
     hidden: null,
+    quarantined: null,
     deleted: false,
     text: null,
     media: null,

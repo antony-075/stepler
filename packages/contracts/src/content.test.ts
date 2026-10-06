@@ -79,12 +79,12 @@ describe('adminContentItemSchema', () => {
     processingStatus: 'NOT_REQUIRED',
     text: 'Вітаємо!',
     ...media,
-    moderation: { hidden: null, openReports: 0 },
+    moderation: { hidden: null, quarantined: null, openReports: 0 },
   };
 
   test('accepts a text frame; the detail adds original and download links', () => {
     expect(adminContentItemSchema.parse(item)).toEqual(item);
-    const detail = { ...item, originalUrl: null, downloadUrl: null, reports: [] };
+    const detail = { ...item, originalUrl: null, downloadUrl: null, reports: [], appeal: null };
     expect(adminContentDetailSchema.parse(detail)).toEqual(detail);
     expect(adminContentItemSchema.safeParse({ ...item, frameNo: 0 }).success).toBe(false);
     expect(adminContentItemSchema.safeParse({ ...item, deletedAt: null }).success).toBe(false);
@@ -95,6 +95,7 @@ describe('adminContentItemSchema', () => {
       ...item,
       moderation: {
         hidden: { by: 'OPERATOR', at: '2026-10-06T10:00:00.000Z', reason: 'Спам' },
+        quarantined: null,
         openReports: 2,
       },
     };
@@ -188,9 +189,10 @@ describe('list queries', () => {
     expect(adminContentListQuerySchema.safeParse({ state: [] }).success).toBe(false);
     expect(
       adminContentListQuerySchema.safeParse({
-        state: ['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE'],
+        state: ['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE'],
       }).success,
     ).toBe(false);
+    expect(adminContentListQuerySchema.safeParse({ state: 'QUARANTINED' }).success).toBe(true);
     expect(adminContentListQuerySchema.safeParse({ reported: 'true' }).success).toBe(false);
   });
 

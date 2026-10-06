@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import { appealResolutionSchema, appealStatusSchema, appealTargetTypeSchema } from './appeals.js';
 import { contentKindSchema } from './content.js';
 import {
   contentHiddenSchema,
+  contentQuarantinedSchema,
   moderationTextSchema,
   reportReasonSchema,
   reportStatusSchema,
@@ -28,8 +30,12 @@ export const operatorReportListQuerySchema = z
   .strict();
 export type OperatorReportListQuery = z.infer<typeof operatorReportListQuerySchema>;
 
-/** A reported item's state as the operator sees it. */
-export const operatorItemStateSchema = z.enum(['VISIBLE', 'HIDDEN', 'DELETED']);
+/**
+ * A reported item's state as the operator sees it: deleted (by its admin or a guest, or after
+ * the quarantine ran out) wins over quarantined (the operator's deletion, slice 9b), which wins
+ * over hidden.
+ */
+export const operatorItemStateSchema = z.enum(['VISIBLE', 'HIDDEN', 'QUARANTINED', 'DELETED']);
 export type OperatorItemState = z.infer<typeof operatorItemStateSchema>;
 
 const frameNo = z.number().int().min(1);
@@ -83,6 +89,52 @@ const reportFields = {
   adminDismissedAt: z.iso.datetime().nullable(),
 };
 
+/** The frame a report or an appeal is about; `null` once purged. */
+export const operatorContentSchema = z
+  .object({
+    id: z.uuid(),
+    kind: contentKindSchema,
+    frameNo,
+    createdAt: z.iso.datetime(),
+    hidden: contentHiddenSchema.nullable(),
+    /** The operator's deletion, undone by a restore until `purgeAfter` (slice 9b). */
+    quarantined: contentQuarantinedSchema.nullable(),
+    deleted: z.boolean(),
+    text: z.string().nullable(),
+    media: z
+      .object({
+        thumbnailUrl: z.url().nullable(),
+        previewUrl: z.url().nullable(),
+        posterUrl: z.url().nullable(),
+      })
+      .strict()
+      .nullable(),
+    /** `null` for a deleted or quarantined frame: nothing is signed for the original then. */
+    originalUrl: z.url().nullable(),
+  })
+  .strict();
+export type OperatorContent = z.infer<typeof operatorContentSchema>;
+
+/** The minimal collection context (R5); `null` once purged. */
+export const operatorCollectionSchema = z
+  .object({
+    id: z.uuid(),
+    title: z.string(),
+    status: z.enum(['ACTIVE', 'ARCHIVED', 'DELETING']),
+    blocked: z.object({ at: z.iso.datetime(), reason: z.string() }).strict().nullable(),
+  })
+  .strict();
+
+/** The owner's address and state (R5). */
+export const operatorOwnerSchema = z
+  .object({
+    id: z.uuid(),
+    email: z.email(),
+    status: z.enum(['ACTIVE', 'BLOCKED']),
+    blockedReason: z.string().nullable(),
+  })
+  .strict();
+
 /** `GET /api/v1/operator/reports/:id`. */
 export const operatorReportDetailSchema = z
   .object({
@@ -96,45 +148,9 @@ export const operatorReportDetailSchema = z
       .strict(),
     /** Every other report on the same item, newest first. */
     otherReports: z.array(z.object(reportFields).strict()),
-    content: z
-      .object({
-        id: z.uuid(),
-        kind: contentKindSchema,
-        frameNo,
-        createdAt: z.iso.datetime(),
-        hidden: contentHiddenSchema.nullable(),
-        deleted: z.boolean(),
-        text: z.string().nullable(),
-        media: z
-          .object({
-            thumbnailUrl: z.url().nullable(),
-            previewUrl: z.url().nullable(),
-            posterUrl: z.url().nullable(),
-          })
-          .strict()
-          .nullable(),
-        originalUrl: z.url().nullable(),
-      })
-      .strict()
-      .nullable(),
-    collection: z
-      .object({
-        id: z.uuid(),
-        title: z.string(),
-        status: z.enum(['ACTIVE', 'ARCHIVED', 'DELETING']),
-        blocked: z.object({ at: z.iso.datetime(), reason: z.string() }).strict().nullable(),
-      })
-      .strict()
-      .nullable(),
-    owner: z
-      .object({
-        id: z.uuid(),
-        email: z.email(),
-        status: z.enum(['ACTIVE', 'BLOCKED']),
-        blockedReason: z.string().nullable(),
-      })
-      .strict()
-      .nullable(),
+    content: operatorContentSchema.nullable(),
+    collection: operatorCollectionSchema.nullable(),
+    owner: operatorOwnerSchema.nullable(),
   })
   .strict();
 export type OperatorReportDetail = z.infer<typeof operatorReportDetailSchema>;
@@ -150,3 +166,101 @@ export const operatorActionRequestSchema = z.object({ reason: moderationTextSche
 export type OperatorActionRequest = z.infer<typeof operatorActionRequestSchema>;
 
 export const operatorReportIdParamsSchema = z.object({ id: z.uuid() });
+
+// --- Appeals (slice 9b): the admins' appeals, decided in the console's second queue. ---
+
+/** `GET /api/v1/operator/appeals`: one status at a time, newest first, cursor-paginated. */
+export const operatorAppealListQuerySchema = z
+  .object({
+    status: appealStatusSchema.default('OPEN'),
+    cursor: z.string().min(1).max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+  })
+  .strict();
+export type OperatorAppealListQuery = z.infer<typeof operatorAppealListQuerySchema>;
+
+/**
+ * What the appeal is against, as it stands now: the operator's hide, the quarantine, the
+ * collection block, or nothing any more (`NONE`: already reversed, or the frame is gone).
+ */
+export const operatorAppealMeasureSchema = z.enum(['HIDDEN', 'QUARANTINED', 'BLOCKED', 'NONE']);
+export type OperatorAppealMeasure = z.infer<typeof operatorAppealMeasureSchema>;
+
+/** A queue row: the target and the measure; the text and the actions are on the detail page. */
+export const operatorAppealRowSchema = z
+  .object({
+    id: z.uuid(),
+    targetType: appealTargetTypeSchema,
+    status: appealStatusSchema,
+    createdAt: z.iso.datetime(),
+    measure: operatorAppealMeasureSchema,
+    /** The frame, for a `CONTENT` appeal; `null` for a collection appeal or once purged. */
+    content: z
+      .object({
+        id: z.uuid(),
+        kind: contentKindSchema,
+        frameNo,
+        state: operatorItemStateSchema,
+      })
+      .strict()
+      .nullable(),
+    collection: z.object({ id: z.uuid(), title: z.string() }).strict().nullable(),
+  })
+  .strict();
+export type OperatorAppealRow = z.infer<typeof operatorAppealRowSchema>;
+
+export const operatorAppealPageSchema = z
+  .object({ items: z.array(operatorAppealRowSchema), nextCursor: z.string().nullable() })
+  .strict();
+export type OperatorAppealPage = z.infer<typeof operatorAppealPageSchema>;
+
+const appealFields = {
+  id: z.uuid(),
+  targetType: appealTargetTypeSchema,
+  targetId: z.uuid(),
+  status: appealStatusSchema,
+  /** The admin's text: the one user-authored text the operator reads here. */
+  text: z.string(),
+  createdAt: z.iso.datetime(),
+  resolution: appealResolutionSchema.nullable(),
+};
+
+/** `GET /api/v1/operator/appeals/:id`. */
+export const operatorAppealDetailSchema = z
+  .object({
+    appeal: z.object(appealFields).strict(),
+    /** Earlier appeals on the same target, newest first. */
+    previousAppeals: z.array(z.object(appealFields).strict()),
+    measure: operatorAppealMeasureSchema,
+    content: operatorContentSchema.nullable(),
+    collection: operatorCollectionSchema.nullable(),
+    owner: operatorOwnerSchema.nullable(),
+    /** The guest reports on the same frame (links to the report queue); none for a collection. */
+    relatedReports: z.array(
+      z
+        .object({
+          id: z.uuid(),
+          reason: reportReasonSchema,
+          status: reportStatusSchema,
+          createdAt: z.iso.datetime(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+export type OperatorAppealDetail = z.infer<typeof operatorAppealDetailSchema>;
+
+/**
+ * `PATCH /api/v1/operator/appeals/:id`: «Задовольнити» reverses the measure (a note is
+ * optional); «Відхилити» keeps it and needs a note the admin will read.
+ */
+export const resolveAppealRequestSchema = z
+  .object({ status: z.enum(['UPHELD', 'REJECTED']), note: moderationTextSchema.optional() })
+  .strict()
+  .refine((value) => value.status !== 'REJECTED' || value.note !== undefined, {
+    path: ['note'],
+    message: 'A rejection needs a note',
+  });
+export type ResolveAppealRequest = z.infer<typeof resolveAppealRequestSchema>;
+
+export const operatorAppealIdParamsSchema = z.object({ id: z.uuid() });

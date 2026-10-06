@@ -37,7 +37,10 @@
     "GUEST_PAGE_DRAFT_CONFLICT": "This page was just changed in another tab.",
     "THEME_CONTRAST_TOO_LOW": "These colours are hard to read together.",
     "CONTENT_MODERATED": "Moderation hid this frame — it can't be shown again.",
-    "REPORT_RESOLVED": "This report was already decided differently."
+    "REPORT_RESOLVED": "This report was already decided differently.",
+    "APPEAL_NOT_APPLICABLE": "Nothing to appeal here: the moderation measure is already lifted.",
+    "APPEAL_OPEN": "An appeal is already filed and under review.",
+    "APPEAL_RESOLVED": "This appeal was already decided differently."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -1313,6 +1316,7 @@
     "states": {
       "VISIBLE": "Visible",
       "HIDDEN": "Hidden",
+      "QUARANTINED": "In quarantine",
       "DELETED": "Deleted"
     },
     "kinds": {

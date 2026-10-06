@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { adminAppealSchema } from './appeals.js';
 import { adminReportSchema, contentModerationSchema } from './reports.js';
 import {
   codePointLength,
@@ -82,9 +83,12 @@ export type AdminContentItem = z.infer<typeof adminContentItemSchema>;
  */
 export const adminContentDetailSchema = adminContentItemSchema
   .extend({
+    /** Both `null` for a quarantined frame: the admin sees it, but cannot download it. */
     originalUrl: z.url().nullable(),
     downloadUrl: z.url().nullable(),
     reports: z.array(adminReportSchema),
+    /** The latest appeal on this frame, whatever its status (slice 9b); `null` when none. */
+    appeal: adminAppealSchema.nullable(),
   })
   .strict();
 export type AdminContentDetail = z.infer<typeof adminContentDetailSchema>;
@@ -160,11 +164,17 @@ const limit = z.coerce.number().int().min(1).max(100).default(48);
  * (`?state=ACTIVE&state=REPORTED`, which Express hands over as an array; one is a string), and
  * the whole is ANDed with `kind`. The service dedupes.
  */
-export const contentStateSchema = z.enum(['ACTIVE', 'HIDDEN_ADMIN', 'HIDDEN_OPERATOR', 'REPORTED']);
+export const contentStateSchema = z.enum([
+  'ACTIVE',
+  'HIDDEN_ADMIN',
+  'HIDDEN_OPERATOR',
+  'QUARANTINED',
+  'REPORTED',
+]);
 export type ContentState = z.infer<typeof contentStateSchema>;
 export const contentStatesSchema = z.union([
   contentStateSchema,
-  z.array(contentStateSchema).min(1).max(4),
+  z.array(contentStateSchema).min(1).max(5),
 ]);
 
 /** `GET /api/v1/collections/:id/content`. */
@@ -198,11 +208,14 @@ export const contentCountsSchema = z
     lastAddedAt: z.iso.datetime().nullable(),
     /**
      * By state (slice 9 F1), per collection like the kinds, not per the current kind filter:
-     * `active` + `hiddenByAdmin` + `hiddenByOperator` + (reported and not hidden) = `total`.
+     * `active` + `hiddenByAdmin` + `hiddenByOperator` + `quarantined` + (reported, not hidden,
+     * not quarantined) = `total`. A quarantined frame counts only as quarantined.
      */
     active: count,
     hiddenByAdmin: count,
     hiddenByOperator: count,
+    /** Deleted by the operator, kept until its purge date (slice 9b). */
+    quarantined: count,
     /** Non-deleted frames with open reports the admin has not dismissed (hidden ones included). */
     reported: count,
   })

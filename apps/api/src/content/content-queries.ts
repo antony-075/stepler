@@ -29,7 +29,10 @@ function decodeFrameCursor(cursor: string): number | null {
 }
 
 /** The kind counts and the newest time; the state counts come from the moderation module. */
-type KindCounts = Omit<ContentCounts, 'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'reported'>;
+type KindCounts = Omit<
+  ContentCounts,
+  'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'quarantined' | 'reported'
+>;
 
 const invalidCursor = () =>
   new AppError('VALIDATION_FAILED', 400, {

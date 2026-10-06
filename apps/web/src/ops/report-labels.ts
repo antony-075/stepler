@@ -21,5 +21,6 @@ export function paramOfStatus(status: ReportStatus): string {
 export const STATE_BADGE: Record<OperatorItemState, 'neutral' | 'warning' | 'danger'> = {
   VISIBLE: 'neutral',
   HIDDEN: 'warning',
+  QUARANTINED: 'warning',
   DELETED: 'danger',
 };

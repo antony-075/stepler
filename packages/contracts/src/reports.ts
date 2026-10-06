@@ -81,10 +81,23 @@ export const contentHiddenSchema = z
   .strict();
 export type ContentHidden = z.infer<typeof contentHiddenSchema>;
 
-/** A frame's moderation state for its admin: hidden or not, and open reports not dismissed. */
+/**
+ * Deleted by the Stepler operator (slice 9b, Q-A1): invisible to guests, kept for the admin to
+ * see and appeal until `purgeAfter`, when it is deleted for good. `reason` is the operator's.
+ */
+export const contentQuarantinedSchema = z
+  .object({ at: z.iso.datetime(), reason: z.string(), purgeAfter: z.iso.datetime() })
+  .strict();
+export type ContentQuarantined = z.infer<typeof contentQuarantinedSchema>;
+
+/**
+ * A frame's moderation state for its admin: hidden or not, quarantined or not, and open reports
+ * not dismissed. A quarantined frame may also carry the admin's own hide (kept for a restore).
+ */
 export const contentModerationSchema = z
   .object({
     hidden: contentHiddenSchema.nullable(),
+    quarantined: contentQuarantinedSchema.nullable(),
     openReports: z.number().int().min(0),
   })
   .strict();

@@ -90,14 +90,21 @@ describe('what the admin sees', () => {
 
   test('moderation: hidden by an admin or the operator', () => {
     const at = '2026-10-06T10:00:00.000Z';
-    expect(contentModerationSchema.parse({ hidden: null, openReports: 0 })).toEqual({
-      hidden: null,
-      openReports: 0,
-    });
+    const none = { hidden: null, quarantined: null, openReports: 0 };
+    expect(contentModerationSchema.parse(none)).toEqual(none);
     expect(
       contentModerationSchema.safeParse({
         hidden: { by: 'OPERATOR', at, reason: 'Порушення' },
+        quarantined: null,
         openReports: 2,
+      }).success,
+    ).toBe(true);
+    // Deleted by the operator (slice 9b): the reason and the purge date.
+    expect(
+      contentModerationSchema.safeParse({
+        hidden: null,
+        quarantined: { at, reason: 'Незаконний вміст', purgeAfter: at },
+        openReports: 0,
       }).success,
     ).toBe(true);
     expect(
@@ -109,6 +116,7 @@ describe('what the admin sees', () => {
   });
 });
 
-test('the moderation error codes are appended', () => {
-  expect(ERROR_CODES.slice(-2)).toEqual(['CONTENT_MODERATED', 'REPORT_RESOLVED']);
+test('the moderation error codes are present', () => {
+  expect(ERROR_CODES).toContain('CONTENT_MODERATED');
+  expect(ERROR_CODES).toContain('REPORT_RESOLVED');
 });

@@ -1,9 +1,15 @@
 import { describe, expect, test } from 'vitest';
 import {
   operatorActionRequestSchema,
+  operatorAppealDetailSchema,
+  operatorAppealListQuerySchema,
+  operatorAppealRowSchema,
+  operatorContentSchema,
+  operatorItemStateSchema,
   operatorReportDetailSchema,
   operatorReportListQuerySchema,
   operatorReportRowSchema,
+  resolveAppealRequestSchema,
   resolveReportRequestSchema,
 } from './index.js';
 
@@ -66,6 +72,81 @@ describe('the detail', () => {
         report: { ...detail.report, reporterEmail: 'r@example.com' },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('appeals (slice 9b)', () => {
+  const appeal = {
+    id,
+    targetType: 'CONTENT',
+    targetId: id,
+    status: 'OPEN',
+    text: 'Це моє фото, я дав дозвіл',
+    createdAt: at,
+    resolution: null,
+  };
+
+  test('the queue: open appeals, 50 per page; rows carry the measure', () => {
+    expect(operatorAppealListQuerySchema.parse({})).toEqual({ status: 'OPEN', limit: 50 });
+    expect(operatorAppealListQuerySchema.safeParse({ status: 'DISMISSED' }).success).toBe(false);
+    const row = {
+      id,
+      targetType: 'CONTENT',
+      status: 'OPEN',
+      createdAt: at,
+      measure: 'QUARANTINED',
+      content: { id, kind: 'PHOTO', frameNo: 3, state: 'QUARANTINED' },
+      collection: { id, title: 'Весілля' },
+    };
+    expect(operatorAppealRowSchema.parse(row)).toEqual(row);
+    expect(
+      operatorAppealRowSchema.safeParse({ ...row, content: null, collection: null }).success,
+    ).toBe(true);
+  });
+
+  test('the detail: the text, previous appeals, the target and related reports', () => {
+    const detail = {
+      appeal,
+      previousAppeals: [
+        { ...appeal, status: 'REJECTED', resolution: { status: 'REJECTED', note: 'Ні', at } },
+      ],
+      measure: 'HIDDEN',
+      content: null,
+      collection: null,
+      owner: null,
+      relatedReports: [{ id, reason: 'SPAM', status: 'OPEN', createdAt: at }],
+    };
+    expect(operatorAppealDetailSchema.parse(detail)).toEqual(detail);
+  });
+
+  test('a decision: a rejection needs a note, an upheld appeal may have one', () => {
+    expect(resolveAppealRequestSchema.parse({ status: 'UPHELD' })).toEqual({ status: 'UPHELD' });
+    expect(resolveAppealRequestSchema.parse({ status: 'UPHELD', note: ' Помилка ' })).toEqual({
+      status: 'UPHELD',
+      note: 'Помилка',
+    });
+    expect(resolveAppealRequestSchema.safeParse({ status: 'REJECTED' }).success).toBe(false);
+    expect(
+      resolveAppealRequestSchema.safeParse({ status: 'REJECTED', note: 'Підтверджено' }).success,
+    ).toBe(true);
+    expect(resolveAppealRequestSchema.safeParse({ status: 'OPEN' }).success).toBe(false);
+  });
+
+  test('a frame may be quarantined (slice 9b)', () => {
+    expect(operatorItemStateSchema.safeParse('QUARANTINED').success).toBe(true);
+    const content = {
+      id,
+      kind: 'PHOTO',
+      frameNo: 3,
+      createdAt: at,
+      hidden: null,
+      quarantined: { at, reason: 'Незаконний вміст', purgeAfter: at },
+      deleted: false,
+      text: null,
+      media: null,
+      originalUrl: null,
+    };
+    expect(operatorContentSchema.parse(content)).toEqual(content);
   });
 });
 
