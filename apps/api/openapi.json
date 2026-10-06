@@ -729,6 +729,11 @@
                             ],
                             "type": "string"
                           },
+                          "storageBytes": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
                           "title": {
                             "type": "string"
                           },
@@ -754,6 +759,7 @@
                           "defaultLinkPermissions",
                           "contentCount",
                           "lastContentAt",
+                          "storageBytes",
                           "welcomeMessage",
                           "cover",
                           "image"
@@ -1027,6 +1033,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -1052,6 +1063,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"
@@ -1360,6 +1372,11 @@
                       ],
                       "type": "object"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -1385,6 +1402,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image",
@@ -1654,6 +1672,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -1679,6 +1702,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"
@@ -1923,6 +1947,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -1948,6 +1977,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"
@@ -8140,6 +8170,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -8165,6 +8200,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"
@@ -8626,6 +8662,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -8651,6 +8692,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"
@@ -9048,6 +9090,11 @@
                       ],
                       "type": "string"
                     },
+                    "storageBytes": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "title": {
                       "type": "string"
                     },
@@ -9073,6 +9120,7 @@
                     "defaultLinkPermissions",
                     "contentCount",
                     "lastContentAt",
+                    "storageBytes",
                     "welcomeMessage",
                     "cover",
                     "image"

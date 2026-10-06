@@ -2,19 +2,50 @@
 
 import { LockKeyhole } from 'lucide-react';
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui';
-import { type ComponentProps, type MouseEvent, type ReactNode, useId, useState } from 'react';
-import { focusHalo } from '../lib/focus';
+import {
+  Children,
+  type ComponentProps,
+  createContext,
+  isValidElement,
+  type MouseEvent,
+  type ReactNode,
+  useContext,
+  useId,
+  useState,
+} from 'react';
+import { focusHalo, focusRingInset } from '../lib/focus';
 import { cn } from '../lib/utils';
+import { SegmentThumb } from './segment-thumb';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip';
 
 /** Separates the label and the count in the accessible name; flex layout does not render it. */
 const NAME_SPACE = ' ';
 
-type ToggleGroupProps = Omit<ToggleGroupPrimitive.ToggleGroupSingleProps, 'type'>;
+type ToggleGroupVariant = 'chips' | 'segmented';
+
+type ToggleGroupProps = Omit<ToggleGroupPrimitive.ToggleGroupSingleProps, 'type'> & {
+  /**
+   * `chips` (default): separate bordered chips, the selected one on the soft accent.
+   * `segmented`: equal segments on a grey track with a white thumb that slides to the selected
+   * one (CSS only: the thumb moves by its own width, so the segments are equal).
+   */
+  variant?: ToggleGroupVariant;
+};
+
+const VariantContext = createContext<ToggleGroupVariant>('chips');
+
+/** The `value` of each direct item child, in order (for the sliding thumb). */
+function itemValues(children: ReactNode): string[] {
+  return Children.toArray(children).flatMap((child) =>
+    isValidElement<{ value?: unknown }>(child) && typeof child.props.value === 'string'
+      ? [child.props.value]
+      : [],
+  );
+}
 
 /**
- * Single-select filter chips (direction C's FilterChips: content type, grid or rows). Radix renders
- * it as a `radiogroup` of `radio` items: arrows move focus, Space or Enter selects. Name it with
+ * Single-select filter chips or a segmented control (DESIGN-SYSTEM.md §0.5). Radix renders it as
+ * a `radiogroup` of `radio` items: arrows move focus, Space or Enter selects. Name it with
  * `aria-label` or `aria-labelledby`.
  *
  * Deviation from Radix: a segmented control always has a value, so pressing the selected item
@@ -25,6 +56,8 @@ function ToggleGroup({
   value,
   defaultValue,
   onValueChange,
+  variant = 'chips',
+  children,
   ...props
 }: ToggleGroupProps) {
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue ?? '');
@@ -36,15 +69,27 @@ function ToggleGroup({
     onValueChange?.(next);
   }
 
+  const values = variant === 'segmented' ? itemValues(children) : [];
   return (
-    <ToggleGroupPrimitive.Root
-      data-slot="toggle-group"
-      type="single"
-      value={currentValue}
-      onValueChange={handleValueChange}
-      className={cn('inline-flex w-fit max-w-full items-center gap-1', className)}
-      {...props}
-    />
+    <VariantContext value={variant}>
+      <ToggleGroupPrimitive.Root
+        data-slot="toggle-group"
+        data-variant={variant}
+        type="single"
+        value={currentValue}
+        onValueChange={handleValueChange}
+        className={cn(
+          variant === 'segmented'
+            ? 'relative isolate inline-grid w-fit max-w-full auto-cols-fr grid-flow-col rounded-[7px] bg-track p-0.5 shadow-[inset_0_0_0_1px_var(--track-edge)]'
+            : 'inline-flex w-fit max-w-full items-center gap-1.5',
+          className,
+        )}
+        {...props}
+      >
+        {variant === 'segmented' ? <SegmentThumb count={values.length} /> : null}
+        {children}
+      </ToggleGroupPrimitive.Root>
+    </VariantContext>
   );
 }
 
@@ -63,9 +108,10 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
 };
 
 /**
- * A filter chip (DESIGN-SYSTEM.md §5.7): 36px for a fine pointer, 44px on touch
- * (`pointer-coarse`), 8px radius, muted text; the selected chip has a 1px `--foreground` edge on
- * the sheet colour (selection is also `aria-checked` and the text colour, never colour alone).
+ * A filter chip (DESIGN-SYSTEM.md §0.5): 36px (32px with a mouse from `md`), 44px on touch
+ * (`pointer-coarse`), a 6px radius and a quiet edge; the selected chip sits on the soft accent
+ * with accent text (selection is also `aria-checked` and the weight, never colour alone). In a
+ * `segmented` group the item is a segment over the track.
  * Other props (`lang`, `title`, …) pass through to the Radix item.
  *
  * Keep the visible text in the accessible name (WCAG 2.5.3 Label in Name): do not give a
@@ -75,17 +121,26 @@ type ToggleGroupItemProps = ComponentProps<typeof ToggleGroupPrimitive.Item> & {
  * `<ToggleGroupItem value="uk" lang="uk">Українська</ToggleGroupItem>`.
  */
 const itemClassName = cn(
-  'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-transparent px-3 text-sm font-semibold whitespace-nowrap text-muted-foreground transition-[color,border-color] duration-(--duration-fast) pointer-coarse:h-11 motion-reduce:transition-none',
+  'group/chip inline-flex h-9 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-control border border-border-strong bg-card px-2.5 text-sm whitespace-nowrap text-foreground-soft transition-[color,background-color,border-color,transform] duration-(--duration-fast) ease-out active:scale-[0.97] md:pointer-fine:h-8 pointer-coarse:h-11 motion-reduce:transition-none motion-reduce:active:scale-100',
   focusHalo,
   // Selection is read from aria-checked / aria-pressed as well as data-state: a Radix Tooltip
   // trigger (`asChild`) on the item overwrites its data-state with the tooltip's own.
+  'hover:border-input hover:text-foreground',
+  'data-[state=on]:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] data-[state=on]:bg-info-soft data-[state=on]:font-semibold data-[state=on]:text-link',
+  'aria-checked:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-checked:bg-info-soft aria-checked:font-semibold aria-checked:text-link',
+  'aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:font-semibold aria-pressed:text-link',
   'data-[state=on]:focus-visible:border-ring aria-checked:focus-visible:border-ring aria-pressed:focus-visible:border-ring',
-  'hover:text-foreground data-[state=on]:border-foreground data-[state=on]:bg-card data-[state=on]:text-foreground',
-  'aria-checked:border-foreground aria-checked:bg-card aria-checked:text-foreground',
-  'aria-pressed:border-foreground aria-pressed:bg-card aria-pressed:text-foreground',
   'disabled:pointer-events-none disabled:text-muted-foreground',
-  'aria-disabled:cursor-not-allowed aria-disabled:hover:text-muted-foreground',
+  'aria-disabled:cursor-not-allowed aria-disabled:text-muted-foreground aria-disabled:hover:border-border-strong aria-disabled:hover:text-muted-foreground aria-disabled:active:scale-100',
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+);
+
+/** A segment: transparent over the track; the thumb behind it shows which one is chosen. */
+const segmentClassName = cn(
+  'group/chip relative z-1 inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[5px] px-3 text-sm whitespace-nowrap text-foreground-soft transition-colors duration-(--duration-fast) md:pointer-fine:h-8 pointer-coarse:h-11 motion-reduce:transition-none',
+  focusRingInset,
+  'hover:text-foreground aria-checked:font-semibold aria-checked:text-foreground',
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground",
 );
 
 function ToggleGroupItem({
@@ -96,6 +151,7 @@ function ToggleGroupItem({
   children,
   ...props
 }: ToggleGroupItemProps) {
+  const variant = useContext(VariantContext);
   const body = (
     <>
       {icon ? (
@@ -108,7 +164,7 @@ function ToggleGroupItem({
       {count === undefined || count === null ? null : (
         <span
           data-slot="toggle-group-item-count"
-          className="type-data text-muted-foreground group-data-[state=on]/chip:text-foreground group-aria-checked/chip:text-foreground group-aria-pressed/chip:text-foreground"
+          className="type-data text-muted-foreground group-data-[state=on]/chip:text-current group-aria-checked/chip:text-current group-aria-pressed/chip:text-current"
         >
           {count}
         </span>
@@ -125,7 +181,7 @@ function ToggleGroupItem({
   return (
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
-      className={cn(itemClassName, className)}
+      className={cn(variant === 'segmented' ? segmentClassName : itemClassName, className)}
       {...props}
     >
       {body}
@@ -179,4 +235,10 @@ function LockedToggleGroupItem({
   );
 }
 
-export { ToggleGroup, ToggleGroupItem, type ToggleGroupItemProps, type ToggleGroupProps };
+export {
+  ToggleGroup,
+  ToggleGroupItem,
+  type ToggleGroupItemProps,
+  type ToggleGroupProps,
+  type ToggleGroupVariant,
+};

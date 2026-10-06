@@ -27,6 +27,9 @@ import { isApiError } from '@/api/client';
 import { fetchMe, ME_QUERY_KEY } from '@/api/me';
 import { errorMessageKey } from '@/errors/error-message';
 import { setLocaleCookie } from '@/i18n/set-locale';
+import { BrandLoading } from '@/components/brand-loading';
+import { Breadcrumbs } from '@/components/breadcrumbs';
+import { TopbarCrumbsProvider, useTopbarCrumbs } from '@/components/topbar-crumbs';
 import { AccountBlock } from './account-block';
 import { AdminNav } from './admin-nav';
 import { sidebarCookie } from './sidebar-state';
@@ -88,68 +91,102 @@ export function AppShell({
             <Button onClick={() => void me.refetch()}>{t('verify.retry')}</Button>
           </div>
         ) : (
-          <p role="status" className="text-muted-foreground">
-            {t('app.loading')}
-          </p>
+          <BrandLoading label={t('app.loading')} />
         )}
       </main>
     );
   }
 
-  // Owner decisions 2026-10-02 (supersede 2026-10-01's "no section nav"): a left sidebar from
-  // `lg` with the wordmark, «Колекції» and «Акаунт» under it; it folds to a 72px icon
-  // rail (the toggle at its top, remembered per browser). Below `lg` the same nav is a sheet
-  // behind a menu button. Who is signed in and «Вийти» stay top right in a slim 56px bar. Everything is
-  // the flat light table: the sidebar is set apart by a hairline, not a fill.
+  // V1 «Графіт» (owner 2026-10-06; DESIGN-SYSTEM.md §0.7), on the decisions of 2026-10-02: from
+  // `lg` a left sidebar on the grey chrome with the wordmark, «Колекції» and «Акаунт» under it
+  // and the legal links at the bottom; it folds to a 72px icon rail (the toggle at its top,
+  // remembered per browser). The content is one white panel with a 1px edge, 8px from the window,
+  // with a slim 48px top bar (who is signed in, «Вийти») that stays at the top while the page
+  // scrolls. Below `lg` the same nav is a sheet behind a menu button in a 56px bar.
   return (
-    <TooltipProvider>
-      <div
-        data-sidebar={collapsed ? 'collapsed' : 'expanded'}
-        className={cn(
-          'min-h-dvh bg-background lg:grid lg:transition-[grid-template-columns] lg:duration-(--duration-base) lg:ease-out motion-reduce:lg:transition-none',
-          collapsed ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]' : 'lg:grid-cols-[15rem_minmax(0,1fr)]',
-        )}
-      >
-        <a
-          href="#main"
+    <TopbarCrumbsProvider>
+      <TooltipProvider>
+        <div
+          data-sidebar={collapsed ? 'collapsed' : 'expanded'}
           className={cn(
-            'sr-only z-(--z-skip) rounded-control bg-primary px-4 py-3 font-semibold text-primary-foreground no-underline focus:not-sr-only focus:fixed focus:top-2 focus:left-2',
-            focusRing,
+            'min-h-dvh bg-background lg:grid lg:transition-[grid-template-columns] lg:duration-(--duration-base) lg:ease-out motion-reduce:lg:transition-none',
+            // The space above a page's first line (its h1, or the collection's mini-nav), shared by
+            // the page (AdminPage) and the sidebar's nav, so «Колекції» sits on the h1's line.
+            '[--page-top:1.25rem] lg:[--page-top:1.5rem] laptop:[--page-top:1.25rem]',
+            // The collection's mini-nav runs edge to edge: no cap for it or the top bar above it.
+            'has-[[data-page-top=tight]]:[--admin-max:none]',
+            collapsed
+              ? 'lg:grid-cols-[4.5rem_minmax(0,1fr)]'
+              : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
           )}
         >
-          {t('app.skipToContent')}
-        </a>
-        <aside
-          id="admin-sidebar"
-          className="sticky top-0 hidden h-dvh min-w-0 flex-col overflow-hidden border-r lg:flex"
-        >
-          <div
+          <a
+            href="#main"
             className={cn(
-              'flex h-14 shrink-0 items-center gap-2',
-              collapsed ? 'justify-center px-3' : 'pr-2 pl-5',
+              'sr-only z-(--z-skip) rounded-control bg-primary px-4 py-3 font-semibold text-primary-foreground no-underline focus:not-sr-only focus:fixed focus:top-2 focus:left-2',
+              focusRing,
             )}
           >
-            {collapsed ? null : <BrandLink />}
-            <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-            <AdminNav collapsed={collapsed} />
-          </div>
-        </aside>
-        <div className="flex min-h-dvh min-w-0 flex-col">
-          <header className="sticky top-0 z-(--z-sticky) border-b bg-background">
-            <div className="admin-container flex h-14 items-center gap-2">
-              <MobileNav />
-              <div className="ml-auto flex min-w-0 justify-end">
-                <AccountBlock email={me.data.email} displayName={me.data.displayName} />
-              </div>
+            {t('app.skipToContent')}
+          </a>
+          <aside
+            id="admin-sidebar"
+            className="sticky top-0 hidden h-dvh min-w-0 flex-col overflow-hidden lg:flex"
+          >
+            <div
+              // The panel's top bar: 8px from the window, 50px tall; this row shares its centre line.
+              className={cn(
+                'mt-2 flex h-[3.125rem] shrink-0 items-center gap-2',
+                collapsed ? 'justify-center px-3' : 'pr-2 pl-4',
+              )}
+            >
+              {/* Folded (owner 2026-10-06): no logo, only «Розгорнути меню» on this line. */}
+              {collapsed ? null : <BrandLink />}
+              <SidebarToggle collapsed={collapsed} onToggle={toggleSidebar} />
             </div>
-          </header>
-          <div className="flex-1">{children}</div>
+            {/* The nav starts where the page's first line does (--page-top under the top bar); its
+              36px row is 5px taller than the h1's line, so it starts 2.5px higher to share the
+              h1's centre line. */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2.5 pt-[calc(var(--page-top)-2.5px)] pb-4">
+              <AdminNav collapsed={collapsed} />
+            </div>
+          </aside>
+          {/* The white panel; on `lg` the window's 8px margin stays visible around it. */}
+          <div className="flex min-h-dvh min-w-0 flex-col lg:py-2 lg:pr-2 [--shell-inset-bottom:0px] lg:[--shell-inset-bottom:9px]">
+            {/* Covers the 8px above the stuck top bar, so content never shows over it. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none sticky top-0 z-(--z-sticky) -mt-2 hidden h-2 bg-background lg:block"
+            />
+            <div
+              data-slot="admin-panel"
+              className="flex min-w-0 flex-1 flex-col bg-background lg:rounded-sheet lg:border lg:bg-card"
+            >
+              <header className="sticky top-0 z-(--z-sticky) border-b bg-background lg:top-2 lg:-mx-px lg:-mt-px lg:rounded-t-sheet lg:border lg:bg-card">
+                <div className="admin-container flex h-14 items-center gap-2 lg:h-12">
+                  <MobileNav />
+                  {/* Desktop: where the page sits (owner 2026-10-06); phones keep it in the page. */}
+                  <div className="hidden min-w-0 flex-1 lg:flex">
+                    <TopbarTrail />
+                  </div>
+                  <div className="ml-auto flex min-w-0 justify-end">
+                    <AccountBlock email={me.data.email} displayName={me.data.displayName} />
+                  </div>
+                </div>
+              </header>
+              <div className="flex-1">{children}</div>
+            </div>
+          </div>
         </div>
-      </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </TopbarCrumbsProvider>
   );
+}
+
+/** The page's breadcrumbs in the desktop top bar: one line, a long title cut with its full text in `title`. */
+function TopbarTrail() {
+  const items = useTopbarCrumbs();
+  return items === null ? null : <Breadcrumbs items={items} nowrap />;
 }
 
 /**
@@ -170,7 +207,9 @@ function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
           aria-expanded={!collapsed}
           aria-controls="admin-sidebar"
           onClick={onToggle}
-          className={cn('text-muted-foreground hover:text-foreground', { 'ml-auto': !collapsed })}
+          className={cn('text-muted-foreground hover:bg-hover hover:text-foreground', {
+            'ml-auto': !collapsed,
+          })}
         >
           <Icon aria-hidden="true" />
         </Button>
@@ -180,7 +219,10 @@ function SidebarToggle({ collapsed, onToggle }: { collapsed: boolean; onToggle: 
   );
 }
 
-/** The wordmark «stepler», back to the collections. */
+/**
+ * Back to the collections (owner 2026-10-06): the wordmark «stepler» alone (Golos Text 700, as in
+ * the logo files; ink in light, near-white in dark). The folded rail shows no logo.
+ */
 function BrandLink() {
   const t = useTranslations('brand');
   return (
@@ -188,7 +230,8 @@ function BrandLink() {
       href="/app"
       translate="no"
       className={cn(
-        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center rounded-control px-1 text-xl text-foreground no-underline',
+        'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-control text-[1.1875rem] text-foreground no-underline',
+        '-ml-1 px-1',
         focusRing,
       )}
     >
@@ -214,7 +257,7 @@ function MobileNav() {
           </Button>
         </SheetTrigger>
         <SheetContent aria-describedby={undefined}>
-          <SheetHeader closeLabel={t('close')} className="border-b-0 pl-5 sm:pl-5">
+          <SheetHeader closeLabel={t('close')} className="border-b-0 pl-4 sm:pl-4">
             <SheetTitle className="sr-only">{t('label')}</SheetTitle>
             <BrandLink />
           </SheetHeader>

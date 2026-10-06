@@ -67,7 +67,8 @@ export default async function LegalDocumentPage({ params }: { params: Params }) 
         </div>
       </SiteHeader>
       <main className="stepler-container flex-1 pt-6 pb-16 sm:pt-10 lg:pt-12 print:pt-0 print:pb-0">
-        <div className="grid max-w-[68ch] gap-6">
+        {/* A centred reading column (owner 2026-10-06). */}
+        <div className="mx-auto grid w-full max-w-[68ch] gap-6">
           <div className="grid gap-2">
             <h1 className="type-h1">{t(TITLE_KEY[document])}</h1>
             <LegalMeta meta={meta} />

@@ -128,3 +128,23 @@ export const AllTintsDark: Story = {
   ...AllTints,
   globals: { theme: 'dark' },
 };
+
+/**
+ * `band` (V1): the full width of a card at 16:9 (the dashboard's tiles, the collection's
+ * mini-nav), a picture cropped to fill or the initials, the same box either way.
+ */
+export const Band: Story = {
+  render: (args) => (
+    <div className="grid w-72 gap-4">
+      <CollectionCover {...args} size="band" />
+      <CollectionCover {...args} size="band" image={<img alt="" src={samplePhoto(160)} />} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const [initials, image] = slots(canvasElement).map((slot) => slot.getBoundingClientRect());
+    for (const box of [initials!, image!]) {
+      await expect(Math.round(box.width)).toBe(288);
+      await expect(Math.round(box.height)).toBe(Math.round((288 * 9) / 16));
+    }
+  },
+};

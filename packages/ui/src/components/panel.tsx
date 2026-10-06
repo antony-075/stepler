@@ -45,7 +45,7 @@ function PanelHeader({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       data-slot="panel-header"
-      className={cn('grid gap-1 p-4 sm:p-6', BEFORE_SECTION, className)}
+      className={cn('grid gap-1 p-4 sm:p-5', BEFORE_SECTION, className)}
       {...props}
     />
   );
@@ -86,7 +86,7 @@ function PanelContent({ className, ...props }: ComponentProps<'div'>) {
     <div
       data-slot="panel-content"
       className={cn(
-        'p-4 sm:p-6 [[data-slot=panel-header]+&]:pt-3 [&_p]:[overflow-wrap:anywhere]',
+        'p-4 sm:p-5 [[data-slot=panel-header]+&]:pt-3 [&_p]:[overflow-wrap:anywhere]',
         BEFORE_SECTION,
         className,
       )}
@@ -100,7 +100,7 @@ function PanelFooter({ className, ...props }: ComponentProps<'div'>) {
     <div
       data-slot="panel-footer"
       className={cn(
-        'flex flex-wrap items-center gap-3 p-4 sm:p-6 [[data-slot^=panel-]+&]:pt-4',
+        'flex flex-wrap items-center gap-3 p-4 sm:p-5 [[data-slot^=panel-]+&]:pt-4',
         className,
       )}
       {...props}

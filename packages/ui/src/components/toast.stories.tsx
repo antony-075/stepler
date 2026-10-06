@@ -4,6 +4,7 @@ import { expect, screen, userEvent, waitFor } from 'storybook/test';
 import { cn } from '../lib/utils';
 import { Button } from './button';
 import { Toaster, ToastProvider, useToast } from './toast';
+import { minTarget } from '../stories/target';
 
 type TriggerProps = {
   title?: string;
@@ -146,7 +147,7 @@ export const Dismiss: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     const close = await screen.findByRole('button', { name: 'Close' });
-    await expect(close.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(close.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.click(close);
     await waitFor(() => expect(toasts()).toHaveLength(0));
   },
@@ -329,7 +330,7 @@ export const WithAction: Story = {
   play: async ({ canvas }) => {
     await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
     const action = await screen.findByRole('button', { name: 'Open the guest page' });
-    await expect(action.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(action.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     await userEvent.click(action);
     await expect(canvas.getByRole('button', { name: 'Acted' })).toBeVisible();
     await waitFor(() => expect(toasts().filter((t) => t.dataset.state === 'open')).toHaveLength(0));

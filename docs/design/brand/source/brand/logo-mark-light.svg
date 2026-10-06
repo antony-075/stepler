@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Stepler</title>
+  <desc id="desc">A tilted photo frame pinned with a red pushpin and containing the letter S.</desc>
+  <g transform="rotate(-20 256 256)">
+    <rect x="126" y="122" width="260" height="300" rx="8" fill="#FFFFFF" stroke="#3657FF" stroke-width="22"/>
+    <rect x="159" y="155" width="194" height="210" rx="3" fill="#F8F9FF"/>
+    <path d="M 74 30 C 52 30 38 40 38 57 C 38 74 49 82 68 88 L 88 94 C 99 97 103 101 103 108 C 103 116 96 120 83 120 C 69 120 59 115 52 106 L 37 120 C 48 135 64 142 84 142 C 109 142 125 130 125 108 C 125 89 113 79 94 73 L 73 66 C 64 63 60 60 60 55 C 60 49 65 45 75 45 C 87 45 96 50 102 58 L 117 44 C 107 35 93 30 74 30 Z" fill="#3657FF" transform="translate(193 190) scale(.88)"/>
+  </g>
+  <g>
+    <circle cx="256" cy="89" r="30" fill="#FF4F32"/>
+    <path d="M249 111 L263 111 L258 160 L254 166 L250 160 Z" fill="#6E7078"/>
+    <path d="M250 111 L263 111 L258 160 L254 166 L250 160 Z" fill="#666872"/>
+    <circle cx="247" cy="80" r="8" fill="#FFFFFF" opacity=".22"/>
+  </g>
+</svg>

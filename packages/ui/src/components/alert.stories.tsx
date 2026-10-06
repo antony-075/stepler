@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent } from 'storybook/test';
 import { Alert } from './alert';
 import { Button } from './button';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Alert',
@@ -110,6 +111,6 @@ export const WithAction: Story = {
     const retry = canvas.getByRole('button', { name: 'Retry' });
     await userEvent.click(retry);
     await expect(onRetry).toHaveBeenCalledTimes(1);
-    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(retry.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };

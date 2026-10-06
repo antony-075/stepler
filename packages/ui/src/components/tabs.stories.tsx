@@ -1,7 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor } from 'storybook/test';
-import { Images, Link2 } from 'lucide-react';
+import { Images, Link2, Palette, SlidersHorizontal } from 'lucide-react';
 import { Tabs, TabsContent, TabsCount, TabsList, TabsTrigger } from './tabs';
+import { minTarget } from '../stories/target';
 
 const meta = {
   title: 'Components/Tabs',
@@ -27,7 +28,7 @@ type Story = StoryObj<typeof meta>;
 async function expectTriggersAreTouchTargets(tabs: HTMLElement[]) {
   for (const tab of tabs) {
     // 44px minimum touch target (rule 05).
-    await expect(tab.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(tab.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   }
 }
 
@@ -234,4 +235,57 @@ export const SegmentedFourOnPhone: Story = {
     await expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth + 1);
     await expect(list.getBoundingClientRect().width).toBeLessThanOrEqual(358);
   },
+};
+
+/**
+ * The vertical `nav` (the collection page's mini-nav from `xl`, V1): equal rows, the soft accent
+ * highlight slides to the active one (CSS only), arrow keys go up and down.
+ */
+export const Nav: Story = {
+  args: { defaultValue: 'content', orientation: 'vertical' },
+  render: (args) => (
+    <Tabs {...args} className="w-60">
+      <TabsList variant="nav" aria-label="Collection">
+        <TabsTrigger value="content">
+          <Images aria-hidden="true" />
+          Content
+          <TabsCount>248</TabsCount>
+        </TabsTrigger>
+        <TabsTrigger value="links">
+          <Link2 aria-hidden="true" />
+          Links
+        </TabsTrigger>
+        <TabsTrigger value="page">
+          <Palette aria-hidden="true" />
+          Guest page
+        </TabsTrigger>
+        <TabsTrigger value="settings">
+          <SlidersHorizontal aria-hidden="true" />
+          Collection settings
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="content">The frames.</TabsContent>
+      <TabsContent value="links">The links.</TabsContent>
+      <TabsContent value="page">The editor.</TabsContent>
+      <TabsContent value="settings">The settings.</TabsContent>
+    </Tabs>
+  ),
+  play: async ({ canvas, canvasElement }) => {
+    const tabs = canvas.getAllByRole('tab');
+    await expect(canvas.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
+    await expectTriggersAreTouchTargets(tabs);
+    tabs[0]!.focus();
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+    await waitFor(() => expect(tabs[2]).toHaveAttribute('aria-selected', 'true'));
+    const thumb = canvasElement.querySelector<HTMLElement>('[data-slot="segment-thumb"]')!;
+    await expect(getComputedStyle(thumb).getPropertyValue('--thumb-index').trim()).toBe('2');
+    await expect(Math.round(thumb.getBoundingClientRect().height)).toBe(
+      Math.round(tabs[2]!.getBoundingClientRect().height),
+    );
+  },
+};
+
+export const NavDark: Story = {
+  ...Nav,
+  globals: { theme: 'dark' },
 };

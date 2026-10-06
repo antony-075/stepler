@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { expect, userEvent } from 'storybook/test';
 import { Slider } from './slider';
+import { minTarget } from '../stories/target';
 
 /** A labelled slider with its value read out beside it, as the guest page editor's «Затемнення». */
 function Dimming({ min = 50, max = 90 }: { min?: number; max?: number }) {
@@ -48,7 +49,7 @@ export const Keyboard: Story = {
     await expect(canvas.getByText('50%')).toBeVisible();
     // The whole row takes a touch: 44px.
     const root = thumb.closest<HTMLElement>('[data-slot="slider"]')!;
-    await expect(root.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(root.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
   },
 };
 

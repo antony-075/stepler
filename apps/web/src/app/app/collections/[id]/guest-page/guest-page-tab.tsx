@@ -263,8 +263,16 @@ function useFillViewport(ref: RefObject<HTMLElement | null>): number {
       const box = element.getBoundingClientRect();
       const top = box.top + window.scrollY;
       // What the page column has under the workspace (its bottom padding), so nothing scrolls.
-      const column = element.closest('main')?.getBoundingClientRect();
-      const below = column === undefined ? 0 : Math.max(0, Math.ceil(column.bottom - box.bottom));
+      // The column the tab sits in: the content beside the mini-nav from `xl`, else the page.
+      const column = (
+        element.closest('[data-slot="tab-column"]') ?? element.closest('main')
+      )?.getBoundingClientRect();
+      // Under the page column, the shell's white panel ends above the window's edge (V1: its
+      // bottom border and the 8px margin, `--shell-inset-bottom`).
+      const inset = parseFloat(getComputedStyle(element).getPropertyValue('--shell-inset-bottom'));
+      const below =
+        (column === undefined ? 0 : Math.max(0, Math.ceil(column.bottom - box.bottom))) +
+        (Number.isFinite(inset) ? inset : 0);
       setHeight(Math.max(WORKSPACE_MIN, Math.floor(window.innerHeight - top - below)));
     };
     measure();

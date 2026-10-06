@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from './select';
+import { minTarget } from '../stories/target';
 
 // The theme and language settings on /app/settings are built on this: a row label names the
 // select (`aria-labelledby`) and its hint describes it (`aria-describedby`).
@@ -68,7 +69,7 @@ export const Keyboard: Story = {
     const trigger = canvas.getByRole('combobox', { name: 'Theme' });
     await expect(trigger).toHaveAccessibleDescription('System follows your device setting.');
     await expect(trigger).toHaveTextContent('System');
-    await expect(trigger.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+    await expect(trigger.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
 
     trigger.focus();
     await userEvent.keyboard('{Enter}');
@@ -113,7 +114,7 @@ export const Pointer: Story = {
     await waitFor(() => expect(system).toHaveFocus());
     await expect(getComputedStyle(system).outlineStyle).toBe('none');
     for (const option of screen.getAllByRole('option')) {
-      await expect(option.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      await expect(option.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     }
     await userEvent.click(screen.getByRole('option', { name: 'Light' }));
     await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());

@@ -44,8 +44,8 @@ const SIDES = {
 // colour, not a popover (the bottom one is a popover: it sits over the guest page like a dialog) (the left one is the same sidebar the desktop shows, moved over the
 // page; the right one holds sheets of its own), never wider than the screen minus a 3rem strip
 // of the page to tap away (the right one fills a phone), a 1px edge, no shadow in dark, the
-// dialog overlay, the close button in `SheetHeader` (it never scrolls), slides in (240ms) and out (160ms);
-// under reduced motion it fades instead. Radix traps focus inside, closes on Escape and on the
+// dialog overlay, the close button in `SheetHeader` (it never scrolls), slides in (180ms) and out
+// faster (140ms); still under reduced motion. Radix traps focus inside, closes on Escape and on the
 // overlay, and returns focus to the trigger.
 function SheetContent({ className, children, side = 'left', ...props }: SheetContentProps) {
   return (
@@ -57,8 +57,8 @@ function SheetContent({ className, children, side = 'left', ...props }: SheetCon
         className={cn(
           'fixed z-(--z-modal) flex flex-col overflow-hidden bg-background text-foreground shadow-dialog outline-none',
           SIDES[side],
-          'ease-out animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[160ms]',
-          'data-[state=open]:animate-in data-[state=closed]:animate-out motion-reduce:data-[state=closed]:fade-out-0 motion-reduce:data-[state=open]:fade-in-0',
+          'ease-out animation-duration-[var(--duration-slow)] data-[state=closed]:animation-duration-[140ms]',
+          'motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out',
           className,
         )}
         {...props}

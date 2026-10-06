@@ -37,6 +37,8 @@ import {
 } from '@stepler/ui/components/select';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
+import { cn } from '@stepler/ui/lib/utils';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Copy, Download, ExternalLink, Share2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -55,13 +57,15 @@ import { downloadQr, type QrFileFormat, qrFileName } from '@/qr/qr';
 export function ShareButton({
   collection,
   variant = 'default',
+  size = 'default',
   icon = <Share2 aria-hidden="true" />,
   className,
   children,
 }: {
   collection: Collection;
-  /** Ink as the page's primary; outline where another primary is on the page. */
+  /** The accent as the page's primary; outline where another primary is on the page. */
   variant?: 'default' | 'outline';
+  size?: 'default' | 'sm';
   /** Decorative, before the label. */
   icon?: ReactNode;
   className?: string;
@@ -71,12 +75,48 @@ export function ShareButton({
     <ShareDialog
       collection={collection}
       trigger={
-        <Button variant={variant} className={className}>
+        <Button variant={variant} size={size} className={className}>
           {icon}
           {children}
         </Button>
       }
     />
+  );
+}
+
+/**
+ * «Поділитися» as an icon button with its name in a tooltip (the dashboard's table rows and
+ * cards, owner 2026-10-06): 44px on phones and touch, 36px with a mouse; `label` is its
+ * accessible name.
+ */
+export function ShareIconButton({
+  collection,
+  label,
+  className,
+}: {
+  collection: Collection;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <Tooltip>
+      <ShareDialog
+        collection={collection}
+        trigger={
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={label}
+              className={cn('text-muted-foreground hover:text-foreground', className)}
+            >
+              <Share2 aria-hidden="true" />
+            </Button>
+          </TooltipTrigger>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -1,12 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, waitFor } from 'storybook/test';
 
-/** The type scale of docs/design/DESIGN-SYSTEM.md §3.2, one row per `type-*` utility. */
+/** The type scale of docs/design/DESIGN-SYSTEM.md §0.3, one row per `type-*` utility. */
 const SCALE = [
-  { utility: 'type-display', use: 'h1 of guest pages and the sign-in landing (SHRP 80)' },
-  { utility: 'type-h1', use: 'h1 of admin pages (SHRP 80)' },
-  { utility: 'type-h2', use: 'section headings (SHRP 60)' },
-  { utility: 'type-h3', use: 'panel headings (no SHRP below 19px)' },
+  { utility: 'type-display', use: 'h1 of the sign-in landing and guest chrome' },
+  { utility: 'type-h1', use: 'h1 of admin pages (22 / 24px)' },
+  { utility: 'type-h2', use: 'section headings (17 / 18px)' },
+  { utility: 'type-h3', use: 'panel headings (15px)' },
   { utility: 'type-body-lg', use: 'guest texts, guest main button' },
   { utility: 'type-body', use: 'admin body (fields stay 16px)' },
   { utility: 'type-small', use: 'hints, meta, small buttons' },
@@ -43,19 +43,14 @@ function TypeSpecimen() {
         </ul>
       </section>
 
-      <section aria-labelledby="type-sharpness" className="grid gap-4">
-        <h2 id="type-sharpness" className="type-h3">
-          Sharpness (SHRP axis)
+      <section aria-labelledby="type-weights" className="grid gap-4">
+        <h2 id="type-weights" className="type-h3">
+          Weights
         </h2>
         <div className="grid gap-2">
-          {[0, 60, 80, 100].map((shrp) => (
-            <p
-              key={shrp}
-              data-shrp={shrp}
-              className="text-[2.75rem] leading-tight font-semibold"
-              style={{ fontVariationSettings: `'SHRP' ${shrp}` }}
-            >
-              <span className="type-data align-middle text-muted-foreground">SHRP {shrp}</span>{' '}
+          {[400, 500, 600, 650].map((weight) => (
+            <p key={weight} className="text-[1.75rem] leading-tight" style={{ fontWeight: weight }}>
+              <span className="type-data align-middle text-muted-foreground">{weight}</span>{' '}
               Колекції
             </p>
           ))}
@@ -101,16 +96,18 @@ type Story = StoryObj<typeof meta>;
 export const Light: Story = {
   play: async ({ canvas }) => {
     // The committed woff2 files load (no network fonts) and cover the Ukrainian sample.
-    await document.fonts.load('600 32px Geologica', UKRAINIAN);
+    await document.fonts.load('600 32px "Golos Text"', UKRAINIAN);
     await document.fonts.load('400 12px "Geist Mono"', UKRAINIAN);
-    await waitFor(() => expect(document.fonts.check('600 32px Geologica', UKRAINIAN)).toBe(true));
+    await waitFor(() =>
+      expect(document.fonts.check('600 32px "Golos Text"', UKRAINIAN)).toBe(true),
+    );
     await expect(document.fonts.check('400 12px "Geist Mono"', UKRAINIAN)).toBe(true);
-    // Laid out in Geologica, not a fallback: the width differs from the system font's.
-    await expect(textWidth(UKRAINIAN, 'Geologica, monospace')).not.toBe(
+    // Laid out in Golos Text, not a fallback: the width differs from the system font's.
+    await expect(textWidth(UKRAINIAN, '"Golos Text", monospace')).not.toBe(
       textWidth(UKRAINIAN, 'monospace'),
     );
     await expect(getComputedStyle(canvas.getByTestId('ukrainian')).fontFamily).toMatch(
-      /^(Geologica|var)/,
+      /^("Golos Text"|var)/,
     );
   },
 };

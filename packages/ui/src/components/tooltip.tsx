@@ -36,7 +36,7 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          'z-(--z-popover) max-w-64 rounded-sheet bg-primary px-2.5 py-1.5 text-[0.8125rem] leading-[1.4] font-medium text-primary-foreground',
+          'z-(--z-popover) max-w-64 rounded-control bg-inverse px-2.5 py-1.5 text-[0.875rem] leading-[1.4] font-medium text-inverse-foreground',
           'animation-duration-[var(--duration-fast)] motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=delayed-open]:animate-in motion-safe:data-[state=delayed-open]:fade-in-0',
           className,
         )}

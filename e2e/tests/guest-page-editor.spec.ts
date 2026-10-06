@@ -137,25 +137,21 @@ test.describe('guest page editor', () => {
     await guest.context().close();
   });
 
-  test('«Зробити обкладинкою» in the viewer puts the cover into the draft; guests get it on «Зберегти» @desktop', async ({
+  test('a frame made the draft’s cover shows in the editor; guests get it on «Зберегти» @desktop', async ({
     page,
     browser,
   }) => {
+    // The viewer's «Зробити обкладинкою» is gone (owner 2026-10-06: the cover is chosen in the
+    // editor); the draft takes a frame through the same API the editor's frame picker uses.
     // The worker prepares the cover, then the editor asks again within 10 s: allow for both.
     test.setTimeout(60_000);
     const { id, path } = await setUp(page);
     const guest = await asGuest(browser, path);
-    await uploadViaApi(guest, id, 'photo.jpg');
+    const frame = await uploadViaApi(guest, id, 'photo.jpg');
     await waitForContentProcessed(page, id, 1);
 
-    await page.goto(`/app/collections/${id}?tab=content&frame=1`);
-    await page.getByRole('button', { name: 'Зробити обкладинкою' }).click();
-    await expect(toast(page).filter({ hasText: 'Обкладинку додано в чернетку' })).toBeVisible();
-    // The viewer is a modal dialog, so the toast outside it is not in the accessibility tree.
-    const action = page.locator('[data-slot="toast-action"]');
-    await expect(action).toHaveText('Відкрити гостьову сторінку');
-    await action.click();
-    await expect(page).toHaveURL(/tab=appearance/);
+    await setDraftCoverFromFrameViaApi(page, id, frame.id);
+    await page.goto(`/app/collections/${id}?tab=appearance`);
     await expect(status(page)).toContainText('Чернетка — гості бачать попередню версію');
     await waitForImageReady(page, id, 'draft');
     // The editor asks again while the image is prepared; then the preview draws it.

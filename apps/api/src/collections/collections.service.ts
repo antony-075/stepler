@@ -303,17 +303,28 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Map<string, ContentStats>> {
     if (collectionIds.length === 0) return new Map();
-    const groups = await tx.contentItem.groupBy({
-      by: ['collectionId'],
-      where: { collectionId: { in: collectionIds }, deletedAt: null },
-      _count: { _all: true },
-      _max: { createdAt: true },
-    });
+    const [groups, bytes] = await Promise.all([
+      tx.contentItem.groupBy({
+        by: ['collectionId'],
+        where: { collectionId: { in: collectionIds }, deletedAt: null },
+        _count: { _all: true },
+        _max: { createdAt: true },
+      }),
+      this.usage.storageBytesByCollection(collectionIds, tx),
+    ]);
+    const frames = new Map(groups.map((group) => [group.collectionId, group]));
     return new Map(
-      groups.map((group) => [
-        group.collectionId,
-        { count: group._count._all, lastAt: group._max.createdAt },
-      ]),
+      collectionIds.map((id) => {
+        const group = frames.get(id);
+        return [
+          id,
+          {
+            count: group?._count._all ?? 0,
+            lastAt: group?._max.createdAt ?? null,
+            storageBytes: Number(bytes.get(id) ?? 0n),
+          },
+        ];
+      }),
     );
   }
 

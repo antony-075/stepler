@@ -147,7 +147,7 @@ function DropdownMenuGroup(props: ComponentProps<typeof DropdownMenuPrimitive.Gr
 // inside the item (≥ 6:1 against the highlight in both themes) because the fill alone is ~1.1:1.
 // A 4px radius: the popover's 8px minus its 4px padding.
 const itemClassName = cn(
-  "relative flex min-h-11 items-center gap-2.5 rounded-sheet px-3 py-2 text-base select-none [overflow-wrap:anywhere] focus:bg-hover-popover data-disabled:pointer-events-none data-disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+  "relative flex min-h-11 items-center gap-2.5 rounded-[5px] px-3 py-2 text-base select-none md:pointer-fine:min-h-8 md:pointer-fine:px-2 md:pointer-fine:py-1.5 md:pointer-fine:text-[0.875rem] [overflow-wrap:anywhere] focus:bg-hover-popover data-disabled:pointer-events-none data-disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
   focusRingInset,
 );
 

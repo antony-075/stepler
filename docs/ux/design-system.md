@@ -2,7 +2,9 @@
 
 The reusable UI of Stepler lives in `packages/ui` (`@stepler/ui`): shadcn/ui (new-york) components on Radix primitives, styled with Tailwind CSS 4 and the design tokens in `packages/ui/src/styles/globals.css`. Every component has a story in Storybook (`pnpm storybook`, http://localhost:6006) with `play` tests and axe checks that run in `pnpm test`.
 
-This page describes what is implemented. The visual direction is C «Контактний аркуш» (owner decision 2026-10-02, [ADR 0015](../architecture/decisions/0015-visual-direction-c-fonts-frame-numbers.md)); its full specification, including parts not built yet, is [docs/design/DESIGN-SYSTEM.md](../design/DESIGN-SYSTEM.md). The migration from v4 follows its §10.4 step by step; until it is finished, some components below still carry v4 styling (noted where it matters).
+**Since 2026-10-06 the app chrome follows V1 «Графіт»** (zinc greys, one indigo accent, Golos Text, dense controls with a mouse, light motion; [DESIGN-SYSTEM.md §0](../design/DESIGN-SYSTEM.md#0-v1-графіт-реализовано-2026-10-06)). Token values, sizes and fonts quoted further down this page are direction C's unless they say otherwise; §0 and `globals.css` are authoritative.
+
+This page describes what is implemented. The earlier visual direction is C «Контактний аркуш» (owner decision 2026-10-02, [ADR 0015](../architecture/decisions/0015-visual-direction-c-fonts-frame-numbers.md)); its full specification, including parts not built yet, is [docs/design/DESIGN-SYSTEM.md](../design/DESIGN-SYSTEM.md). The migration from v4 follows its §10.4 step by step; until it is finished, some components below still carry v4 styling (noted where it matters).
 
 Import a component by its file: `import { Button } from '@stepler/ui/components/button'`. The stylesheet is `@stepler/ui/styles.css`.
 

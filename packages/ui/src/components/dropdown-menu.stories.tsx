@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './dropdown-menu';
+import { minTarget } from '../stories/target';
 
 function Demo() {
   const [theme, setTheme] = useState('system');
@@ -130,7 +131,7 @@ export const Radio: Story = {
       ...screen.getAllByRole('menuitem'),
       ...screen.getAllByRole('menuitemradio'),
     ]) {
-      await expect(item.getBoundingClientRect().height).toBeGreaterThanOrEqual(44);
+      await expect(item.getBoundingClientRect().height).toBeGreaterThanOrEqual(minTarget());
     }
     await expect(screen.getByRole('menuitemradio', { name: 'System' })).toHaveAttribute(
       'aria-checked',

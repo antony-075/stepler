@@ -26,7 +26,8 @@ function callbackError(value: unknown): CallbackError | null {
  * - Phones: headline, subline, panel (the email field in the first screen), the steps, the phone.
  * - 768–1279: headline + subline beside the panel; the phone and the steps under them, side by side.
  * - ≥ 1280: three columns: headline, subline and steps; the phone; the panel. Wide screens grow
- *   the margins (content at most 1240px), not the line length.
+ *   the margins (content at most 1240px, 1320px from 1600px), not the line length; tall screens
+ *   centre the block vertically, with the footer kept at the bottom.
  */
 export async function SignInLanding({ error }: { error?: unknown }) {
   const [methods, t, tl] = await Promise.all([
@@ -39,7 +40,9 @@ export async function SignInLanding({ error }: { error?: unknown }) {
       <SiteHeader>
         <LanguageSwitch variant="header" />
       </SiteHeader>
-      <main className="flex-1 pt-4 pb-16 sm:pt-10 lg:pb-24 xl:pt-16">
+      {/* The block sits in the middle of the window's height on big and tall screens (owner
+          2026-10-06: not stuck to the top over an empty half), the footer at the bottom. */}
+      <main className="flex flex-1 flex-col justify-center pt-4 pb-16 sm:pt-10 lg:py-16 xl:py-20">
         <div className="stepler-container grid gap-x-10 gap-y-10 [grid-template-areas:'intro'_'auth'_'how'_'phone'] md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-y-16 md:[grid-template-areas:'intro_auth'_'phone_how'] xl:grid-cols-[minmax(0,1fr)_300px_400px] xl:grid-rows-[auto_1fr] xl:gap-x-16 xl:gap-y-12 xl:[grid-template-areas:'intro_phone_auth'_'how_phone_auth']">
           <section className="grid content-start gap-4 [grid-area:intro] md:gap-5">
             <h1 className="type-display text-balance">{t('title')}</h1>
