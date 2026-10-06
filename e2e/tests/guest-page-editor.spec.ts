@@ -399,6 +399,64 @@ test.describe('guest page editor', () => {
     }
   });
 
+  test('no sideways scroll beside the expanded mini-nav, in Ukrainian and English, 1280–1536 @desktop', async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    // Owner remark 179: at 1512 in English the preview toolbar pushed the page sideways.
+    test.setTimeout(90_000);
+    const { id } = await setUp(page);
+    const fits = async (where: string) => {
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth),
+        `the page scrolls sideways: ${where}`,
+      ).toBeLessThanOrEqual(0);
+    };
+    for (const locale of ['uk', 'en'] as const) {
+      const res = await page.request.patch('/api/v1/me', {
+        data: { locale },
+        headers: origin(page),
+      });
+      expect(res.status()).toBe(200);
+      await context.addCookies([{ name: 'st_locale', value: locale, url: baseURL! }]);
+      // The mini-nav expanded on every tab (the editor would start folded under 1700px).
+      await page.evaluate(() => {
+        window.localStorage.setItem('stepler:collection-nav', 'expanded');
+        window.localStorage.setItem('stepler:collection-nav:editor', 'expanded');
+      });
+      for (const width of [1280, 1440, 1512, 1536]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`/app/collections/${id}?tab=appearance`);
+        await expect(preview(page).locator('[data-template]')).toBeVisible({ timeout: 15_000 });
+        await expect(page.locator('html')).toHaveAttribute('lang', locale);
+        if (width >= 1500) await expect(page.locator('#collection-mini-nav')).toBeVisible();
+        await fits(`${locale} ${width} editor`);
+        const pane = (await page.locator('[data-slot="preview-pane"]').boundingBox())!;
+        const toolbar = page.locator('[data-slot="preview-toolbar"]');
+        const controls = [...(await toolbar.getByRole('radio').all()), toolbar.getByRole('link')];
+        expect(controls.length).toBe(4);
+        for (const control of controls) {
+          await expect(control).toBeVisible();
+          const box = (await control.boundingBox())!;
+          expect(
+            box.x,
+            `${locale} ${width}: a toolbar control starts outside the pane`,
+          ).toBeGreaterThanOrEqual(pane.x);
+          expect(
+            box.x + box.width,
+            `${locale} ${width}: a toolbar control is cut`,
+          ).toBeLessThanOrEqual(Math.min(pane.x + pane.width, width) - 1);
+        }
+        await page.goto(`/app/collections/${id}`);
+        // «Вміст» drawn: its type filter is there.
+        await expect(page.locator('[data-slot="tabs-list"]')).toBeVisible();
+        await expect(page.getByRole('tab', { selected: true })).toBeVisible();
+        await fits(`${locale} ${width} content`);
+      }
+    }
+  });
+
   test('changed and changed back is saved; undo and redo across a template switch @desktop', async ({
     page,
   }) => {

@@ -286,7 +286,12 @@ function Overview({ collection, onDeleted }: { collection: Collection; onDeleted
           </aside>
           <div
             data-slot="tab-column"
-            className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 px-(--admin-gutter) pt-(--page-top) pb-16"
+            className={cn(
+              'grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 pt-(--page-top) pb-16',
+              // The editor's two cards make their own edges: 16px of page around them, not the
+              // page gutter (owner remark 178: the room goes to the settings and the preview).
+              tab === 'appearance' ? 'px-4' : 'px-(--admin-gutter)',
+            )}
           >
             {notice}
             {panels}

@@ -10,8 +10,11 @@ import { currentVersion } from '../editor-state';
 import { SECTION_IDS, SectionBody, type SectionId } from './section-list';
 import type { SectionProps } from './section-props';
 
-/** The rows' side padding: the phone sheet's 20px, the desktop panel's 24px. */
-const INSET = { single: 'px-5', multiple: 'px-6' } as const;
+/**
+ * The rows' side padding: the phone sheet's 20px, the desktop panel's 16px (owner remark 178:
+ * the room goes to the settings), on the save bar's column.
+ */
+const INSET = { single: 'px-5', multiple: 'px-4' } as const;
 
 /**
  * The settings as an accordion, on the phone sheet and in the desktop panel alike (owner remark

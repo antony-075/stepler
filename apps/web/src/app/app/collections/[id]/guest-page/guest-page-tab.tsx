@@ -171,7 +171,7 @@ const WORKSPACE_MIN = 460;
 /**
  * The editor on a computer (owner remarks 66, 67): one fixed-height workspace from under the
  * tabs to the window's bottom, so the page itself does not scroll. The settings panel scrolls on
- * its own; the preview pane never scrolls. They are two cards with a 14px gap of page between
+ * its own; the preview pane never scrolls. They are two cards with a 12px gap of page between
  * them, and the gap is the splitter (shadcn/ui Resizable, owner remark 90): arrows resize it from the keyboard; the width is remembered per account in this
  * browser (localStorage, ignored when storage is not available).
  */
@@ -222,7 +222,8 @@ function DesktopEditor({
             <SettingsAccordion mode="multiple" {...props} />
           </div>
         </ResizablePanel>
-        <ResizableHandle gap aria-label={t('splitLabel')} />
+        {/* 12px of page between the cards (owner remark 178: the room goes to the editor). */}
+        <ResizableHandle gap aria-label={t('splitLabel')} className="w-3" />
         <ResizablePanel id="preview" minSize={`${PREVIEW_MIN}px`}>
           <div className="h-full overflow-hidden rounded-sheet border">{preview}</div>
         </ResizablePanel>

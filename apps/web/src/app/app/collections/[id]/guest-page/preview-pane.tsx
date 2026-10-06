@@ -225,7 +225,10 @@ export function PreviewPane({
   return (
     <div
       data-slot="preview-pane"
-      className="@container/pane grid h-full min-h-0 grid-rows-[auto_minmax(0,1fr)] bg-muted"
+      // One column as wide as the pane (never its content's min-content width: owner remark 179,
+      // the English toolbar pushed the pane's content past the window), so the selects shrink and
+      // the container queries below fold the toolbar.
+      className="@container/pane grid h-full min-h-0 min-w-0 grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] bg-muted"
     >
       <TooltipProvider>
         <div
@@ -262,7 +265,8 @@ export function PreviewPane({
         page={page}
         state={state}
         device={device}
-        className="p-4"
+        // 12px beside the device (owner remark 178), on the toolbar's column; 16px above and below.
+        className="px-3 py-4"
       />
     </div>
   );
