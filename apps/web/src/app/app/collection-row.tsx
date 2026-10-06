@@ -21,7 +21,7 @@ import { CollectionQuickActions } from './collections/collection-actions';
  * Every column is left-aligned, headers and values alike (owner 2026-10-06); numbers are mono.
  * Narrow: collection, frames, status, actions; then what guests may add (52rem, icons), the created
  * date (60rem), the size (68rem) and the latest frame (78rem): the latest frame goes first when
- * room runs out, then the size, then the date.
+ * room runs out, then the size, then the date. From 96rem the columns grow in proportion.
  */
 export const TABLE_COLUMNS = cn(
   '[--table-cols:minmax(0,1fr)_4.5rem_10rem_5.5rem]',
@@ -29,6 +29,9 @@ export const TABLE_COLUMNS = cn(
   '@min-[60rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_7.5rem_10rem_5.5rem]',
   '@min-[68rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_5.5rem_7.5rem_10rem_5.5rem]',
   '@min-[78rem]/table:[--table-cols:minmax(0,1fr)_7.5rem_4.5rem_5.5rem_8.5rem_7.5rem_10rem_5.5rem]',
+  // Wide tables share the extra room instead of handing it all to the collection column (owner
+  // 2026-10-06): the collection keeps about a third, the data columns grow from their widths.
+  '@min-[96rem]/table:[--table-cols:minmax(0,2.4fr)_minmax(9rem,1fr)_minmax(4.5rem,0.6fr)_minmax(5.5rem,0.7fr)_minmax(8.5rem,1fr)_minmax(7.5rem,0.9fr)_minmax(10rem,1.1fr)_5.5rem]',
 );
 
 /** Cells shown only once the table is wide enough for their column. */
