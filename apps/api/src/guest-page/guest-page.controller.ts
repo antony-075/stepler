@@ -152,7 +152,7 @@ export class GuestPageController {
   @ApiResponse({ status: 409, description: 'COLLECTION_ARCHIVED, QUOTA_EXCEEDED' })
   @ApiResponse({
     status: 422,
-    description: 'COVER_SOURCE_INVALID: not a photo, no original, or its processing failed',
+    description: 'COVER_SOURCE_INVALID: not a photo, no original, its processing failed, or hidden',
   })
   @ApiResponse({ status: 429, description: RATE_LIMITED })
   @ApiResponse({ status: 503, description: 'DEPENDENCY_UNAVAILABLE: storage; retryable' })

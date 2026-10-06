@@ -5304,7 +5304,7 @@
             "description": "COLLECTION_ARCHIVED, QUOTA_EXCEEDED"
           },
           "422": {
-            "description": "COVER_SOURCE_INVALID: not a photo, no original, or its processing failed"
+            "description": "COVER_SOURCE_INVALID: not a photo, no original, its processing failed, or hidden"
           },
           "429": {
             "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"
@@ -7876,7 +7876,7 @@
             "description": "COLLECTION_ARCHIVED, QUOTA_EXCEEDED (the copy does not fit the collection or the account)"
           },
           "422": {
-            "description": "COVER_SOURCE_INVALID: not a photo, no original, or its processing failed"
+            "description": "COVER_SOURCE_INVALID: not a photo, no original, its processing failed, or hidden"
           },
           "429": {
             "description": "RATE_LIMITED: calls per IP or per user (see Retry-After)"

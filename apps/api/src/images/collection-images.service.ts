@@ -83,7 +83,13 @@ export class CollectionImagesService {
     // Before the copy, so an archived collection costs no storage call; re-checked under the lock.
     if (item.collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
     const original = mediaOf(item, 'ORIGINAL');
-    if (item.kind !== 'PHOTO' || original === undefined || item.processingStatus === 'FAILED') {
+    // A hidden frame is no source either (slice 9): it would put it back in front of guests.
+    if (
+      item.kind !== 'PHOTO' ||
+      original === undefined ||
+      item.processingStatus === 'FAILED' ||
+      item.hiddenAt !== null
+    ) {
       throw new AppError('COVER_SOURCE_INVALID', 422);
     }
 

@@ -232,7 +232,9 @@ export class UploadCompletion {
       where: { id: guestSessionIdOf(row) },
       include: {
         currentLink: true,
-        collection: { select: { status: true, owner: { select: { status: true } } } },
+        collection: {
+          select: { status: true, blockedAt: true, owner: { select: { status: true } } },
+        },
       },
     });
     try {
@@ -259,14 +261,16 @@ export class UploadCompletion {
     });
   }
 
-  /** A repeat of a completion that already happened: the same item, unless it is gone. */
+  /** A repeat of a completion that already happened: the same item, unless gone or hidden. */
   private async completedItem(tx: Prisma.TransactionClient, row: UploadSession): Promise<Outcome> {
     if (row.contentItemId === null) throw new AppError('CONTENT_NOT_FOUND', 404);
     const item = await tx.contentItem.findUnique({
       where: { id: row.contentItemId },
-      select: { deletedAt: true },
+      select: { deletedAt: true, hiddenAt: true },
     });
-    if (item === null || item.deletedAt !== null) throw new AppError('CONTENT_NOT_FOUND', 404);
+    if (item === null || item.deletedAt !== null || item.hiddenAt !== null) {
+      throw new AppError('CONTENT_NOT_FOUND', 404);
+    }
     return { kind: 'item', contentItemId: row.contentItemId };
   }
 
