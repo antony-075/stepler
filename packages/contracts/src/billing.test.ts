@@ -111,7 +111,7 @@ describe('access in the existing responses', () => {
       access,
     };
     expect(usageResponseSchema.parse(usage)).toEqual(usage);
-    const { access: _omitted, ...withoutAccess } = usage;
+    const withoutAccess = { activeCollections: usage.activeCollections, storage: usage.storage };
     expect(usageResponseSchema.safeParse(withoutAccess).success).toBe(false);
   });
 

@@ -53,8 +53,9 @@ export function PackStatus({ collection }: { collection: Collection }) {
     );
   }
   if (deletion !== null) {
+    // An account collection: the account banner above already offers «Обрати тариф».
     return (
-      <Alert variant="warning" role="status" action={choose}>
+      <Alert variant="warning" role="status" action={pack === null ? undefined : choose}>
         {deletion}
       </Alert>
     );

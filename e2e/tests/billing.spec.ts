@@ -8,6 +8,9 @@ import { signInAsOperator } from '../support/operator.js';
 // Billing M1 (ADR 0018): the trial's end makes everything view-only for the admin and closed for
 // guests, and the operator's complimentary plan lifts it.
 
+// Ukrainian copy: an unsupported browser language falls back to it.
+test.use({ locale: 'de-DE' });
+
 const UK = {
   banner: 'Пробний період завершився — колекції доступні лише для перегляду',
   newCollection: 'Нова колекція',
@@ -62,7 +65,7 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   const dialog = operator.getByRole('dialog', { name: 'Надати безкоштовний тариф' });
   await dialog.getByLabel('Причина').fill('Тестовий акаунт');
   await dialog.getByRole('button', { name: 'Надати' }).click();
-  await expect(operator.getByText('Тариф надано')).toBeVisible();
+  await expect(operator.getByText('Тариф надано').first()).toBeVisible();
   await expect(operator.getByText('Безкоштовний тариф без терміну')).toBeVisible();
   await operator.close();
 

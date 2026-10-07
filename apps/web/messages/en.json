@@ -355,10 +355,10 @@
     "descriptionLess": "Show less",
     "access": {
       "packClosedTitle": "Collecting has ended",
-      "packClosedText": "Guests can no longer add photos or wishes, but see the gallery if the link allows it. Content is kept until {date}.",
+      "packClosedText": "Content is kept until {date}; guests can no longer add photos or wishes, but see the gallery if the link allows it",
       "packReadOnlyTitle": "The keeping period is over",
       "packReadOnlyText": "The collection is view-only: you can still view, download and delete.",
-      "deleteAfter": "It will be deleted on {date}. To keep it, choose a plan or download the content before then.",
+      "deleteAfter": "The collection will be deleted on {date} — to keep it, choose a plan or download the content before then",
       "pack": "“{title}” pack: collecting until {window}, kept until {retention}",
       "choosePlan": "Choose a plan"
     }

@@ -603,15 +603,15 @@ Decision details: ADR 0009.
 
 ## 13. Limits, quotas, rate limits
 
-Decision details: ADR 0010. All values come from typed configuration — never hardcoded in business logic, changeable without a DB migration.
+Decision details: ADR 0010, and ADR 0018 for what is sold. Abuse and rate limits come from typed configuration — never hardcoded in business logic, changeable without a DB migration. *Since billing M1 (2026-10-07):* active collections, storage per account and per collection, and guest links per collection are **entitlements**: they come from the account's trial, plan or complimentary grant, or the collection's pack (`BillingOffer` rows, snapshots on `Subscription` / `CollectionPack`), resolved by `LimitsService` through `EntitlementResolver`. The trial's seeded values are 1 collection, 1 GiB, 10 links; the pre-billing values below remain those of the account's plan only where a plan says so.
 
 ### 13.1 Initial values (F1, D2)
 
 | Limit | Value |
 |---|---|
-| Active collections per account | 3 |
-| Storage per collection | 10 GB |
-| Storage per account | 20 GB |
+| Active collections per account | entitlement (trial: 1; before billing: 3) |
+| Storage per collection | entitlement (trial: 1 GiB; before billing: 10 GB) |
+| Storage per account | entitlement (trial: 1 GiB; before billing: 20 GB) |
 | Files per upload operation (UI) | 100 |
 | Concurrent `INITIATED` uploads per guest session | 10 [assumption] |
 | Upload initiations per guest session | 300 / hour |
@@ -643,7 +643,16 @@ MVP computes usage with indexed aggregate queries under a row lock. Counter colu
 
 - Domain limits (per-email, per-session, concurrency, quotas) are derived from database rows — no extra store.
 - IP-based limits use `@nestjs/throttler`. Storage for multi-instance deployment is decided with hosting (in-memory is correct only for a single instance).
-- `LimitsService.forUser(user)` / `forCollection(collection)` is the only place limits are resolved — the seam for future plans/entitlements (D13).
+- `LimitsService.forUser(userId, tx?)` / `forCollection(collectionId, tx?)` is the only place limits are resolved; since ADR 0018 they are asynchronous and return the access state with the limits. `ACCOUNT` collections count against the account; a `PACK` collection only against its pack.
+- `EntitlementGate` is the one write checkpoint for access states (read-only, collecting closed); `test/entitlement-gate.e2e.spec.ts` enumerates every mutating route against it.
+
+### 13.4 Billing (ADR 0018)
+
+Summary; the decision, alternatives and open points are in ADR 0018 and the plan `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`.
+
+- **Implemented in M1 (2026-10-07):** the offer catalogue (seeded draft offers, only the trial live), a 7-day trial for every new account (existing accounts got a fresh one at the migration), access states (`ACTIVE`, `GRACE`, `COLLECTING_CLOSED`, `READ_ONLY`) resolved in one pure function, the write gate on every mutating route, complimentary plans granted by the operator in `/ops/billing/grants`, banners and the guest «збір завершено» state, and the daily `billing.retention` job (deletion warnings 30 and 7 days before; the deletion itself is off, `BILLING_RETENTION_DELETE_ENABLED=false`, until the legal texts describe retention).
+- **Not yet:** payments (LiqPay, M2), subscriptions (M3), the offers editor, refunds and legal v3 (M4). Nobody can buy anything in M1.
+- Read-only keeps everything viewable and downloadable; guests cannot add; the admin can still archive, delete, revoke and appeal. Content of an account whose trial or plan ended is kept `READ_ONLY_RETENTION_MONTHS` (12); a pack's bought retention is its whole keeping period.
 
 ---
 

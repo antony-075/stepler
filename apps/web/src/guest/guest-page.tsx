@@ -201,17 +201,21 @@ function GuestCollection({
           contribution={context.contribution as 'COLLECTING_CLOSED' | 'READ_ONLY'}
           galleryVisible={permissions.canViewGallery}
         />
+        {/* The guest's own frames only when they have some: an empty «додайте» would contradict
+            the closed state. Mounted (hidden) to learn whether there are any. */}
         {contributedBefore ? (
-          <OwnFramesSection
-            context={context}
-            collectionId={collectionId}
-            call={call}
-            batch={null}
-            hide={doneIds}
-            onRename={() => setNamePrompt({ mode: 'edit', then: null })}
-            onDeleted={refreshContext}
-            onHasItems={setOwnHasItems}
-          />
+          <div hidden={!ownHasItems}>
+            <OwnFramesSection
+              context={context}
+              collectionId={collectionId}
+              call={call}
+              batch={null}
+              hide={doneIds}
+              onRename={() => setNamePrompt({ mode: 'edit', then: null })}
+              onDeleted={refreshContext}
+              onHasItems={setOwnHasItems}
+            />
+          </div>
         ) : null}
       </>
     ) : contributes ? (
