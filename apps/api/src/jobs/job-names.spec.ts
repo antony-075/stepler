@@ -16,6 +16,9 @@ describe('job names', () => {
       'mail.report-received': true,
       'mail.report-decision': true,
       'mail.appeal-received': true,
+      'billing.retention': true,
+      'mail.billing-read-only': true,
+      'mail.billing-deletion-warning': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);
@@ -38,6 +41,11 @@ describe('job names', () => {
     expect(singletonKeyFor('media.collection-image', { collectionId: 'c', imageId: 'k' })).toBe(
       'media.collection-image:k',
     );
+    // A collection's 30- and 7-day warnings are two jobs, never deduped into one.
+    expect(singletonKeyFor('mail.billing-deletion-warning', { collectionId: 'c', days: 7 })).toBe(
+      'mail.billing-deletion-warning:c:7',
+    );
+    expect(singletonKeyFor('billing.retention', {})).toBe('billing.retention');
     expect(singletonKeyFor('mail.report-received', { reportId: 'r' })).toBe(
       'mail.report-received:r',
     );

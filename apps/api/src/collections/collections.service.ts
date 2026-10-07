@@ -16,12 +16,12 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { Prisma, type Collection as CollectionRow } from '../generated/prisma/client.js';
 import { GuestLinksService } from '../guest-access/guest-links.service.js';
-import { collectionPurgeDelaySeconds } from '../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
 import { ImageUrls } from '../images/image-urls.js';
+import { CollectionDeletion } from './collection-deletion.js';
 import {
   type CollectionWithDefaultLink,
   type ContentStats,
@@ -44,6 +44,7 @@ export class CollectionsService {
     private readonly pages: GuestPageRepository,
     private readonly entitlements: EntitlementResolver,
     private readonly gate: EntitlementGate,
+    private readonly deletion: CollectionDeletion,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -286,27 +287,12 @@ export class CollectionsService {
         FOR UPDATE`;
       if (row === undefined) throw new AppError('NOT_FOUND', 404);
       if (row.status === 'DELETING') return;
-      await tx.collection.update({
-        where: { id: row.id },
-        data: { status: 'DELETING', deletionRequestedAt: new Date(), archivedAt: null },
+      await this.deletion.markDeleting(tx, {
+        collectionId: row.id,
+        fromStatus: row.status,
+        actor: principal,
+        ...(requestId === undefined ? {} : { requestId }),
       });
-      await this.recordTransition(
-        tx,
-        principal,
-        row.id,
-        'collection.delete',
-        row.status,
-        'DELETING',
-        requestId,
-      );
-      await this.jobs.enqueue(
-        tx,
-        'collection.purge',
-        { collectionId: row.id, ...(requestId === undefined ? {} : { requestId }) },
-        {
-          startAfterSeconds: collectionPurgeDelaySeconds(this.limits.uploads().urlTtlSeconds),
-        },
-      );
     });
   }
 

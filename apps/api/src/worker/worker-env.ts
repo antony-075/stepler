@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { mailEnvShape, parseEnv, positiveInt, sharedEnvShape } from '../config/env.js';
+import { bool, mailEnvShape, parseEnv, positiveInt, sharedEnvShape } from '../config/env.js';
 
 /**
  * The worker's environment: database, storage, mail and its own tuning. It sends the report
@@ -17,6 +17,13 @@ const workerEnvSchema = z.object({
   GUEST_SESSION_IDLE_DAYS: positiveInt(400),
   /** A reporter's address is deleted this long after the report at the latest ([Q6]). */
   REPORT_EMAIL_RETENTION_DAYS: positiveInt(90),
+  /** Billing (ADR 0018 [B8]): read-only content of an account is kept this long, then deleted. */
+  READ_ONLY_RETENTION_MONTHS: positiveInt(12),
+  /**
+   * The retention clock deletes due collections only when `true` (plan [P6]): off until the
+   * legal texts that describe retention are published. Warnings go out either way.
+   */
+  BILLING_RETENTION_DELETE_ENABLED: bool.default(false),
 });
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;

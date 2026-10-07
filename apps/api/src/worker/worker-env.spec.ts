@@ -25,8 +25,23 @@ describe('loadWorkerEnv', () => {
       GUEST_SESSION_IDLE_DAYS: 400,
       OPERATOR_EMAILS: [],
       REPORT_EMAIL_RETENTION_DAYS: 90,
+      READ_ONLY_RETENTION_MONTHS: 12,
+      BILLING_RETENTION_DELETE_ENABLED: false,
     });
     expect(env.LEGAL_CONTACT_EMAIL).toBeUndefined();
+  });
+
+  test('the retention deletion is switched on explicitly (ADR 0018 [P6])', () => {
+    expect(
+      loadWorkerEnv({ ...valid, BILLING_RETENTION_DELETE_ENABLED: 'true' })
+        .BILLING_RETENTION_DELETE_ENABLED,
+    ).toBe(true);
+    expect(() => loadWorkerEnv({ ...valid, BILLING_RETENTION_DELETE_ENABLED: 'yes' })).toThrow(
+      EnvValidationError,
+    );
+    expect(() => loadWorkerEnv({ ...valid, READ_ONLY_RETENTION_MONTHS: '0' })).toThrow(
+      EnvValidationError,
+    );
   });
 
   test('sends the report mail (slice 9): SMTP, the sender and the app origin are required', () => {

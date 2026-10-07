@@ -14,6 +14,9 @@ import { AppealReceivedMailHandler } from './handlers/appeal-received-mail.handl
 import { ReportDecisionMailHandler } from './handlers/report-decision-mail.handler.js';
 import { ReportReceivedMailHandler } from './handlers/report-received-mail.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
+import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
+import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
+import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
 
@@ -21,6 +24,8 @@ import type { WorkerEnv } from './worker-env.js';
 const SCHEDULES: Partial<Record<JobName, string>> = {
   'uploads.expire': '*/15 * * * *',
   'maintenance.sweep': '7 * * * *',
+  // Daily, after the night's backups (ADR 0018 [P6]).
+  'billing.retention': '17 3 * * *',
 };
 
 const POLLING_INTERVAL_SECONDS = 2;
@@ -49,6 +54,9 @@ export class JobRunner implements OnApplicationBootstrap {
     reportReceived: ReportReceivedMailHandler,
     reportDecision: ReportDecisionMailHandler,
     appealReceived: AppealReceivedMailHandler,
+    billingRetention: BillingRetentionHandler,
+    billingReadOnly: BillingReadOnlyMailHandler,
+    billingDeletionWarning: BillingDeletionWarningMailHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -63,6 +71,9 @@ export class JobRunner implements OnApplicationBootstrap {
       reportReceived,
       reportDecision,
       appealReceived,
+      billingRetention,
+      billingReadOnly,
+      billingDeletionWarning,
     ] as JobHandler[];
   }
 

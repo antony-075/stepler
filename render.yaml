@@ -125,6 +125,12 @@ services:
         sync: false
       - key: LEGAL_CONTACT_EMAIL
         sync: false
+      # Billing (ADR 0018): read-only content is kept 12 months; the deletion stays off until
+      # the legal texts with retention are published (warnings are sent either way).
+      - key: READ_ONLY_RETENTION_MONTHS
+        value: '12'
+      - key: BILLING_RETENTION_DELETE_ENABLED
+        value: 'false'
 
   - type: web
     name: stepler-staging

@@ -156,3 +156,77 @@ export const ACCOUNT_BLOCKED_COPY: Readonly<Record<MailLocale, AccountBlockedCop
     contact: 'If you disagree, write to {email}.',
   },
 };
+
+interface BillingReadOnlyCopy {
+  subject: string;
+  heading: string;
+  /** Why: the trial or the plan ended. */
+  reasons: { trial: string; plan: string };
+  effect: string;
+  /** `{date}`: when the content is due for deletion. */
+  keep: string;
+  /** `{url}`: «Тариф і оплата». */
+  choose: string;
+}
+
+/** Billing (ADR 0018 [B8]): the account became read-only. Sent once per read-only episode. */
+export const BILLING_READ_ONLY_COPY: Readonly<Record<MailLocale, BillingReadOnlyCopy>> = {
+  uk: {
+    subject: 'Stepler: колекції доступні лише для перегляду',
+    heading: 'Колекції доступні лише для перегляду',
+    reasons: { trial: 'Пробний період завершився.', plan: 'Ваш тариф завершився.' },
+    effect:
+      'Гості більше не можуть нічого додавати. Ви й надалі можете переглядати й завантажувати вміст.',
+    keep: 'Вміст зберігатиметься до {date}, потім його буде видалено. Ми попередимо за 30 і за 7 днів.',
+    choose: 'Щоб знову збирати фото й відео, оберіть тариф: {url}',
+  },
+  en: {
+    subject: 'Stepler: your collections are view-only',
+    heading: 'Your collections are view-only',
+    reasons: { trial: 'Your trial has ended.', plan: 'Your plan has ended.' },
+    effect: 'Guests can no longer add anything. You can still view and download everything.',
+    keep: 'The content is kept until {date}, then deleted. We will remind you 30 and 7 days before.',
+    choose: 'To collect photos and videos again, choose a plan: {url}',
+  },
+};
+
+interface BillingDeletionWarningCopy {
+  /** `{title}`, `{date}`. */
+  subject: string;
+  heading: string;
+  /** `{title}`, `{date}`. */
+  text: string;
+  /** `{url}`. */
+  keep: string;
+  download: string;
+}
+
+/** Billing (ADR 0018 [B8]): a read-only collection is due for deletion in 30 or 7 days. */
+export const BILLING_DELETION_WARNING_COPY: Readonly<
+  Record<MailLocale, BillingDeletionWarningCopy>
+> = {
+  uk: {
+    subject: 'Stepler: колекцію «{title}» буде видалено {date}',
+    heading: 'Колекцію буде видалено',
+    text: 'Колекція «{title}» доступна лише для перегляду. {date} її буде видалено разом з усім вмістом.',
+    keep: 'Щоб зберегти її, оберіть тариф: {url}',
+    download: 'Або завантажте вміст, який хочете залишити, до цієї дати.',
+  },
+  en: {
+    subject: 'Stepler: “{title}” will be deleted on {date}',
+    heading: 'Your collection will be deleted',
+    text: '“{title}” is view-only. On {date} it will be deleted with everything in it.',
+    keep: 'To keep it, choose a plan: {url}',
+    download: 'Or download what you want to keep before that date.',
+  },
+};
+
+/** A date as the reader says it, in Kyiv time (billing mails). */
+export function formatMailDate(locale: MailLocale, date: Date): string {
+  return new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Kyiv',
+  }).format(date);
+}

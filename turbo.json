@@ -194,7 +194,9 @@
         "MAIL_FROM",
         "OPERATOR_EMAILS",
         "LEGAL_CONTACT_EMAIL",
-        "REPORT_EMAIL_RETENTION_DAYS"
+        "REPORT_EMAIL_RETENTION_DAYS",
+        "READ_ONLY_RETENTION_MONTHS",
+        "BILLING_RETENTION_DELETE_ENABLED"
       ]
     },
     "build-storybook": {

@@ -1,6 +1,8 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
 import { AuditService } from '../audit/audit.service.js';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
+import { CollectionDeletion } from '../collections/collection-deletion.js';
 import { ConfigModule } from '../config/config.module.js';
 import { ContentDeletion } from '../content/content-deletion.js';
 import { DATABASE_POOL_MAX, PrismaService } from '../database/prisma.service.js';
@@ -27,6 +29,9 @@ import { AppealReceivedMailHandler } from './handlers/appeal-received-mail.handl
 import { ReportDecisionMailHandler } from './handlers/report-decision-mail.handler.js';
 import { ReportReceivedMailHandler } from './handlers/report-received-mail.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
+import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
+import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
+import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
@@ -87,6 +92,12 @@ export class WorkerModule {
         ReportReceivedMailHandler,
         ReportDecisionMailHandler,
         AppealReceivedMailHandler,
+        // Billing (ADR 0018): the retention clock deletes the way the admin does.
+        EntitlementResolver,
+        CollectionDeletion,
+        BillingRetentionHandler,
+        BillingReadOnlyMailHandler,
+        BillingDeletionWarningMailHandler,
         JobRunner,
       ],
     };

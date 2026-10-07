@@ -222,26 +222,29 @@ enum LegalDocument {
 }
 
 model User {
-  id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email            String            @unique @db.Citext
-  emailVerifiedAt  DateTime?         @db.Timestamptz(3)
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email              String            @unique @db.Citext
+  emailVerifiedAt    DateTime?         @db.Timestamptz(3)
   /// At most 80 characters (CHECK "User_displayName_length").
-  displayName      String?
-  locale           Locale            @default(uk)
+  displayName        String?
+  locale             Locale            @default(uk)
   /// BLOCKED if and only if blockedAt is set (CHECK "User_blocked_consistent").
-  status           UserStatus        @default(ACTIVE)
-  blockedAt        DateTime?         @db.Timestamptz(3)
-  blockedReason    String?
+  status             UserStatus        @default(ACTIVE)
+  blockedAt          DateTime?         @db.Timestamptz(3)
+  blockedReason      String?
   /// The trial's end (ADR 0018 [B7]): set once, on account creation; never renewed.
-  trialEndsAt      DateTime?         @db.Timestamptz(3)
-  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
-  subscriptions    Subscription[]
-  accounts         AuthAccount[]
-  sessions         AuthSession[]
-  collections      Collection[]
-  uploadSessions   UploadSession[]
-  legalAcceptances LegalAcceptance[]
+  trialEndsAt        DateTime?         @db.Timestamptz(3)
+  /// When the «лише перегляд» mail went out for the current read-only episode (plan Task 6);
+  /// cleared by the retention clock when access returns, so a later episode mails again.
+  readOnlyNotifiedAt DateTime?         @db.Timestamptz(3)
+  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
+  subscriptions      Subscription[]
+  accounts           AuthAccount[]
+  sessions           AuthSession[]
+  collections        Collection[]
+  uploadSessions     UploadSession[]
+  legalAcceptances   LegalAcceptance[]
 }
 
 model AuthAccount {
