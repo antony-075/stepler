@@ -5,7 +5,7 @@ import {
   formatMoney,
   formatPlanSize,
   packOffers,
-  RETURN_POLL_LIMIT_MS,
+  RETURN_CONFIRM_MS,
   retentionYears,
   returnView,
   storageUpgrade,
@@ -82,8 +82,11 @@ describe('returnView', () => {
     expect(returnView({ ...base, status: undefined, failed: true })).toBe('error');
     expect(returnView({ ...base, status: undefined, notFound: true })).toBe('notFound');
     expect(returnView({ ...base, status: 'PENDING' })).toBe('pending');
-    expect(returnView({ ...base, status: 'PENDING', elapsedMs: RETURN_POLL_LIMIT_MS })).toBe(
-      'later',
+    expect(returnView({ ...base, status: 'PENDING', elapsedMs: RETURN_CONFIRM_MS - 1 })).toBe(
+      'pending',
+    );
+    expect(returnView({ ...base, status: 'PENDING', elapsedMs: RETURN_CONFIRM_MS })).toBe(
+      'unconfirmed',
     );
     expect(returnView({ ...base, status: 'SUCCEEDED' })).toBe('succeeded');
     expect(returnView({ ...base, status: 'PARTIALLY_REFUNDED' })).toBe('succeeded');

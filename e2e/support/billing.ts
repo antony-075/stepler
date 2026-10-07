@@ -20,9 +20,11 @@ interface CheckoutData {
 /**
  * What LiqPay would do after the payer acts on its page. `success` / `failure`: LiqPay posts a
  * signed callback to `server_url` and sends the payer back to `result_url`. `processing`: no
- * callback yet, and the stub's `status` answers `processing`.
+ * callback yet, and the stub's `status` answers `processing`. `declined`: what the sandbox does
+ * for a card its anti-fraud refuses — no callback, the order stays open for another attempt and
+ * `status` does not know a payment for it.
  */
-export type StubOutcome = 'success' | 'failure' | 'processing';
+export type StubOutcome = 'success' | 'failure' | 'processing' | 'declined';
 
 /**
  * Answers the next checkout form post in place of LiqPay's page. Returns the order id. The
@@ -48,11 +50,13 @@ export async function payAtLiqPayStub(page: Page, outcome: StubOutcome): Promise
       end_date: Date.now(),
       ...(outcome === 'failure' ? { err_code: 'limit' } : {}),
     };
-    await fetch(`http://127.0.0.1:${E2E_LIQPAY.port}/__control/status`, {
-      method: 'POST',
-      body: JSON.stringify({ orderId: checkout.order_id, fields }),
-    });
-    if (outcome !== 'processing' && checkout.server_url !== undefined) {
+    if (outcome !== 'declined') {
+      await fetch(`http://127.0.0.1:${E2E_LIQPAY.port}/__control/status`, {
+        method: 'POST',
+        body: JSON.stringify({ orderId: checkout.order_id, fields }),
+      });
+    }
+    if ((outcome === 'success' || outcome === 'failure') && checkout.server_url !== undefined) {
       const callback = Buffer.from(JSON.stringify(fields), 'utf8').toString('base64');
       const res = await fetch(checkout.server_url, {
         method: 'POST',

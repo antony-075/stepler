@@ -14,7 +14,7 @@ import type {
   Prisma,
 } from '../generated/prisma/client.js';
 import { FISCAL_RECEIPTS, type FiscalReceipts } from './fiscal/fiscal-receipts.js';
-import { type OfferSnapshot, snapshotOf, snapshotTitle } from './offer-snapshot.js';
+import { type OfferSnapshot, readSnapshot, snapshotOf, snapshotTitle } from './offer-snapshot.js';
 import {
   type CheckoutForm,
   PAYMENT_PROVIDER,
@@ -84,24 +84,62 @@ export class CheckoutService {
 
       const reused = await this.pendingFor(tx, userId, target, now);
       const row = reused ?? (await this.insert(tx, principal, target, now, requestId));
-      const description = `Stepler: ${snapshotTitle(target.snapshot, user.locale)}`;
       // Built inside the transaction: a fiscal refusal rolls the new row back.
-      const checkoutForm: CheckoutForm = this.provider.checkoutForm({
-        orderId: row.providerOrderId,
-        action: 'pay',
-        amountMinor: row.amountMinor,
-        currency: row.currency,
-        description,
-        language: user.locale,
-        resultUrl: `${this.env.APP_ORIGIN}/app/billing/return?payment=${row.id}`,
-        serverUrl: this.env.BILLING_CALLBACK_URL ?? null,
-        expiresAt: row.expiresAt,
-        ...this.fiscalFor(target.offer, row.amountMinor, user.email),
-      });
+      const checkoutForm = this.formFor(row, target.offer, user);
       return { payment: row, form: checkoutForm };
     });
     this.logger.log({ msg: 'billing.checkout', paymentId: payment.id, kind: payment.kind });
     return { paymentId: payment.id, status: 'PENDING', form };
+  }
+
+  /**
+   * A fresh form for the account's own payment that is still pending and payable: the same
+   * LiqPay order again (LiqPay keeps a declined order open for another attempt). Not pending,
+   * past its time, or not the account's → `409 OFFER_UNAVAILABLE` / `404`; the client then
+   * starts a new purchase.
+   */
+  async resume(principal: AccountPrincipal, paymentId: string): Promise<CheckoutResponse> {
+    if (this.env.BILLING_PROVIDER !== 'liqpay') {
+      throw new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503);
+    }
+    const now = new Date();
+    const form = await this.prisma.$transaction(async (tx) => {
+      const [user] = await tx.$queryRaw<{ email: string; locale: 'uk' | 'en' }[]>`
+        SELECT "email"::text AS "email", "locale"::text AS "locale"
+        FROM "User" WHERE "id" = ${principal.userId}::uuid FOR UPDATE`;
+      if (user === undefined) throw new AppError('NOT_FOUND', 404);
+      const row = await tx.payment.findFirst({
+        where: { id: paymentId, userId: principal.userId },
+        include: { offer: true },
+      });
+      if (row === null) throw new AppError('NOT_FOUND', 404);
+      if (row.status !== 'PENDING' || row.expiresAt.getTime() <= now.getTime()) {
+        throw new AppError('OFFER_UNAVAILABLE', 409);
+      }
+      return this.formFor(row, row.offer, user);
+    });
+    this.logger.log({ msg: 'billing.checkout.resume', paymentId });
+    return { paymentId, status: 'PENDING', form };
+  }
+
+  /** LiqPay's signed form for one of our payments; everything in it comes from the row. */
+  private formFor(
+    row: Payment,
+    offer: BillingOffer,
+    user: { email: string; locale: 'uk' | 'en' },
+  ): CheckoutForm {
+    return this.provider.checkoutForm({
+      orderId: row.providerOrderId,
+      action: 'pay',
+      amountMinor: row.amountMinor,
+      currency: row.currency,
+      description: `Stepler: ${snapshotTitle(readSnapshot(row.offerSnapshot), user.locale)}`,
+      language: user.locale,
+      resultUrl: `${this.env.APP_ORIGIN}/app/billing/return?payment=${row.id}`,
+      serverUrl: this.env.BILLING_CALLBACK_URL ?? null,
+      expiresAt: row.expiresAt,
+      ...this.fiscalFor(offer, row.amountMinor, user.email),
+    });
   }
 
   private fiscalFor(offer: BillingOffer, amountMinor: number, email: string) {

@@ -5,8 +5,10 @@
 // - one panel, one state at a time, the state's sentence as the panel's h1 so a screen reader
 //   hears it on arrival and on every change (`aria-live="polite"`);
 // - «Очікуємо підтвердження від банку» with a small spinner while the API asks LiqPay (every 3 s,
-//   up to 2 minutes), then «Перевіримо пізніше» with the way to «Тариф і оплата» — never an
-//   endless spinner;
+//   for the first 20 s; then «Оплату ще не підтверджено» (a declined card at LiqPay sends no
+//   callback and leaves the order open), with «Спробувати ще раз» (the same order, freshly
+//   signed) first, «Перевірити ще раз» second and the calm fact that no money is taken until
+//   LiqPay confirms — never an endless spinner; polling goes on quietly for 2 minutes;
 // - success is calm, not confetti: a green check, «Оплату отримано», what is now active and the
 //   amount, and the one next step as the primary button («Відкрити колекцію»);
 // - failure and expiry say that nothing was charged and offer «Спробувати ще раз» first;
@@ -19,12 +21,13 @@ import { Spinner } from '@stepler/ui/components/spinner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleCheck, CircleX, Clock } from 'lucide-react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useState } from 'react';
 import { BILLING_KEY, fetchPayment, paymentKey } from '@/api/billing';
 import { isApiError } from '@/api/client';
 import { COLLECTIONS_KEY, USAGE_KEY } from '@/api/collections';
+import { useCheckout } from '@/billing/checkout-redirect';
 import { formatMoney, RETURN_POLL_LIMIT_MS, RETURN_POLL_MS, returnView } from '@/billing/offers';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -35,7 +38,9 @@ export function PaymentReturn() {
   const queryClient = useQueryClient();
   const raw = useSearchParams().get('payment') ?? '';
   const paymentId = UUID.test(raw) ? raw.toLowerCase() : null;
-  const [startedAt] = useState(() => Date.now());
+  const [startedAt, setStartedAt] = useState(() => Date.now());
+  const checkout = useCheckout();
+  const router = useRouter();
   const [now, setNow] = useState(startedAt);
   const payment = useQuery({
     queryKey: paymentKey(paymentId ?? 'none'),
@@ -96,13 +101,42 @@ export function PaymentReturn() {
         />
       );
       break;
-    case 'later':
+    case 'unconfirmed':
       body = (
         <State
           icon={<Clock className="text-muted-foreground" />}
-          title={t('laterTitle')}
-          text={t('laterText')}
-          actions={toBilling}
+          title={t('unconfirmedTitle')}
+          text={t('unconfirmedText')}
+          note={t('moneyNote')}
+          error={checkout.errorMessage}
+          actions={
+            <>
+              <Button
+                aria-disabled={checkout.pending}
+                onClick={() => {
+                  if (checkout.pending || paymentId === null) return;
+                  // The order may be gone or past its time: then a new purchase.
+                  checkout.start({ resume: paymentId }).catch((error: unknown) => {
+                    if (isApiError(error, 'OFFER_UNAVAILABLE')) router.push(retryHref);
+                  });
+                }}
+              >
+                {checkout.pending ? <Spinner label={t('retry')} /> : null}
+                {t('retry')}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const restarted = Date.now();
+                  setStartedAt(restarted);
+                  setNow(restarted);
+                  void payment.refetch();
+                }}
+              >
+                {t('checkAgain')}
+              </Button>
+            </>
+          }
         />
       );
       break;
@@ -173,11 +207,14 @@ export function PaymentReturn() {
   }
 
   return (
-    <Panel>
-      <PanelContent aria-live="polite" className="sm:p-8">
-        {body}
-      </PanelContent>
-    </Panel>
+    <>
+      <Panel>
+        <PanelContent aria-live="polite" className="sm:p-8">
+          {body}
+        </PanelContent>
+      </Panel>
+      {checkout.handoff}
+    </>
   );
 }
 
@@ -185,11 +222,15 @@ function State({
   icon,
   title,
   text,
+  note,
+  error,
   actions,
 }: {
   icon: ReactNode;
   title: string;
   text?: string;
+  note?: string;
+  error?: string | null;
   actions?: ReactNode;
 }) {
   return (
@@ -200,7 +241,11 @@ function State({
       <div className="grid gap-2">
         <h1 className="type-h1 text-balance">{title}</h1>
         {text === undefined ? null : <p className="text-pretty text-foreground-soft">{text}</p>}
+        {note === undefined ? null : (
+          <p className="text-sm text-pretty text-muted-foreground">{note}</p>
+        )}
       </div>
+      {error === undefined || error === null ? null : <Alert variant="error">{error}</Alert>}
       {actions === undefined ? null : (
         <div className="grid gap-2 pt-2 sm:flex sm:flex-wrap">{actions}</div>
       )}

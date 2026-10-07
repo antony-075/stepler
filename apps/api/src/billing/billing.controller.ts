@@ -85,6 +85,30 @@ export class BillingController {
     return this.checkouts.create(principal, body, requestId);
   }
 
+  /**
+   * Pays the same pending order again (after a declined card, LiqPay keeps the order open): a
+   * freshly signed form for it. Not pending or past its time → `409`; start a new checkout.
+   */
+  @Post('payments/:id/checkout')
+  @RateLimit('billing-checkout')
+  @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: not your payment, or unknown' })
+  @ApiResponse({
+    status: 409,
+    description: 'OFFER_UNAVAILABLE: the payment is no longer pending or its time ran out',
+  })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server',
+  })
+  resume(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: paymentIdParamsSchema }) params: { id: string },
+  ): Promise<CheckoutResponse> {
+    return this.checkouts.resume(principal, params.id);
+  }
+
   @Get('payments')
   @ApiResponse({ status: 200, standardSchema: paymentListSchema })
   @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: an invalid cursor or limit' })

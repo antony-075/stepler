@@ -24,6 +24,13 @@ export const fetchOffers = (locale: string): Promise<OfferList> =>
 export const createCheckout = (body: CheckoutRequest): Promise<CheckoutResponse> =>
   apiRequest('/billing/checkouts', { method: 'POST', body, schema: checkoutResponseSchema });
 
+/** The same pending order again, freshly signed (after a declined card). */
+export const resumeCheckout = (paymentId: string): Promise<CheckoutResponse> =>
+  apiRequest(`/billing/payments/${encodeURIComponent(paymentId)}/checkout`, {
+    method: 'POST',
+    schema: checkoutResponseSchema,
+  });
+
 /** The return page polls this; the API asks LiqPay while the payment is pending. */
 export const fetchPayment = (id: string): Promise<PaymentDto> =>
   apiRequest(`/billing/payments/${encodeURIComponent(id)}`, { schema: paymentDtoSchema });

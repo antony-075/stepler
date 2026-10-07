@@ -86,10 +86,15 @@ export function retentionYears(days: number): number | null {
 
 /** What the return page shows (plan Task 14); never from its own URL, only from the API. */
 export type ReturnView =
-  'loading' | 'pending' | 'later' | 'succeeded' | 'failed' | 'expired' | 'notFound' | 'error';
+  'loading' | 'pending' | 'unconfirmed' | 'succeeded' | 'failed' | 'expired' | 'notFound' | 'error';
 
-/** The return page polls every 3 s for up to 2 minutes, then says it will settle later. */
+/**
+ * The return page polls every 3 s for up to 2 minutes. After 20 s without a final answer it stops
+ * saying «очікуємо» and offers to pay again or check again (a declined card at LiqPay sends no
+ * callback and leaves the order open), while it keeps polling in the background.
+ */
 export const RETURN_POLL_MS = 3_000;
+export const RETURN_CONFIRM_MS = 20_000;
 export const RETURN_POLL_LIMIT_MS = 120_000;
 
 export function returnView(input: {
@@ -103,7 +108,7 @@ export function returnView(input: {
     case undefined:
       return input.failed ? 'error' : 'loading';
     case 'PENDING':
-      return input.elapsedMs >= RETURN_POLL_LIMIT_MS ? 'later' : 'pending';
+      return input.elapsedMs >= RETURN_CONFIRM_MS ? 'unconfirmed' : 'pending';
     case 'FAILED':
       return 'failed';
     case 'EXPIRED':

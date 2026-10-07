@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { isApiError } from '@/api/client';
-import { createCheckout } from '@/api/billing';
+import { createCheckout, resumeCheckout } from '@/api/billing';
 import { BrandLoading } from '@/components/brand-loading';
 import { errorMessageKey } from '@/errors/error-message';
 
@@ -45,12 +45,13 @@ export function CheckoutHandoff({ form }: { form: CheckoutForm }) {
 }
 
 /**
- * Starts a checkout: the API prices it and returns LiqPay's form, which the hand-off posts.
+ * Starts a checkout: the API prices it and returns LiqPay's form, which the hand-off posts;
+ * `{ resume }` asks for the same pending order again (after a declined card).
  * Nothing to pay (`form: null`) goes straight to the return page. `errorMessage` is the
  * translated reason of the last failure.
  */
 export function useCheckout(): {
-  start: (request: CheckoutRequest) => Promise<void>;
+  start: (request: CheckoutRequest | { resume: string }) => Promise<void>;
   pending: boolean;
   errorMessage: string | null;
   reset: () => void;
@@ -60,7 +61,8 @@ export function useCheckout(): {
   const router = useRouter();
   const [form, setForm] = useState<CheckoutForm | null>(null);
   const mutation = useMutation({
-    mutationFn: createCheckout,
+    mutationFn: (request: CheckoutRequest | { resume: string }) =>
+      'resume' in request ? resumeCheckout(request.resume) : createCheckout(request),
     onSuccess: (res) => {
       if (res.form === null) router.push(`/app/billing/return?payment=${res.paymentId}`);
       else setForm(res.form);

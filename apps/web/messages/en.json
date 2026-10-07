@@ -1774,8 +1774,6 @@
       "loading": "Checking the payment",
       "pendingTitle": "Waiting for the bank to confirm",
       "pendingText": "This usually takes a few seconds. The page updates by itself.",
-      "laterTitle": "We'll check again later",
-      "laterText": "The bank hasn't confirmed the payment yet. Its status will appear in «Plan and billing» as soon as it does.",
       "succeededTitle": "Payment received",
       "succeededText": "«{title}» is active. Paid {amount}.",
       "openCollection": "Open the collection",
@@ -1786,7 +1784,11 @@
       "expiredText": "The payment wasn't completed in time and nothing was charged. Start it again.",
       "notFound": "Payment not found. Check «Plan and billing».",
       "loadFailed": "Couldn't check the payment.",
-      "toBilling": "To «Plan and billing»"
+      "toBilling": "To «Plan and billing»",
+      "unconfirmedTitle": "The payment isn't confirmed yet",
+      "unconfirmedText": "LiqPay hasn't reported the payment yet. If the bank declined it, try again, with another card if you like.",
+      "moneyNote": "No money is taken until LiqPay confirms the payment.",
+      "checkAgain": "Check again"
     },
     "history": {
       "title": "Payment history",

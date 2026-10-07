@@ -349,6 +349,39 @@ describe('payments are the account’s own', () => {
   });
 });
 
+describe('POST /billing/payments/:id/checkout (pay the same order again)', () => {
+  test('own pending: the same order, freshly signed; otherwise 404 or 409', async () => {
+    const s = await scene();
+    const { response } = decodedForm((await s.checkout(packFor(s.collectionId)).expect(201)).body);
+    const resume = (cookie: string) =>
+      request(server)
+        .post(`/api/v1/billing/payments/${response.paymentId}/checkout`)
+        .set('Origin', ORIGIN)
+        .set('Cookie', cookie);
+    const again = decodedForm((await resume(s.owner.cookie).expect(201)).body);
+    expect(again.response.paymentId).toBe(response.paymentId);
+    expect(again.data).toMatchObject({ order_id: response.paymentId, amount: '500.00' });
+    expect(again.fields.signature).toBe(liqpaySign(TEST_LIQPAY.privateKey, again.fields.data));
+
+    const stranger = await signInAs(app, prisma, 'taras@example.com');
+    await resume(stranger.cookie).expect(404);
+
+    await prisma.payment.update({
+      where: { id: response.paymentId },
+      data: { expiresAt: new Date(Date.now() - 1000) },
+    });
+    expect((await resume(s.owner.cookie).expect(409)).body).toMatchObject({
+      code: 'OFFER_UNAVAILABLE',
+    });
+    await prisma.payment.update({
+      where: { id: response.paymentId },
+      data: { expiresAt: new Date(Date.now() + 60_000), status: 'FAILED', failedAt: new Date() },
+    });
+    await resume(s.owner.cookie).expect(409);
+    expect(await prisma.payment.count()).toBe(1);
+  });
+});
+
 describe('GET /billing/offers', () => {
   test('public: live offers with live prices only, in the asked language', async () => {
     await prisma.billingPrice.update({

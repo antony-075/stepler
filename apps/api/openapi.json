@@ -1287,6 +1287,116 @@
         ]
       }
     },
+    "/api/v1/billing/payments/{id}/checkout": {
+      "post": {
+        "operationId": "BillingController_resume_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "form": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "action": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "fields": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "data": {
+                              "type": "string"
+                            },
+                            "signature": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "data",
+                            "signature"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "action",
+                        "fields"
+                      ],
+                      "type": "object"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "status",
+                    "form"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not your payment, or unknown"
+          },
+          "409": {
+            "description": "OFFER_UNAVAILABLE: the payment is no longer pending or its time ran out"
+          },
+          "429": {
+            "description": "RATE_LIMITED: checkouts per account per hour"
+          },
+          "503": {
+            "description": "PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
     "/api/v1/collections": {
       "get": {
         "operationId": "CollectionsController_list_v1",
@@ -1542,6 +1652,11 @@
                             "additionalProperties": false,
                             "nullable": true,
                             "properties": {
+                              "offerId": {
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                "type": "string"
+                              },
                               "offerTitle": {
                                 "additionalProperties": false,
                                 "properties": {
@@ -1575,6 +1690,7 @@
                               }
                             },
                             "required": [
+                              "offerId",
                               "offerTitle",
                               "storageBytes",
                               "windowEndsAt",
@@ -1911,6 +2027,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -1944,6 +2065,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -2298,6 +2420,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -2331,6 +2458,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -2683,6 +2811,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -2716,6 +2849,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -3311,6 +3445,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -3344,6 +3483,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -9913,6 +10053,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -9946,6 +10091,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -10476,6 +10622,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -10509,6 +10660,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",
@@ -10969,6 +11121,11 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
                         "offerTitle": {
                           "additionalProperties": false,
                           "properties": {
@@ -11002,6 +11159,7 @@
                         }
                       },
                       "required": [
+                        "offerId",
                         "offerTitle",
                         "storageBytes",
                         "windowEndsAt",

@@ -154,6 +154,35 @@ test('no answer yet: the return page waits on the bank and ignores its own URL @
   await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toHaveCount(0);
 });
 
+test('a declined card sends no answer: after a while, pay the same order again @desktop', async ({
+  page,
+}) => {
+  await signIn(page, newEmail());
+  await page.goto('/app/billing?pack=pack-start');
+  const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
+  await dialog.getByLabel('Назва нової колекції').fill('Ювілей');
+  const orderOf = await payAtLiqPayStub(page, 'declined');
+  await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Очікуємо підтвердження від банку' }),
+  ).toBeVisible();
+  // No spinner forever: the page says what it knows and offers the next step.
+  await expect(page.getByRole('heading', { name: 'Оплату ще не підтверджено' })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByText('Гроші не списуються, доки LiqPay не підтвердить оплату.'),
+  ).toBeVisible();
+  const first = orderOf();
+
+  await page.unrouteAll();
+  const retried = await payAtLiqPayStub(page, 'success');
+  await page.getByRole('button', { name: 'Спробувати ще раз' }).click();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+  // The same LiqPay order was paid, not a second one.
+  expect(retried()).toBe(first);
+});
+
 test('collecting ended: «Збір завершено», extend by 30 days, guests can add again @desktop', async ({
   page,
   browser,
