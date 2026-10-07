@@ -58,6 +58,16 @@ export class PaymentTransitions {
     }
   }
 
+  /**
+   * A checkout nobody paid: `PENDING` past its TTL, and the provider has no success for it. A
+   * success that arrives later is still honoured (`EXPIRED` + success → `SUCCEEDED`).
+   */
+  async expire(tx: Db, payment: Payment): Promise<TransitionOutcome> {
+    if (payment.status !== 'PENDING') return 'noop';
+    await tx.payment.update({ where: { id: payment.id }, data: { status: 'EXPIRED' } });
+    return 'applied';
+  }
+
   private async succeed(
     tx: Db,
     payment: Payment,

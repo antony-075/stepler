@@ -19,6 +19,7 @@ describe('job names', () => {
       'billing.retention': true,
       'mail.billing-read-only': true,
       'mail.billing-deletion-warning': true,
+      'billing.reconcile': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);

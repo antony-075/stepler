@@ -25,6 +25,7 @@ import { RequestId } from '../logging/request-id.decorator.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { CheckoutService } from './checkout.service.js';
 import { PaymentQueries, toPaymentDto } from './payment-queries.js';
+import { ReconciliationService } from './reconciliation.service.js';
 
 /**
  * The account's billing (ADR 0018): the public catalogue, checkouts and the account's own
@@ -38,6 +39,7 @@ export class BillingController {
   constructor(
     private readonly checkouts: CheckoutService,
     private readonly queries: PaymentQueries,
+    private readonly reconciliation: ReconciliationService,
   ) {}
 
   /** Public: `/pricing` renders it signed out. */
@@ -94,7 +96,12 @@ export class BillingController {
     return this.queries.list(principal.userId, query, locale);
   }
 
-  /** The return page polls this; `result_url` parameters are never trusted. */
+  /**
+   * The return page polls this. While the payment is pending it asks LiqPay's `status` API (at
+   * most once per 15 s per payment, from 30 s after checkout) and applies the answer like a
+   * callback [P7]; a provider error leaves the payment as it is. `result_url` parameters are
+   * never trusted.
+   */
   @Get('payments/:id')
   @ApiResponse({ status: 200, standardSchema: paymentDtoSchema })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: not your payment, or unknown' })
@@ -102,7 +109,8 @@ export class BillingController {
     @CurrentPrincipal() principal: AccountPrincipal,
     @Param({ schema: paymentIdParamsSchema }) params: { id: string },
   ): Promise<PaymentDto> {
-    const row = await this.queries.ownPayment(principal.userId, params.id);
+    const own = await this.queries.ownPayment(principal.userId, params.id);
+    const row = await this.reconciliation.refreshPayment(own.id);
     return toPaymentDto(row, await this.queries.localeOf(principal.userId));
   }
 }

@@ -16,6 +16,7 @@ import { ReportReceivedMailHandler } from './handlers/report-received-mail.handl
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
 import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
+import { BillingReconcileHandler } from './handlers/billing-reconcile.handler.js';
 import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
@@ -26,6 +27,8 @@ const SCHEDULES: Partial<Record<JobName, string>> = {
   'maintenance.sweep': '7 * * * *',
   // Daily, after the night's backups (ADR 0018 [P6]).
   'billing.retention': '17 3 * * *',
+  // Open payments and unapplied callbacks (ADR 0018 [P7]): a lost callback heals within minutes.
+  'billing.reconcile': '*/10 * * * *',
 };
 
 const POLLING_INTERVAL_SECONDS = 2;
@@ -57,6 +60,7 @@ export class JobRunner implements OnApplicationBootstrap {
     billingRetention: BillingRetentionHandler,
     billingReadOnly: BillingReadOnlyMailHandler,
     billingDeletionWarning: BillingDeletionWarningMailHandler,
+    billingReconcile: BillingReconcileHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -74,6 +78,7 @@ export class JobRunner implements OnApplicationBootstrap {
       billingRetention,
       billingReadOnly,
       billingDeletionWarning,
+      billingReconcile,
     ] as JobHandler[];
   }
 

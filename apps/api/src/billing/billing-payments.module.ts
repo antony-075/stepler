@@ -9,6 +9,7 @@ import { DEFAULT_LINK_CREATOR, PackGrants } from './pack-grants.js';
 import { PaymentEvents } from './payment-events.service.js';
 import { PaymentQueries } from './payment-queries.js';
 import { PaymentTransitions } from './payment-transitions.js';
+import { ReconciliationService } from './reconciliation.service.js';
 
 /**
  * Payments for packs (ADR 0018, PR M2): the catalogue and checkouts, LiqPay's callback, the
@@ -24,6 +25,7 @@ import { PaymentTransitions } from './payment-transitions.js';
     PaymentEvents,
     PaymentTransitions,
     PackGrants,
+    ReconciliationService,
     GuestPageRepository,
     { provide: DEFAULT_LINK_CREATOR, useExisting: GuestLinksService },
   ],

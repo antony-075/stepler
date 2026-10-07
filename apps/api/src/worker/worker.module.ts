@@ -2,6 +2,12 @@ import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
 import { AuditService } from '../audit/audit.service.js';
 import { EntitlementResolver } from '../billing/entitlement-resolver.js';
+import { PackGrants } from '../billing/pack-grants.js';
+import { PaymentEvents } from '../billing/payment-events.service.js';
+import { PaymentTransitions } from '../billing/payment-transitions.js';
+import { PAYMENT_PROVIDERS } from '../billing/provider/provider-factory.js';
+import { ReconciliationService } from '../billing/reconciliation.service.js';
+import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
 import { CollectionDeletion } from '../collections/collection-deletion.js';
 import { ConfigModule } from '../config/config.module.js';
 import { ContentDeletion } from '../content/content-deletion.js';
@@ -31,6 +37,7 @@ import { ReportReceivedMailHandler } from './handlers/report-received-mail.handl
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
 import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
+import { BillingReconcileHandler } from './handlers/billing-reconcile.handler.js';
 import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
@@ -96,6 +103,16 @@ export class WorkerModule {
         EntitlementResolver,
         CollectionDeletion,
         BillingRetentionHandler,
+        // Payment reconciliation (ADR 0018 [P7]): the LiqPay port and the same transitions as the
+        // API. No default-link creator here (no APP_SECRET): a pack's new collection gets its
+        // default link on the owner's first visit (G4).
+        ...PAYMENT_PROVIDERS,
+        GuestPageRepository,
+        PackGrants,
+        PaymentTransitions,
+        PaymentEvents,
+        ReconciliationService,
+        BillingReconcileHandler,
         BillingReadOnlyMailHandler,
         BillingDeletionWarningMailHandler,
         JobRunner,
