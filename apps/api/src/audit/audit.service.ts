@@ -31,7 +31,10 @@ export type AuditAction =
   | 'content.restore'
   | 'appeal.create'
   | 'appeal.uphold'
-  | 'appeal.reject';
+  | 'appeal.reject'
+  // Billing (ADR 0018).
+  | 'billing.grant'
+  | 'billing.grant_revoke';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -40,7 +43,16 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link' | 'content' | 'report' | 'user' | 'appeal';
+  targetType:
+    | 'collection'
+    | 'guest_link'
+    | 'content'
+    | 'report'
+    | 'user'
+    | 'appeal'
+    | 'subscription'
+    | 'payment'
+    | 'offer';
   targetId: string;
   /**
    * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other

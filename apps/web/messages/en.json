@@ -1503,12 +1503,27 @@
         "description": "The measure stays. The admin sees your note in the app.",
         "confirm": "Reject",
         "done": "Appeal rejected"
+      },
+      "grant": {
+        "button": "Grant plan",
+        "title": "Grant a free plan",
+        "description": "The account gets the plan's limits at once, with nothing to pay. Only operators see the reason.",
+        "confirm": "Grant",
+        "done": "Plan granted"
+      },
+      "revokeGrant": {
+        "button": "Revoke plan",
+        "title": "Revoke the free plan",
+        "description": "The plan ends now. If the trial is over, the account's collections become view-only.",
+        "confirm": "Revoke",
+        "done": "Plan revoked"
       }
     },
     "nav": {
       "label": "Console sections",
       "reports": "Guest reports",
-      "appeals": "Admin appeals"
+      "appeals": "Admin appeals",
+      "billing": "Account plans"
     },
     "appeals": {
       "title": "Admin appeals",
@@ -1552,6 +1567,56 @@
       "previousNote": "Decision: {note}",
       "reports": "Reports on this frame ({count})",
       "resolvedElsewhere": "The appeal was already decided the other way."
+    },
+    "billing": {
+      "title": "Account plans",
+      "intro": "Find an account by its e-mail to grant or revoke a free plan.",
+      "email": "Account e-mail",
+      "find": "Find",
+      "notFound": "There is no account with {email}.",
+      "invalidEmail": "That does not look like an e-mail address.",
+      "failed": "Could not load the account. Try again.",
+      "createdAt": "Account created {date}",
+      "accessTitle": "Access",
+      "states": {
+        "ACTIVE": "Active",
+        "GRACE": "Grace period",
+        "COLLECTING_CLOSED": "Collecting ended",
+        "READ_ONLY": "View only"
+      },
+      "reasons": {
+        "TRIAL": "Trial until {date}",
+        "TRIAL_OPEN": "Trial",
+        "TRIAL_ENDED": "Trial ended, no plan",
+        "COMPLIMENTARY": "Free plan until {date}",
+        "COMPLIMENTARY_OPEN": "Free plan with no end",
+        "SUBSCRIPTION": "Paid subscription until {date}",
+        "SUBSCRIPTION_OPEN": "Paid subscription",
+        "SUBSCRIPTION_PAST_DUE": "Payment failed, grace period until {date}",
+        "SUBSCRIPTION_ENDED": "Plan ended",
+        "NONE": "No plan"
+      },
+      "planTitle": "Current plan",
+      "noPlan": "No plan in force.",
+      "planComplimentary": "Free “{title}”: {collections, plural, one {# collection} other {# collections}}, {storage}, up to {links} links per collection,",
+      "planPaid": "Paid “{title}”: {collections, plural, one {# collection} other {# collections}}, {storage}, up to {links} links per collection,",
+      "until": "until {date}",
+      "noEnd": "with no end",
+      "grantTitle": "Grant a free plan",
+      "replaceTitle": "Replace the free plan",
+      "paidExists": "The account pays for a subscription. A free plan can be granted only after it is cancelled.",
+      "offersFailed": "Could not load the plans. Reload the page.",
+      "offer": "Plan",
+      "offerOption": "{title}: {collections, plural, one {# collection} other {# collections}}, {storage}",
+      "offerDraft": "{offer} (not on sale)",
+      "term": "Term",
+      "termOpen": "No end",
+      "termUntil": "Until a date",
+      "endDate": "Last day of the plan",
+      "endDateError": "Choose a day in the future.",
+      "grant": "Grant plan",
+      "replace": "Replace plan",
+      "planLine": "{what} {when}"
     }
   },
   "notFound": {

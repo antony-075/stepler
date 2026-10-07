@@ -16765,6 +16765,920 @@
         ]
       }
     },
+    "/api/v1/operator/billing/accounts": {
+      "get": {
+        "operationId": "OperatorBillingController_account_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "email",
+            "required": true,
+            "schema": {
+              "format": "email",
+              "maxLength": 320,
+              "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "email": {
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+                      "type": "string"
+                    },
+                    "subscription": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "cancelAtPeriodEnd": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "currentPeriodEnd": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "currentPeriodStart": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "graceEndsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "interval": {
+                          "enum": [
+                            "ONE_TIME",
+                            "MONTH",
+                            "YEAR"
+                          ],
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "limits": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "activeCollections": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "collectionStorageBytes": {
+                              "nullable": true,
+                              "pattern": "^\\d{1,20}$",
+                              "type": "string"
+                            },
+                            "guestLinks": {
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "retentionDays": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "storageBytes": {
+                              "nullable": true,
+                              "pattern": "^\\d{1,20}$",
+                              "type": "string"
+                            },
+                            "windowDays": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "activeCollections",
+                            "storageBytes",
+                            "collectionStorageBytes",
+                            "guestLinks",
+                            "windowDays",
+                            "retentionDays"
+                          ],
+                          "type": "object"
+                        },
+                        "offerId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "offerTitle": {
+                          "type": "string"
+                        },
+                        "price": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "amountMinor": {
+                              "exclusiveMinimum": true,
+                              "maximum": 9007199254740991,
+                              "minimum": 0,
+                              "type": "integer"
+                            },
+                            "currency": {
+                              "enum": [
+                                "UAH",
+                                "EUR",
+                                "USD"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "amountMinor",
+                            "currency"
+                          ],
+                          "type": "object"
+                        },
+                        "source": {
+                          "enum": [
+                            "LIQPAY",
+                            "COMPLIMENTARY"
+                          ],
+                          "type": "string"
+                        },
+                        "status": {
+                          "enum": [
+                            "PENDING",
+                            "ACTIVE",
+                            "PAST_DUE",
+                            "CANCELED",
+                            "EXPIRED"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "source",
+                        "status",
+                        "offerId",
+                        "offerTitle",
+                        "interval",
+                        "price",
+                        "limits",
+                        "currentPeriodStart",
+                        "currentPeriodEnd",
+                        "graceEndsAt",
+                        "cancelAtPeriodEnd",
+                        "createdAt"
+                      ],
+                      "type": "object"
+                    },
+                    "trialEndsAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "userId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "userId",
+                    "email",
+                    "createdAt",
+                    "access",
+                    "trialEndsAt",
+                    "subscription"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: no account with this e-mail, or not an operator"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
+    "/api/v1/operator/billing/grants": {
+      "post": {
+        "operationId": "OperatorBillingController_grant_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "endsAt": {
+                    "format": "date-time",
+                    "nullable": true,
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                    "type": "string"
+                  },
+                  "offerId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "reason": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "userId": {
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "userId",
+                  "offerId",
+                  "endsAt",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cancelAtPeriodEnd": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "currentPeriodEnd": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "currentPeriodStart": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "graceEndsAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "interval": {
+                      "enum": [
+                        "ONE_TIME",
+                        "MONTH",
+                        "YEAR"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "limits": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "activeCollections": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "collectionStorageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "guestLinks": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "retentionDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "storageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "windowDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "activeCollections",
+                        "storageBytes",
+                        "collectionStorageBytes",
+                        "guestLinks",
+                        "windowDays",
+                        "retentionDays"
+                      ],
+                      "type": "object"
+                    },
+                    "offerId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "offerTitle": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "amountMinor": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "enum": [
+                            "UAH",
+                            "EUR",
+                            "USD"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amountMinor",
+                        "currency"
+                      ],
+                      "type": "object"
+                    },
+                    "source": {
+                      "enum": [
+                        "LIQPAY",
+                        "COMPLIMENTARY"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING",
+                        "ACTIVE",
+                        "PAST_DUE",
+                        "CANCELED",
+                        "EXPIRED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "status",
+                    "offerId",
+                    "offerTitle",
+                    "interval",
+                    "price",
+                    "limits",
+                    "currentPeriodStart",
+                    "currentPeriodEnd",
+                    "graceEndsAt",
+                    "cancelAtPeriodEnd",
+                    "createdAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: not a subscription offer, an end in the past, or no reason"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such account, or not an operator"
+          },
+          "409": {
+            "description": "SUBSCRIPTION_EXISTS: the account pays for a live subscription; cancel it first"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
+    "/api/v1/operator/billing/grants/{id}/revoke": {
+      "post": {
+        "operationId": "OperatorBillingController_revoke_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "cancelAtPeriodEnd": {
+                      "type": "boolean"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "currentPeriodEnd": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "currentPeriodStart": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "graceEndsAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "interval": {
+                      "enum": [
+                        "ONE_TIME",
+                        "MONTH",
+                        "YEAR"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "limits": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "activeCollections": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "collectionStorageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "guestLinks": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "retentionDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "storageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "windowDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "activeCollections",
+                        "storageBytes",
+                        "collectionStorageBytes",
+                        "guestLinks",
+                        "windowDays",
+                        "retentionDays"
+                      ],
+                      "type": "object"
+                    },
+                    "offerId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "offerTitle": {
+                      "type": "string"
+                    },
+                    "price": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "amountMinor": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "enum": [
+                            "UAH",
+                            "EUR",
+                            "USD"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amountMinor",
+                        "currency"
+                      ],
+                      "type": "object"
+                    },
+                    "source": {
+                      "enum": [
+                        "LIQPAY",
+                        "COMPLIMENTARY"
+                      ],
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING",
+                        "ACTIVE",
+                        "PAST_DUE",
+                        "CANCELED",
+                        "EXPIRED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "source",
+                    "status",
+                    "offerId",
+                    "offerTitle",
+                    "interval",
+                    "price",
+                    "limits",
+                    "currentPeriodStart",
+                    "currentPeriodEnd",
+                    "graceEndsAt",
+                    "cancelAtPeriodEnd",
+                    "createdAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: a 1–500 reason is required"
+          },
+          "404": {
+            "description": "NOT_FOUND: no live grant with this id, or not an operator"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
+    "/api/v1/operator/billing/offers": {
+      "get": {
+        "operationId": "OperatorBillingController_offers_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "code": {
+                            "type": "string"
+                          },
+                          "extension": {
+                            "enum": [
+                              "WINDOW",
+                              "RETENTION",
+                              "STORAGE"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": [
+                              "TRIAL",
+                              "PACK",
+                              "PACK_EXTENSION",
+                              "SUBSCRIPTION"
+                            ],
+                            "type": "string"
+                          },
+                          "limits": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "activeCollections": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "collectionStorageBytes": {
+                                "nullable": true,
+                                "pattern": "^\\d{1,20}$",
+                                "type": "string"
+                              },
+                              "guestLinks": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "retentionDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "storageBytes": {
+                                "nullable": true,
+                                "pattern": "^\\d{1,20}$",
+                                "type": "string"
+                              },
+                              "windowDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "activeCollections",
+                              "storageBytes",
+                              "collectionStorageBytes",
+                              "guestLinks",
+                              "windowDays",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          "rank": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "titleEn": {
+                            "type": "string"
+                          },
+                          "titleUk": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "kind",
+                          "extension",
+                          "titleUk",
+                          "titleEn",
+                          "rank",
+                          "active",
+                          "limits"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not the Stepler operator, or nothing reported by that id"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
     "/api/v1/operator/collections/{id}/block": {
       "post": {
         "operationId": "OperatorActionsController_blockCollection_v1",
