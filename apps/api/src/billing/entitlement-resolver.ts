@@ -18,6 +18,7 @@ type Db = Prisma.TransactionClient;
 export const TRIAL_OFFER_CODE = 'trial';
 
 const PACK_SELECT = {
+  offerId: true,
   storageBytes: true,
   guestLinks: true,
   activatedAt: true,

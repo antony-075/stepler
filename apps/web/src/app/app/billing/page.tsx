@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AdminPage } from '@/components/admin-page';
 import { BillingOverview } from './billing-overview';
@@ -9,13 +10,15 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * «Тариф і оплата» (ADR 0018). In M1 it says what the account has now (trial, grant or nothing)
- * and that card payments come next; no buttons that cannot work yet (rule 18).
+ * «Тариф і оплата» (ADR 0018): what the account has now, the packs on sale (M2) and the
+ * payment history. `?pack=` / `?collection=` open the purchase dialog with that choice.
  */
 export default function BillingPage() {
   return (
     <AdminPage className="*:max-w-[1240px]">
-      <BillingOverview />
+      <Suspense>
+        <BillingOverview />
+      </Suspense>
     </AdminPage>
   );
 }

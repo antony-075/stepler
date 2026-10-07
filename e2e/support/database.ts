@@ -39,3 +39,15 @@ export function endTrial(email: string): void {
     `UPDATE "User" SET "trialEndsAt" = now() - interval '1 day' WHERE email = '${safeEmail(email)}';`,
   );
 }
+
+const safeId = (id: string): string => {
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error('unexpected id format');
+  return id;
+};
+
+/** Ends a pack collection's collecting window a day ago (what 30 days of waiting would do). */
+export function endPackWindow(collectionId: string): void {
+  execute(
+    `UPDATE "CollectionPack" SET "windowEndsAt" = now() - interval '1 day', "activatedAt" = LEAST("activatedAt", now() - interval '2 days') WHERE "collectionId" = '${safeId(collectionId)}';`,
+  );
+}

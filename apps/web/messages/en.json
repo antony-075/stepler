@@ -143,7 +143,8 @@
       },
       "note": "What guests see",
       "phoneAlt": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
-    }
+    },
+    "pricingLink": "Pricing"
   },
   "toast": {
     "announcement": "Notification",
@@ -359,8 +360,13 @@
       "packReadOnlyTitle": "The keeping period is over",
       "packReadOnlyText": "The collection is view-only: you can still view, download and delete.",
       "deleteAfter": "The collection will be deleted on {date} — to keep it, choose a plan or download the content before then",
-      "pack": "“{title}” pack: collecting until {window}, kept until {retention}",
-      "choosePlan": "Choose a plan"
+      "choosePlan": "Choose a plan",
+      "packClosedTitleDate": "Collecting ended on {date}",
+      "packTitle": "The «{title}» pack",
+      "packWindowOpen": "Guests can add until {date}",
+      "packWindowEnded": "Collecting ended on {date}",
+      "packRetention": "Kept until {date}",
+      "packStorage": "Pack storage used"
     }
   },
   "content": {
@@ -1702,7 +1708,6 @@
     "collectionsUsage": "{used} of {limit, plural, one {# active collection} other {# active collections}}",
     "storageUsage": "{used} of {limit} storage",
     "readOnlyExplained": "View only means guests cannot add anything, while you can still view, download and delete. Content is kept for 12 months after the plan ends, then deleted; we e-mail you 30 and 7 days before.",
-    "paymentsSoon": "Card payments will appear here soon. Until then, access can be extended only through Stepler support.",
     "loadFailed": "Could not load your plan.",
     "retry": "Try again",
     "access": {
@@ -1718,6 +1723,104 @@
       "choosePlan": "Choose a plan",
       "trialDaysLeft": "Trial: {days, plural, =0 {ends today} one {# day left} other {# days left}}",
       "readOnlyShort": "View only"
+    },
+    "pack": {
+      "oneTime": "one-time",
+      "storage": "{size} for photos, videos and documents",
+      "window": "Guests add for {days, plural, one {# day} other {# days}} after payment",
+      "retentionYears": "Kept for {years, plural, one {# year} other {# years}} after payment",
+      "retentionDays": "Kept for {days, plural, one {# day} other {# days}} after payment",
+      "links": "Up to {count, plural, one {# additional guest link} other {# additional guest links}}",
+      "buy": "Buy"
+    },
+    "pricing": {
+      "metaTitle": "Pricing",
+      "metaDescription": "A pack for one event: room for your guests' photos and videos, collecting and keeping. One card payment, no subscription.",
+      "title": "Pricing",
+      "intro": "One pack, one event. You pay once by card: no subscription, no automatic charges.",
+      "trial": "A new account gets a 7-day trial without a card: 1 collection and 1 GB.",
+      "packsTitle": "Packs for an event",
+      "signIn": "Sign in to buy",
+      "choose": "Choose a pack",
+      "extrasTitle": "If you need more",
+      "extrasText": "A pack can be extended or enlarged from the collection's page.",
+      "extraPrice": "{title} — {price}",
+      "storageExtra": "Move to a bigger pack — you pay the price difference",
+      "subscriptionsSoon": "A subscription for event businesses with several collections is coming soon.",
+      "paymentNote": "Payments go through LiqPay (PrivatBank). Stepler never sees or stores your card details.",
+      "unavailable": "Prices are not available right now. Try reloading the page a little later.",
+      "nav": "Pricing"
+    },
+    "buy": {
+      "title": "The «{title}» pack",
+      "description": "A pack covers one collection. After payment guests add content for {days, plural, one {# day} other {# days}}, and we keep it until the pack's term ends.",
+      "target": "Which collection",
+      "newCollection": "A new collection",
+      "newTitle": "Name of the new collection",
+      "newTitleHint": "The collection is created as soon as the payment goes through.",
+      "noExisting": "Every collection already has a pack: this one will create a new collection.",
+      "total": "To pay",
+      "pay": "Go to payment",
+      "paying": "Going to payment",
+      "cancel": "Cancel",
+      "liqpayNote": "We'll take you to LiqPay's payment page. Card details are entered there, not in Stepler."
+    },
+    "handoff": {
+      "title": "Taking you to LiqPay's payment page…",
+      "text": "Keep this tab open. After paying, LiqPay brings you back to Stepler."
+    },
+    "return": {
+      "pageTitle": "Payment",
+      "loading": "Checking the payment",
+      "pendingTitle": "Waiting for the bank to confirm",
+      "pendingText": "This usually takes a few seconds. The page updates by itself.",
+      "laterTitle": "We'll check again later",
+      "laterText": "The bank hasn't confirmed the payment yet. Its status will appear in «Plan and billing» as soon as it does.",
+      "succeededTitle": "Payment received",
+      "succeededText": "«{title}» is active. Paid {amount}.",
+      "openCollection": "Open the collection",
+      "failedTitle": "The payment didn't go through",
+      "failedText": "Nothing was charged. Try again or use another card.",
+      "retry": "Try again",
+      "expiredTitle": "The time to pay ran out",
+      "expiredText": "The payment wasn't completed in time and nothing was charged. Start it again.",
+      "notFound": "Payment not found. Check «Plan and billing».",
+      "loadFailed": "Couldn't check the payment.",
+      "toBilling": "To «Plan and billing»"
+    },
+    "history": {
+      "title": "Payment history",
+      "empty": "No payments yet.",
+      "loadFailed": "Couldn't load the payment history.",
+      "date": "Date",
+      "what": "What",
+      "amount": "Amount",
+      "status": "Status",
+      "statuses": {
+        "PENDING": "Pending",
+        "SUCCEEDED": "Paid",
+        "FAILED": "Failed",
+        "EXPIRED": "Not completed",
+        "REVERSED": "Reversed by the bank",
+        "REFUNDED": "Refunded",
+        "PARTIALLY_REFUNDED": "Partly refunded"
+      }
+    },
+    "packs": {
+      "title": "Buy a pack",
+      "intro": "A pack is a one-time payment for one collection, with no automatic charges.",
+      "unavailable": "Packs can't be bought right now."
+    },
+    "extend": {
+      "storageUse": "{used} of {limit}",
+      "upgrade": "Enlarge to {size}",
+      "confirmText": "To pay: {amount}. We'll take you to LiqPay's payment page.",
+      "confirm": "Go to payment",
+      "pending": "Going to payment",
+      "cancel": "Cancel",
+      "failed": "Couldn't start the payment.",
+      "buyForCollection": "Buy a pack for this collection",
+      "buyForCollectionText": "A pack takes this collection off the account's limits: its own storage, collecting time and keeping term."
     }
   }
 }

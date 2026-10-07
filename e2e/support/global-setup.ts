@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { E2E_PRICES } from './billing-env.js';
 import { E2E_DATABASE_URL } from './env.js';
 
 const apiDir = fileURLToPath(new URL('../../apps/api/', import.meta.url));
@@ -29,11 +30,28 @@ function prisma(args: string[], input?: string): void {
 const E2E_TRIAL_LIMITS = `UPDATE "BillingOffer" SET "activeCollections" = 3,
   "storageBytes" = 21474836480, "collectionStorageBytes" = 10737418240 WHERE "code" = 'trial';`;
 
+/**
+ * The packs on sale in the journeys (ADR 0018): UAH prices (`E2E_PRICES`), offers activated.
+ * Prices are rewritten on every run so a changed price list takes effect.
+ */
+const E2E_CATALOGUE = `DELETE FROM "BillingPrice" WHERE "offerId" IN (SELECT id FROM "BillingOffer"
+  WHERE code IN ('pack-start','pack-event','ext-window-30','ext-retention-365'))
+  AND NOT EXISTS (SELECT 1 FROM "Payment" p WHERE p."priceId" = "BillingPrice".id);
+UPDATE "BillingPrice" SET active = false WHERE "offerId" IN (SELECT id FROM "BillingOffer"
+  WHERE code IN ('pack-start','pack-event','ext-window-30','ext-retention-365'));
+INSERT INTO "BillingPrice" ("offerId", "interval", "currency", "amountMinor")
+  SELECT o.id, 'ONE_TIME', 'UAH', v.amount FROM "BillingOffer" o JOIN (VALUES
+  ${Object.entries(E2E_PRICES)
+    .map(([code, amount]) => `('${code}', ${amount})`)
+    .join(', ')}) AS v(code, amount) ON v.code = o.code;
+UPDATE "BillingOffer" SET active = true
+  WHERE code IN ('pack-start','pack-event','ext-window-30','ext-retention-365');`;
+
 /** Migrates the e2e database and empties it, so every run starts clean. */
 export default function globalSetup(): void {
   prisma(['migrate', 'deploy']);
   prisma(
     ['db', 'execute', '--stdin'],
-    `TRUNCATE "User", "AuthAccount", "AuthSession", "MagicLinkToken" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}`,
+    `TRUNCATE "User", "AuthAccount", "AuthSession", "MagicLinkToken" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}\n${E2E_CATALOGUE}`,
   );
 }

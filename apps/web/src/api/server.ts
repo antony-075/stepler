@@ -6,6 +6,8 @@ import {
   guestLinkThemeResponseSchema,
   type MeResponse,
   meResponseSchema,
+  type OfferList,
+  offerListSchema,
 } from '@stepler/contracts';
 import { headers } from 'next/headers';
 import { upstreamRequestHeaders } from '@/api-proxy/forward';
@@ -81,6 +83,23 @@ export async function fetchGuestLinkTheme(token: string): Promise<GuestLinkTheme
     });
     if (!res.ok) return null;
     const parsed = guestLinkThemeResponseSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The public catalogue for `/pricing` (ADR 0018); `null` when the API can't answer. */
+export async function fetchOffersServer(locale: string): Promise<OfferList | null> {
+  try {
+    const url = new URL('/api/v1/billing/offers', getWebEnv().API_INTERNAL_URL);
+    url.searchParams.set('locale', locale);
+    const res = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const parsed = offerListSchema.safeParse(await res.json());
     return parsed.success ? parsed.data : null;
   } catch {
     return null;

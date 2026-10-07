@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
-import { endTrial } from '../support/database.js';
+import { payAtLiqPayStub } from '../support/billing.js';
+import { endPackWindow, endTrial } from '../support/database.js';
 import { mainLinkPath, openGuestLink } from '../support/guest.js';
 import { signInAsOperator } from '../support/operator.js';
 
@@ -40,12 +41,12 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await expect(create).toHaveAccessibleDescription(/Гості не можуть нічого додавати/);
   expect(await horizontalOverflow(page)).toBe(0);
 
-  // «Тариф і оплата» says the same, honestly: no pay button yet.
+  // «Тариф і оплата» says the same and offers the packs (M2).
   await page.getByRole('link', { name: 'Обрати тариф' }).click();
   await expect(page).toHaveURL(/\/app\/billing$/);
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
   await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Оплата карткою з’явиться/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
 
   // Guests can still open the link, but there is nothing to add.
   const guest = await openGuestLink(browser, guestPath);
@@ -72,6 +73,117 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await page.goto('/app');
   await expect(page.getByRole('button', { name: UK.newCollection })).toBeEnabled();
   await expect(page.getByText(UK.banner)).toHaveCount(0);
+  const reopened = await openGuestLink(browser, guestPath);
+  await expect(reopened.getByRole('button', { name: UK.addFiles })).toBeVisible();
+  await reopened.context().close();
+});
+
+// Billing M2 (ADR 0018, plan Task 14): packs bought through the real `LiqPayProvider`; only
+// LiqPay's endpoints are replaced (`support/billing.ts`, `support/liqpay-stub.ts`).
+
+test('pricing is public: two packs with prices, signing in to buy', async ({ page }) => {
+  await page.goto('/pricing');
+  await expect(page.getByRole('heading', { name: 'Тарифи', level: 1 })).toBeVisible();
+  const start = page.getByTestId('pack-pack-start');
+  await expect(start.getByRole('heading', { name: 'Старт' })).toBeVisible();
+  await expect(start.getByText(/^499,00\s₴$/)).toBeVisible();
+  await expect(page.getByTestId('pack-pack-event').getByText(/^999,00\s₴$/)).toBeVisible();
+  await expect(page.getByText(/Продовжити збір на 30 днів — 199,00\s₴/)).toBeVisible();
+  expect(await horizontalOverflow(page)).toBe(0);
+  await start.getByRole('link', { name: 'Увійти, щоб купити' }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+test('a pack for a trial collection: checkout, LiqPay, «Оплату отримано», the pack in force @desktop', async ({
+  page,
+}) => {
+  await signIn(page, newEmail());
+  const { id } = await createCollectionViaApi(page, 'Весілля Олени');
+  await page.goto(`/app/collections/${id}`);
+  await page.getByRole('link', { name: 'Купити пакет для цієї колекції' }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/billing\\?collection=${id}$`));
+
+  await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
+  await expect(dialog.getByRole('radio', { name: 'Весілля Олени' })).toBeChecked();
+  await expect(dialog.getByText(/^499,00\s₴$/)).toBeVisible();
+  await payAtLiqPayStub(page, 'success');
+  await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
+
+  await expect(page).toHaveURL(/\/app\/billing\/return\?payment=/);
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+  await page.getByRole('link', { name: 'Відкрити колекцію' }).click();
+  await expect(page.getByText('Пакет «Старт»')).toBeVisible();
+  await expect(page.getByText(/^Гості додають до /)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Продовжити збір на 30 днів' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Купити пакет для цієї колекції' })).toHaveCount(0);
+
+  await page.goto('/app/billing');
+  await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
+});
+
+test('a declined card: «Оплата не пройшла» and a way to try again @desktop', async ({ page }) => {
+  await signIn(page, newEmail());
+  await page.goto('/app/billing?pack=pack-event');
+  const dialog = page.getByRole('dialog', { name: 'Пакет «Подія»' });
+  await expect(dialog.getByRole('radio', { name: 'Нова колекція' })).toBeChecked();
+  await dialog.getByLabel('Назва нової колекції').fill('Ювілей');
+  await payAtLiqPayStub(page, 'failure');
+  await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(page.getByRole('heading', { name: 'Оплата не пройшла' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Спробувати ще раз' })).toBeVisible();
+});
+
+test('no answer yet: the return page waits on the bank and ignores its own URL @desktop', async ({
+  page,
+}) => {
+  await signIn(page, newEmail());
+  await page.goto('/app/billing?pack=pack-start');
+  const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
+  await dialog.getByLabel('Назва нової колекції').fill('Хрестини');
+  await payAtLiqPayStub(page, 'processing');
+  await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(
+    page.getByRole('heading', { name: 'Очікуємо підтвердження від банку' }),
+  ).toBeVisible();
+  // A forged `status=success` in the return URL changes nothing: only the API decides.
+  await page.goto(`${page.url()}&status=success`);
+  await expect(
+    page.getByRole('heading', { name: 'Очікуємо підтвердження від банку' }),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toHaveCount(0);
+});
+
+test('collecting ended: «Збір завершено», extend by 30 days, guests can add again @desktop', async ({
+  page,
+  browser,
+}) => {
+  await signIn(page, newEmail());
+  const { id } = await createCollectionViaApi(page, 'Випускний');
+  const guestPath = await mainLinkPath(page, id);
+  await page.goto(`/app/billing?pack=pack-start&collection=${id}`);
+  await payAtLiqPayStub(page, 'success');
+  await page
+    .getByRole('dialog', { name: 'Пакет «Старт»' })
+    .getByRole('button', { name: 'Перейти до оплати' })
+    .click();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+
+  endPackWindow(id);
+  await page.goto(`/app/collections/${id}`);
+  await expect(page.getByText(/^Збір завершено \d/).first()).toBeVisible();
+  const guest = await openGuestLink(browser, guestPath);
+  await expect(guest.getByRole('button', { name: UK.addFiles })).toHaveCount(0);
+  await guest.context().close();
+
+  await page.unrouteAll();
+  await payAtLiqPayStub(page, 'success');
+  await page.getByRole('button', { name: 'Продовжити збір на 30 днів' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Продовжити збір на 30 днів' });
+  await expect(confirm.getByText(/199,00\s₴/)).toBeVisible();
+  await confirm.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+
   const reopened = await openGuestLink(browser, guestPath);
   await expect(reopened.getByRole('button', { name: UK.addFiles })).toBeVisible();
   await reopened.context().close();

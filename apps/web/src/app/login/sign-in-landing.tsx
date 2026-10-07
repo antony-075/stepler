@@ -1,4 +1,7 @@
 import { Panel, PanelContent } from '@stepler/ui/components/panel';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { cn } from '@stepler/ui/lib/utils';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { fetchAuthMethods } from '@/api/server';
 import { SiteFooter } from '@/components/site-footer';
@@ -39,7 +42,18 @@ export async function SignInLanding({ error }: { error?: unknown }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader>
-        <LanguageSwitch variant="header" />
+        <div className="flex items-center gap-1 sm:gap-3">
+          <Link
+            href="/pricing"
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-control px-2 text-sm font-medium text-foreground-soft no-underline hover:text-foreground',
+              focusRing,
+            )}
+          >
+            {t('pricingLink')}
+          </Link>
+          <LanguageSwitch variant="header" />
+        </div>
       </SiteHeader>
       {/* The block sits in the middle of the window's height on big and tall screens (owner
           2026-10-06: not stuck to the top over an empty half), the footer at the bottom. */}

@@ -49,6 +49,8 @@ export type CollectionEntitlement = z.infer<typeof collectionEntitlementSchema>;
 /** A pack collection's own clocks [P4]. */
 export const collectionPackSchema = z
   .object({
+    /** The pack's offer: a bigger tier (higher rank) is a storage upgrade (ADR 0018 [P4]). */
+    offerId: z.uuid(),
     /** The pack's name in both languages (offers are named per language, [B10]). */
     offerTitle: z.object({ uk: z.string(), en: z.string() }).strict(),
     storageBytes: z.int().min(0),

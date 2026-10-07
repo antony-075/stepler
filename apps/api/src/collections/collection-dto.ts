@@ -104,6 +104,7 @@ export function toCollectionDto(
     pack:
       row.entitlement === 'PACK' && row.pack !== null
         ? {
+            offerId: row.pack.offerId,
             offerTitle: { uk: row.pack.offer.titleUk, en: row.pack.offer.titleEn },
             storageBytes: Number(row.pack.storageBytes),
             windowEndsAt: row.pack.windowEndsAt.toISOString(),
