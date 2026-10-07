@@ -18,6 +18,7 @@
     "build-storybook": "turbo run build-storybook",
     "infra:up": "docker compose -f docker/compose.yaml --env-file docker/.env up -d --wait",
     "infra:down": "docker compose -f docker/compose.yaml --env-file docker/.env down",
+    "mailpit": "docker compose -f docker/compose.yaml --env-file docker/.env up -d --wait mailpit && echo 'Mailpit: http://127.0.0.1:8025' && (open http://127.0.0.1:8025 || xdg-open http://127.0.0.1:8025 || true)",
     "storage:bootstrap": "pnpm --filter @stepler/api storage:bootstrap",
     "storybook": "pnpm --filter @stepler/ui storybook",
     "templates:dev": "pnpm --filter @stepler/templates storybook",

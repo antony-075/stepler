@@ -40,7 +40,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
         <Toaster
           label={t('region')}
           closeLabel={t('close')}
-          position={BOTTOM_TOASTS.test(pathname) ? 'bottom' : 'top-center'}
+          position={BOTTOM_TOASTS.test(pathname) ? 'bottom' : 'top-right'}
         />
       </ToastProvider>
     </QueryClientProvider>

@@ -24,7 +24,10 @@ test.describe('collection content', () => {
     browser,
   }) => {
     const id = await withWishes(page, browser, ['Перше', 'Друге', 'Третє']);
-    const frames = page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button');
+    // The frames' own buttons: a tile's hover action («Видалити кадр 3») is a button too.
+    const frames = page
+      .getByRole('list', { name: 'Кадри колекції' })
+      .getByRole('button', { name: /^Кадр / });
     await expect(frames).toHaveCount(3);
     await expect(frames.first()).toHaveAccessibleName(/^Кадр 3,/);
     await expect(page.getByRole('tab', { name: /^Вміст/ })).toHaveText('Вміст3');

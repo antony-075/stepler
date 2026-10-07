@@ -10,18 +10,27 @@
 // - «Завантажити» on every file: another guest's downloads as a neutral `stepler.<ext>` (the API
 //   signs no file name or number into its link); «Видалити» only on the guest's own frame and
 //   only when the link allows it, behind a plain confirm («Видалити кадр #012?»), never typed.
+// - Slice 9: another guest's frame has a «⋯» menu (44px, «Більше дій») with «Поскаржитися»,
+//   which opens the report form; the guest's own frames have no menu.
 import type { GuestContentItem } from '@stepler/contracts';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@stepler/ui/components/dropdown-menu';
 import { FrameViewer } from '@stepler/ui/components/frame-viewer';
 import { useToast } from '@stepler/ui/components/toast';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
 import { useQuery } from '@tanstack/react-query';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Flag, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { formatBytes } from '@/format/bytes';
 import { FileStage, TextStage, viewerButton } from '@/media/viewer-stage';
 import { getGuestContent } from './api';
+import { GuestReport } from './report-content';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
 
@@ -57,10 +66,14 @@ export function GuestViewer({
   onDelete: (item: GuestContentItem) => Promise<void>;
 }) {
   const t = useTranslations('guest.viewer');
+  const tReport = useTranslations('guest.report');
   const tContent = useTranslations('content');
   const format = useFormatter();
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
+  /** Which opening of the report form this is: each gets a new idempotency key. */
+  const [reporting, setReporting] = useState<{ id: string; opening: number } | null>(null);
+  const [openings, setOpenings] = useState(0);
   const [videoFailed, setVideoFailed] = useState<string | null>(null);
   const index = openId === null ? -1 : items.findIndex((item) => item.id === openId);
   const item = index === -1 ? undefined : items[index];
@@ -125,6 +138,24 @@ export function GuestViewer({
                 <span className="max-sm:sr-only">{t('delete')}</span>
               </button>
             ) : null}
+            {item.isOwn ? null : (
+              <DropdownMenu>
+                <DropdownMenuTrigger className={viewerButton} aria-label={tReport('more')}>
+                  <MoreHorizontal aria-hidden="true" className="size-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setOpenings((n) => n + 1);
+                      setReporting({ id: item.id, opening: openings + 1 });
+                    }}
+                  >
+                    <Flag aria-hidden="true" />
+                    {tReport('menuItem')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </>
         }
         details={
@@ -168,6 +199,17 @@ export function GuestViewer({
           />
         )}
       </FrameViewer>
+      {reporting !== null && reporting.id === item.id ? (
+        <GuestReport
+          key={reporting.opening}
+          call={call}
+          item={item}
+          open
+          onOpenChange={(open) => {
+            if (!open) setReporting(null);
+          }}
+        />
+      ) : null}
       {item.canDelete && number !== null ? (
         <ConfirmDialog
           open={confirming}

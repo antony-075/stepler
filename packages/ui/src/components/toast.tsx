@@ -187,12 +187,15 @@ function useAvoidOffset(openKey: string): number {
 }
 
 /**
- * Where toasts appear. `top-center` (the default; owner 2026-10-06): centred at the top, under
- * the page's top bar (`--toast-top`, its height; 0 without one) and clear of the safe area.
- * `bottom`: bottom-centre on phones, bottom-right from `sm`, lifted above any fixed bottom bar
- * marked `data-toast-avoid` (pages whose top belongs to their own content, e.g. guest pages).
+ * Where toasts appear. `top-right` (the default; owner 2026-10-06, remark 175): the top right
+ * corner, 12px from the window's top (plus the safe area) and 16px from its right, over the top
+ * bar's right end while shown, so they never cover the page's own header controls. On phones
+ * full width minus the 16px gutters, 8px under the top bar (`--toast-top`) as before, where a
+ * sheet's close button sits higher. `bottom`: bottom-centre on phones, bottom-right from `sm`,
+ * lifted above any fixed bottom bar marked `data-toast-avoid` (pages whose top belongs to their
+ * own content, e.g. guest pages).
  */
-type ToasterPosition = 'top-center' | 'bottom';
+type ToasterPosition = 'top-right' | 'bottom';
 
 type ToasterProps = {
   /** Name of the notifications region (e.g. "Сповіщення"); `{hotkey}` is replaced with F8. */
@@ -204,21 +207,25 @@ type ToasterProps = {
 };
 
 // Enter: fade and a short slide from the edge the toasts sit on (160ms); exit: the reverse, faster
-// (120ms). Transform and opacity only; nothing moves under reduced motion.
+// (120ms). Top right: from the right from `sm`, from the top on phones (where they span the
+// width). Transform and opacity only; nothing moves under reduced motion.
 const MOTION: Record<ToasterPosition, string> = {
-  'top-center':
+  'top-right': cn(
     'motion-safe:data-[state=open]:slide-in-from-top-2 motion-safe:data-[state=closed]:slide-out-to-top-2',
+    'sm:motion-safe:data-[state=open]:slide-in-from-top-0 sm:motion-safe:data-[state=open]:slide-in-from-right-4',
+    'sm:motion-safe:data-[state=closed]:slide-out-to-top-0 sm:motion-safe:data-[state=closed]:slide-out-to-right-4',
+  ),
   bottom: 'motion-safe:data-[state=open]:slide-in-from-bottom-2',
 };
 
 // Based on shadcn/ui (new-york) toast. Deviations: rendered from context by one `Toaster`, at
-// the top centre (full width minus the 16px gutter on phones, 420px from `sm`) or at the bottom
+// the top right (full width minus the 16px gutter on phones, 360px from `sm`) or at the bottom
 // (`position`), the variant's soft fill and edge (8px radius, `--shadow-popover`), a built-in
 // icon per variant, a 44px close button, `error` toasts use Radix's `foreground` type (announced
 // assertively), and motion is off under reduced motion (`MOTION`).
-function Toaster({ label, closeLabel, position = 'top-center', className }: ToasterProps) {
+function Toaster({ label, closeLabel, position = 'top-right', className }: ToasterProps) {
   const { toasts, dismiss } = useToastContext();
-  const top = position === 'top-center';
+  const top = position === 'top-right';
   const openKey = toasts
     .filter((t) => t.open)
     .map((t) => t.id)
@@ -297,8 +304,10 @@ function Toaster({ label, closeLabel, position = 'top-center', className }: Toas
         className={cn(
           'pointer-events-none fixed inset-x-0 z-(--z-toast) m-0 flex max-h-dvh list-none flex-col gap-2 p-4 outline-none',
           top
-            ? // 8px under the top bar, or clear of the notch on a page without one.
-              'top-(--toast-top,0px) mx-auto pt-[max(0.5rem,env(safe-area-inset-top))] sm:w-[420px] sm:max-w-full'
+            ? // Phones: 8px under the page's top bar (`--toast-top`, its height; 0 without one), so a
+              // sheet's header and its close button stay free. From `sm`: 12px from the window's
+              // top (below the notch), 16px from its right; a 360px toast.
+              'top-(--toast-top,0px) pt-[max(0.5rem,env(safe-area-inset-top))] sm:top-0 sm:left-auto sm:w-[392px] sm:max-w-full sm:pt-[calc(0.75rem+env(safe-area-inset-top))]'
             : [
                 'sm:left-auto sm:w-[420px] sm:max-w-full',
                 // Above a bottom bar the bar already clears the safe area; only the gutter remains.

@@ -33,6 +33,8 @@ export interface GuestSessionLimits {
   textsPerHour: number;
   uploadInitiationsPerHour: number;
   concurrentUploads: number;
+  /** Reports one session may send per rolling hour (slice 9). */
+  reportsPerHour: number;
 }
 
 /** The direct-upload protocol's sizes and lifetimes (spec §10.2, §10.6). */
@@ -74,6 +76,7 @@ export class LimitsService {
       textsPerHour: this.env.LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR,
       uploadInitiationsPerHour: this.env.LIMIT_UPLOAD_INITIATIONS_PER_GUEST_SESSION_PER_HOUR,
       concurrentUploads: this.env.LIMIT_CONCURRENT_UPLOADS_PER_GUEST_SESSION,
+      reportsPerHour: this.env.LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR,
     };
   }
 
@@ -88,6 +91,19 @@ export class LimitsService {
   /** Guest reads per client IP per minute and route; generous, a bound on load. */
   guestReadsPerIpPerMinute(): number {
     return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
+  }
+
+  /** Slice 9b: appeals per admin per rolling day, and the quarantine before an operator purge. */
+  moderation(): { appealsPerDay: number; quarantineDays: number } {
+    return {
+      appealsPerDay: this.env.LIMIT_APPEALS_PER_ACCOUNT_PER_DAY,
+      quarantineDays: this.env.MODERATION_QUARANTINE_DAYS,
+    };
+  }
+
+  /** Guest reports per client IP per hour, across sessions (slice 9). */
+  reportsPerIpPerHour(): number {
+    return this.env.LIMIT_REPORTS_PER_IP_PER_HOUR;
   }
 
   /** Guest deletes of their own frames per client IP per minute and route [C15]. */

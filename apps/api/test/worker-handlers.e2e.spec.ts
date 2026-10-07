@@ -11,6 +11,8 @@ import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
+import { AuditService } from '../src/audit/audit.service.js';
+import { ContentDeletion } from '../src/content/content-deletion.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
@@ -21,7 +23,7 @@ import { WorkerModule } from '../src/worker/worker.module.js';
 import { loadWorkerEnv, type WorkerEnv } from '../src/worker/worker-env.js';
 import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
-import { TEST_DATABASE_URL, testEnv } from './support/env.js';
+import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys, putObject } from './support/storage.js';
@@ -31,6 +33,7 @@ const coverPrefix = (collectionId: string, id: string) => imagePrefix(collection
 const apiEnv = testEnv();
 const workerEnv = (overrides: Record<string, string> = {}): WorkerEnv =>
   loadWorkerEnv({
+    ...WORKER_MAIL_ENV,
     NODE_ENV: 'test',
     LOG_LEVEL: 'error',
     DATABASE_URL: TEST_DATABASE_URL,
@@ -315,7 +318,12 @@ describe('worker handlers', () => {
 
   describe('maintenance.sweep', () => {
     const sweep = (overrides: Record<string, string> = {}) =>
-      new MaintenanceSweepHandler(prisma, queue, workerEnv(overrides));
+      new MaintenanceSweepHandler(
+        prisma,
+        new ContentDeletion(new AuditService(), queue),
+        queue,
+        workerEnv(overrides),
+      );
 
     test('fails photos and videos stuck PENDING for an hour with no media job left', async () => {
       const { collectionId } = await seed();
@@ -486,6 +494,7 @@ describe('worker handlers', () => {
       };
       const handler = new MaintenanceSweepHandler(
         prisma,
+        new ContentDeletion(new AuditService(), broken),
         broken,
         workerEnv({ GUEST_SESSION_IDLE_DAYS: '30' }),
       );

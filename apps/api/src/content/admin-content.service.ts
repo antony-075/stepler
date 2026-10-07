@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type {
   AdminContentDetail,
+  AdminContentItem,
   AdminContentListQuery,
   AdminContentPage,
   BulkDeleteContentResponse,
@@ -11,15 +12,20 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { AppealsService } from '../moderation/appeals.service.js';
+import { ContentHiding } from '../moderation/content-hiding.js';
+import { ModerationReads, moderationOf } from '../moderation/moderation-reads.js';
 import { ContentDeletion } from './content-deletion.js';
-import { toAdminContentDetail, toAdminContentItem } from './content-dto.js';
+import { toAdminContentItem } from './content-dto.js';
 import { ContentQueries } from './content-queries.js';
 import { MediaUrls, WITH_MEDIA } from './media-urls.js';
 
 /**
  * The collection owner's view of content. Rows are reached only through
  * `collection.ownerId = principal.userId` and a collection that is not `DELETING`; anything
- * else is `404` (no existence disclosure). Operators have no content access in this work.
+ * else is `404` (no existence disclosure). The operator works on content through its own console
+ * (`OperatorModule`), never through these routes. Hidden frames are listed here (the admin sees
+ * them, with their moderation state).
  */
 @Injectable()
 export class AdminContentService {
@@ -28,6 +34,9 @@ export class AdminContentService {
     private readonly queries: ContentQueries,
     private readonly deletion: ContentDeletion,
     private readonly media: MediaUrls,
+    private readonly hiding: ContentHiding,
+    private readonly moderation: ModerationReads,
+    private readonly appeals: AppealsService,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -37,34 +46,131 @@ export class AdminContentService {
     query: AdminContentListQuery,
   ): Promise<AdminContentPage> {
     await this.assertOwnedCollection(a, collectionId);
+    const state = await this.stateWhere(collectionId, query.state);
     const { rows, nextCursor } = await this.queries.page(
-      { collectionId, ...(query.kind === undefined ? {} : { kind: query.kind }) },
+      { collectionId, ...(query.kind === undefined ? {} : { kind: query.kind }), ...state },
       query.cursor,
       query.limit,
       query.sort,
     );
+    const reports = await this.moderation.forItems(rows.map((row) => row.id));
     const items = await Promise.all(
-      rows.map(async (row) => toAdminContentItem(row, await this.media.forItem(row))),
+      rows.map(async (row) =>
+        toAdminContentItem(
+          row,
+          await this.media.forItem(row),
+          moderationOf(row, reports.get(row.id)?.openReports ?? 0),
+        ),
+      ),
     );
     return { items, nextCursor };
   }
 
   async counts(a: AccountPrincipal, collectionId: string): Promise<ContentCounts> {
     await this.assertOwnedCollection(a, collectionId);
-    return this.queries.counts(collectionId);
+    const [counts, states] = await Promise.all([
+      this.queries.counts(collectionId),
+      this.moderation.stateCounts(collectionId),
+    ]);
+    return { ...counts, ...states };
+  }
+
+  /**
+   * The state filter (slice 9 F1): OR between the chosen states (deduped), ANDed with the kind by
+   * the caller. Open reports are looked up once when a state needs them.
+   */
+  private async stateWhere(
+    collectionId: string,
+    state: AdminContentListQuery['state'],
+  ): Promise<Prisma.ContentItemWhereInput> {
+    if (state === undefined) return {};
+    const states = [...new Set(Array.isArray(state) ? state : [state])];
+    const reportedIds =
+      states.includes('REPORTED') || states.includes('ACTIVE')
+        ? await this.moderation.reportedContentIds(collectionId)
+        : [];
+    const clauses = states.map((one): Prisma.ContentItemWhereInput => {
+      switch (one) {
+        case 'HIDDEN_ADMIN':
+          return { hiddenBy: 'ADMIN', quarantinedAt: null };
+        case 'HIDDEN_OPERATOR':
+          return { hiddenBy: 'OPERATOR' };
+        case 'REPORTED':
+          return { id: { in: reportedIds } };
+        case 'QUARANTINED':
+          return { quarantinedAt: { not: null } };
+        case 'ACTIVE':
+          return { hiddenAt: null, quarantinedAt: null, id: { notIn: reportedIds } };
+      }
+    });
+    return clauses.length === 1 ? clauses[0]! : { OR: clauses };
   }
 
   async get(a: AccountPrincipal, id: string): Promise<AdminContentDetail> {
+    const { row, item } = await this.item(a, id);
+    return {
+      ...item,
+      // Quarantined (slice 9b): the admin sees it, but gets no link to the original.
+      ...(row.quarantinedAt === null
+        ? await this.media.original(row, { viewer: 'admin' })
+        : { originalUrl: null, downloadUrl: null }),
+      reports: await this.moderation.openReports(row.id),
+      // Slice 9b: the latest appeal on the frame, for its status in the moderation panel.
+      appeal: await this.appeals.latestForContent(row.id),
+    };
+  }
+
+  /** One live frame of the admin's, as the list shows it. */
+  private async item(a: AccountPrincipal, id: string) {
     const row = await this.prisma.contentItem.findFirst({
       where: { id, deletedAt: null, collection: ownedBy(a) },
       include: WITH_MEDIA,
     });
     if (row === null) throw new AppError('NOT_FOUND', 404);
-    return toAdminContentDetail(
+    const reports = await this.moderation.forItems([row.id]);
+    const item = toAdminContentItem(
       row,
       await this.media.forItem(row),
-      await this.media.original(row, { viewer: 'admin' }),
+      moderationOf(row, reports.get(row.id)?.openReports ?? 0),
     );
+    return { row, item };
+  }
+
+  /**
+   * «Приховати від гостей» (R3): gone for guests everywhere, still here for the admin. Idempotent;
+   * an operator-hidden frame stays as it is. Returns the frame as the list shows it.
+   */
+  async hide(a: AccountPrincipal, id: string, requestId?: string): Promise<AdminContentItem> {
+    return this.changeVisibility(a, id, (tx, item) =>
+      this.hiding.hide(tx, item, a, null, requestId),
+    );
+  }
+
+  /** «Показати гостям»: only what the admin hid; operator-hidden → `409 CONTENT_MODERATED`. */
+  async unhide(a: AccountPrincipal, id: string, requestId?: string): Promise<AdminContentItem> {
+    return this.changeVisibility(a, id, (tx, item) =>
+      this.hiding.unhide(tx, item, a, null, requestId),
+    );
+  }
+
+  private async changeVisibility(
+    a: AccountPrincipal,
+    id: string,
+    change: (
+      tx: Prisma.TransactionClient,
+      item: { id: string; collectionId: string },
+    ) => Promise<unknown>,
+  ): Promise<AdminContentItem> {
+    await this.prisma.$transaction(async (tx) => {
+      // The canonical id comes from the row: the route accepts a UUID in any case.
+      const row = await tx.contentItem.findFirst({
+        where: { id, deletedAt: null, collection: ownedBy(a) },
+        select: { id: true, collectionId: true },
+      });
+      if (row === null) throw new AppError('NOT_FOUND', 404);
+      await change(tx, row);
+    });
+    return (await this.item(a, id)).item;
   }
 
   /**

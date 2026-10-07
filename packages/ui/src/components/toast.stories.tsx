@@ -13,7 +13,7 @@ type TriggerProps = {
   count?: number;
   durationMs?: number;
   actionLabel?: string;
-  /** The Toaster's, set by the decorator (top centre by default). */
+  /** The Toaster's, set by the decorator (top right by default). */
   position?: ToasterPosition;
 };
 
@@ -60,7 +60,7 @@ const withToaster: Decorator = (Story, context) => (
     <Toaster
       label="Notifications"
       closeLabel="Close"
-      position={(context.args as TriggerProps).position ?? 'top-center'}
+      position={(context.args as TriggerProps).position ?? 'top-right'}
     />
   </ToastProvider>
 );
@@ -176,26 +176,49 @@ function overlaps(a: DOMRect, b: DOMRect): boolean {
 }
 
 /**
- * The default (owner 2026-10-06): centred at the top, `--toast-top` (the page's top bar) plus 8px
- * from the top, within the 16px gutters on a 360px phone.
+ * The default (owner remark 175): the top right corner, 12px from the top and 16px from the
+ * right, a compact 360px toast, so it never covers the page's header controls in the middle.
  */
-export const TopCenter: Story = {
-  globals: { viewport: { value: 'phone' } },
-  args: { title: 'Collection saved' },
+export const TopRight: Story = {
+  args: { title: 'Saved: guests see the new page' },
   play: async ({ canvas }) => {
-    // The app sets the variable on the page's root (apps/web globals.css).
-    document.documentElement.style.setProperty('--toast-top', '56px');
+    // The top bar's height only places phone toasts.
+    document.documentElement.style.setProperty('--toast-top', '57px');
     try {
       await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
       await waitFor(() => expect(toasts()).toHaveLength(1));
       const toast = toasts()[0]!;
       await waitFor(() => expect(toast.getAnimations()).toHaveLength(0));
       const box = toast.getBoundingClientRect();
-      await expect(box.top).toBeGreaterThanOrEqual(56 + 8);
-      await expect(box.top).toBeLessThanOrEqual(56 + 8 + 1);
-      await expect(box.left).toBeGreaterThanOrEqual(16);
-      await expect(box.right).toBeLessThanOrEqual(window.innerWidth - 16);
-      await expect(Math.abs(box.left - (window.innerWidth - box.right))).toBeLessThanOrEqual(1);
+      await expect(Math.round(box.top)).toBe(12);
+      await expect(Math.round(window.innerWidth - box.right)).toBe(16);
+      await expect(Math.round(box.width)).toBe(360);
+    } finally {
+      document.documentElement.style.removeProperty('--toast-top');
+    }
+  },
+};
+
+/**
+ * On a 360px phone: at the top, full width within the 16px gutters, 8px under the page's top bar
+ * (`--toast-top`), so a sheet's close button above it stays free.
+ */
+export const TopPhone: Story = {
+  globals: { viewport: { value: 'phone' } },
+  args: { title: 'Collection saved' },
+  play: async ({ canvas }) => {
+    // The app sets the variable on the page's root (apps/web globals.css).
+    document.documentElement.style.setProperty('--toast-top', '57px');
+    try {
+      await userEvent.click(canvas.getByRole('button', { name: 'Show toast' }));
+      await waitFor(() => expect(toasts()).toHaveLength(1));
+      const toast = toasts()[0]!;
+      await waitFor(() => expect(toast.getAnimations()).toHaveLength(0));
+      const box = toast.getBoundingClientRect();
+      await expect(Math.round(box.top)).toBe(57 + 8);
+      await expect(Math.round(box.left)).toBe(16);
+      await expect(Math.round(window.innerWidth - box.right)).toBe(16);
+      await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
     } finally {
       document.documentElement.style.removeProperty('--toast-top');
     }

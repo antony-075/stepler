@@ -24,6 +24,16 @@ export const TEST_SHADOW_DATABASE_URL =
   process.env.TEST_SHADOW_DATABASE_URL ?? `postgresql://${pg}@${pgHost}/stepler_shadow`;
 
 /**
+ * The mail variables the worker shares with the API (slice 9): Mailpit, as `testEnv`. Spread
+ * into every `loadWorkerEnv` call of the tests.
+ */
+export const WORKER_MAIL_ENV = {
+  APP_ORIGIN: 'http://localhost:3000',
+  SMTP_URL: process.env.TEST_SMTP_URL ?? 'smtp://127.0.0.1:1025',
+  MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+};
+
+/**
  * A valid API environment for tests. Service URLs point at `docker/compose.yaml` and can be
  * overridden through the process environment (CI) or per test.
  */

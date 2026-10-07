@@ -1,15 +1,15 @@
 'use client';
 
-import type { Collection } from '@stepler/contracts';
+import { type Collection, collectionDisplayStatus } from '@stepler/contracts';
 import { Badge } from '@stepler/ui/components/badge';
+import { CollectionStatusBadge as StatusBadge } from '@stepler/ui/components/collection-status-badge';
 import { cn } from '@stepler/ui/lib/utils';
-import { Archive } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { formatBytes } from '@/format/bytes';
 import { PermissionChips } from '@/guest-links/permission-chips';
-import { ARCHIVED_COVER, ARCHIVED_SURFACE } from './archived-style';
+import { ARCHIVED_COVER, ARCHIVED_SURFACE, BLOCKED_ACCENT } from './archived-style';
 import { CollectionMark } from './collection-mark';
 import { ShareIconButton } from './collections/[id]/share-dialog';
 import { CollectionQuickActions } from './collections/collection-actions';
@@ -107,6 +107,7 @@ export function CollectionRow({ collection }: { collection: Collection }) {
   const tCard = useTranslations('collections.card');
   const format = useFormatter();
   const archived = collection.status === 'ARCHIVED';
+  const blocked = collection.blocked !== null;
   const created = format.dateTime(new Date(collection.createdAt), 'short');
   const last =
     collection.lastContentAt === null
@@ -123,7 +124,12 @@ export function CollectionRow({ collection }: { collection: Collection }) {
       data-slot="collection-card"
       data-view="table"
       data-status={collection.status}
-      className={cn(ROW, archived && cn(ARCHIVED_SURFACE, 'hover:bg-hover-card'))}
+      data-display-status={collectionDisplayStatus(collection)}
+      className={cn(
+        ROW,
+        archived && cn(ARCHIVED_SURFACE, 'hover:bg-hover-card'),
+        blocked && BLOCKED_ACCENT,
+      )}
     >
       <div className={cn('flex min-w-0 items-center gap-3', COLLECTION_CELL)}>
         <CollectionMark
@@ -188,8 +194,9 @@ export function CollectionRow({ collection }: { collection: Collection }) {
 }
 
 /**
- * The collection's status as a badge: green «Колекція активна», or a neutral «В архіві» with
- * the archive box (owner 2026-10-06). `short`: «Активна» (the collection page's header).
+ * The collection's one status as a badge (owner remark S1, 2026-10-06): «Заблоковано» (red, the
+ * ban sign) wins over «В архіві» (the archive box) and «Колекція активна» (green), so a blocked
+ * collection never also reads active. `short`: «Активна» (the collection page's header).
  */
 export function CollectionStatusBadge({
   collection,
@@ -201,28 +208,25 @@ export function CollectionStatusBadge({
   className?: string;
 }) {
   const t = useTranslations('collections');
-  const archived = collection.status === 'ARCHIVED';
-  const label = short ? t(`status.${collection.status}`) : t(`statusChip.${collection.status}`);
+  const status = collectionDisplayStatus(collection);
+  const label = short ? t(`status.${status}`) : t(`statusChip.${status}`);
   return (
-    <Badge
-      variant={archived ? 'neutral' : 'success'}
-      title={label}
-      {...(archived ? { icon: <Archive /> } : {})}
+    <StatusBadge
+      status={status}
+      label={label}
       {...(className === undefined ? {} : { className })}
-    >
-      {label}
-    </Badge>
+    />
   );
 }
 
 /**
  * Whether guests can get in, as a badge beside the collection's status (owner 2026-10-06: every
- * status is a badge): an archived collection is «Доступ закрито» (neutral); otherwise the main
- * link's state.
+ * status is a badge): a blocked or archived collection is «Доступ закрито» (neutral: the status
+ * badge already says why); otherwise the main link's state.
  */
 export function AccessBadge({ collection }: { collection: Collection }) {
   const t = useTranslations('collections');
-  if (collection.status === 'ARCHIVED') {
+  if (collection.blocked !== null || collection.status === 'ARCHIVED') {
     return (
       <Badge data-slot="collection-access" variant="neutral" title={t('guestsClosed')}>
         {t('guestsClosed')}

@@ -14,7 +14,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { apiRequest, isApiError } from '@/api/client';
-import { errorMessageKey } from '@/errors/error-message';
+import { signInErrorMessage } from '@/errors/error-message';
 import { isLocale } from '@/i18n/locales';
 import { LegalConsent } from '@/legal/legal-consent';
 import { GoogleMark } from './google-mark';
@@ -40,6 +40,8 @@ interface LoginFormProps {
   legal: LegalVersions;
   /** An error code carried back from the Google callback or start (`/login?error=…`). */
   initialError: CallbackError | null;
+  /** `LEGAL_CONTACT_EMAIL`, for a blocked account's message (slice 9); `null` when unset. */
+  contactEmail: string | null;
 }
 
 /**
@@ -57,6 +59,7 @@ export function LoginForm({
   googleEnabled,
   legal,
   initialError,
+  contactEmail,
 }: LoginFormProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -132,7 +135,9 @@ export function LoginForm({
         <p className="max-w-[40ch] text-pretty text-muted-foreground">{t('login.lead')}</p>
       </div>
 
-      {shownError !== null && <Alert variant="error">{t(errorMessageKey(shownError))}</Alert>}
+      {shownError !== null && (
+        <Alert variant="error">{signInErrorMessage(t, shownError, contactEmail)}</Alert>
+      )}
 
       <form
         noValidate

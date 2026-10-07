@@ -30,19 +30,21 @@ export interface LegalDocumentVersion {
 
 /** Exactly one entry per document: its current version. */
 export const LEGAL_DOCUMENTS: readonly LegalDocumentVersion[] = [
+  // v2 (slice 9): in-app reports, the reporter's optional e-mail, the operator's moderation.
+  // Everyone accepts again (R8).
   {
     document: 'TERMS',
-    version: 'v1',
-    effectiveDate: '2026-10-04',
+    version: 'v2',
+    effectiveDate: '2026-10-06',
     draft: true,
-    requireReacceptance: false,
+    requireReacceptance: true,
   },
   {
     document: 'PRIVACY',
-    version: 'v1',
-    effectiveDate: '2026-10-04',
+    version: 'v2',
+    effectiveDate: '2026-10-06',
     draft: true,
-    requireReacceptance: false,
+    requireReacceptance: true,
   },
 ];
 

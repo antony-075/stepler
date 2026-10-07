@@ -21,6 +21,13 @@
 //   Focus is the violet ring outside the tile. Hover lifts the picture slightly (scale 1.03),
 //   not under reduced motion.
 // - Long content never widens the tile: text clamps, titles break anywhere.
+// - Moderation marks (slice 9): `marks` are the caller's Badges («Скарга», «Приховано»), at the
+//   top-left over the picture (the top-right belongs to the selection check and the quick
+//   actions). They are visual only: the caller puts the same words into `accessibleName`.
+// - A marked tile also gets a 2px inner ring in its mark's colour (`ring`, owner F2): amber for a
+//   report, muted for the admin's hide, red for the operator's. An inset box-shadow overlay on the
+//   tile (not the face), so it never moves layout and stays at full size while the selected face
+//   steps back to 90%. Never colour alone: the mark and the name carry the meaning.
 import { Check, FileText, ImageIcon, Play, Quote } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
 import { focusRing } from '../lib/focus';
@@ -67,7 +74,27 @@ type FrameProps = {
   overlay?: ReactNode;
   /** A 1px inner edge over the picture, so a white photo keeps its outline on a white page. */
   outlined?: boolean;
+  /**
+   * Badges over the tile's top-left (moderation: «Скарга», «Приховано»). Composition, not
+   * booleans; aria-hidden with the tile, so add their words to `accessibleName`.
+   */
+  marks?: ReactNode;
+  /** A 2px inner ring in the marks' colour (`warning` report, `muted` admin hide, `destructive` operator hide). */
+  ring?: FrameRing;
+  /**
+   * Greyed (slice 9b: «Видалено модерацією»): the picture only, in grayscale at 70%; the marks
+   * and the ring stay at full strength. Add the state's words to `accessibleName`.
+   */
+  dimmed?: boolean;
   className?: string;
+};
+
+type FrameRing = 'warning' | 'muted' | 'destructive';
+
+const RING: Record<FrameRing, string> = {
+  warning: 'shadow-[inset_0_0_0_2px_var(--warning)]',
+  muted: 'shadow-[inset_0_0_0_2px_var(--border-strong)]',
+  destructive: 'shadow-[inset_0_0_0_2px_var(--destructive)]',
 };
 
 /** The dark pill over a picture: white mono text, legible on any photo in both themes. */
@@ -259,6 +286,9 @@ function Frame({
   actions,
   overlay,
   outlined = false,
+  marks,
+  ring,
+  dimmed = false,
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
@@ -274,10 +304,12 @@ function Frame({
       {/* Selected, the picture steps back to 90% (V1): the tile's soft accent shows around it. */}
       <div
         data-slot="frame-face"
+        data-dimmed={dimmed || undefined}
         className={cn(
           'absolute inset-0 overflow-hidden rounded-frame transition-transform duration-(--duration-menu) ease-out motion-reduce:transition-none',
           kind === 'empty' ? 'bg-transparent' : 'bg-muted',
           selected && 'scale-90 rounded-control',
+          dimmed && 'opacity-70 grayscale',
         )}
       >
         <FrameFace
@@ -298,6 +330,24 @@ function Frame({
           data-slot="frame-edge"
           className="pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame shadow-[inset_0_0_0_1px_var(--border)]"
         />
+      ) : null}
+      {ring === undefined ? null : (
+        <span
+          data-slot="frame-ring"
+          data-ring={ring}
+          className={cn(
+            'pointer-events-none absolute inset-0 z-(--z-frame-mark) rounded-frame',
+            RING[ring],
+          )}
+        />
+      )}
+      {marks ? (
+        <span
+          data-slot="frame-marks"
+          className="absolute top-1.5 left-1.5 z-(--z-frame-mark) flex max-w-[calc(100%-2.75rem)] flex-wrap gap-1"
+        >
+          {marks}
+        </span>
       ) : null}
       {selected ? (
         <span className="absolute top-1.5 right-1.5 z-(--z-frame-mark) grid size-[1.375rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_0_2px_#FFFFFF] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:animation-duration-[var(--duration-fast)]">
@@ -351,4 +401,4 @@ function Frame({
   );
 }
 
-export { Frame, type FrameKind, type FrameProps };
+export { Frame, type FrameKind, type FrameProps, type FrameRing };

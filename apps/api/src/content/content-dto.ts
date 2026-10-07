@@ -1,6 +1,6 @@
 import type {
-  AdminContentDetail,
   AdminContentItem,
+  ContentModeration,
   GuestContentDetail,
   GuestContentItem,
 } from '@stepler/contracts';
@@ -33,10 +33,14 @@ function fileOf(row: ContentItemWithMedia) {
   };
 }
 
-/** The admin sees every number and the contributor's name. Explicit: never a Prisma row. */
+/**
+ * The admin sees every number, the contributor's name and the moderation state (`moderationOf`).
+ * Explicit: never a Prisma row.
+ */
 export function toAdminContentItem(
   row: ContentItemWithMedia,
-  urls: ContentMediaUrls = NO_MEDIA,
+  urls: ContentMediaUrls,
+  moderation: ContentModeration,
 ): AdminContentItem {
   return {
     id: row.id,
@@ -49,6 +53,7 @@ export function toAdminContentItem(
     processingStatus: row.processingStatus,
     text: row.textBody,
     ...urls,
+    moderation,
   };
 }
 
@@ -90,14 +95,6 @@ export interface OriginalUrls {
 }
 
 const NO_ORIGINAL: OriginalUrls = { originalUrl: null, downloadUrl: null };
-
-export function toAdminContentDetail(
-  row: ContentItemWithMedia,
-  urls: ContentMediaUrls = NO_MEDIA,
-  original: OriginalUrls = NO_ORIGINAL,
-): AdminContentDetail {
-  return { ...toAdminContentItem(row, urls), ...original };
-}
 
 export function toGuestContentDetail(
   row: ContentItemWithMedia,

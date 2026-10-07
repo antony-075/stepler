@@ -84,8 +84,14 @@ export class TextsService {
     });
     if (existing === null) return null;
     if (existing.textBody !== body) throw new AppError('IDEMPOTENCY_CONFLICT', 409);
-    // The admin deleted it meanwhile: a retry must not hand the guest a deleted item back.
-    if (existing.deletedAt !== null) throw new AppError('CONTENT_NOT_FOUND', 404);
+    // Deleted or hidden meanwhile: a retry must not hand the guest an item they may not see.
+    if (
+      existing.deletedAt !== null ||
+      existing.hiddenAt !== null ||
+      existing.quarantinedAt !== null
+    ) {
+      throw new AppError('CONTENT_NOT_FOUND', 404);
+    }
     return existing;
   }
 

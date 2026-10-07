@@ -289,3 +289,39 @@ export const NavDark: Story = {
   ...Nav,
   globals: { theme: 'dark' },
 };
+
+/**
+ * Triggers built once as a fragment (the collection page renders them in two layouts) still get
+ * the highlight: the thumb counts the triggers inside the fragment.
+ */
+export const NavFromFragment: Story = {
+  args: { defaultValue: 'links', orientation: 'vertical' },
+  render: (args) => {
+    const triggers = (
+      <>
+        <TabsTrigger value="content">Content</TabsTrigger>
+        <TabsTrigger value="links">Links</TabsTrigger>
+        <TabsTrigger value="page">Guest page</TabsTrigger>
+      </>
+    );
+    return (
+      <Tabs {...args} className="w-60">
+        <TabsList variant="nav" aria-label="Collection">
+          {triggers}
+        </TabsList>
+        <TabsContent value="content">The frames.</TabsContent>
+        <TabsContent value="links">The links.</TabsContent>
+        <TabsContent value="page">The editor.</TabsContent>
+      </Tabs>
+    );
+  },
+  play: async ({ canvas, canvasElement }) => {
+    const thumb = canvasElement.querySelector<HTMLElement>('[data-slot="segment-thumb"]');
+    await expect(thumb).not.toBeNull();
+    await expect(getComputedStyle(thumb!).getPropertyValue('--thumb-count').trim()).toBe('3');
+    const links = canvas.getByRole('tab', { name: 'Links' });
+    await expect(Math.round(thumb!.getBoundingClientRect().top)).toBe(
+      Math.round(links.getBoundingClientRect().top),
+    );
+  },
+};

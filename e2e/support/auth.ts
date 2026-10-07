@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
-import { latestMagicLink } from './mailpit.js';
+import { latestMagicLink, messageIds } from './mailpit.js';
 
 /** The acceptance sentence; each document link carries a screen-reader new-tab note. */
 const NEW_TAB_UK = '(відкриється в новій вкладці)';
@@ -33,6 +33,8 @@ export const newEmail = (): string => `e2e-${randomUUID()}@stepler.test`;
 
 /** Requests a link through the UI; Turnstile's always-pass test key solves itself. */
 export async function requestLink(page: Page, email: string): Promise<string> {
+  // A reused address (the operator's) has older, used links in Mailpit: wait for a new one.
+  const seen = await messageIds(email);
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: SIGN_IN_UK.title })).toBeVisible();
   await page.getByLabel(SIGN_IN_UK.email).fill(email);
@@ -42,7 +44,7 @@ export async function requestLink(page: Page, email: string): Promise<string> {
   await submit.click();
   await expect(page.getByRole('heading', { name: SIGN_IN_UK.sent })).toBeVisible();
   await expect(page.getByText(email)).toBeVisible();
-  return latestMagicLink(email);
+  return latestMagicLink(email, 15_000, seen);
 }
 
 /**

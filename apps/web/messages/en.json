@@ -35,7 +35,12 @@
     "LEGAL_ACCEPTANCE_REQUIRED": "To continue, accept the Terms of Service and the Privacy Policy.",
     "LEGAL_VERSION_OUTDATED": "The documents have changed. Review them and accept again.",
     "GUEST_PAGE_DRAFT_CONFLICT": "This page was just changed in another tab.",
-    "THEME_CONTRAST_TOO_LOW": "These colours are hard to read together."
+    "THEME_CONTRAST_TOO_LOW": "These colours are hard to read together.",
+    "CONTENT_MODERATED": "Moderation hid this frame — it can't be shown again.",
+    "REPORT_RESOLVED": "This report was already decided differently.",
+    "APPEAL_NOT_APPLICABLE": "Nothing to appeal here: the moderation measure is already lifted.",
+    "APPEAL_OPEN": "An appeal is already filed and under review.",
+    "APPEAL_RESOLVED": "This appeal was already decided differently."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -58,7 +63,8 @@
     "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
     "turnstileRetry": "Try again",
     "legalCheckbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
-    "legalHint": "Tick the box to continue."
+    "legalHint": "Tick the box to continue.",
+    "accountBlockedContact": "This account is blocked. If you disagree, write to {email}."
   },
   "verify": {
     "pageTitle": "Confirm sign-in",
@@ -155,7 +161,9 @@
     "new": "New collection",
     "status": {
       "ACTIVE": "Active",
-      "ARCHIVED": "Archived"
+      "ARCHIVED": "Archived",
+      "BLOCKED": "Blocked",
+      "DELETING": "Being deleted"
     },
     "createdOn": "Created {date}",
     "archivedOn": "Archived {date}",
@@ -197,16 +205,23 @@
     "linkPaused": "Link paused",
     "statusChip": {
       "ACTIVE": "Collection active",
-      "ARCHIVED": "Archived"
+      "ARCHIVED": "Archived",
+      "BLOCKED": "Blocked",
+      "DELETING": "Being deleted"
     },
     "subtitle": "Create a collection for each event and gather photos, videos, documents and wishes from guests.",
     "search": "Search collections",
     "searchPlaceholder": "Search by title",
-    "filterLabel": "Show",
-    "filter": {
+    "state": {
+      "label": "State",
+      "prefix": "State:",
       "all": "All",
       "active": "Active",
-      "archived": "Archive"
+      "archived": "Archived",
+      "blocked": "Blocked",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "clear": "Clear",
+      "empty": "No collections in the chosen states."
     },
     "sortLabel": "Sort:",
     "sort": {
@@ -252,7 +267,13 @@
     "guestsClosed": "Access closed",
     "cellName": "{name}:",
     "none": "—",
-    "archiveGroup": "Archive · {count}"
+    "archiveGroup": "Archive · {count}",
+    "blocked": {
+      "badge": "Blocked",
+      "title": "Collection blocked by moderation",
+      "text": "Guests can’t open it. Reason: {reason}.",
+      "contact": "Other questions: <email></email>."
+    }
   },
   "collection": {
     "pageTitle": "Collection",
@@ -317,6 +338,8 @@
       "appearance": "Guest page",
       "settings": "Collection settings"
     },
+    "navCollapse": "Collapse the collection panel",
+    "navExpand": "Expand the collection panel",
     "descriptionMore": "Show more",
     "descriptionLess": "Show less"
   },
@@ -422,6 +445,58 @@
       "download": "Download frame {number}",
       "delete": "Delete frame {number}",
       "downloadFailed": "Couldn’t get the file. Try again."
+    },
+    "moderation": {
+      "marks": {
+        "reported": "Report",
+        "hidden": "Hidden",
+        "moderated": "Hidden by moderation",
+        "quarantined": "Deleted by moderation"
+      },
+      "title": "Moderation",
+      "visible": "Guests see this frame.",
+      "hiddenByAdmin": "Guests don’t see this frame.",
+      "hide": "Hide from guests",
+      "show": "Show to guests",
+      "hiddenDone": "Frame hidden from guests",
+      "shownDone": "Guests see the frame again",
+      "moderatedTitle": "Hidden by moderation",
+      "moderatedReason": "Reason: {reason}",
+      "moderatedContact": "Other questions: <email></email>.",
+      "moderatedConflict": "Moderation hid this frame — it can’t be shown",
+      "reportsTitle": "Reports ({count})",
+      "noDescription": "No description",
+      "dismiss": "Dismiss reports",
+      "dismissHint": "The mark goes away. Stepler moderation still reviews the reports.",
+      "dismissTitle": "Dismiss the reports on this frame?",
+      "dismissText": "The mark goes away.",
+      "dismissConfirm": "Dismiss",
+      "dismissDone": "Reports dismissed",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "failed": "Could not save. Try again.",
+      "quarantinedTitle": "Deleted by moderation",
+      "quarantinedPurge": "Guests can’t see this frame. It will be deleted for good on {date} unless an appeal is upheld."
+    },
+    "state": {
+      "label": "State",
+      "prefix": "State:",
+      "all": "All",
+      "active": "Active",
+      "hidden-admin": "Hidden by admin",
+      "hidden-operator": "Hidden by moderation",
+      "reported": "Reported",
+      "selected": "{count, plural, one {# selected} other {# selected}}",
+      "clear": "Clear",
+      "empty": {
+        "active": "No active frames",
+        "hidden-admin": "No frames hidden by the admin",
+        "hidden-operator": "No frames hidden by moderation",
+        "reported": "No reported frames",
+        "several": "No frames in the chosen states",
+        "quarantined": "No frames deleted by moderation"
+      },
+      "quarantined": "Deleted by moderation"
     }
   },
   "guestLinks": {
@@ -453,7 +528,8 @@
     "resume": "Turn on",
     "gone": "This link is gone. All of the collection’s links are under Manage links.",
     "picker": "Link",
-    "pausedMarker": "paused"
+    "pausedMarker": "paused",
+    "blockedNotice": "Guests can’t open any link of this collection until the block is lifted."
   },
   "links": {
     "loading": "Loading links",
@@ -800,7 +876,39 @@
     },
     "refresh": "Refresh",
     "refreshed": "Refreshed",
-    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>."
+    "legalNotice": "By adding content you agree to the <terms>Terms of Service</terms> and acknowledge the <privacy>Privacy Policy</privacy>.",
+    "report": {
+      "more": "More actions",
+      "menuItem": "Report",
+      "title": "Report",
+      "reasonsLegend": "What’s wrong?",
+      "reasons": {
+        "ILLEGAL": "Illegal content",
+        "INAPPROPRIATE": "Indecent or offensive",
+        "PRIVACY": "Violates privacy",
+        "SPAM": "Spam or advertising",
+        "OTHER": "Other"
+      },
+      "reasonRequired": "Choose what’s wrong",
+      "descriptionLabel": "Describe what’s wrong",
+      "descriptionHint": "Optional",
+      "descriptionTooLong": "At most {max} characters",
+      "emailLabel": "Your email",
+      "emailHint": "Optional — to tell you the decision",
+      "emailInvalid": "Check the address",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "sentTitle": "Report sent",
+      "sentText": "Stepler moderation will review it. The frame stays in the gallery for now.",
+      "close": "Close",
+      "counter": "{count}/{max}",
+      "errors": {
+        "rateLimited": "Too many reports. Try again later.",
+        "gone": "This frame is no longer available.",
+        "failed": "Could not send the report. Try again."
+      }
+    }
   },
   "account": {
     "pageTitle": "Account",
@@ -1137,7 +1245,9 @@
       "frameName": "Frame {number}, photo",
       "frameNotReady": "Frame {number}, photo still preparing — cannot be chosen",
       "unusable": "Cannot be used",
-      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen"
+      "frameUnusable": "Frame {number}, the photo could not be processed — cannot be chosen",
+      "frameHidden": "Frame {number}, photo hidden from guests — cannot be chosen",
+      "frameReported": "Frame {number}, photo, reported"
     },
     "splitLabel": "Settings panel width",
     "statusShort": {
@@ -1186,5 +1296,290 @@
         "background": "«Minimal» has a solid background only."
       }
     }
+  },
+  "ops": {
+    "title": "Stepler · Moderation",
+    "brand": "Stepler",
+    "badge": "Moderation",
+    "signedInAs": "Signed in as",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out. Try again.",
+    "unavailable": "Could not load the console.",
+    "retry": "Try again",
+    "statuses": {
+      "OPEN": "New",
+      "ACTIONED": "Actioned",
+      "DISMISSED": "Dismissed"
+    },
+    "reasons": {
+      "ILLEGAL": "Illegal content",
+      "INAPPROPRIATE": "Indecent or offensive",
+      "PRIVACY": "Violates privacy",
+      "SPAM": "Spam or advertising",
+      "OTHER": "Other"
+    },
+    "states": {
+      "VISIBLE": "Visible",
+      "HIDDEN": "Hidden",
+      "QUARANTINED": "In quarantine",
+      "DELETED": "Deleted"
+    },
+    "kinds": {
+      "PHOTO": "Photo",
+      "VIDEO": "Video",
+      "DOCUMENT": "Document",
+      "TEXT": "Text"
+    },
+    "queue": {
+      "title": "Reports",
+      "tabsLabel": "Report status",
+      "loading": "Loading…",
+      "more": "Show more",
+      "error": "Could not load the reports.",
+      "contentGone": "Content deleted",
+      "collectionGone": "Collection deleted",
+      "columns": {
+        "received": "Received",
+        "reason": "Reason",
+        "content": "Content",
+        "state": "State",
+        "collection": "Collection",
+        "openReports": "Reports on frame"
+      },
+      "empty": {
+        "OPEN": "No new reports",
+        "ACTIONED": "No actioned reports yet",
+        "DISMISSED": "No dismissed reports yet"
+      },
+      "openReportsCount": "Reports on frame: {count}"
+    },
+    "collectionStatuses": {
+      "ACTIVE": "Active",
+      "ARCHIVED": "Archived",
+      "DELETING": "Being deleted",
+      "BLOCKED": "Blocked"
+    },
+    "ownerStatuses": {
+      "ACTIVE": "Active",
+      "BLOCKED": "Blocked"
+    },
+    "detail": {
+      "back": "All reports",
+      "notFound": "Report not found",
+      "error": "Could not load the report.",
+      "content": "Content",
+      "contentPurged": "The content was deleted for good.",
+      "contentDeleted": "The content was deleted.",
+      "frameAlt": "Frame {frame}",
+      "noPreview": "No preview",
+      "openOriginal": "Open the original",
+      "hiddenByOperator": "Hidden by moderation. Reason: {reason}",
+      "hiddenByAdmin": "Hidden by the collection admin",
+      "addedAt": "Added {at}",
+      "report": "Report",
+      "reason": "Reason",
+      "description": "Description",
+      "noDescription": "No description",
+      "received": "Received",
+      "contact": "Contact",
+      "hasContact": "The reporter left a contact",
+      "noContact": "No contact",
+      "status": "State",
+      "adminDismissed": "Admin dismissed",
+      "decision": "Decision",
+      "otherReports": "Other reports on this frame ({count})",
+      "collection": "Collection",
+      "title": "Title",
+      "blocked": "Blocked",
+      "blockReason": "Block reason",
+      "owner": "Owner",
+      "email": "Email",
+      "quarantined": "Quarantined until {date} · Reason: {reason}"
+    },
+    "actions": {
+      "reason": "Reason",
+      "reasonRequired": "Give a reason",
+      "reasonTooLong": "At most {max} characters",
+      "counter": "{count}/{max}",
+      "cancel": "Cancel",
+      "close": "Close",
+      "pending": "Saving…",
+      "failed": "Could not complete the action. Try again.",
+      "resolvedElsewhere": "This report was already decided differently.",
+      "gone": "This no longer exists. Reload the page.",
+      "hide": {
+        "button": "Hide frame",
+        "title": "Hide frame",
+        "description": "Guests will no longer see the frame. The admin sees the reason and cannot show it.",
+        "confirm": "Hide",
+        "done": "Frame hidden"
+      },
+      "unhide": {
+        "button": "Show frame",
+        "title": "Show frame to guests",
+        "description": "Guests will see the frame again.",
+        "confirm": "Show",
+        "done": "Frame visible to guests again"
+      },
+      "dismiss": {
+        "button": "Dismiss report",
+        "title": "Dismiss report",
+        "description": "The decision covers every open report on this frame. A reporter with a contact gets an email.",
+        "confirm": "Dismiss",
+        "done": "Report dismissed"
+      },
+      "action": {
+        "button": "Mark as actioned",
+        "title": "Mark as actioned",
+        "description": "The decision covers every open report on this frame. A reporter with a contact gets an email.",
+        "confirm": "Mark",
+        "done": "Marked as actioned"
+      },
+      "blockCollection": {
+        "button": "Block collection",
+        "title": "Block collection",
+        "description": "Guests can no longer open the collection. The admin sees the reason and cannot unblock it.",
+        "confirm": "Block",
+        "done": "Collection blocked"
+      },
+      "unblockCollection": {
+        "button": "Unblock collection",
+        "title": "Unblock collection",
+        "description": "Guests can open the collection again.",
+        "confirm": "Unblock",
+        "done": "Collection unblocked"
+      },
+      "blockAccount": {
+        "button": "Block account",
+        "title": "Block account",
+        "description": "The owner is signed out everywhere and cannot sign in. None of their collections open for guests.",
+        "confirm": "Block",
+        "done": "Account blocked"
+      },
+      "unblockAccount": {
+        "button": "Unblock account",
+        "title": "Unblock account",
+        "description": "The owner can sign in again and their collections open for guests.",
+        "confirm": "Unblock",
+        "done": "Account unblocked"
+      },
+      "note": "Note to the admin",
+      "noteOptional": "Note to the admin (optional)",
+      "noteRequired": "Say why the appeal is rejected",
+      "quarantine": {
+        "button": "Delete (90-day quarantine)",
+        "title": "Delete frame (90-day quarantine)",
+        "description": "Guests stop seeing the frame at once. Its files are kept for 90 days: the frame can be restored until then, after that it is deleted for good.",
+        "confirm": "Delete",
+        "done": "Frame quarantined"
+      },
+      "restore": {
+        "button": "Restore frame",
+        "title": "Restore frame",
+        "description": "The quarantine ends: guests see the frame again (unless its admin hid it).",
+        "confirm": "Restore",
+        "done": "Frame restored"
+      },
+      "uphold": {
+        "button": "Uphold",
+        "title": "Uphold appeal",
+        "description": "The measure is reversed: the frame is restored or shown, the collection unblocked. The admin sees the decision and the note.",
+        "confirm": "Uphold",
+        "done": "Appeal upheld"
+      },
+      "reject": {
+        "button": "Reject",
+        "title": "Reject appeal",
+        "description": "The measure stays. The admin sees your note in the app.",
+        "confirm": "Reject",
+        "done": "Appeal rejected"
+      }
+    },
+    "nav": {
+      "label": "Console sections",
+      "reports": "Guest reports",
+      "appeals": "Admin appeals"
+    },
+    "appeals": {
+      "title": "Admin appeals",
+      "tabsLabel": "Appeal status",
+      "statuses": {
+        "OPEN": "New",
+        "UPHELD": "Upheld",
+        "REJECTED": "Rejected"
+      },
+      "columns": {
+        "received": "Received",
+        "target": "About",
+        "measure": "Measure",
+        "collection": "Collection"
+      },
+      "measures": {
+        "HIDDEN": "Hidden",
+        "QUARANTINED": "Quarantined",
+        "BLOCKED": "Blocked",
+        "NONE": "Lifted"
+      },
+      "empty": {
+        "OPEN": "No new appeals",
+        "UPHELD": "No upheld appeals",
+        "REJECTED": "No rejected appeals"
+      },
+      "error": "Couldn’t load the appeals.",
+      "detailError": "Couldn’t load the appeal.",
+      "collectionTarget": "Collection",
+      "back": "Back to appeals",
+      "notFound": "Appeal not found",
+      "headingContent": "Appeal about a frame",
+      "headingCollection": "Appeal against a collection block",
+      "appeal": "Appeal",
+      "noNote": "No note",
+      "measure": "Measure",
+      "measureNow": "Now",
+      "purgeAfter": "Deleted for good",
+      "measureGone": "The measure is gone: reversed, or the content was deleted.",
+      "previous": "Earlier appeals ({count})",
+      "previousNote": "Decision: {note}",
+      "reports": "Reports on this frame ({count})",
+      "resolvedElsewhere": "The appeal was already decided the other way."
+    }
+  },
+  "notFound": {
+    "code": "404",
+    "title": "Page not found",
+    "text": "The link may be out of date or mistyped.",
+    "home": "Go to the home page"
+  },
+  "appeals": {
+    "open": "Appeal sent {date} · Under review",
+    "upheld": "Appeal upheld {date}",
+    "rejected": "Appeal rejected: {note}",
+    "submit": "Appeal",
+    "openHint": "Stepler moderation is still reviewing your appeal.",
+    "dialog": {
+      "titleContent": "Appeal about this frame",
+      "titleCollection": "Appeal against the block",
+      "descriptionContent": "Explain why the moderation decision on this frame is wrong. The answer will appear here, in the app.",
+      "descriptionCollection": "Explain why the collection was blocked by mistake. The answer will appear here, in the app.",
+      "textLabel": "Your explanation",
+      "textHint": "Stepler moderation reads it alongside the frame or collection.",
+      "required": "Write an explanation",
+      "tooLong": "At most {max} characters",
+      "counter": "{count}/{max}",
+      "send": "Send",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "sentTitle": "Appeal sent",
+      "sentText": "Stepler moderation will review it. The decision will appear here.",
+      "close": "Close"
+    },
+    "errors": {
+      "open": "An appeal is already under review",
+      "notApplicable": "This frame no longer needs an appeal",
+      "notApplicableCollection": "The collection is no longer blocked",
+      "rateLimited": "Too many appeals. Try again tomorrow.",
+      "failed": "Couldn’t send the appeal. Try again."
+    },
+    "noNote": "no note"
   }
 }

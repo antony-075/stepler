@@ -16,6 +16,7 @@ import { AppError } from '../errors/app-error.js';
 import { LegalService } from '../legal/legal.service.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { MAILER, type Mailer } from '../mail/mailer.js';
+import { renderAccountBlockedEmail } from '../mail/templates/account-blocked.js';
 import { renderMagicLinkEmail } from '../mail/templates/magic-link.js';
 import { TURNSTILE_VERIFIER, type TurnstileVerifier } from '../turnstile/turnstile-verifier.js';
 import { generateToken, hashToken } from './tokens.js';
@@ -68,7 +69,14 @@ export class MagicLinkService {
       where: { email },
       select: { status: true, locale: true },
     });
-    if (user?.status === 'BLOCKED') return;
+    if (user?.status === 'BLOCKED') {
+      // Instead of a link, the account's own mailbox learns why none comes ([Q3]); at most once
+      // an hour, so the requests cannot flood it. The answer stays the same `202`.
+      if (await this.firstBlockedNoticeThisHour(email)) {
+        void this.sendBlockedNotice(email, user.locale);
+      }
+      return;
+    }
 
     const locale = user?.locale ?? input.locale ?? 'uk';
     const token = generateToken();
@@ -167,6 +175,29 @@ export class MagicLinkService {
       // Two first sign-ins for one address raced; the other created the user.
       if (constraintViolation(error)?.constraint !== 'User_email_key') throw error;
       return this.prisma.user.findUniqueOrThrow({ where: { email }, select });
+    }
+  }
+
+  /** In memory, per instance, like the IP limit; the key is the address's hash, never the address. */
+  private async firstBlockedNoticeThisHour(email: string): Promise<boolean> {
+    const record = await this.throttle.increment(
+      `account-blocked:${hashToken(email.toLowerCase())}`,
+      HOUR_MS,
+      1,
+      HOUR_MS,
+      'account-blocked',
+    );
+    return !record.isBlocked;
+  }
+
+  private async sendBlockedNotice(email: string, locale: Locale): Promise<void> {
+    try {
+      await this.mailer.send({
+        to: email,
+        ...renderAccountBlockedEmail({ locale, contactEmail: this.env.LEGAL_CONTACT_EMAIL }),
+      });
+    } catch (error) {
+      this.logger.error({ msg: 'Account blocked email failed', ...smtpErrorFields(error) });
     }
   }
 

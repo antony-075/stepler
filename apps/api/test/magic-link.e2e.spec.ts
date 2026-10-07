@@ -283,7 +283,15 @@ describe('magic link sign-in', () => {
     expect(bodies[1]).toEqual(bodies[0]);
     expect(bodies[2]).toEqual(bodies[0]);
     expect(await waitForMessages(existing)).toHaveLength(1);
-    expect(await messagesAfter(blocked, 500)).toHaveLength(0);
+    // [Q3] (slice 9): the blocked account's own mailbox learns why no link comes; no link.
+    const [notice] = await waitForMessages(blocked);
+    expect(notice?.Subject).toBe('Stepler: акаунт заблоковано');
+    const text = await messageText(notice?.ID ?? '');
+    expect(text).toContain('заблоковано');
+    expect(text).not.toContain('/auth/verify');
+    // Once an hour at most, however often it asks.
+    await requestLink(blocked).expect(202);
+    expect(await messagesAfter(blocked, 500)).toHaveLength(1);
   });
 
   test('a blocked user cannot verify a link issued before the block', async () => {

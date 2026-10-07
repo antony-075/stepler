@@ -28,6 +28,12 @@ function decodeFrameCursor(cursor: string): number | null {
   }
 }
 
+/** The kind counts and the newest time; the state counts come from the moderation module. */
+type KindCounts = Omit<
+  ContentCounts,
+  'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'quarantined' | 'reported'
+>;
+
 const invalidCursor = () =>
   new AppError('VALIDATION_FAILED', 400, {
     errors: [{ path: ['cursor'], message: 'Invalid cursor' }],
@@ -91,15 +97,18 @@ export class ContentQueries {
     return { rows: items, nextCursor: more ? encodeCursor(last) : null };
   }
 
-  /** Non-deleted items by kind and the newest one's time, in one grouped query. */
-  async counts(collectionId: string): Promise<ContentCounts> {
+  /**
+   * Non-deleted items by kind and the newest one's time, in one grouped query. The state counts
+   * are the moderation module's (`ModerationReads.stateCounts`).
+   */
+  async counts(collectionId: string): Promise<KindCounts> {
     const groups = await this.prisma.contentItem.groupBy({
       by: ['kind'],
       where: { collectionId, deletedAt: null },
       _count: { _all: true },
       _max: { createdAt: true },
     });
-    const counts: ContentCounts = {
+    const counts: KindCounts = {
       total: 0,
       photo: 0,
       video: 0,

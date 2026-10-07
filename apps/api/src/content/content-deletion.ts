@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AuditService } from '../audit/audit.service.js';
-import type { Principal } from '../auth/principal.js';
+import { AuditService, type AuditActor } from '../audit/audit.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 
@@ -8,10 +7,17 @@ export interface SoftDeleteOptions {
   /** One request deleting several frames (the admin's multi-select) [C7]. */
   bulk: boolean;
   requestId?: string;
+  /** The Stepler operator's reason (slice 9), kept in the audit event; never user content. */
+  reason?: string;
+  /**
+   * The sweep ending quarantines (slice 9b): only rows still quarantined past `purgeAfter` are
+   * deleted, so a frame restored after the sweep read it is left alone.
+   */
+  expiredQuarantineOnly?: boolean;
 }
 
 /**
- * The one way content is deleted, by the admin or by a guest: the rows are soft-deleted (gone
+ * The one way content is deleted, by the admin, a guest or the Stepler operator: the rows are soft-deleted (gone
  * from every view and from usage at once), and each gets one `content.delete` audit event and
  * one `content.purge` job, all in the caller's transaction. Callers decide who may delete what;
  * the caller also calls `jobs.ready()` before opening that transaction.
@@ -33,12 +39,20 @@ export class ContentDeletion {
     tx: Prisma.TransactionClient,
     collectionId: string,
     ids: readonly string[],
-    actor: Principal,
+    /** `'system'`: the sweep ending a quarantine (slice 9b). */
+    actor: AuditActor,
     options: SoftDeleteOptions,
   ): Promise<string[]> {
     if (ids.length === 0) return [];
     const rows = await tx.contentItem.updateManyAndReturn({
-      where: { collectionId, id: { in: [...ids] }, deletedAt: null },
+      where: {
+        collectionId,
+        id: { in: [...ids] },
+        deletedAt: null,
+        ...(options.expiredQuarantineOnly === true
+          ? { quarantinedAt: { not: null }, purgeAfter: { lt: new Date() } }
+          : {}),
+      },
       data: { deletedAt: new Date() },
       select: { id: true, kind: true, frameNo: true },
     });
@@ -50,7 +64,12 @@ export class ContentDeletion {
         action: 'content.delete',
         targetType: 'content',
         targetId: row.id,
-        metadata: { kind: row.kind, frameNo: row.frameNo, bulk: options.bulk },
+        metadata: {
+          kind: row.kind,
+          frameNo: row.frameNo,
+          bulk: options.bulk,
+          ...(options.reason === undefined ? {} : { reason: options.reason }),
+        },
         ...requestId,
       });
       await this.jobs.enqueue(tx, 'content.purge', { contentItemId: row.id, ...requestId });

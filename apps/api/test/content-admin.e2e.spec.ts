@@ -171,12 +171,29 @@ describe('admin content API', () => {
       document: 1,
       text: 2,
       lastAddedAt: new Date(BASE_TIME + 6000).toISOString(),
+      active: 5,
+      hiddenByAdmin: 0,
+      hiddenByOperator: 0,
+      quarantined: 0,
+      reported: 0,
     });
     const empty = await ownerWithCollectionFor('second@example.com');
     expect(
       (await get(empty.cookie, `/collections/${empty.collectionId}/content/counts`).expect(200))
         .body,
-    ).toEqual({ total: 0, photo: 0, video: 0, document: 0, text: 0, lastAddedAt: null });
+    ).toEqual({
+      total: 0,
+      photo: 0,
+      video: 0,
+      document: 0,
+      text: 0,
+      lastAddedAt: null,
+      active: 0,
+      hiddenByAdmin: 0,
+      hiddenByOperator: 0,
+      quarantined: 0,
+      reported: 0,
+    });
   });
 
   async function ownerWithCollectionFor(email: string) {

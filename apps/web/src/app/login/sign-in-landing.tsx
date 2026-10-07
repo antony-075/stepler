@@ -5,6 +5,7 @@ import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { LanguageSwitch } from '@/i18n/language-switch';
 import { GuestPhone, HowItWorks } from './how-it-works';
+import { getWebEnv } from '@/env';
 import { type CallbackError, LoginForm } from './login-form';
 
 const CALLBACK_ERRORS: readonly CallbackError[] = [
@@ -62,6 +63,7 @@ export async function SignInLanding({ error }: { error?: unknown }) {
                     googleEnabled={methods.google}
                     legal={methods.legal}
                     initialError={callbackError(error)}
+                    contactEmail={getWebEnv().LEGAL_CONTACT_EMAIL ?? null}
                   />
                 )}
               </PanelContent>
