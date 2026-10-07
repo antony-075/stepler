@@ -9,6 +9,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "worker:dev": "turbo run worker:dev --filter @stepler/api",
+    "dev:tunnel": "node scripts/dev-tunnel.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

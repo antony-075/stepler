@@ -76,6 +76,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm mailpit`                                  | Start Mailpit alone (if not running) and open its inbox, http://127.0.0.1:8025 |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
+| `pnpm dev:tunnel`                               | `pnpm dev` behind a temporary Cloudflare quick tunnel (needs `brew install cloudflared`); passes the tunnel's address to the API as `BILLING_CALLBACK_URL`, so LiqPay sandbox callbacks reach your machine. Stop it when done: the local API is public while it runs |
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm release:check`                            | Full pre-release check before a manual staging deploy: format, lint, typecheck, tests, builds, Storybook, three-browser e2e, Docker image checks (needs `pnpm infra:up`) |
 | `pnpm build`                                    | Build all packages and apps                                   |
