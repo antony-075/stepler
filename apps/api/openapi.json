@@ -503,6 +503,731 @@
         ]
       }
     },
+    "/api/v1/billing/checkouts": {
+      "post": {
+        "operationId": "BillingController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collectionId": {
+                        "format": "uuid",
+                        "nullable": true,
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "PACK"
+                        ],
+                        "type": "string"
+                      },
+                      "priceId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      },
+                      "title": {
+                        "maxLength": 100,
+                        "minLength": 1,
+                        "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "priceId",
+                      "collectionId"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "collectionId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "PACK_EXTENSION"
+                        ],
+                        "type": "string"
+                      },
+                      "priceId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "priceId",
+                      "collectionId"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "autoRenewConsent": {
+                        "enum": [
+                          true
+                        ],
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "enum": [
+                          "SUBSCRIPTION"
+                        ],
+                        "type": "string"
+                      },
+                      "priceId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      },
+                      "termsVersion": {
+                        "maxLength": 20,
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "priceId",
+                      "autoRenewConsent",
+                      "termsVersion"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "SUBSCRIPTION_CHANGE"
+                        ],
+                        "type": "string"
+                      },
+                      "priceId": {
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "priceId"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "form": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "action": {
+                          "format": "uri",
+                          "type": "string"
+                        },
+                        "fields": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "data": {
+                              "type": "string"
+                            },
+                            "signature": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "data",
+                            "signature"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "action",
+                        "fields"
+                      ],
+                      "type": "object"
+                    },
+                    "paymentId": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "paymentId",
+                    "status",
+                    "form"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule"
+          },
+          "404": {
+            "description": "NOT_FOUND: the collection is not yours, unknown, or being deleted"
+          },
+          "409": {
+            "description": "OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an extension for an account collection, a smaller tier) or subscriptions (not yet sold); PAYMENT_PENDING: another offer is waiting for payment for this collection"
+          },
+          "429": {
+            "description": "RATE_LIMITED: checkouts per account per hour"
+          },
+          "503": {
+            "description": "PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/billing/offers": {
+      "get": {
+        "operationId": "BillingController_offers_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "uk",
+              "enum": [
+                "uk",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "extension": {
+                            "enum": [
+                              "WINDOW",
+                              "RETENTION",
+                              "STORAGE"
+                            ],
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": [
+                              "TRIAL",
+                              "PACK",
+                              "PACK_EXTENSION",
+                              "SUBSCRIPTION"
+                            ],
+                            "type": "string"
+                          },
+                          "limits": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "activeCollections": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "collectionStorageBytes": {
+                                "nullable": true,
+                                "pattern": "^\\d{1,20}$",
+                                "type": "string"
+                              },
+                              "guestLinks": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "retentionDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "storageBytes": {
+                                "nullable": true,
+                                "pattern": "^\\d{1,20}$",
+                                "type": "string"
+                              },
+                              "windowDays": {
+                                "exclusiveMinimum": true,
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "activeCollections",
+                              "storageBytes",
+                              "collectionStorageBytes",
+                              "guestLinks",
+                              "windowDays",
+                              "retentionDays"
+                            ],
+                            "type": "object"
+                          },
+                          "prices": {
+                            "items": {
+                              "additionalProperties": false,
+                              "properties": {
+                                "amountMinor": {
+                                  "exclusiveMinimum": true,
+                                  "maximum": 9007199254740991,
+                                  "minimum": 0,
+                                  "type": "integer"
+                                },
+                                "currency": {
+                                  "enum": [
+                                    "UAH",
+                                    "EUR",
+                                    "USD"
+                                  ],
+                                  "type": "string"
+                                },
+                                "id": {
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                                  "type": "string"
+                                },
+                                "interval": {
+                                  "enum": [
+                                    "ONE_TIME",
+                                    "MONTH",
+                                    "YEAR"
+                                  ],
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "interval",
+                                "amountMinor",
+                                "currency"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "rank": {
+                            "maximum": 9007199254740991,
+                            "minimum": -9007199254740991,
+                            "type": "integer"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "code",
+                          "kind",
+                          "extension",
+                          "title",
+                          "description",
+                          "limits",
+                          "rank",
+                          "prices"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/billing/payments": {
+      "get": {
+        "operationId": "BillingController_payments_v1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountMinor": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "collectionId": {
+                            "format": "uuid",
+                            "nullable": true,
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "enum": [
+                              "UAH",
+                              "EUR",
+                              "USD"
+                            ],
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "kind": {
+                            "enum": [
+                              "PACK",
+                              "PACK_EXTENSION",
+                              "SUBSCRIPTION",
+                              "SUBSCRIPTION_RENEWAL",
+                              "SUBSCRIPTION_CHANGE"
+                            ],
+                            "type": "string"
+                          },
+                          "offerTitle": {
+                            "type": "string"
+                          },
+                          "paidAt": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "refundedMinor": {
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "status": {
+                            "enum": [
+                              "PENDING",
+                              "SUCCEEDED",
+                              "FAILED",
+                              "EXPIRED",
+                              "REVERSED",
+                              "REFUNDED",
+                              "PARTIALLY_REFUNDED"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "status",
+                          "createdAt",
+                          "paidAt",
+                          "offerTitle",
+                          "collectionId",
+                          "refundedMinor",
+                          "amountMinor",
+                          "currency"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "nextCursor": {
+                      "nullable": true,
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "items",
+                    "nextCursor"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: an invalid cursor or limit"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/billing/payments/{id}": {
+      "get": {
+        "operationId": "BillingController_payment_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "amountMinor": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "collectionId": {
+                      "format": "uuid",
+                      "nullable": true,
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "currency": {
+                      "enum": [
+                        "UAH",
+                        "EUR",
+                        "USD"
+                      ],
+                      "type": "string"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "PACK",
+                        "PACK_EXTENSION",
+                        "SUBSCRIPTION",
+                        "SUBSCRIPTION_RENEWAL",
+                        "SUBSCRIPTION_CHANGE"
+                      ],
+                      "type": "string"
+                    },
+                    "offerTitle": {
+                      "type": "string"
+                    },
+                    "paidAt": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
+                    "refundedMinor": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "status": {
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED",
+                        "FAILED",
+                        "EXPIRED",
+                        "REVERSED",
+                        "REFUNDED",
+                        "PARTIALLY_REFUNDED"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "status",
+                    "createdAt",
+                    "paidAt",
+                    "offerTitle",
+                    "collectionId",
+                    "refundedMinor",
+                    "amountMinor",
+                    "currency"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "404": {
+            "description": "NOT_FOUND: not your payment, or unknown"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
     "/api/v1/collections": {
       "get": {
         "operationId": "CollectionsController_list_v1",

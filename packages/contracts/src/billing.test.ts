@@ -129,3 +129,18 @@ describe('access in the existing responses', () => {
     );
   });
 });
+
+describe('billing lists (M2)', () => {
+  test('offers default to Ukrainian and refuse other keys', async () => {
+    const { offerListQuerySchema } = await import('./index.js');
+    expect(offerListQuerySchema.parse({})).toEqual({ locale: 'uk' });
+    expect(offerListQuerySchema.safeParse({ locale: 'de' }).success).toBe(false);
+    expect(offerListQuerySchema.safeParse({ admin: '1' }).success).toBe(false);
+  });
+
+  test('payments page by cursor with a bounded limit', async () => {
+    const { accountPaymentListQuerySchema } = await import('./index.js');
+    expect(accountPaymentListQuerySchema.parse({})).toEqual({ limit: 20 });
+    expect(accountPaymentListQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
+  });
+});

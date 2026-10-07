@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { accessSchema } from './access.js';
+import { localeSchema } from './auth.js';
 import { collectionTitleSchema } from './collections.js';
 import { usageResponseSchema } from './usage.js';
 
@@ -219,3 +220,27 @@ export const paymentDtoSchema = z
   .extend(moneySchema.shape)
   .strict();
 export type PaymentDto = z.infer<typeof paymentDtoSchema>;
+
+/** `GET /api/v1/billing/offers?locale=`: public; the page asks in its own language. */
+export const offerListQuerySchema = z.object({ locale: localeSchema.default('uk') }).strict();
+export type OfferListQuery = z.infer<typeof offerListQuerySchema>;
+
+/** Active offers with at least one active price, best first per kind; never the trial. */
+export const offerListSchema = z.object({ items: z.array(offerDtoSchema) }).strict();
+export type OfferList = z.infer<typeof offerListSchema>;
+
+/** `GET /api/v1/billing/payments`: the account's own payments, newest first. */
+export const accountPaymentListQuerySchema = z
+  .object({
+    cursor: z.string().min(1).max(200).optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+export type AccountPaymentListQuery = z.infer<typeof accountPaymentListQuerySchema>;
+
+export const paymentListSchema = z
+  .object({ items: z.array(paymentDtoSchema), nextCursor: z.string().nullable() })
+  .strict();
+export type PaymentList = z.infer<typeof paymentListSchema>;
+
+export const paymentIdParamsSchema = z.object({ id: z.uuid() }).strict();

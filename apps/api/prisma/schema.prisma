@@ -210,6 +210,27 @@ enum SubscriptionSource {
   COMPLIMENTARY
 }
 
+/// What a payment buys (plan Task 11). Renewals are separate rows [P9].
+enum PaymentKind {
+  PACK
+  PACK_EXTENSION
+  SUBSCRIPTION
+  SUBSCRIPTION_RENEWAL
+  SUBSCRIPTION_CHANGE
+}
+
+/// Written only by `PaymentTransitions` (and refunds, M4); final states never regress except
+/// SUCCEEDED → REVERSED.
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  REVERSED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
 /// ACCOUNT = the account's plan or trial governs it; PACK = its own pack does (plan [P1]).
 enum CollectionEntitlement {
   ACCOUNT
@@ -240,6 +261,7 @@ model User {
   createdAt          DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
   subscriptions      Subscription[]
+  payments           Payment[]
   accounts           AuthAccount[]
   sessions           AuthSession[]
   collections        Collection[]
@@ -352,6 +374,7 @@ model Collection {
   images              CollectionImage[]     @relation("CollectionImages")
   guestPageVersions   GuestPageVersion[]
   pack                CollectionPack?
+  payments            Payment[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
 }
@@ -761,6 +784,7 @@ model BillingOffer {
   subscriptions          Subscription[]     @relation("SubscriptionOffer")
   pendingSubscriptions   Subscription[]     @relation("SubscriptionPendingOffer")
   packs                  CollectionPack[]
+  payments               Payment[]
 }
 
 /// A price of one offer in one currency and period, in minor units (B2). One live price per
@@ -777,6 +801,7 @@ model BillingPrice {
   offer                BillingOffer    @relation(fields: [offerId], references: [id], onDelete: Restrict)
   subscriptions        Subscription[]  @relation("SubscriptionPrice")
   pendingSubscriptions Subscription[]  @relation("SubscriptionPendingPrice")
+  payments             Payment[]
 
   @@index([offerId])
 }
@@ -821,6 +846,7 @@ model Subscription {
   price                  BillingPrice?      @relation("SubscriptionPrice", fields: [priceId], references: [id], onDelete: Restrict)
   pendingOffer           BillingOffer?      @relation("SubscriptionPendingOffer", fields: [pendingOfferId], references: [id], onDelete: Restrict)
   pendingPrice           BillingPrice?      @relation("SubscriptionPendingPrice", fields: [pendingPriceId], references: [id], onDelete: Restrict)
+  payments               Payment[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status, currentPeriodEnd], map: "Subscription_period_end_idx")
@@ -844,3 +870,52 @@ model CollectionPack {
 
   @@index([offerId])
 }
+
+/// One checkout and its money (ADR 0018, plan Task 11). The id is LiqPay's `order_id` [P8], kept
+/// in `providerOrderId` too. Amount, currency and what was bought are snapshotted at checkout
+/// [B10]; a payment survives its collection's purge (`collectionId` SET NULL). Rules as named
+/// CHECKs: "Payment_amount_positive", "Payment_refund_bounds", "Payment_paid_consistent"; one
+/// pending pack checkout per collection and offer ("Payment_one_pending_per_target").
+model Payment {
+  id                 String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId             String        @db.Uuid
+  kind               PaymentKind
+  status             PaymentStatus @default(PENDING)
+  offerId            String        @db.Uuid
+  priceId            String?       @db.Uuid
+  collectionId       String?       @db.Uuid
+  subscriptionId     String?       @db.Uuid
+  /// A pack that creates its collection (`collectionId` NULL at checkout): the title to use.
+  newCollectionTitle String?
+  amountMinor        Int
+  currency           Currency
+  /// What was bought: the offer's code, kind, titles and limits at checkout.
+  offerSnapshot      Json
+  providerOrderId    String        @unique
+  providerPaymentId  String?       @unique
+  expiresAt          DateTime      @db.Timestamptz(3)
+  paidAt             DateTime?     @db.Timestamptz(3)
+  failedAt           DateTime?     @db.Timestamptz(3)
+  errCode            String?
+  refundedMinor      Int           @default(0)
+  /// A success that could not be granted as bought (e.g. a second pack): for the operator.
+  needsReview        Boolean       @default(false)
+  /// The provider reported another amount or currency: nothing was granted.
+  mismatch           Boolean       @default(false)
+  /// The last `status` call for this payment (the return page's refresh is throttled by it).
+  lastCheckedAt      DateTime?     @db.Timestamptz(3)
+  createdAt          DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @db.Timestamptz(3)
+  user               User          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer              BillingOffer  @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  price              BillingPrice? @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  collection         Collection?   @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  subscription       Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([collectionId])
+  @@index([offerId])
+  @@index([priceId])
+  @@index([subscriptionId])
+}
+

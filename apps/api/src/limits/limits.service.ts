@@ -147,6 +147,16 @@ export class LimitsService {
     return this.env.LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE;
   }
 
+  /** LiqPay callbacks per client IP per minute (ADR 0018): load, not authentication. */
+  billingCallbacksPerIpPerMinute(): number {
+    return this.env.LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE;
+  }
+
+  /** Checkouts per signed-in account per hour. */
+  billingCheckoutsPerUserPerHour(): number {
+    return this.env.LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {

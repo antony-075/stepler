@@ -106,3 +106,44 @@ export async function givePack(
   });
   await prisma.collection.update({ where: { id: collectionId }, data: { entitlement: 'PACK' } });
 }
+
+/** A sandbox-shaped key pair for tests only; never a real key. */
+export const TEST_LIQPAY = {
+  publicKey: 'sandbox_i00000000test',
+  privateKey: 'sandbox_test-private-key-for-integration-tests',
+} as const;
+
+/** The API env that switches payments on with the test keys (and an optional stub base). */
+export function liqpayEnv(apiBase?: string): Record<string, string> {
+  return {
+    BILLING_PROVIDER: 'liqpay',
+    LIQPAY_PUBLIC_KEY: TEST_LIQPAY.publicKey,
+    LIQPAY_PRIVATE_KEY: TEST_LIQPAY.privateKey,
+    ...(apiBase === undefined ? {} : { LIQPAY_API_BASE: apiBase }),
+  };
+}
+
+/** Draft UAH prices for tests (kopecks), as the operator would set them. */
+export const TEST_PRICES = {
+  'pack-start': 50_000,
+  'pack-event': 120_000,
+  'ext-window-30': 15_000,
+  'ext-retention-365': 30_000,
+} as const;
+
+export type PricedCode = keyof typeof TEST_PRICES;
+
+/** Prices and activates the pack offers; returns each offer's id and its live price id. */
+export async function priceCatalogue(
+  prisma: PrismaClient,
+): Promise<Record<PricedCode, { offerId: string; priceId: string }>> {
+  const out = {} as Record<PricedCode, { offerId: string; priceId: string }>;
+  for (const [code, amountMinor] of Object.entries(TEST_PRICES) as [PricedCode, number][]) {
+    const offer = await prisma.billingOffer.update({ where: { code }, data: { active: true } });
+    const price = await prisma.billingPrice.create({
+      data: { offerId: offer.id, interval: 'ONE_TIME', currency: 'UAH', amountMinor },
+    });
+    out[code] = { offerId: offer.id, priceId: price.id };
+  }
+  return out;
+}

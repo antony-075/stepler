@@ -28,7 +28,9 @@ export type RateLimitName =
   | 'guest-upload'
   | 'guest-upload-session'
   | 'admin-cover'
-  | 'admin-cover-user';
+  | 'admin-cover-user'
+  | 'billing-callback'
+  | 'billing-checkout';
 
 const RATE_LIMIT = 'stepler:rateLimit';
 const MINUTE_MS = 60_000;
@@ -101,6 +103,12 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       named('admin-cover', limits.coverCallsPerIpPerMinute(), MINUTE_MS),
       {
         ...named('admin-cover-user', limits.coverCallsPerUserPerMinute(), MINUTE_MS),
+        getTracker: adminUserTracker,
+      },
+      // Billing (ADR 0018): LiqPay's callback per IP; checkouts per signed-in account per hour.
+      named('billing-callback', limits.billingCallbacksPerIpPerMinute(), MINUTE_MS),
+      {
+        ...named('billing-checkout', limits.billingCheckoutsPerUserPerHour(), HOUR_MS),
         getTracker: adminUserTracker,
       },
     ],

@@ -37,6 +37,8 @@ export async function resetDatabase(prisma: PrismaClient): Promise<void> {
     `DELETE FROM "BillingOffer" WHERE "code" <> ALL($1::text[])`,
     SEEDED_OFFERS,
   );
+  // As seeded: only the trial is live (a suite may price and activate the others).
+  await prisma.$executeRawUnsafe(`UPDATE "BillingOffer" SET "active" = ("code" = 'trial')`);
   await prisma.$executeRawUnsafe(
     `DO $$ BEGIN IF to_regclass('pgboss.job') IS NOT NULL THEN DELETE FROM pgboss.job; END IF; END $$`,
   );

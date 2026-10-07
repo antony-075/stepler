@@ -34,7 +34,11 @@ export type AuditAction =
   | 'appeal.reject'
   // Billing (ADR 0018).
   | 'billing.grant'
-  | 'billing.grant_revoke';
+  | 'billing.grant_revoke'
+  | 'billing.checkout'
+  | 'billing.payment_succeeded'
+  | 'billing.payment_failed'
+  | 'billing.payment_reversed';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
