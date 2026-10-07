@@ -9,4 +9,6 @@ import type { Prisma } from '../generated/prisma/client.js';
 export const GUEST_VISIBLE = {
   deletedAt: null,
   hiddenAt: null,
+  // Slice 9b: deleted by the operator, kept only for its admin and the appeal.
+  quarantinedAt: null,
 } as const satisfies Prisma.ContentItemWhereInput;

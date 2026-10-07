@@ -90,16 +90,15 @@ export class AdminContentService {
     const clauses = states.map((one): Prisma.ContentItemWhereInput => {
       switch (one) {
         case 'HIDDEN_ADMIN':
-          return { hiddenBy: 'ADMIN' };
+          return { hiddenBy: 'ADMIN', quarantinedAt: null };
         case 'HIDDEN_OPERATOR':
           return { hiddenBy: 'OPERATOR' };
         case 'REPORTED':
           return { id: { in: reportedIds } };
         case 'QUARANTINED':
-          // Slice 9b (plan Task 3): matches quarantined frames once the column exists.
-          return { id: { in: [] } };
+          return { quarantinedAt: { not: null } };
         case 'ACTIVE':
-          return { hiddenAt: null, id: { notIn: reportedIds } };
+          return { hiddenAt: null, quarantinedAt: null, id: { notIn: reportedIds } };
       }
     });
     return clauses.length === 1 ? clauses[0]! : { OR: clauses };
@@ -109,7 +108,10 @@ export class AdminContentService {
     const { row, item } = await this.item(a, id);
     return {
       ...item,
-      ...(await this.media.original(row, { viewer: 'admin' })),
+      // Quarantined (slice 9b): the admin sees it, but gets no link to the original.
+      ...(row.quarantinedAt === null
+        ? await this.media.original(row, { viewer: 'admin' })
+        : { originalUrl: null, downloadUrl: null }),
       reports: await this.moderation.openReports(row.id),
       // Slice 9b (plan Task 4): the latest appeal on the frame, once appeals exist.
       appeal: null,

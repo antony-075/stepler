@@ -1,11 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { OperatorPrincipal } from '../auth/principal.js';
-import { ContentDeletion } from '../content/content-deletion.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
-import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { LimitsService } from '../limits/limits.service.js';
 import { BlockingService } from '../moderation/blocking.service.js';
 import { ContentHiding } from '../moderation/content-hiding.js';
+import { ContentQuarantine } from '../moderation/content-quarantine.js';
 import { OperatorScope } from './operator-scope.js';
 
 /**
@@ -21,9 +21,9 @@ export class OperatorActions {
     private readonly prisma: PrismaService,
     private readonly scope: OperatorScope,
     private readonly hiding: ContentHiding,
-    private readonly deletion: ContentDeletion,
+    private readonly quarantines: ContentQuarantine,
     private readonly blocking: BlockingService,
-    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly limits: LimitsService,
   ) {}
 
   /** Hides a live frame (an admin hide becomes the operator's); a repeat changes nothing. */
@@ -44,18 +44,26 @@ export class OperatorActions {
     if (result === 'shown') this.log('content.unhide', 'content', item.id);
   }
 
-  /** Deletes a frame as the admin would (purge job, audit with the reason); idempotent. */
-  async delete(op: OperatorPrincipal, contentId: string, reason: string, requestId?: string) {
-    const item = await this.scope.reportedContent(contentId);
-    await this.jobs.ready();
-    const deleted = await this.prisma.$transaction((tx) =>
-      this.deletion.softDelete(tx, item.collectionId, [item.id], op, {
-        bulk: false,
-        reason,
-        ...(requestId === undefined ? {} : { requestId }),
-      }),
+  /**
+   * «Видалити (карантин 90 днів)» (slice 9b): gone for guests and from the quota at once, purged
+   * after `MODERATION_QUARANTINE_DAYS` unless restored; idempotent.
+   */
+  async quarantine(op: OperatorPrincipal, contentId: string, reason: string, requestId?: string) {
+    const item = await this.liveContent(contentId);
+    const days = this.limits.moderation().quarantineDays;
+    const result = await this.prisma.$transaction((tx) =>
+      this.quarantines.quarantine(tx, item, op, reason, days, requestId),
     );
-    if (deleted.length > 0) this.log('content.delete', 'content', item.id);
+    if (result === 'quarantined') this.log('content.quarantine', 'content', item.id);
+  }
+
+  /** Ends a quarantine before its purge date (an operator mistake); idempotent. */
+  async restore(op: OperatorPrincipal, contentId: string, reason: string, requestId?: string) {
+    const item = await this.liveContent(contentId);
+    const result = await this.prisma.$transaction((tx) =>
+      this.quarantines.restore(tx, item, op, reason, requestId),
+    );
+    if (result === 'restored') this.log('content.restore', 'content', item.id);
   }
 
   async blockCollection(op: OperatorPrincipal, id: string, reason: string, requestId?: string) {
@@ -94,7 +102,7 @@ export class OperatorActions {
     );
   }
 
-  /** Hide and unhide act on frames that are not deleted. */
+  /** Hide, unhide, quarantine and restore act on frames that are not deleted. */
   private async liveContent(contentId: string) {
     const item = await this.scope.reportedContent(contentId);
     if (item.deleted) throw new AppError('NOT_FOUND', 404);

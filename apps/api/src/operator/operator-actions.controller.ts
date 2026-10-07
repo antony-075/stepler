@@ -16,8 +16,8 @@ const DONE = { status: 204, description: 'Done, or already so (idempotent); audi
 const BAD_REASON = { status: 400, description: 'VALIDATION_FAILED: a 1–500 reason is required' };
 
 /**
- * The operator's actions (R5), each with a reason, on reported scope only ([P5]). Deleting is a
- * `POST` because the reason is a body.
+ * The operator's actions (R5), each with a reason, on reported scope only ([P5]). Each is a
+ * `POST` because the reason is a body; deleting is a quarantine (slice 9b).
  */
 @ApiTags('Operator')
 @ApiCookieAuth(SESSION_COOKIE_SCHEME)
@@ -54,18 +54,37 @@ export class OperatorActionsController {
     return this.actions.unhide(op, params.id, body.reason, requestId);
   }
 
-  @Post('content/:id/delete')
+  /**
+   * The operator's deletion (slice 9b): a quarantine of `MODERATION_QUARANTINE_DAYS` (90) before
+   * the purge; guests lose the frame at once and it leaves the owner's quota.
+   */
+  @Post('content/:id/quarantine')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiResponse(DONE)
   @ApiResponse(BAD_REASON)
   @ApiResponse(NOT_OPERATOR)
-  delete(
+  quarantine(
     @CurrentOperator() op: OperatorPrincipal,
     @Param({ schema: idParamsSchema }) params: { id: string },
     @Body({ schema: operatorActionRequestSchema }) body: OperatorActionRequest,
     @RequestId() requestId: string | undefined,
   ): Promise<void> {
-    return this.actions.delete(op, params.id, body.reason, requestId);
+    return this.actions.quarantine(op, params.id, body.reason, requestId);
+  }
+
+  /** Ends a quarantine before its purge date. */
+  @Post('content/:id/restore')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiResponse(DONE)
+  @ApiResponse(BAD_REASON)
+  @ApiResponse(NOT_OPERATOR)
+  restore(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: idParamsSchema }) params: { id: string },
+    @Body({ schema: operatorActionRequestSchema }) body: OperatorActionRequest,
+    @RequestId() requestId: string | undefined,
+  ): Promise<void> {
+    return this.actions.restore(op, params.id, body.reason, requestId);
   }
 
   @Post('collections/:id/block')

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BlockingService } from './blocking.service.js';
 import { ContentHiding } from './content-hiding.js';
+import { ContentQuarantine } from './content-quarantine.js';
 import { ModerationReads } from './moderation-reads.js';
 import { ReportResolution } from './report-resolution.js';
 import { ReportsService } from './reports.service.js';
@@ -13,7 +14,21 @@ import { ReportsService } from './reports.service.js';
  * `ContentModule`, next to the other guest content routes and their session guard.
  */
 @Module({
-  providers: [ContentHiding, ModerationReads, ReportsService, ReportResolution, BlockingService],
-  exports: [ContentHiding, ModerationReads, ReportsService, ReportResolution, BlockingService],
+  providers: [
+    ContentHiding,
+    ContentQuarantine,
+    ModerationReads,
+    ReportsService,
+    ReportResolution,
+    BlockingService,
+  ],
+  exports: [
+    ContentHiding,
+    ContentQuarantine,
+    ModerationReads,
+    ReportsService,
+    ReportResolution,
+    BlockingService,
+  ],
 })
 export class ModerationModule {}

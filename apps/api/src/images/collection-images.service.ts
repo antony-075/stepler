@@ -88,7 +88,8 @@ export class CollectionImagesService {
       item.kind !== 'PHOTO' ||
       original === undefined ||
       item.processingStatus === 'FAILED' ||
-      item.hiddenAt !== null
+      item.hiddenAt !== null ||
+      item.quarantinedAt !== null
     ) {
       throw new AppError('COVER_SOURCE_INVALID', 422);
     }

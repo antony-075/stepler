@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { PrismaService } from '../src/database/prisma.service.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { SmtpMailer } from '../src/mail/smtp-mailer.js';
+import { AuditService } from '../src/audit/audit.service.js';
+import { ContentDeletion } from '../src/content/content-deletion.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { ReportDecisionMailHandler } from '../src/worker/handlers/report-decision-mail.handler.js';
 import { ReportReceivedMailHandler } from '../src/worker/handlers/report-received-mail.handler.js';
@@ -191,7 +193,12 @@ describe('report mail in the worker', () => {
       reporterLocale: 'uk',
       createdAt: new Date(Date.now() - 89 * DAY_MS),
     });
-    await new MaintenanceSweepHandler(prisma, queue, base).handle();
+    await new MaintenanceSweepHandler(
+      prisma,
+      new ContentDeletion(new AuditService(), queue),
+      queue,
+      base,
+    ).handle();
     expect(await prisma.contentReport.findUniqueOrThrow({ where: { id: old.id } })).toMatchObject({
       reporterEmail: null,
       reporterLocale: null,

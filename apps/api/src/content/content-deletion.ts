@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AuditService } from '../audit/audit.service.js';
-import type { Principal } from '../auth/principal.js';
+import { AuditService, type AuditActor } from '../audit/audit.service.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 
@@ -10,6 +9,11 @@ export interface SoftDeleteOptions {
   requestId?: string;
   /** The Stepler operator's reason (slice 9), kept in the audit event; never user content. */
   reason?: string;
+  /**
+   * The sweep ending quarantines (slice 9b): only rows still quarantined past `purgeAfter` are
+   * deleted, so a frame restored after the sweep read it is left alone.
+   */
+  expiredQuarantineOnly?: boolean;
 }
 
 /**
@@ -35,12 +39,20 @@ export class ContentDeletion {
     tx: Prisma.TransactionClient,
     collectionId: string,
     ids: readonly string[],
-    actor: Principal,
+    /** `'system'`: the sweep ending a quarantine (slice 9b). */
+    actor: AuditActor,
     options: SoftDeleteOptions,
   ): Promise<string[]> {
     if (ids.length === 0) return [];
     const rows = await tx.contentItem.updateManyAndReturn({
-      where: { collectionId, id: { in: [...ids] }, deletedAt: null },
+      where: {
+        collectionId,
+        id: { in: [...ids] },
+        deletedAt: null,
+        ...(options.expiredQuarantineOnly === true
+          ? { quarantinedAt: { not: null }, purgeAfter: { lt: new Date() } }
+          : {}),
+      },
       data: { deletedAt: new Date() },
       select: { id: true, kind: true, frameNo: true },
     });

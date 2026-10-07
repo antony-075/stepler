@@ -174,6 +174,7 @@ describe('admin content API', () => {
       active: 5,
       hiddenByAdmin: 0,
       hiddenByOperator: 0,
+      quarantined: 0,
       reported: 0,
     });
     const empty = await ownerWithCollectionFor('second@example.com');
@@ -190,6 +191,7 @@ describe('admin content API', () => {
       active: 0,
       hiddenByAdmin: 0,
       hiddenByOperator: 0,
+      quarantined: 0,
       reported: 0,
     });
   });

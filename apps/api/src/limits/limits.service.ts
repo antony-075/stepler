@@ -93,6 +93,14 @@ export class LimitsService {
     return this.env.LIMIT_GUEST_READS_PER_IP_PER_MINUTE;
   }
 
+  /** Slice 9b: appeals per admin per rolling day, and the quarantine before an operator purge. */
+  moderation(): { appealsPerDay: number; quarantineDays: number } {
+    return {
+      appealsPerDay: this.env.LIMIT_APPEALS_PER_ACCOUNT_PER_DAY,
+      quarantineDays: this.env.MODERATION_QUARANTINE_DAYS,
+    };
+  }
+
   /** Guest reports per client IP per hour, across sessions (slice 9). */
   reportsPerIpPerHour(): number {
     return this.env.LIMIT_REPORTS_PER_IP_PER_HOUR;

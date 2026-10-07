@@ -11,6 +11,8 @@ import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { PgBossClient, PgBossQueue, senderBossOptions } from '../src/jobs/pg-boss-queue.js';
 import { OBJECT_STORAGE, type ObjectStorage } from '../src/storage/object-storage.js';
 import { S3ObjectStorage } from '../src/storage/s3-object-storage.js';
+import { AuditService } from '../src/audit/audit.service.js';
+import { ContentDeletion } from '../src/content/content-deletion.js';
 import { MaintenanceSweepHandler } from '../src/worker/handlers/maintenance-sweep.handler.js';
 import { PurgeCollectionHandler } from '../src/worker/handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handler.js';
@@ -316,7 +318,12 @@ describe('worker handlers', () => {
 
   describe('maintenance.sweep', () => {
     const sweep = (overrides: Record<string, string> = {}) =>
-      new MaintenanceSweepHandler(prisma, queue, workerEnv(overrides));
+      new MaintenanceSweepHandler(
+        prisma,
+        new ContentDeletion(new AuditService(), queue),
+        queue,
+        workerEnv(overrides),
+      );
 
     test('fails photos and videos stuck PENDING for an hour with no media job left', async () => {
       const { collectionId } = await seed();
@@ -487,6 +494,7 @@ describe('worker handlers', () => {
       };
       const handler = new MaintenanceSweepHandler(
         prisma,
+        new ContentDeletion(new AuditService(), broken),
         broken,
         workerEnv({ GUEST_SESSION_IDLE_DAYS: '30' }),
       );

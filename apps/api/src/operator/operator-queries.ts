@@ -52,7 +52,14 @@ export class OperatorQueries {
     const [items, collections, open] = await Promise.all([
       this.prisma.contentItem.findMany({
         where: { id: { in: contentIds } },
-        select: { id: true, kind: true, frameNo: true, deletedAt: true, hiddenAt: true },
+        select: {
+          id: true,
+          kind: true,
+          frameNo: true,
+          deletedAt: true,
+          quarantinedAt: true,
+          hiddenAt: true,
+        },
       }),
       this.prisma.collection.findMany({
         where: { id: { in: collectionIds } },
@@ -115,12 +122,15 @@ export class OperatorQueries {
     let content: OperatorReportDetail['content'] = null;
     if (item !== null) {
       const deleted = item.deletedAt !== null;
-      // Nothing is signed for a deleted frame: its purge is under way.
+      // Nothing is signed for a deleted frame: its purge is under way. A quarantined one keeps
+      // its previews (the operator decides on it) but no link to the original (slice 9b).
       const [media, original] = deleted
         ? [null, null]
         : await Promise.all([
             this.media.forItem(item),
-            this.media.original(item, { viewer: 'admin', own: false }),
+            item.quarantinedAt === null
+              ? this.media.original(item, { viewer: 'admin', own: false })
+              : null,
           ]);
       content = {
         id: item.id,
@@ -128,7 +138,7 @@ export class OperatorQueries {
         frameNo: item.frameNo,
         createdAt: item.createdAt.toISOString(),
         hidden: moderationOf(item, 0).hidden,
-        quarantined: moderationOf(item, 0).quarantined,
+        quarantined: deleted ? null : moderationOf(item, 0).quarantined,
         deleted,
         text: deleted ? null : item.textBody,
         media,

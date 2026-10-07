@@ -266,9 +266,14 @@ export class UploadCompletion {
     if (row.contentItemId === null) throw new AppError('CONTENT_NOT_FOUND', 404);
     const item = await tx.contentItem.findUnique({
       where: { id: row.contentItemId },
-      select: { deletedAt: true, hiddenAt: true },
+      select: { deletedAt: true, hiddenAt: true, quarantinedAt: true },
     });
-    if (item === null || item.deletedAt !== null || item.hiddenAt !== null) {
+    if (
+      item === null ||
+      item.deletedAt !== null ||
+      item.hiddenAt !== null ||
+      item.quarantinedAt !== null
+    ) {
       throw new AppError('CONTENT_NOT_FOUND', 404);
     }
     return { kind: 'item', contentItemId: row.contentItemId };

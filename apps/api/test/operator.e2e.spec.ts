@@ -133,7 +133,7 @@ describe('operator API', () => {
       path: `/reports/${sc.reportB}`,
       body: { status: 'DISMISSED', note: 'Ні' },
     },
-    ...['hide', 'unhide', 'delete'].map((action) => ({
+    ...['hide', 'unhide', 'quarantine', 'restore'].map((action) => ({
       method: 'post' as const,
       path: `/content/${sc.reported}/${action}`,
       body: { reason: 'Причина' },
@@ -210,7 +210,7 @@ describe('operator API', () => {
     const op = as(sc.operator.cookie);
     const reason = { reason: 'Причина' };
     const attempts = [
-      ...['hide', 'unhide', 'delete'].map((a) =>
+      ...['hide', 'unhide', 'quarantine', 'restore'].map((a) =>
         op.send('post', `/content/${sc.unreported}/${a}`, reason),
       ),
       ...['block', 'unblock'].map((a) =>
@@ -230,7 +230,13 @@ describe('operator API', () => {
     expect(await prisma.auditEvent.count({ where: { actorType: 'OPERATOR' } })).toBe(0);
     expect(
       await prisma.contentItem.count({
-        where: { OR: [{ hiddenAt: { not: null } }, { deletedAt: { not: null } }] },
+        where: {
+          OR: [
+            { hiddenAt: { not: null } },
+            { deletedAt: { not: null } },
+            { quarantinedAt: { not: null } },
+          ],
+        },
       }),
     ).toBe(0);
     expect(await prisma.user.count({ where: { status: 'BLOCKED' } })).toBe(0);
@@ -328,7 +334,7 @@ describe('operator API', () => {
     await op.send('patch', `/reports/${sc.reportB}`, { status: 'OPEN', note: 'x' }).expect(400);
   });
 
-  test('content: hide, unhide and delete, each with a reason and audited', async () => {
+  test('content: hide, unhide and quarantine, each with a reason and audited', async () => {
     const sc = await scene();
     const op = as(sc.operator.cookie);
     const guestRead = () =>
@@ -360,20 +366,24 @@ describe('operator API', () => {
     await guestRead().expect(200);
 
     const empty = await op
-      .send('post', `/content/${sc.reported}/delete`, { reason: '  ' })
+      .send('post', `/content/${sc.reported}/quarantine`, { reason: '  ' })
       .expect(400);
     expect(empty.body).toMatchObject({ code: 'VALIDATION_FAILED' });
+    // The operator's deletion is a quarantine (slice 9b): no purge job, the row stays.
     await op
-      .send('post', `/content/${sc.reported}/delete`, { reason: 'Незаконний вміст' })
+      .send('post', `/content/${sc.reported}/quarantine`, { reason: 'Незаконний вміст' })
       .expect(204);
-    await op.send('post', `/content/${sc.reported}/delete`, { reason: 'Ще раз' }).expect(204);
+    await op.send('post', `/content/${sc.reported}/quarantine`, { reason: 'Ще раз' }).expect(204);
     expect(
-      (await prisma.contentItem.findUniqueOrThrow({ where: { id: sc.reported } })).deletedAt,
-    ).not.toBeNull();
-    expect(await prisma.auditEvent.findMany({ where: { action: 'content.delete' } })).toMatchObject(
-      [{ actorType: 'OPERATOR', metadata: { reason: 'Незаконний вміст' } }],
-    );
-    expect(await queuedJobs(prisma, 'content.purge')).toHaveLength(1);
+      await prisma.auditEvent.findMany({ where: { action: 'content.quarantine' } }),
+    ).toMatchObject([{ actorType: 'OPERATOR', metadata: { reason: 'Незаконний вміст' } }]);
+    expect(await queuedJobs(prisma, 'content.purge')).toHaveLength(0);
+    await guestRead().expect(404);
+    // Deleted later (by its admin): the detail says so.
+    await prisma.contentItem.update({
+      where: { id: sc.reported },
+      data: { deletedAt: new Date() },
+    });
     // The detail of a deleted frame.
     const detail = operatorReportDetailSchema.parse(
       (await op.get(`/reports/${sc.reportB}`).expect(200)).body,

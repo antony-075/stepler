@@ -43,7 +43,10 @@
               "GUEST_PAGE_DRAFT_CONFLICT",
               "THEME_CONTRAST_TOO_LOW",
               "CONTENT_MODERATED",
-              "REPORT_RESOLVED"
+              "REPORT_RESOLVED",
+              "APPEAL_NOT_APPLICABLE",
+              "APPEAL_OPEN",
+              "APPEAL_RESOLVED"
             ],
             "type": "string"
           },
@@ -1878,6 +1881,7 @@
                     "ACTIVE",
                     "HIDDEN_ADMIN",
                     "HIDDEN_OPERATOR",
+                    "QUARANTINED",
                     "REPORTED"
                   ],
                   "type": "string"
@@ -1888,11 +1892,12 @@
                       "ACTIVE",
                       "HIDDEN_ADMIN",
                       "HIDDEN_OPERATOR",
+                      "QUARANTINED",
                       "REPORTED"
                     ],
                     "type": "string"
                   },
-                  "maxItems": 4,
+                  "maxItems": 5,
                   "minItems": 1,
                   "type": "array"
                 }
@@ -2011,10 +2016,36 @@
                                 "maximum": 9007199254740991,
                                 "minimum": 0,
                                 "type": "integer"
+                              },
+                              "quarantined": {
+                                "additionalProperties": false,
+                                "nullable": true,
+                                "properties": {
+                                  "at": {
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                    "type": "string"
+                                  },
+                                  "purgeAfter": {
+                                    "format": "date-time",
+                                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                    "type": "string"
+                                  },
+                                  "reason": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "at",
+                                  "reason",
+                                  "purgeAfter"
+                                ],
+                                "type": "object"
                               }
                             },
                             "required": [
                               "hidden",
+                              "quarantined",
                               "openReports"
                             ],
                             "type": "object"
@@ -2290,6 +2321,11 @@
                       "minimum": 0,
                       "type": "integer"
                     },
+                    "quarantined": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
                     "reported": {
                       "maximum": 9007199254740991,
                       "minimum": 0,
@@ -2321,6 +2357,7 @@
                     "active",
                     "hiddenByAdmin",
                     "hiddenByOperator",
+                    "quarantined",
                     "reported"
                   ],
                   "type": "object"
@@ -9024,6 +9061,83 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "appeal": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "createdAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "id": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "resolution": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "note": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "status": {
+                              "enum": [
+                                "UPHELD",
+                                "REJECTED"
+                              ],
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "note",
+                            "at"
+                          ],
+                          "type": "object"
+                        },
+                        "status": {
+                          "enum": [
+                            "OPEN",
+                            "UPHELD",
+                            "REJECTED"
+                          ],
+                          "type": "string"
+                        },
+                        "targetId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
+                        },
+                        "targetType": {
+                          "enum": [
+                            "CONTENT",
+                            "COLLECTION"
+                          ],
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "targetType",
+                        "targetId",
+                        "status",
+                        "text",
+                        "createdAt",
+                        "resolution"
+                      ],
+                      "type": "object"
+                    },
                     "contributorName": {
                       "nullable": true,
                       "type": "string"
@@ -9108,10 +9222,36 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "quarantined": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "purgeAfter": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "reason",
+                            "purgeAfter"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
                         "hidden",
+                        "quarantined",
                         "openReports"
                       ],
                       "type": "object"
@@ -9225,7 +9365,8 @@
                     "moderation",
                     "originalUrl",
                     "downloadUrl",
-                    "reports"
+                    "reports",
+                    "appeal"
                   ],
                   "type": "object"
                 }
@@ -9358,10 +9499,36 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "quarantined": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "purgeAfter": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "reason",
+                            "purgeAfter"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
                         "hidden",
+                        "quarantined",
                         "openReports"
                       ],
                       "type": "object"
@@ -9606,10 +9773,36 @@
                           "maximum": 9007199254740991,
                           "minimum": 0,
                           "type": "integer"
+                        },
+                        "quarantined": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "purgeAfter": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "reason",
+                            "purgeAfter"
+                          ],
+                          "type": "object"
                         }
                       },
                       "required": [
                         "hidden",
+                        "quarantined",
                         "openReports"
                       ],
                       "type": "object"
@@ -14119,9 +14312,9 @@
         ]
       }
     },
-    "/api/v1/operator/content/{id}/delete": {
+    "/api/v1/operator/content/{id}/hide": {
       "post": {
-        "operationId": "OperatorActionsController_delete_v1",
+        "operationId": "OperatorActionsController_hide_v1",
         "parameters": [
           {
             "in": "path",
@@ -14185,9 +14378,75 @@
         ]
       }
     },
-    "/api/v1/operator/content/{id}/hide": {
+    "/api/v1/operator/content/{id}/quarantine": {
       "post": {
-        "operationId": "OperatorActionsController_hide_v1",
+        "operationId": "OperatorActionsController_quarantine_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "reason": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Done, or already so (idempotent); audited once"
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: a 1–500 reason is required"
+          },
+          "404": {
+            "description": "NOT_FOUND: not the Stepler operator, or nothing reported by that id"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
+    "/api/v1/operator/content/{id}/restore": {
+      "post": {
+        "operationId": "OperatorActionsController_restore_v1",
         "parameters": [
           {
             "in": "path",
@@ -14414,6 +14673,7 @@
                                 "enum": [
                                   "VISIBLE",
                                   "HIDDEN",
+                                  "QUARANTINED",
                                   "DELETED"
                                 ],
                                 "type": "string"
@@ -14677,6 +14937,31 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "quarantined": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "purgeAfter": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "reason",
+                            "purgeAfter"
+                          ],
+                          "type": "object"
+                        },
                         "text": {
                           "nullable": true,
                           "type": "string"
@@ -14688,6 +14973,7 @@
                         "frameNo",
                         "createdAt",
                         "hidden",
+                        "quarantined",
                         "deleted",
                         "text",
                         "media",
@@ -15093,6 +15379,31 @@
                           "nullable": true,
                           "type": "string"
                         },
+                        "quarantined": {
+                          "additionalProperties": false,
+                          "nullable": true,
+                          "properties": {
+                            "at": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "purgeAfter": {
+                              "format": "date-time",
+                              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                              "type": "string"
+                            },
+                            "reason": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "at",
+                            "reason",
+                            "purgeAfter"
+                          ],
+                          "type": "object"
+                        },
                         "text": {
                           "nullable": true,
                           "type": "string"
@@ -15104,6 +15415,7 @@
                         "frameNo",
                         "createdAt",
                         "hidden",
+                        "quarantined",
                         "deleted",
                         "text",
                         "media",

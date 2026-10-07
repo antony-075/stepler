@@ -123,6 +123,10 @@ const apiEnvSchema = z
     // (counted from rows, like texts).
     LIMIT_REPORTS_PER_IP_PER_HOUR: positiveInt(60),
     LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR: positiveInt(10),
+    // Slice 9b: appeals per admin account per rolling 24 hours (counted from rows), and how long
+    // a frame the operator deleted stays restorable before the purge.
+    LIMIT_APPEALS_PER_ACCOUNT_PER_DAY: positiveInt(20),
+    MODERATION_QUARANTINE_DAYS: positiveInt(90),
     // Per-file maxima by kind (D2, decimal units) and the files a guest may pick at once.
     LIMIT_FILE_BYTES_PHOTO: byteCount(50_000_000n),
     LIMIT_FILE_BYTES_VIDEO: byteCount(2_000_000_000n),

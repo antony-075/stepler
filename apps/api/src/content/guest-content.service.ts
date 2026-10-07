@@ -72,7 +72,7 @@ export class GuestContentService {
     await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
       const row = await tx.contentItem.findFirst({
-        where: { id, collectionId: p.collectionId, hiddenAt: null },
+        where: { id, collectionId: p.collectionId, hiddenAt: null, quarantinedAt: null },
         select: { id: true, contributorGuestSessionId: true },
       });
       if (row === null || !isOwnItem(p, row)) throw new AppError('NOT_FOUND', 404);

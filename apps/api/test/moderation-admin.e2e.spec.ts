@@ -269,7 +269,7 @@ describe('admin hide and unhide (R3)', () => {
     expect(await ids('state=HIDDEN_OPERATOR')).toEqual([hiddenOperator.id]);
     expect(await ids('state=HIDDEN_OPERATOR&kind=TEXT')).toEqual([]);
     expect(await ids('state=REPORTED&kind=TEXT')).toEqual([hiddenAdmin.id, itemId]);
-    // Several states are OR (deduped); five values are refused.
+    // Several states are OR (deduped); six values are refused.
     expect(await ids('state=HIDDEN_ADMIN&state=HIDDEN_OPERATOR')).toEqual([
       hiddenOperator.id,
       hiddenAdmin.id,
@@ -280,7 +280,7 @@ describe('admin hide and unhide (R3)', () => {
     ]);
     await request(server())
       .get(
-        `/api/v1/collections/${collectionId}/content?state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE`,
+        `/api/v1/collections/${collectionId}/content?state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE&state=ACTIVE`,
       )
       .set('Cookie', owner.cookie)
       .expect(400);

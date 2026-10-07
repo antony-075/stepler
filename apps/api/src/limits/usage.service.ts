@@ -51,6 +51,8 @@ export class UsageService {
    * renditions; plan Task 7), plus the declared size of its open (`INITIATED` or `COMPLETING`)
    * uploads, which reserve their space until they complete, fail or expire. A deleted item or an
    * image nothing references any more stops counting at once, before the worker purges its objects.
+   * A frame the operator quarantined (slice 9b) stops counting too: the owner cannot use it,
+   * though its files stay in storage until the purge (the operator console shows them).
    */
   async collectionStorageBytes(
     tx: Prisma.TransactionClient,
@@ -61,7 +63,7 @@ export class UsageService {
         COALESCE((
           SELECT SUM(m."sizeBytes") FROM "MediaObject" m
           JOIN "ContentItem" c ON c."id" = m."contentItemId"
-          WHERE c."collectionId" = ${collectionId}::uuid AND c."deletedAt" IS NULL
+          WHERE c."collectionId" = ${collectionId}::uuid AND c."deletedAt" IS NULL AND c."quarantinedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
@@ -91,7 +93,7 @@ export class UsageService {
         COALESCE((
           SELECT SUM(m."sizeBytes") FROM "MediaObject" m
           JOIN "ContentItem" c ON c."id" = m."contentItemId"
-          WHERE c."collectionId" = k."id" AND c."deletedAt" IS NULL
+          WHERE c."collectionId" = k."id" AND c."deletedAt" IS NULL AND c."quarantinedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
@@ -115,7 +117,7 @@ export class UsageService {
           JOIN "ContentItem" c ON c."id" = m."contentItemId"
           JOIN "Collection" k ON k."id" = c."collectionId"
           WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
-            AND c."deletedAt" IS NULL
+            AND c."deletedAt" IS NULL AND c."quarantinedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v

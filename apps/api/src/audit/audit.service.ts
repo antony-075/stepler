@@ -25,7 +25,13 @@ export type AuditAction =
   | 'collection.block'
   | 'collection.unblock'
   | 'account.block'
-  | 'account.unblock';
+  | 'account.unblock'
+  // Slice 9b: the operator's deletion is a quarantine; appeals.
+  | 'content.quarantine'
+  | 'content.restore'
+  | 'appeal.create'
+  | 'appeal.uphold'
+  | 'appeal.reject';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -34,7 +40,7 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link' | 'content' | 'report' | 'user';
+  targetType: 'collection' | 'guest_link' | 'content' | 'report' | 'user' | 'appeal';
   targetId: string;
   /**
    * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other

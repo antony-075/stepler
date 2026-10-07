@@ -1,12 +1,14 @@
 import type { OperatorItemState, OperatorReportDetail } from '@stepler/contracts';
 import type { ContentReport } from '../generated/prisma/client.js';
 
-/** A frame's state in the queue: deleted wins over hidden. */
+/** A frame's state in the queue: deleted wins over quarantined (slice 9b), which wins over hidden. */
 export function itemState(row: {
   deletedAt: Date | null;
+  quarantinedAt: Date | null;
   hiddenAt: Date | null;
 }): OperatorItemState {
   if (row.deletedAt !== null) return 'DELETED';
+  if (row.quarantinedAt !== null) return 'QUARANTINED';
   return row.hiddenAt === null ? 'VISIBLE' : 'HIDDEN';
 }
 

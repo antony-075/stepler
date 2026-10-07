@@ -1,6 +1,8 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
+import { AuditService } from '../audit/audit.service.js';
 import { ConfigModule } from '../config/config.module.js';
+import { ContentDeletion } from '../content/content-deletion.js';
 import { DATABASE_POOL_MAX, PrismaService } from '../database/prisma.service.js';
 import { JOB_QUEUE } from '../jobs/job-queue.js';
 import {
@@ -66,6 +68,9 @@ export class WorkerModule {
         },
         PgBossClient,
         { provide: JOB_QUEUE, useClass: PgBossQueue },
+        // The sweep ends expired quarantines the way every deletion goes (slice 9b).
+        AuditService,
+        ContentDeletion,
         PurgeContentHandler,
         PurgeCollectionHandler,
         MaintenanceSweepHandler,

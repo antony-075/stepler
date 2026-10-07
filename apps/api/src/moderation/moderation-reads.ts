@@ -61,10 +61,14 @@ export class ModerationReads {
    */
   async stateCounts(collectionId: string): Promise<StateCounts> {
     const [row] = await this.prisma.$queryRaw<[StateCounts]>`
-      SELECT count(*) FILTER (WHERE c."hiddenAt" IS NULL AND NOT r."open")::int AS "active",
-             count(*) FILTER (WHERE c."hiddenBy" = 'ADMIN')::int AS "hiddenByAdmin",
+      SELECT count(*) FILTER (
+               WHERE c."hiddenAt" IS NULL AND c."quarantinedAt" IS NULL AND NOT r."open"
+             )::int AS "active",
+             count(*) FILTER (
+               WHERE c."hiddenBy" = 'ADMIN' AND c."quarantinedAt" IS NULL
+             )::int AS "hiddenByAdmin",
              count(*) FILTER (WHERE c."hiddenBy" = 'OPERATOR')::int AS "hiddenByOperator",
-             0::int AS "quarantined",
+             count(*) FILTER (WHERE c."quarantinedAt" IS NOT NULL)::int AS "quarantined",
              count(*) FILTER (WHERE r."open")::int AS "reported"
         FROM "ContentItem" c
         CROSS JOIN LATERAL (
@@ -82,14 +86,17 @@ export interface StateCounts {
   active: number;
   hiddenByAdmin: number;
   hiddenByOperator: number;
-  /** Slice 9b (plan Task 3): deleted by the operator, until the purge date. */
+  /** Slice 9b: deleted by the operator, until the purge date (only here, not as hidden). */
   quarantined: number;
   reported: number;
 }
 
 /** A frame's moderation state for its admin, from its row and `forItems`. */
 export function moderationOf(
-  row: Pick<ContentItem, 'hiddenAt' | 'hiddenBy' | 'hiddenReason'>,
+  row: Pick<
+    ContentItem,
+    'hiddenAt' | 'hiddenBy' | 'hiddenReason' | 'quarantinedAt' | 'quarantineReason' | 'purgeAfter'
+  >,
   openReports: number,
 ): ContentModeration {
   return {
@@ -97,8 +104,14 @@ export function moderationOf(
       row.hiddenAt === null || row.hiddenBy === null
         ? null
         : { by: row.hiddenBy, at: row.hiddenAt.toISOString(), reason: row.hiddenReason },
-    // Slice 9b (plan Task 3): the quarantine state, once the columns exist.
-    quarantined: null,
+    quarantined:
+      row.quarantinedAt === null || row.quarantineReason === null || row.purgeAfter === null
+        ? null
+        : {
+            at: row.quarantinedAt.toISOString(),
+            reason: row.quarantineReason,
+            purgeAfter: row.purgeAfter.toISOString(),
+          },
     openReports,
   };
 }

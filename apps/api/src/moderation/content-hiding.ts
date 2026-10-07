@@ -41,9 +41,15 @@ export class ContentHiding {
     const { count } = await tx.contentItem.updateMany({
       where:
         by === 'ADMIN'
-          ? { id: item.id, deletedAt: null, hiddenAt: null }
-          : // `IS DISTINCT FROM 'OPERATOR'`: visible, or hidden by the admin.
-            { id: item.id, deletedAt: null, OR: [{ hiddenBy: null }, { hiddenBy: 'ADMIN' }] },
+          ? { id: item.id, deletedAt: null, quarantinedAt: null, hiddenAt: null }
+          : // `IS DISTINCT FROM 'OPERATOR'`: visible, or hidden by the admin. A quarantined frame
+            // is past hiding (slice 9b): the operator restores it first.
+            {
+              id: item.id,
+              deletedAt: null,
+              quarantinedAt: null,
+              OR: [{ hiddenBy: null }, { hiddenBy: 'ADMIN' }],
+            },
       data: {
         hiddenAt: new Date(),
         hiddenBy: by,
@@ -51,7 +57,10 @@ export class ContentHiding {
         hiddenReason: by === 'OPERATOR' ? reason : null,
       },
     });
-    if (count === 0) return 'unchanged';
+    if (count === 0) {
+      if (by === 'ADMIN') await this.assertNotQuarantined(tx, item.id);
+      return 'unchanged';
+    }
     await this.audit.record(tx, {
       collectionId: item.collectionId,
       actor,
@@ -80,7 +89,7 @@ export class ContentHiding {
     const { count } = await tx.contentItem.updateMany({
       where:
         by === 'ADMIN'
-          ? { id: item.id, deletedAt: null, hiddenBy: 'ADMIN' }
+          ? { id: item.id, deletedAt: null, quarantinedAt: null, hiddenBy: 'ADMIN' }
           : { id: item.id, deletedAt: null, hiddenAt: { not: null } },
       data: { hiddenAt: null, hiddenBy: null, hiddenByUserId: null, hiddenReason: null },
     });
@@ -88,9 +97,11 @@ export class ContentHiding {
       if (by === 'ADMIN') {
         const row = await tx.contentItem.findUnique({
           where: { id: item.id },
-          select: { hiddenBy: true },
+          select: { hiddenBy: true, quarantinedAt: true },
         });
-        if (row?.hiddenBy === 'OPERATOR') throw new AppError('CONTENT_MODERATED', 409);
+        if (row?.hiddenBy === 'OPERATOR' || (row !== null && row.quarantinedAt !== null)) {
+          throw new AppError('CONTENT_MODERATED', 409);
+        }
       }
       return 'unchanged';
     }
@@ -104,5 +115,11 @@ export class ContentHiding {
       ...(requestId === undefined ? {} : { requestId }),
     });
     return 'shown';
+  }
+
+  /** The admin's hide of a frame the operator quarantined: `409`, like an operator hide. */
+  private async assertNotQuarantined(tx: Prisma.TransactionClient, id: string): Promise<void> {
+    const row = await tx.contentItem.findUnique({ where: { id }, select: { quarantinedAt: true } });
+    if (row !== null && row.quarantinedAt !== null) throw new AppError('CONTENT_MODERATED', 409);
   }
 }
