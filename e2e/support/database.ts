@@ -24,3 +24,18 @@ export function dropLegalAcceptances(email: string): void {
     `DELETE FROM "LegalAcceptance" WHERE "userId" IN (SELECT id FROM "User" WHERE email = '${email}');`,
   );
 }
+
+const safeEmail = (email: string): string => {
+  if (!/^[a-z0-9@.-]+$/.test(email)) throw new Error('unexpected e-mail format');
+  return email;
+};
+
+/**
+ * Ends the account's trial a day ago (ADR 0018): what seven days of waiting would do. Plans and
+ * grants are left as they are.
+ */
+export function endTrial(email: string): void {
+  execute(
+    `UPDATE "User" SET "trialEndsAt" = now() - interval '1 day' WHERE email = '${safeEmail(email)}';`,
+  );
+}

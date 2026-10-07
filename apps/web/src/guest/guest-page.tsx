@@ -32,6 +32,7 @@ import { fontVariables } from './template-fonts';
 import { buildGuestActions, buildGuestPageModel } from './template-model';
 import { staticSlots } from './static-slots';
 import { AllFramesSection, OwnFramesSection } from './template-slots';
+import { ContributionClosed } from './contribution-closed';
 import { TextComposer } from './text-composer';
 import { hasUnsettled } from './upload/queue';
 import { useUploadQueue } from './upload/use-upload-queue';
@@ -80,9 +81,14 @@ function GuestCollection({
   const time = useFrameTime();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { permissions, guest, counts } = context;
+  const { guest, counts } = context;
+  // Closed by billing (ADR 0018 [P2]): the link's contribution rights are off; deleting their own
+  // frames and the gallery stay as the link allows.
+  const open = context.contribution === 'OPEN';
+  const permissions = open ? context.permissions : withoutContribution(context.permissions);
   const primary = primaryContribution(permissions);
   const contributes = primary !== null;
+  const contributedBefore = primaryContribution(context.permissions) !== null;
 
   const [namePrompt, setNamePrompt] = useState<{ mode: 'first' | 'edit'; then: Pending } | null>(
     null,
@@ -189,7 +195,26 @@ function GuestCollection({
   );
   const slots = {
     ...staticSlots(),
-    ownFrames: contributes ? (
+    ownFrames: !open ? (
+      <>
+        <ContributionClosed
+          contribution={context.contribution as 'COLLECTING_CLOSED' | 'READ_ONLY'}
+          galleryVisible={permissions.canViewGallery}
+        />
+        {contributedBefore ? (
+          <OwnFramesSection
+            context={context}
+            collectionId={collectionId}
+            call={call}
+            batch={null}
+            hide={doneIds}
+            onRename={() => setNamePrompt({ mode: 'edit', then: null })}
+            onDeleted={refreshContext}
+            onHasItems={setOwnHasItems}
+          />
+        ) : null}
+      </>
+    ) : contributes ? (
       <OwnFramesSection
         context={context}
         collectionId={collectionId}
@@ -253,4 +278,15 @@ function GuestCollection({
       />
     </>
   );
+}
+
+/** The link's rights without adding anything: what a closed collection leaves a guest. */
+function withoutContribution(p: GuestContext['permissions']): GuestContext['permissions'] {
+  return {
+    ...p,
+    canUploadPhotos: false,
+    canUploadVideos: false,
+    canUploadDocuments: false,
+    canSubmitText: false,
+  };
 }

@@ -39,6 +39,7 @@ import { GuestPageTab } from './guest-page/guest-page-tab';
 import { CollectionHeader } from './collection-header';
 import { type CollectionTab, tabOf } from './collection-tab';
 import { BlockedBanner } from './blocked-banner';
+import { PackStatus } from './pack-status';
 import { ContentTab } from './content/content-tab';
 import { CollectionSettingsPanel } from './settings/collection-settings';
 import { LinksList } from './links/links-list';
@@ -178,6 +179,8 @@ function Overview({
         />
       )}
       {archivedNotice}
+      {/* Billing (ADR 0018): a pack's clocks, its read-only state, a scheduled deletion. */}
+      <PackStatus collection={collection} />
     </>
   );
   const triggers = (

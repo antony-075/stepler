@@ -37,6 +37,7 @@ import {
   setCollectionImageFromFrame,
   useInvalidateCollections,
 } from '@/api/collections';
+import { writeLock } from '../../../access-model';
 import { CollectionMark } from '../../../collection-mark';
 import { FramePicker } from '../images/frame-picker';
 import { imageErrorKey } from '../images/image-errors';
@@ -60,7 +61,9 @@ export function CollectionImageCard({ collection }: { collection: Collection }) 
   const [picking, setPicking] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [removeFailure, setRemoveFailure] = useState<string | null>(null);
-  const readOnly = collection.status === 'ARCHIVED';
+  const archived = collection.status === 'ARCHIVED';
+  // Archived, or read-only through billing (ADR 0018): the image stays, nothing changes.
+  const readOnly = archived || writeLock(collection).locked;
   const { image } = collection;
 
   // Every change answers the collection (removal: nothing): the detail keeps its storage line,
@@ -211,7 +214,9 @@ export function CollectionImageCard({ collection }: { collection: Collection }) 
       ) : null}
 
       {readOnly ? (
-        <p className="text-sm text-muted-foreground">{tImage('archivedRefused')}</p>
+        <p className="text-sm text-muted-foreground">
+          {archived ? tImage('archivedRefused') : tRoot('errors.COLLECTION_READ_ONLY')}
+        </p>
       ) : state === 'uploading' ? null : (
         <div className="grid gap-2">
           <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-2 sm:flex sm:flex-wrap">

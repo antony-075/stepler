@@ -19,11 +19,21 @@ function prisma(args: string[], input?: string): void {
   }
 }
 
+/**
+ * The journeys sign up through the real flow, so every account is on the trial (ADR 0018).
+ * Most journeys are not about billing and need more than its 1 collection and 1 GiB: the e2e
+ * catalogue gives the trial the limits the app had before billing (3 collections, 20 GiB, 10 GiB
+ * per collection). `billing.spec.ts` covers what the trial's end does; the API tests cover its
+ * real limits.
+ */
+const E2E_TRIAL_LIMITS = `UPDATE "BillingOffer" SET "activeCollections" = 3,
+  "storageBytes" = 21474836480, "collectionStorageBytes" = 10737418240 WHERE "code" = 'trial';`;
+
 /** Migrates the e2e database and empties it, so every run starts clean. */
 export default function globalSetup(): void {
   prisma(['migrate', 'deploy']);
   prisma(
     ['db', 'execute', '--stdin'],
-    'TRUNCATE "User", "AuthAccount", "AuthSession", "MagicLinkToken" RESTART IDENTITY CASCADE;',
+    `TRUNCATE "User", "AuthAccount", "AuthSession", "MagicLinkToken" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}`,
   );
 }

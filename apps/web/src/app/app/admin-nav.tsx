@@ -3,24 +3,29 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
-import { Layers, UserCog, type LucideIcon } from 'lucide-react';
+import { CreditCard, Layers, UserCog, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LegalLinks } from '@/legal/legal-links';
 
-type Section = { key: 'collections' | 'account'; href: string; icon: LucideIcon };
+type Section = { key: 'collections' | 'account' | 'billing'; href: string; icon: LucideIcon };
 
 // Only what works (owner 2026-10-02): no statistics or help entries until they exist. The
 // account (theme, language) comes right under the collections, styled and opened the same way.
 const COLLECTIONS: Section = { key: 'collections', href: '/app', icon: Layers };
 const ACCOUNT: Section = { key: 'account', href: '/app/account', icon: UserCog };
+/** «Тариф і оплата» (ADR 0018): the plan, the trial and, from M2, payments. */
+const BILLING: Section = { key: 'billing', href: '/app/billing', icon: CreditCard };
 
-/** «Акаунт» owns /app/account; every other admin page belongs to the collections. */
+const within = (pathname: string, href: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
+
+/** «Акаунт» and «Тариф і оплата» own their pages; every other admin page is the collections'. */
 export function currentSection(pathname: string): Section['key'] {
-  return pathname === ACCOUNT.href || pathname.startsWith(`${ACCOUNT.href}/`)
-    ? 'account'
-    : 'collections';
+  if (within(pathname, ACCOUNT.href)) return 'account';
+  if (within(pathname, BILLING.href)) return 'billing';
+  return 'collections';
 }
 
 /** `page` on the section's own page; `true` inside it (a collection's pages). */
@@ -51,6 +56,7 @@ export function AdminNav({
         <ul className="grid gap-0.5">
           <NavItem section={COLLECTIONS} collapsed={collapsed} onNavigate={onNavigate} />
           <NavItem section={ACCOUNT} collapsed={collapsed} onNavigate={onNavigate} />
+          <NavItem section={BILLING} collapsed={collapsed} onNavigate={onNavigate} />
         </ul>
       </nav>
       {collapsed ? null : <LegalLinks variant="nav" className="mt-auto" />}

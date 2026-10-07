@@ -51,6 +51,7 @@ import { SaveBar } from './save-bar';
 import type { SectionProps } from './sections/section-props';
 import { SettingsAccordion } from './sections/settings-accordion';
 import { useGuestPageEditor } from './use-guest-page-editor';
+import { writeLock } from '../../../access-model';
 
 const DESKTOP = '(min-width: 1024px)';
 
@@ -117,7 +118,10 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
   const tTemplates = useTranslations('templates');
   const desktop = useDesktop();
   const editor = useGuestPageEditor(collection.id, initial);
-  const readOnly = collection.status === 'ARCHIVED';
+  const archived = collection.status === 'ARCHIVED';
+  // Archived, or read-only through billing (ADR 0018): the editor shows, nothing saves.
+  const readOnly = archived || writeLock(collection).locked;
+  const readOnlyNotice = readOnly ? t(archived ? 'archived' : 'readOnlyAccess') : null;
   const def = definitionOf(editor.working.templateId) ?? definitionOf('classic')!;
   const links = useQuery({
     queryKey: guestLinksKey(collection.id),
@@ -131,7 +135,7 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
 
   return (
     <div className="grid gap-4" data-slot="guest-page-editor">
-      {readOnly ? <Alert variant="info">{t('archived')}</Alert> : null}
+      {readOnlyNotice === null ? null : <Alert variant="info">{readOnlyNotice}</Alert>}
       {desktop ? (
         <DesktopEditor
           props={props}
@@ -146,7 +150,7 @@ function Editor({ collection, initial }: { collection: Collection; initial: Gues
           }
         />
       ) : (
-        <PhoneEditor {...props} />
+        <PhoneEditor {...props} readOnlyNotice={readOnlyNotice} />
       )}
     </div>
   );
