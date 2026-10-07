@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ModerationModule } from '../moderation/moderation.module.js';
+import { OperatorAppealQueries } from './operator-appeal-queries.js';
+import { OperatorAppealsController } from './operator-appeals.controller.js';
 import { OperatorActionsController } from './operator-actions.controller.js';
 import { OperatorActions } from './operator-actions.service.js';
 import { OperatorQueries } from './operator-queries.js';
@@ -14,7 +16,7 @@ import { OperatorScope } from './operator-scope.js';
  */
 @Module({
   imports: [ModerationModule],
-  controllers: [OperatorReportsController, OperatorActionsController],
-  providers: [OperatorScope, OperatorQueries, OperatorActions],
+  controllers: [OperatorReportsController, OperatorActionsController, OperatorAppealsController],
+  providers: [OperatorScope, OperatorQueries, OperatorActions, OperatorAppealQueries],
 })
 export class OperatorModule {}

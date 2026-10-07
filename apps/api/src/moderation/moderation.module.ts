@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { AppealResolution } from './appeal-resolution.js';
+import { AppealsService } from './appeals.service.js';
 import { BlockingService } from './blocking.service.js';
 import { ContentHiding } from './content-hiding.js';
 import { ContentQuarantine } from './content-quarantine.js';
@@ -21,6 +23,8 @@ import { ReportsService } from './reports.service.js';
     ReportsService,
     ReportResolution,
     BlockingService,
+    AppealsService,
+    AppealResolution,
   ],
   exports: [
     ContentHiding,
@@ -29,6 +33,8 @@ import { ReportsService } from './reports.service.js';
     ReportsService,
     ReportResolution,
     BlockingService,
+    AppealsService,
+    AppealResolution,
   ],
 })
 export class ModerationModule {}

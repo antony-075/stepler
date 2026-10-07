@@ -12,6 +12,7 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { AppealsService } from '../moderation/appeals.service.js';
 import { ContentHiding } from '../moderation/content-hiding.js';
 import { ModerationReads, moderationOf } from '../moderation/moderation-reads.js';
 import { ContentDeletion } from './content-deletion.js';
@@ -35,6 +36,7 @@ export class AdminContentService {
     private readonly media: MediaUrls,
     private readonly hiding: ContentHiding,
     private readonly moderation: ModerationReads,
+    private readonly appeals: AppealsService,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -113,8 +115,8 @@ export class AdminContentService {
         ? await this.media.original(row, { viewer: 'admin' })
         : { originalUrl: null, downloadUrl: null }),
       reports: await this.moderation.openReports(row.id),
-      // Slice 9b (plan Task 4): the latest appeal on the frame, once appeals exist.
-      appeal: null,
+      // Slice 9b: the latest appeal on the frame, for its status in the moderation panel.
+      appeal: await this.appeals.latestForContent(row.id),
     };
   }
 

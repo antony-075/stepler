@@ -3,6 +3,7 @@ import { AuditService } from '../audit/audit.service.js';
 import type { OperatorPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
+import type { Prisma } from '../generated/prisma/client.js';
 
 /**
  * The Stepler operator's blocks (R7). Each is one conditional update, audited with the reason
@@ -40,6 +41,20 @@ export class BlockingService {
     await this.setCollectionBlock(op, collectionId, null, requestId, reason);
   }
 
+  /**
+   * The unblock inside the caller's transaction (slice 9b: an upheld appeal reverses the block
+   * with its decision). `true` when it changed the collection; the caller logs after commit.
+   */
+  unblockCollectionIn(
+    tx: Prisma.TransactionClient,
+    op: OperatorPrincipal,
+    collectionId: string,
+    reason: string | null,
+    requestId?: string,
+  ): Promise<boolean> {
+    return this.setCollectionBlockIn(tx, op, collectionId, null, requestId, reason);
+  }
+
   private async setCollectionBlock(
     op: OperatorPrincipal,
     collectionId: string,
@@ -47,44 +62,58 @@ export class BlockingService {
     requestId: string | undefined,
     unblockReason?: string,
   ): Promise<void> {
-    const block = blockReason !== null;
-    const changed = await this.prisma.$transaction(async (tx) => {
-      const { count } = await tx.collection.updateMany({
-        where: {
-          id: collectionId,
-          status: { not: 'DELETING' },
-          blockedAt: block ? null : { not: null },
-        },
-        data: block
-          ? { blockedAt: new Date(), blockedReason: blockReason }
-          : { blockedAt: null, blockedReason: null },
-      });
-      if (count === 0) {
-        const exists = await tx.collection.count({
-          where: { id: collectionId, status: { not: 'DELETING' } },
-        });
-        if (exists === 0) throw new AppError('NOT_FOUND', 404);
-        return false;
-      }
-      await this.audit.record(tx, {
-        collectionId,
-        actor: op,
-        action: block ? 'collection.block' : 'collection.unblock',
-        targetType: 'collection',
-        targetId: collectionId,
-        metadata: { reason: blockReason ?? unblockReason ?? null },
-        ...(requestId === undefined ? {} : { requestId }),
-      });
-      return true;
+    const changed = await this.prisma.$transaction((tx) =>
+      this.setCollectionBlockIn(tx, op, collectionId, blockReason, requestId, unblockReason),
+    );
+    if (changed) this.logCollection(blockReason !== null, collectionId);
+  }
+
+  /** Logs a block change once it committed (ids only). */
+  logCollection(block: boolean, collectionId: string): void {
+    this.logger.log({
+      msg: 'operator action',
+      action: block ? 'collection.block' : 'collection.unblock',
+      targetType: 'collection',
+      targetId: collectionId,
     });
-    if (changed) {
-      this.logger.log({
-        msg: 'operator action',
-        action: block ? 'collection.block' : 'collection.unblock',
-        targetType: 'collection',
-        targetId: collectionId,
+  }
+
+  private async setCollectionBlockIn(
+    tx: Prisma.TransactionClient,
+    op: OperatorPrincipal,
+    collectionId: string,
+    blockReason: string | null,
+    requestId: string | undefined,
+    unblockReason?: string | null,
+  ): Promise<boolean> {
+    const block = blockReason !== null;
+    const { count } = await tx.collection.updateMany({
+      where: {
+        id: collectionId,
+        status: { not: 'DELETING' },
+        blockedAt: block ? null : { not: null },
+      },
+      data: block
+        ? { blockedAt: new Date(), blockedReason: blockReason }
+        : { blockedAt: null, blockedReason: null },
+    });
+    if (count === 0) {
+      const exists = await tx.collection.count({
+        where: { id: collectionId, status: { not: 'DELETING' } },
       });
+      if (exists === 0) throw new AppError('NOT_FOUND', 404);
+      return false;
     }
+    await this.audit.record(tx, {
+      collectionId,
+      actor: op,
+      action: block ? 'collection.block' : 'collection.unblock',
+      targetType: 'collection',
+      targetId: collectionId,
+      metadata: { reason: blockReason ?? unblockReason ?? null },
+      ...(requestId === undefined ? {} : { requestId }),
+    });
+    return true;
   }
 
   /** `BLOCKED`, every session revoked; sign-in then answers `ACCOUNT_BLOCKED`. */

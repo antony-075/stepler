@@ -15,6 +15,7 @@ describe('job names', () => {
       'collection-image.purge': true,
       'mail.report-received': true,
       'mail.report-decision': true,
+      'mail.appeal-received': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);
@@ -42,6 +43,9 @@ describe('job names', () => {
     );
     expect(singletonKeyFor('mail.report-decision', { reportId: 'r' })).toBe(
       'mail.report-decision:r',
+    );
+    expect(singletonKeyFor('mail.appeal-received', { appealId: 'p' })).toBe(
+      'mail.appeal-received:p',
     );
     expect(singletonKeyFor('maintenance.sweep', {})).toBe('maintenance.sweep');
     expect(singletonKeyFor('uploads.expire', {})).toBe('uploads.expire');

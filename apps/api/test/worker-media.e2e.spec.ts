@@ -456,6 +456,7 @@ describe('JobRunner', () => {
       noop('collection-image.purge') as never,
       noop('mail.report-received') as never,
       noop('mail.report-decision') as never,
+      noop('mail.appeal-received') as never,
     );
   }
   const job = (retryCount: number) =>

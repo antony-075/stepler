@@ -100,78 +100,90 @@ export class OperatorQueries {
   async report(id: string): Promise<OperatorReportDetail> {
     const report = await this.prisma.contentReport.findUnique({ where: { id } });
     if (report === null) throw new AppError('NOT_FOUND', 404);
-    const [others, item, collection] = await Promise.all([
+    const [others, content, context] = await Promise.all([
       this.prisma.contentReport.findMany({
         where: { contentId: report.contentId, id: { not: report.id } },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       }),
-      this.prisma.contentItem.findUnique({ where: { id: report.contentId }, include: WITH_MEDIA }),
-      this.prisma.collection.findUnique({
-        where: { id: report.collectionId },
-        select: {
-          id: true,
-          title: true,
-          status: true,
-          blockedAt: true,
-          blockedReason: true,
-          owner: { select: { id: true, email: true, status: true, blockedReason: true } },
-        },
-      }),
+      this.content(report.contentId),
+      this.collectionContext(report.collectionId),
     ]);
-
-    let content: OperatorReportDetail['content'] = null;
-    if (item !== null) {
-      const deleted = item.deletedAt !== null;
-      // Nothing is signed for a deleted frame: its purge is under way. A quarantined one keeps
-      // its previews (the operator decides on it) but no link to the original (slice 9b).
-      const [media, original] = deleted
-        ? [null, null]
-        : await Promise.all([
-            this.media.forItem(item),
-            item.quarantinedAt === null
-              ? this.media.original(item, { viewer: 'admin', own: false })
-              : null,
-          ]);
-      content = {
-        id: item.id,
-        kind: item.kind,
-        frameNo: item.frameNo,
-        createdAt: item.createdAt.toISOString(),
-        hidden: moderationOf(item, 0).hidden,
-        quarantined: deleted ? null : moderationOf(item, 0).quarantined,
-        deleted,
-        text: deleted ? null : item.textBody,
-        media,
-        // A document opens through its download link; photos and videos inline.
-        originalUrl: original === null ? null : (original.originalUrl ?? original.downloadUrl),
-      };
-    }
-
     return {
       report: toOperatorReport(report),
       otherReports: others.map(toOperatorReportFields),
       content,
-      collection:
-        collection === null
-          ? null
-          : {
-              id: collection.id,
-              title: collection.title,
-              status: collection.status,
-              blocked:
-                collection.blockedAt === null || collection.blockedReason === null
-                  ? null
-                  : { at: collection.blockedAt.toISOString(), reason: collection.blockedReason },
-            },
-      owner:
-        collection === null
-          ? null
-          : {
-              id: collection.owner.id,
-              email: collection.owner.email,
-              status: collection.owner.status,
-              blockedReason: collection.owner.blockedReason,
-            },
+      ...context,
+    };
+  }
+
+  /**
+   * The frame as the operator sees it (the report and appeal details' content stage); `null` once
+   * purged. Nothing is signed for a deleted frame: its purge is under way. A quarantined one keeps
+   * its previews (the operator decides on it) but no link to the original (slice 9b).
+   */
+  async content(contentId: string): Promise<OperatorReportDetail['content']> {
+    const item = await this.prisma.contentItem.findUnique({
+      where: { id: contentId },
+      include: WITH_MEDIA,
+    });
+    if (item === null) return null;
+    const deleted = item.deletedAt !== null;
+    const [media, original] = deleted
+      ? [null, null]
+      : await Promise.all([
+          this.media.forItem(item),
+          item.quarantinedAt === null
+            ? this.media.original(item, { viewer: 'admin', own: false })
+            : null,
+        ]);
+    const moderation = moderationOf(item, 0);
+    return {
+      id: item.id,
+      kind: item.kind,
+      frameNo: item.frameNo,
+      createdAt: item.createdAt.toISOString(),
+      hidden: moderation.hidden,
+      quarantined: deleted ? null : moderation.quarantined,
+      deleted,
+      text: deleted ? null : item.textBody,
+      media,
+      // A document opens through its download link; photos and videos inline.
+      originalUrl: original === null ? null : (original.originalUrl ?? original.downloadUrl),
+    };
+  }
+
+  /** The minimal collection context: its title and state, the owner's address and state. */
+  async collectionContext(
+    collectionId: string,
+  ): Promise<Pick<OperatorReportDetail, 'collection' | 'owner'>> {
+    const collection = await this.prisma.collection.findUnique({
+      where: { id: collectionId },
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        blockedAt: true,
+        blockedReason: true,
+        owner: { select: { id: true, email: true, status: true, blockedReason: true } },
+      },
+    });
+    if (collection === null) return { collection: null, owner: null };
+    return {
+      collection: {
+        id: collection.id,
+        title: collection.title,
+        status: collection.status,
+        blocked:
+          collection.blockedAt === null || collection.blockedReason === null
+            ? null
+            : { at: collection.blockedAt.toISOString(), reason: collection.blockedReason },
+      },
+      owner: {
+        id: collection.owner.id,
+        email: collection.owner.email,
+        status: collection.owner.status,
+        blockedReason: collection.owner.blockedReason,
+      },
     };
   }
 }

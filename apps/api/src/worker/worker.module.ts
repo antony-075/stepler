@@ -23,6 +23,7 @@ import { MaintenanceSweepHandler } from './handlers/maintenance-sweep.handler.js
 import { PurgeCollectionHandler } from './handlers/purge-collection.handler.js';
 import { PurgeContentHandler } from './handlers/purge-content.handler.js';
 import { PurgeCollectionImageHandler } from './handlers/purge-collection-image.handler.js';
+import { AppealReceivedMailHandler } from './handlers/appeal-received-mail.handler.js';
 import { ReportDecisionMailHandler } from './handlers/report-decision-mail.handler.js';
 import { ReportReceivedMailHandler } from './handlers/report-received-mail.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
@@ -85,6 +86,7 @@ export class WorkerModule {
         PurgeCollectionImageHandler,
         ReportReceivedMailHandler,
         ReportDecisionMailHandler,
+        AppealReceivedMailHandler,
         JobRunner,
       ],
     };

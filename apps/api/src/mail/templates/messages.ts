@@ -93,6 +93,19 @@ export const REPORT_RECEIVED_COPY = {
   open: 'Переглянути: {url}',
 } as const;
 
+/**
+ * The operator's «нова апеляція» mail (slice 9b, Q-A5): the target type and the console link
+ * only; the admin's text is read signed in.
+ */
+export const APPEAL_RECEIVED_COPY = {
+  subject: 'Stepler: нова апеляція ({label})',
+  heading: 'Нова апеляція',
+  intro: 'Адміністратор колекції подав апеляцію.',
+  target: 'Щодо: {label}',
+  open: 'Переглянути: {url}',
+  targets: { CONTENT: 'кадр', COLLECTION: 'колекція' },
+} as const;
+
 interface ReportDecisionCopy {
   subject: string;
   heading: string;

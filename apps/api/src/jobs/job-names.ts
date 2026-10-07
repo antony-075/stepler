@@ -23,6 +23,8 @@ interface JobPayloads {
   'mail.report-received': { reportId: string };
   /** The reporter's decision mail, if they left an address (`reporterNotifiedAt`). */
   'mail.report-decision': { reportId: string };
+  /** Slice 9b: the operator's «нова апеляція» mail, once per appeal (`operatorNotifiedAt`). */
+  'mail.appeal-received': { appealId: string };
 }
 
 /** Job payloads by queue name (ADR 0009). Payloads hold ids only, never user content. */
@@ -82,6 +84,7 @@ export const JOB_OPTIONS = {
   'collection-image.purge': PURGE,
   'mail.report-received': MAIL,
   'mail.report-decision': MAIL,
+  'mail.appeal-received': MAIL,
 } as const satisfies Record<JobName, JobOptions>;
 
 export const JOB_NAMES = Object.keys(JOB_OPTIONS) as JobName[];
@@ -98,6 +101,7 @@ const ENTITY_KEY: { [N in JobName]: (data: JobData[N]) => string | null } = {
   'collection-image.purge': (data) => data.imageId,
   'mail.report-received': (data) => data.reportId,
   'mail.report-decision': (data) => data.reportId,
+  'mail.appeal-received': (data) => data.appealId,
 };
 
 /**
