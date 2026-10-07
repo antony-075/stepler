@@ -88,6 +88,11 @@ export function toCollectionDto(
     // The published guest page's.
     welcomeMessage: row.guestPageVersions[0]?.welcomeMessage ?? null,
     image,
+    // The operator's block (R7); the CHECK keeps the two together.
+    blocked:
+      row.blockedAt === null || row.blockedReason === null
+        ? null
+        : { at: row.blockedAt.toISOString(), reason: row.blockedReason },
   };
 }
 

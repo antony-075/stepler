@@ -185,7 +185,7 @@ function DropdownMenuCheckboxItem({
   return (
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
-      className={cn(itemClassName, 'pl-9', className)}
+      className={cn(itemClassName, 'pl-9 md:pointer-fine:pl-9', className)}
       checked={checked}
       {...props}
     >
@@ -211,7 +211,7 @@ function DropdownMenuRadioItem({
   return (
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
-      className={cn(itemClassName, 'pl-9', className)}
+      className={cn(itemClassName, 'pl-9 md:pointer-fine:pl-9', className)}
       {...props}
     >
       <span className="pointer-events-none absolute left-3 flex size-4 items-center justify-center">

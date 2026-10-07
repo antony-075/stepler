@@ -4,6 +4,7 @@ import type { GuestPrincipal } from '../auth/principal.js';
 import {
   canDeleteItem,
   canListAll,
+  canReportItem,
   canSeeItem,
   canSubmitText,
   canUploadKind,
@@ -62,4 +63,14 @@ test('everything allowed: still never another guest’s item to delete', () => {
   expect(canDeleteItem(p, own)).toBe(true);
   expect(canDeleteItem(p, foreign)).toBe(false);
   expect(canDeleteItem(p, orphan)).toBe(false);
+});
+
+test('reports (slice 9): another guest’s visible frame only', () => {
+  const gallery = guest('canViewGallery');
+  expect(canReportItem(gallery, foreign)).toBe('ok');
+  expect(canReportItem(gallery, orphan)).toBe('ok');
+  expect(canReportItem(gallery, own)).toBe('own');
+  const contributeOnly = guest(...PERMISSIONS.filter((name) => name !== 'canViewGallery'));
+  expect(canReportItem(contributeOnly, foreign)).toBe('invisible');
+  expect(canReportItem(contributeOnly, own)).toBe('own');
 });

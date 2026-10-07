@@ -113,3 +113,57 @@ export const WithIcon: Story = {
     await expect(badge).toHaveTextContent('Archived');
   },
 };
+
+/** Slice 9: the moderation marks on content and collections, on the card surface. */
+export const Moderation: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2 rounded-sheet bg-card p-4">
+      <Badge variant="warning">Скарга</Badge>
+      <Badge variant="neutral">Приховано</Badge>
+      <Badge variant="danger">Приховано модерацією</Badge>
+      <Badge variant="danger">Заблоковано</Badge>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    await expect(canvas.getByText('Скарга').closest('[data-slot="badge"]')).toHaveAttribute(
+      'data-variant',
+      'warning',
+    );
+    await expect(canvas.getByText('Заблоковано').closest('[data-slot="badge"]')).toHaveAttribute(
+      'data-variant',
+      'danger',
+    );
+  },
+};
+
+export const ModerationDark: Story = {
+  ...Moderation,
+  globals: { theme: 'dark' },
+};
+
+/** Slice 9b: the quarantine and the appeal states, on the card surface. */
+export const Appeals: Story = {
+  render: () => (
+    <div className="flex flex-wrap gap-2 rounded-sheet bg-card p-4">
+      <Badge variant="danger">Видалено модерацією</Badge>
+      <Badge variant="warning">У карантині</Badge>
+      <Badge variant="info">Апеляцію подано</Badge>
+      <Badge variant="success">Апеляцію задоволено</Badge>
+      <Badge variant="neutral">Апеляцію відхилено</Badge>
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const variantOf = (text: string) =>
+      canvas.getByText(text).closest('[data-slot="badge"]')?.getAttribute('data-variant');
+    await expect(variantOf('Видалено модерацією')).toBe('danger');
+    await expect(variantOf('У карантині')).toBe('warning');
+    await expect(variantOf('Апеляцію подано')).toBe('info');
+    await expect(variantOf('Апеляцію задоволено')).toBe('success');
+    await expect(variantOf('Апеляцію відхилено')).toBe('neutral');
+  },
+};
+
+export const AppealsDark: Story = {
+  ...Appeals,
+  globals: { theme: 'dark' },
+};

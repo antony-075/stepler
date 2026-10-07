@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ContentDeletion } from '../../content/content-deletion.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { JobData, JobName } from '../../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../../jobs/job-queue.js';
@@ -29,7 +30,14 @@ const ENQUEUE_CHUNK = 50;
  * - deletes guest sessions idle for `GUEST_SESSION_IDLE_DAYS` that contributed nothing and have
  *   no upload rows (open, rejected or done). Their
  *   cookie has expired by then (Max-Age 400 days, renewed on use; `lastSeenAt` is at most an hour
- *   behind), so nobody can come back to them.
+ *   behind), so nobody can come back to them;
+ * - deletes reporters' addresses (and their locale) kept longer than
+ *   `REPORT_EMAIL_RETENTION_DAYS` with no decision mail sent ([Q6]); logs the count only;
+ * - ends the quarantine of frames the operator deleted once their `purgeAfter` has passed
+ *   (slice 9b): each is soft-deleted through `ContentDeletion` (actor `SYSTEM`, reason
+ *   `quarantine_expired`), so the usual `content.purge` removes its files. Up to
+ *   `WORKER_PURGE_BATCH_SIZE` per run, oldest first ("ContentItem_quarantine_purge_idx"); a frame
+ *   restored meanwhile is skipped by the conditional update.
  */
 @Injectable()
 export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> {
@@ -38,9 +46,13 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly deletion: ContentDeletion,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
     @Inject(WORKER_ENV)
-    private readonly env: Pick<WorkerEnv, 'WORKER_PURGE_BATCH_SIZE' | 'GUEST_SESSION_IDLE_DAYS'>,
+    private readonly env: Pick<
+      WorkerEnv,
+      'WORKER_PURGE_BATCH_SIZE' | 'GUEST_SESSION_IDLE_DAYS' | 'REPORT_EMAIL_RETENTION_DAYS'
+    >,
   ) {}
 
   async handle(): Promise<void> {
@@ -113,6 +125,8 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     const stalledMedia = await this.failStalledMedia(staleBefore);
     const stalledImages = await this.failStalledImages(staleBefore);
     const idleSessions = await this.deleteIdleGuestSessions();
+    const reporterEmailsDeleted = await this.deleteOldReporterEmails();
+    const quarantinePurged = await this.purgeExpiredQuarantine();
     this.logger.log({
       msg: 'maintenance.sweep done',
       contentPurges: items.length,
@@ -121,6 +135,8 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       stalledMediaFailed: stalledMedia,
       stalledImagesFailed: stalledImages,
       idleSessionsDeleted: idleSessions,
+      reporterEmailsDeleted,
+      quarantinePurged,
     });
     if (enqueueError !== undefined) throw enqueueError;
   }
@@ -165,6 +181,42 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
         }
       });
     }
+  }
+
+  /** Frames whose quarantine ran out, soft-deleted per collection in short transactions. */
+  private async purgeExpiredQuarantine(): Promise<number> {
+    const rows = await this.prisma.contentItem.findMany({
+      where: { quarantinedAt: { not: null }, deletedAt: null, purgeAfter: { lt: new Date() } },
+      select: { id: true, collectionId: true },
+      orderBy: { purgeAfter: 'asc' },
+      take: this.env.WORKER_PURGE_BATCH_SIZE,
+    });
+    const byCollection = new Map<string, string[]>();
+    for (const row of rows) {
+      byCollection.set(row.collectionId, [...(byCollection.get(row.collectionId) ?? []), row.id]);
+    }
+    let purged = 0;
+    for (const [collectionId, ids] of byCollection) {
+      for (let start = 0; start < ids.length; start += ENQUEUE_CHUNK) {
+        const chunk = ids.slice(start, start + ENQUEUE_CHUNK);
+        const deleted = await this.prisma.$transaction((tx) =>
+          this.deletion.softDelete(tx, collectionId, chunk, 'system', {
+            bulk: chunk.length > 1,
+            reason: 'quarantine_expired',
+            expiredQuarantineOnly: true,
+          }),
+        );
+        purged += deleted.length;
+      }
+    }
+    return purged;
+  }
+
+  private deleteOldReporterEmails(): Promise<number> {
+    return this.prisma.$executeRaw`
+      UPDATE "ContentReport" SET "reporterEmail" = NULL, "reporterLocale" = NULL
+      WHERE "reporterEmail" IS NOT NULL
+        AND "createdAt" < now() - make_interval(days => ${this.env.REPORT_EMAIL_RETENTION_DAYS}::int)`;
   }
 
   /** In batches, so no statement holds many row locks for long. */

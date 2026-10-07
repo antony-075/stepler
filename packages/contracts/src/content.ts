@@ -1,5 +1,8 @@
 import { z } from 'zod';
+import { adminAppealSchema } from './appeals.js';
+import { adminReportSchema, contentModerationSchema } from './reports.js';
 import {
+  codePointLength,
   NO_CONTROL_CHARACTERS,
   NO_CONTROL_CHARACTERS_EXCEPT_LINE_BREAKS_AND_TABS,
 } from './text.js';
@@ -17,11 +20,7 @@ export const TEXT_MAX_CHARS = 5000;
 /** A guest's optional name [O4]. Mirrored by `GuestSession_name_length`, `ContentItem_name_length`. */
 export const GUEST_NAME_MAX_CHARS = 80;
 
-/**
- * Length in Unicode code points, as PostgreSQL's `char_length` counts it: an emoji is one, while
- * `String.length` counts its two UTF-16 units.
- */
-export const codePointLength = (value: string): number => [...value].length;
+export { codePointLength } from './text.js';
 
 const codePoints = (max: number) => (value: string) => {
   const length = codePointLength(value);
@@ -72,13 +71,25 @@ export const adminContentItemSchema = z
     processingStatus: processingStatusSchema,
     text: z.string().nullable(),
     ...mediaUrls,
+    /** Hidden from guests (by whom, why) and the open reports the admin has not dismissed. */
+    moderation: contentModerationSchema,
   })
   .strict();
 export type AdminContentItem = z.infer<typeof adminContentItemSchema>;
 
-/** `GET /api/v1/content/:id`: the item plus links to the original (view and download). */
+/**
+ * `GET /api/v1/content/:id`: the item plus links to the original (view and download), and its
+ * open reports the admin has not dismissed, oldest first (never the reporter's contact, R2).
+ */
 export const adminContentDetailSchema = adminContentItemSchema
-  .extend({ originalUrl: z.url().nullable(), downloadUrl: z.url().nullable() })
+  .extend({
+    /** Both `null` for a quarantined frame: the admin sees it, but cannot download it. */
+    originalUrl: z.url().nullable(),
+    downloadUrl: z.url().nullable(),
+    reports: z.array(adminReportSchema),
+    /** The latest appeal on this frame, whatever its status (slice 9b); `null` when none. */
+    appeal: adminAppealSchema.nullable(),
+  })
   .strict();
 export type AdminContentDetail = z.infer<typeof adminContentDetailSchema>;
 
@@ -147,11 +158,31 @@ export type AdminContentSort = z.infer<typeof adminContentSortSchema>;
 const cursor = z.string().min(1).max(200).optional();
 const limit = z.coerce.number().int().min(1).max(100).default(48);
 
+/**
+ * The admin's state filter (slice 9 F1): `ACTIVE` = not hidden and no open report the admin has
+ * not dismissed; the two hides by who hid; `REPORTED` = open reports. Several states are OR
+ * (`?state=ACTIVE&state=REPORTED`, which Express hands over as an array; one is a string), and
+ * the whole is ANDed with `kind`. The service dedupes.
+ */
+export const contentStateSchema = z.enum([
+  'ACTIVE',
+  'HIDDEN_ADMIN',
+  'HIDDEN_OPERATOR',
+  'QUARANTINED',
+  'REPORTED',
+]);
+export type ContentState = z.infer<typeof contentStateSchema>;
+export const contentStatesSchema = z.union([
+  contentStateSchema,
+  z.array(contentStateSchema).min(1).max(5),
+]);
+
 /** `GET /api/v1/collections/:id/content`. */
 export const adminContentListQuerySchema = z
   .object({
     kind: contentKindSchema.optional(),
     sort: adminContentSortSchema.default('newest'),
+    state: contentStatesSchema.optional(),
     cursor,
     limit,
   })
@@ -175,6 +206,18 @@ export const contentCountsSchema = z
     document: count,
     text: count,
     lastAddedAt: z.iso.datetime().nullable(),
+    /**
+     * By state (slice 9 F1), per collection like the kinds, not per the current kind filter:
+     * `active` + `hiddenByAdmin` + `hiddenByOperator` + `quarantined` + (reported, not hidden,
+     * not quarantined) = `total`. A quarantined frame counts only as quarantined.
+     */
+    active: count,
+    hiddenByAdmin: count,
+    hiddenByOperator: count,
+    /** Deleted by the operator, kept until its purge date (slice 9b). */
+    quarantined: count,
+    /** Non-deleted frames with open reports the admin has not dismissed (hidden ones included). */
+    reported: count,
   })
   .strict();
 export type ContentCounts = z.infer<typeof contentCountsSchema>;

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent } from 'storybook/test';
 import { Button } from './button';
+import { Badge } from './badge';
 import { Frame } from './frame';
 import { samplePhoto } from '../stories/sample-photo';
 import { FrameGrid } from './frame-grid';
@@ -228,4 +229,125 @@ export const Dark: Story = {
     await expect(document.documentElement.dataset.theme).toBe('dark');
     await expect(canvas.getAllByRole('listitem')).toHaveLength(6);
   },
+};
+
+/** Slice 9: a reported frame carries a «Скарга» mark and an amber inner ring; its name says so too. */
+export const Reported: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, скарга',
+    marks: <Badge variant="warning">Скарга</Badge>,
+    ring: 'warning',
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: /скарга$/ })).toBeInTheDocument();
+    const marks = canvasElement.querySelector('[data-slot="frame-marks"]');
+    await expect(marks).toHaveTextContent('Скарга');
+    // Visual only: inside the aria-hidden tile.
+    await expect(marks?.closest('[aria-hidden="true"]')).not.toBeNull();
+    const ring = canvasElement.querySelector<HTMLElement>('[data-slot="frame-ring"]');
+    await expect(ring).toHaveAttribute('data-ring', 'warning');
+    // The ring is an overlay the size of the tile: nothing moved.
+    const tile = canvasElement.querySelector<HTMLElement>('[data-slot="frame-media"]');
+    await expect(ring!.getBoundingClientRect().width).toBe(tile!.getBoundingClientRect().width);
+  },
+};
+
+/** Hidden by the admin, and reported: both marks, the hide's muted ring wins. */
+export const Hidden: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, скарга, приховано',
+    marks: (
+      <>
+        <Badge variant="warning">Скарга</Badge>
+        <Badge variant="neutral">Приховано</Badge>
+      </>
+    ),
+    ring: 'muted',
+  },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-slot="frame-marks"]')).toHaveTextContent(
+      'СкаргаПриховано',
+    );
+    await expect(canvasElement.querySelector('[data-slot="frame-ring"]')).toHaveAttribute(
+      'data-ring',
+      'muted',
+    );
+  },
+};
+
+/** Selected while reported: the face steps back, the ring stays at the tile's full size. */
+export const ReportedSelected: Story = {
+  args: {
+    ...Reported.args,
+    selectable: true,
+    selected: true,
+    onToggleSelect: fn(),
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, скарга, вибрано',
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { pressed: true })).toBeInTheDocument();
+    const ring = canvasElement.querySelector<HTMLElement>('[data-slot="frame-ring"]');
+    const face = canvasElement.querySelector<HTMLElement>('[data-slot="frame-face"]');
+    await expect(ring!.getBoundingClientRect().width).toBeGreaterThan(
+      face!.getBoundingClientRect().width,
+    );
+  },
+};
+
+/** A wish hidden by moderation, in a phone-sized tile: the marks wrap, never overflow. */
+export const ModeratedText: Story = {
+  args: {
+    kind: 'text',
+    media: undefined,
+    text: 'Вітаємо молодят! Нехай кожен день буде світлим, а дім — повним сміху.',
+    name: 'Ірина',
+    accessibleName: 'Кадр 86, побажання, Ірина, приховано модерацією',
+    marks: <Badge variant="danger">Приховано модерацією</Badge>,
+    ring: 'destructive',
+  },
+  render: (args) => (
+    <div className="w-28">
+      <Frame {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const marks = canvasElement.querySelector<HTMLElement>('[data-slot="frame-marks"]');
+    const tile = canvasElement.querySelector<HTMLElement>('[data-slot="frame-media"]');
+    await expect(marks!.getBoundingClientRect().right).toBeLessThanOrEqual(
+      tile!.getBoundingClientRect().right,
+    );
+  },
+};
+
+export const ReportedDark: Story = {
+  ...Reported,
+  globals: { theme: 'dark' },
+};
+
+export const ModeratedTextDark: Story = {
+  ...ModeratedText,
+  globals: { theme: 'dark' },
+};
+
+/** Deleted by moderation (slice 9b): the picture greyed, the mark and the ring at full strength. */
+export const Quarantined: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, видалено модерацією',
+    marks: <Badge variant="danger">Видалено модерацією</Badge>,
+    ring: 'destructive',
+    dimmed: true,
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: /видалено модерацією/ })).toBeInTheDocument();
+    const face = canvasElement.querySelector<HTMLElement>('[data-slot="frame-face"]');
+    await expect(face).toHaveAttribute('data-dimmed', 'true');
+    await expect(face).toHaveClass('grayscale');
+    const marks = canvasElement.querySelector<HTMLElement>('[data-slot="frame-marks"]');
+    await expect(getComputedStyle(marks!).opacity).toBe('1');
+  },
+};
+
+export const QuarantinedDark: Story = {
+  ...Quarantined,
+  globals: { theme: 'dark' },
 };

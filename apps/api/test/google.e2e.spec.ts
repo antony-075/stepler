@@ -371,7 +371,7 @@ describe('Google sign-in', () => {
       unknown
     >;
     const edited = Buffer.from(
-      JSON.stringify({ ...decoded, legal: { terms: 'v2', privacy: 'v2' } }),
+      JSON.stringify({ ...decoded, legal: { terms: 'v9', privacy: 'v9' } }),
     ).toString('base64url');
     const tampered = await request(server())
       .get('/api/v1/auth/google/callback')

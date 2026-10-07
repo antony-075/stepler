@@ -32,7 +32,9 @@ describe('LimitsService', () => {
       textsPerHour: 60,
       uploadInitiationsPerHour: 300,
       concurrentUploads: 10,
+      reportsPerHour: 10,
     });
+    expect(limits.reportsPerIpPerHour()).toBe(60);
   });
 
   test('applies env overrides', () => {

@@ -1,10 +1,5 @@
+import { escapeHtml, type RenderedEmail } from './html.js';
 import { formatMinutes, MAGIC_LINK_COPY, type MailLocale } from './messages.js';
-
-export interface RenderedEmail {
-  subject: string;
-  text: string;
-  html: string;
-}
 
 export interface MagicLinkEmailInput {
   url: string;
@@ -12,18 +7,6 @@ export interface MagicLinkEmailInput {
   appOrigin: string;
   locale: MailLocale;
   expiresInMinutes: number;
-}
-
-const HTML_ESCAPES: Readonly<Record<string, string>> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-};
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
 export function renderMagicLinkEmail(input: MagicLinkEmailInput): RenderedEmail {

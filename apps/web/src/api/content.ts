@@ -1,11 +1,13 @@
 import {
   adminContentDetailSchema,
+  adminContentItemSchema,
   adminContentPageSchema,
   type AdminContentSort,
   bulkDeleteContentResponseSchema,
   type BulkDeleteContentResponse,
   contentCountsSchema,
   type ContentKind,
+  type ContentState,
 } from '@stepler/contracts';
 import { apiRequest } from './client';
 import { collectionKey } from './collections';
@@ -17,7 +19,15 @@ export const contentListKey = (
   collectionId: string,
   kind: ContentKind | undefined,
   sort: AdminContentSort,
-) => [...collectionKey(collectionId), 'content', kind ?? 'all', sort] as const;
+  states: readonly ContentState[] = [],
+) =>
+  [
+    ...collectionKey(collectionId),
+    'content',
+    kind ?? 'all',
+    states.length === 0 ? 'any' : [...states].sort().join('+'),
+    sort,
+  ] as const;
 
 /** Every list of the collection, whatever the filter and order. */
 export const contentListsKey = (collectionId: string) =>
@@ -28,11 +38,19 @@ export const contentCountsKey = (collectionId: string) =>
 
 export function listContent(
   collectionId: string,
-  query: { kind?: ContentKind; sort: AdminContentSort; cursor?: string; limit?: number },
+  query: {
+    kind?: ContentKind;
+    sort: AdminContentSort;
+    cursor?: string;
+    limit?: number;
+    /** The state filter (slice 9 F1): OR between states, ANDed with the kind. */
+    states?: readonly ContentState[];
+  },
 ) {
   const params = new URLSearchParams();
   if (query.limit !== undefined) params.set('limit', String(query.limit));
   if (query.kind !== undefined) params.set('kind', query.kind);
+  for (const state of query.states ?? []) params.append('state', state);
   if (query.sort !== 'newest') params.set('sort', query.sort);
   if (query.cursor !== undefined) params.set('cursor', query.cursor);
   const search = params.toString();
@@ -64,3 +82,21 @@ export const bulkDeleteContent = (
     body: { ids },
     schema: bulkDeleteContentResponseSchema,
   });
+
+/** «Приховати від гостей» (slice 9): idempotent; returns the frame as the grid shows it. */
+export const hideContent = (id: string) =>
+  apiRequest(`/content/${encodeURIComponent(id)}/hide`, {
+    method: 'POST',
+    schema: adminContentItemSchema,
+  });
+
+/** «Показати гостям»: only what the admin hid (`409 CONTENT_MODERATED` otherwise). */
+export const unhideContent = (id: string) =>
+  apiRequest(`/content/${encodeURIComponent(id)}/unhide`, {
+    method: 'POST',
+    schema: adminContentItemSchema,
+  });
+
+/** «Відхилити скарги»: clears the admin's mark; the operator still reviews them. */
+export const dismissReports = (id: string): Promise<void> =>
+  apiRequest(`/content/${encodeURIComponent(id)}/reports/dismiss`, { method: 'POST' });

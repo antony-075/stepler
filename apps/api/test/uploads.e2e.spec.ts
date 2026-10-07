@@ -17,7 +17,7 @@ import { PurgeContentHandler } from '../src/worker/handlers/purge-content.handle
 import { loadWorkerEnv } from '../src/worker/worker-env.js';
 import { listenOnLoopback } from './support/app.js';
 import { queuedJobs, resetDatabase } from './support/database.js';
-import { TEST_DATABASE_URL, testEnv } from './support/env.js';
+import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import {
@@ -38,6 +38,7 @@ const storage = new S3ObjectStorage(env);
 const boss = new PgBossClient(senderBossOptions(TEST_DATABASE_URL));
 const queue = new PgBossQueue(boss);
 const workerEnv = loadWorkerEnv({
+  ...WORKER_MAIL_ENV,
   NODE_ENV: 'test',
   DATABASE_URL: TEST_DATABASE_URL,
   S3_ENDPOINT: env.S3_ENDPOINT,

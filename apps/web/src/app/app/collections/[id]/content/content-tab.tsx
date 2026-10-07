@@ -30,11 +30,28 @@
 //   or the order clears the selection.
 // - An empty collection keeps the calm tinted panel; an empty filter says what is missing and
 //   offers «Показати все». Archived collections look the same: their frames are kept.
+// - Slice 9 (R2, R3): tiles carry their marks («Скарга», «Приховано», «Приховано модерацією») and
+//   say them in their names; the viewer's details hold the moderation panel.
+// - State filter (F1, owner 2026-10-06): a «Стан: …» Select beside the order, the same height, each
+//   option (owner: labels and mono counts only, no icons) a checkbox, so several states combine
+//   (OR), the whole ANDed with the type chips (`?state=a&state=b`); the counts are per collection,
+//   like the type counts. Nothing is persisted. An empty result says what was filtered and offers
+//   «Показати все».
 
 import type { AdminContentItem, AdminContentPage, Collection } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@stepler/ui/components/dropdown-menu';
 import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
@@ -58,7 +75,16 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { CheckSquare, Download, ImagePlus, ListChecks, RefreshCw, Trash2 } from 'lucide-react';
+import {
+  CheckSquare,
+  ChevronDown,
+  Download,
+  ImagePlus,
+  ListChecks,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
@@ -93,8 +119,13 @@ import {
   kindFromParam,
   lockedFilters,
   sortFromParam,
+  STATE_FILTERS,
+  stateCount,
+  stateFilterOf,
+  statesFromParams,
 } from './content-filters';
 import { ContentViewer } from './content-viewer';
+import { ModerationMarks, moderationMarks, moderationRing } from './moderation-marks';
 import { chunks, rangeSelect, toggle } from './selection';
 import { documentType } from '@/media/viewer-stage';
 import { useNewContent } from './use-new-content';
@@ -104,14 +135,30 @@ import { MediaImg } from '@/media/media-img';
 import { gridPicture } from '@/media/previews';
 
 const SORTS = ['newest', 'frame'] as const;
+/** The menu's option values to the API's states, for the checks. */
+const STATES_OF = {
+  active: 'ACTIVE',
+  'hidden-admin': 'HIDDEN_ADMIN',
+  'hidden-operator': 'HIDDEN_OPERATOR',
+  quarantined: 'QUARANTINED',
+  reported: 'REPORTED',
+} as const;
 
-export function ContentTab({ collection }: { collection: Collection }) {
+export function ContentTab({
+  collection,
+  contactEmail,
+}: {
+  collection: Collection;
+  /** `LEGAL_CONTACT_EMAIL` (slice 9), for the operator-hide note; `null` when unset. */
+  contactEmail: string | null;
+}) {
   const t = useTranslations('content');
   const router = useRouter();
   const params = useSearchParams();
   const queryClient = useQueryClient();
   const sortId = useId();
   const kind = kindFromParam(params.get('kind'));
+  const states = statesFromParams(params.getAll('state'));
   const sort = sortFromParam(params.get('sort'));
   const frameNo = frameFromParam(params.get('frame'));
   const { counts, newCount, showNew, rebase, refresh } = useNewContent(collection.id);
@@ -128,7 +175,7 @@ export function ContentTab({ collection }: { collection: Collection }) {
   // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
   const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
-  const view = `${kind ?? 'all'}:${sort}`;
+  const view = `${kind ?? 'all'}:${states.join('+')}:${sort}`;
   const [selectionView, setSelectionView] = useState(view);
   if (selectionView !== view) {
     setSelectionView(view);
@@ -140,10 +187,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
   const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
-    queryKey: contentListKey(collection.id, kind, sort),
+    queryKey: contentListKey(collection.id, kind, sort, states),
     queryFn: ({ pageParam }) =>
       listContent(collection.id, {
         ...(kind === undefined ? {} : { kind }),
+        states,
         sort,
         ...(pageParam === null ? {} : { cursor: pageParam }),
       }),
@@ -159,12 +207,16 @@ export function ContentTab({ collection }: { collection: Collection }) {
   });
   const locked = lockedFilters(links.data?.items, counts.data);
 
-  /** Updates the URL; `null` removes a parameter. */
-  function navigate(changes: Record<string, string | null>, mode: 'push' | 'replace') {
+  /** Updates the URL; `null` removes a parameter, an array repeats it (`?state=a&state=b`). */
+  function navigate(
+    changes: Record<string, string | readonly string[] | null>,
+    mode: 'push' | 'replace',
+  ) {
     const query = new URLSearchParams(params.toString());
     for (const [key, value] of Object.entries(changes)) {
-      if (value === null) query.delete(key);
-      else query.set(key, value);
+      query.delete(key);
+      if (typeof value === 'string') query.set(key, value);
+      else if (value !== null) for (const one of value) query.append(key, one);
     }
     const search = query.toString();
     const href = `/app/collections/${collection.id}${search === '' ? '' : `?${search}`}`;
@@ -236,6 +288,15 @@ export function ContentTab({ collection }: { collection: Collection }) {
     } catch {
       toast({ variant: 'error', title: t('tile.downloadFailed') });
     }
+  }
+
+  /** After a hide, show or dismissal: this frame's detail, every list and the counts again. */
+  async function moderationChanged(item: AdminContentItem) {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: contentDetailKey(item.id) }),
+      queryClient.invalidateQueries({ queryKey: contentListsKey(collection.id) }),
+      queryClient.invalidateQueries({ queryKey: contentCountsKey(collection.id) }),
+    ]);
   }
 
   async function removeFrame(item: AdminContentItem) {
@@ -342,9 +403,11 @@ export function ContentTab({ collection }: { collection: Collection }) {
             <ToggleGroup
               aria-label={t('filterLabel')}
               value={filter}
-              onValueChange={(value) =>
-                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace')
-              }
+              onValueChange={(value) => {
+                // Radix gives '' when the pressed chip is pressed again: keep the view.
+                if (value === '') return;
+                navigate({ kind: value === 'all' ? null : value, frame: null }, 'replace');
+              }}
             >
               {KIND_FILTERS.map((value) => (
                 <ToggleGroupItem
@@ -379,6 +442,75 @@ export function ContentTab({ collection }: { collection: Collection }) {
               />
               <span className="max-sm:sr-only">{t('refresh')}</span>
             </Button>
+            {/* The state (F1a): a menu of checkboxes that stays open while toggling (OR between
+                states); the trigger says what is chosen; «Скинути» at the foot when something is. */}
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  // Non-modal: the grid stays live and visible while the admin ticks states.
+                  // `shrink`: the Button base is `shrink-0`; this one shares the row on phones.
+                  className="h-11 w-full min-w-0 shrink justify-between font-normal sm:min-w-44 md:h-9 md:w-auto pointer-coarse:h-11"
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="text-muted-foreground">{t('state.prefix')}</span>{' '}
+                    {states.length === 0
+                      ? t('state.all')
+                      : states.length === 1
+                        ? t(`state.${stateFilterOf(states[0]!)}`)
+                        : t('state.selected', { count: states.length })}
+                  </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-72">
+                <DropdownMenuLabel>{t('state.label')}</DropdownMenuLabel>
+                {STATE_FILTERS.map((value) => {
+                  const checked = states.includes(STATES_OF[value]);
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={value}
+                      checked={checked}
+                      // Stays open: the admin usually ticks more than one.
+                      onSelect={(event) => event.preventDefault()}
+                      onCheckedChange={(next) => {
+                        const nextFilters = STATE_FILTERS.filter((other) =>
+                          other === value ? next === true : states.includes(STATES_OF[other]),
+                        );
+                        navigate({ state: nextFilters, frame: null }, 'replace');
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate whitespace-nowrap">
+                        {t(`state.${value}`)}
+                      </span>
+                      {counts.data === undefined ? null : (
+                        <span className="type-data ml-3 text-muted-foreground tabular-nums">
+                          {stateCount(counts.data, value)}
+                        </span>
+                      )}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+                {states.length === 0 ? null : (
+                  <>
+                    <DropdownMenuSeparator />
+                    {/* The same gutter as the checkboxes, so the labels line up. */}
+                    <DropdownMenuItem
+                      className="pl-9 md:pointer-fine:pl-9"
+                      onSelect={() => navigate({ state: null, frame: null }, 'replace')}
+                    >
+                      <span className="pointer-events-none absolute left-3 flex size-4 items-center justify-center">
+                        <X aria-hidden="true" />
+                      </span>
+                      {t('state.clear')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <span id={sortId} className="sr-only">
               {t('sortLabel')}
             </span>
@@ -407,17 +539,23 @@ export function ContentTab({ collection }: { collection: Collection }) {
             <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
             {/* «Вибрати» turns selection on and off (pressed while on); «Вибрати все
                 завантажене» is in the selection bar (owner 2026-10-06). Icon only on phones. */}
-            <Button
-              ref={selectButton}
-              variant="outline"
-              aria-pressed={selecting}
-              disabled={items.length === 0 && !selecting}
-              onClick={() => (selecting ? exitSelection() : setSelecting(true))}
-              className="h-11 shrink-0 px-3 md:h-9 pointer-coarse:h-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
-            >
-              <CheckSquare aria-hidden="true" className="size-4" />
-              <span className="max-sm:sr-only">{t('select.start')}</span>
-            </Button>
+            {/* Icon only (F3, owner 2026-10-06): the word is its name and its tooltip. */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  ref={selectButton}
+                  variant="outline"
+                  aria-label={t('select.start')}
+                  aria-pressed={selecting}
+                  disabled={items.length === 0 && !selecting}
+                  onClick={() => (selecting ? exitSelection() : setSelecting(true))}
+                  className="h-11 w-11 shrink-0 px-0 md:h-9 md:w-9 pointer-coarse:h-11 pointer-coarse:w-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
+                >
+                  <CheckSquare aria-hidden="true" className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('select.start')}</TooltipContent>
+            </Tooltip>
           </div>
         </div>
       </div>
@@ -461,6 +599,26 @@ export function ContentTab({ collection }: { collection: Collection }) {
         >
           {t('loadFailed')}
         </Alert>
+      ) : items.length === 0 && states.length > 0 ? (
+        <Panel className="py-6">
+          <EmptyState
+            headingLevel={3}
+            title={
+              states.length === 1
+                ? t(`state.empty.${stateFilterOf(states[0]!)}`)
+                : t('state.empty.several')
+            }
+            {...(filter === 'all' ? {} : { description: t('emptyFilterText') })}
+            action={
+              <Button
+                variant="outline"
+                onClick={() => navigate({ state: null, kind: null }, 'replace')}
+              >
+                {t('showAll')}
+              </Button>
+            }
+          />
+        </Panel>
       ) : items.length === 0 && filter === 'all' ? (
         <EmptyCollection collection={collection} />
       ) : items.length === 0 && filter !== 'all' ? (
@@ -578,11 +736,14 @@ export function ContentTab({ collection }: { collection: Collection }) {
       />
 
       <ContentViewer
+        collectionId={collection.id}
         items={items}
         frameNo={frameNo}
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
         onClose={closeViewer}
         onDelete={removeFrame}
+        contactEmail={contactEmail}
+        onModerationChanged={moderationChanged}
       />
       <ConfirmDialog
         open={deleting !== null}
@@ -627,12 +788,18 @@ function AdminFrame({
   const format = useFormatter();
   const time = format.dateTime(new Date(item.createdAt), { hour: '2-digit', minute: '2-digit' });
   const name = item.contributorName ?? t('noName');
-  const baseName = t('frameName', {
+  const marks = moderationMarks(item);
+  const frameName = t('frameName', {
     number: item.frameNo,
     kind: t(`kind.${item.kind}`),
     time,
     name,
   });
+  // The marks are visual on the tile; their words go into its name (slice 9).
+  const baseName =
+    marks.length === 0
+      ? frameName
+      : `${frameName}, ${marks.map((mark) => t(`moderation.marks.${mark}`).toLowerCase()).join(', ')}`;
   const accessibleName = selection?.selected
     ? t('select.selectedName', { name: baseName })
     : baseName;
@@ -641,11 +808,17 @@ function AdminFrame({
       ? {}
       : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
   // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
+  const ring = moderationRing(marks);
+  // Deleted by moderation (slice 9b): greyed, and nothing to download until a restore.
+  const quarantined = item.moderation.quarantined !== null;
   const quick = {
     outlined: true,
+    marks: <ModerationMarks marks={marks} />,
+    ...(ring === undefined ? {} : { ring }),
+    dimmed: quarantined,
     overlay: (
       <>
-        {item.kind === 'TEXT' ? null : (
+        {item.kind === 'TEXT' || quarantined ? null : (
           <TileAction label={t('tile.download', { number: item.frameNo })} onClick={onDownload}>
             <Download aria-hidden="true" />
           </TileAction>

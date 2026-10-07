@@ -1,5 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { compose, E2E_DATABASE_URL, E2E_S3_ENDPOINT, E2E_SMTP_URL } from './support/env.js';
+import { OPERATOR_EMAILS } from './support/operator.js';
 
 // Dedicated ports so e2e never collides with `pnpm dev` (3000/4000); overridable for a second
 // stack running at the same time (uploads then need that origin in the bucket's CORS).
@@ -37,6 +38,9 @@ export default defineConfig({
         DATABASE_URL: E2E_DATABASE_URL,
         SMTP_URL: E2E_SMTP_URL,
         MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+        // The operator's service accounts (slice 9, `support/operator.ts`); the same on the worker.
+        OPERATOR_EMAILS,
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
         // Cloudflare's documented always-pass test keys.
         TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
         TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
@@ -49,12 +53,16 @@ export default defineConfig({
         S3_FORCE_PATH_STYLE: 'true',
         // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
         LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
+        // The operator's few service addresses sign in many times per run (slice 9).
+        LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '10000',
         LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '10000',
         LIMIT_TEXTS_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_READS_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE: '10000',
+        LIMIT_REPORTS_PER_IP_PER_HOUR: '10000',
+        LIMIT_APPEALS_PER_ACCOUNT_PER_DAY: '10000',
         LIMIT_UPLOAD_CALLS_PER_IP_PER_MINUTE: '10000',
         LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE: '10000',
         LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE: '10000',
@@ -71,6 +79,12 @@ export default defineConfig({
         NODE_ENV: 'production',
         LOG_LEVEL: 'info',
         DATABASE_URL: E2E_DATABASE_URL,
+        // The report mail goes to Mailpit, with links to this web origin.
+        APP_ORIGIN: `http://127.0.0.1:${WEB_PORT}`,
+        SMTP_URL: E2E_SMTP_URL,
+        MAIL_FROM: 'Stepler <no-reply@stepler.test>',
+        OPERATOR_EMAILS,
+        LEGAL_CONTACT_EMAIL: 'privacy@stepler.test',
         S3_ENDPOINT: E2E_S3_ENDPOINT,
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'stepler-test',

@@ -134,6 +134,42 @@ enum AuthProvider {
   EMAIL
 }
 
+/// Why a guest reported a frame (R1; contracts `REPORT_REASONS`).
+enum ReportReason {
+  ILLEGAL
+  INAPPROPRIATE
+  PRIVACY
+  SPAM
+  OTHER
+}
+
+/// OPEN until the operator decides; the decision covers every open report on the item ([P2]).
+enum ReportStatus {
+  OPEN
+  DISMISSED
+  ACTIONED
+}
+
+/// Who hid a frame from guests: its admin, or the Stepler operator (the admin cannot undo that).
+enum HiddenBy {
+  ADMIN
+  OPERATOR
+}
+
+/// What a collection admin appeals (slice 9b): a frame the operator hid or quarantined, or the
+/// blocked collection itself.
+enum AppealTargetType {
+  CONTENT
+  COLLECTION
+}
+
+/// OPEN until the operator decides; UPHELD reverses the measure, REJECTED keeps it (with a note).
+enum AppealStatus {
+  OPEN
+  UPHELD
+  REJECTED
+}
+
 /// Legal documents (registry in @stepler/contracts `LEGAL_DOCUMENTS`; ADR 0016).
 enum LegalDocument {
   TERMS
@@ -231,6 +267,11 @@ model Collection {
   status              CollectionStatus   @default(ACTIVE)
   archivedAt          DateTime?          @db.Timestamptz(3)
   deletionRequestedAt DateTime?          @db.Timestamptz(3)
+  /// Blocked by the Stepler operator (R7): closed to guests, the owner cannot unblock it. Both
+  /// set or both NULL (CHECK "Collection_blocked_consistent"); the reason is the operator's,
+  /// 1 to 500 characters (CHECK "Collection_blocked_reason_length").
+  blockedAt           DateTime?          @db.Timestamptz(3)
+  blockedReason       String?
   /// The next frame number (ADR 0015); taken and incremented in the transaction that creates an
   /// item. Gaps are never filled. At least 1 (CHECK "Collection_next_frame_positive").
   nextFrameNo         Int                @default(1)
@@ -430,6 +471,26 @@ model ContentItem {
   sanitizeFailedAt          DateTime?        @db.Timestamptz(3)
   /// Soft delete: hidden at once, purged by the worker.
   deletedAt                 DateTime?        @db.Timestamptz(3)
+  /// Hidden from guests (slice 9): every guest read filters on it (`GUEST_VISIBLE`); the admin
+  /// still sees the item. The three are set together (CHECK "ContentItem_hidden_consistent");
+  /// an operator hide has a reason (CHECKs "ContentItem_operator_hide_reason",
+  /// "ContentItem_hidden_reason_length"). `hiddenByUserId` has no FK: the audit trail outlives
+  /// the account.
+  hiddenAt                  DateTime?        @db.Timestamptz(3)
+  hiddenBy                  HiddenBy?
+  hiddenByUserId            String?          @db.Uuid
+  hiddenReason              String?
+  /// Deleted by the Stepler operator (slice 9b, Q-A1): invisible to guests and outside the
+  /// quota at once, kept for its admin to see and appeal until `purgeAfter`, when the sweep
+  /// soft-deletes it for the purge. `deletedAt` stays NULL meanwhile, so `content.purge` cannot
+  /// touch it. The four are set together (CHECK "ContentItem_quarantine_consistent"); the reason
+  /// is 1 to 500 characters (CHECK "ContentItem_quarantine_reason_length"); a quarantine replaces
+  /// an operator hide (CHECK "ContentItem_quarantine_not_operator_hidden"), an admin hide stays.
+  /// `quarantinedByUserId` has no FK. The sweep reads "ContentItem_quarantine_purge_idx".
+  quarantinedAt             DateTime?        @db.Timestamptz(3)
+  quarantinedByUserId       String?          @db.Uuid
+  quarantineReason          String?
+  purgeAfter                DateTime?        @db.Timestamptz(3)
   createdAt                 DateTime         @default(now()) @db.Timestamptz(3)
   collection                Collection       @relation(fields: [collectionId], references: [id], onDelete: Cascade)
   contributorGuestSession   GuestSession?    @relation(fields: [contributorGuestSessionId, collectionId], references: [id, collectionId], onDelete: SetNull, onUpdate: NoAction, map: "ContentItem_session_same_collection_fkey")
@@ -520,6 +581,75 @@ model UploadSession {
   @@index([status, expiresAt])
   @@index([collectionId, status])
   @@index([guestLinkId])
+}
+
+/// A guest's report on a frame (slice 9, spec §7.4). Plain ids without foreign keys, so a report
+/// outlives the content, collection and guest session it names, as abuse history. No IP is ever
+/// stored. The reporter's e-mail (with their locale, CHECK "ContentReport_contact_consistent") is
+/// kept only until the decision mail is sent, 90 days at most. One OPEN report per guest session
+/// and item (partial unique "ContentReport_one_open_per_guest"); the admin's open reports use
+/// "ContentReport_admin_open_idx". Rules live as named CHECKs: "ContentReport_resolved_consistent",
+/// "ContentReport_description_length", "ContentReport_note_length", "ContentReport_email_length".
+model ContentReport {
+  id                     String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contentId              String        @db.Uuid
+  collectionId           String        @db.Uuid
+  reporterGuestSessionId String        @db.Uuid
+  /// The client's `Idempotency-Key`; unique per guest session.
+  idempotencyKey         String        @db.Uuid
+  reason                 ReportReason
+  description            String?
+  reporterEmail          String?       @db.Citext
+  reporterLocale         Locale?
+  requestId              String?
+  status                 ReportStatus  @default(OPEN)
+  /// The operator who decided; set with `resolvedAt` and `resolutionNote`.
+  resolvedByUserId       String?       @db.Uuid
+  resolvedAt             DateTime?     @db.Timestamptz(3)
+  resolutionNote         String?
+  /// The collection admin dismissed it for themselves ([Q1]); the operator still sees it OPEN.
+  adminDismissedAt       DateTime?     @db.Timestamptz(3)
+  /// The worker's mail jobs stamp these once sent, so a retried job sends nothing twice.
+  operatorNotifiedAt     DateTime?     @db.Timestamptz(3)
+  reporterNotifiedAt     DateTime?     @db.Timestamptz(3)
+  createdAt              DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@unique([reporterGuestSessionId, idempotencyKey])
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([contentId, status])
+  @@index([collectionId])
+}
+
+/// A collection admin's appeal against the operator's measure (slice 9b, ADR 0013 addendum): on
+/// a frame (hidden or quarantined by the operator) or on the blocked collection. Plain ids
+/// without foreign keys, like reports: it outlives what it names. One OPEN appeal per target
+/// (partial unique "ModerationAppeal_one_open_per_target"); a decided one allows a new one.
+/// CHECKs: "ModerationAppeal_text_length" (1–1000), "ModerationAppeal_note_length" (1–500),
+/// "ModerationAppeal_resolved_consistent" (OPEN ⇔ no decision time or decider),
+/// "ModerationAppeal_rejection_note" (REJECTED has a note), "ModerationAppeal_open_has_no_note".
+model ModerationAppeal {
+  id                 String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId       String           @db.Uuid
+  targetType         AppealTargetType
+  targetId           String           @db.Uuid
+  submittedByUserId  String           @db.Uuid
+  /// The admin's text: user content the operator reads; never in logs or audit metadata.
+  text               String
+  status             AppealStatus     @default(OPEN)
+  /// The operator who decided; set with `resolvedAt`.
+  resolvedByUserId   String?          @db.Uuid
+  resolvedAt         DateTime?        @db.Timestamptz(3)
+  /// The operator's note the admin reads: required on REJECTED, optional on UPHELD.
+  resolutionNote     String?
+  requestId          String?
+  /// The worker's mail job stamps it once the operator was told, so a retried job sends nothing twice.
+  operatorNotifiedAt DateTime?        @db.Timestamptz(3)
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+  @@index([collectionId, createdAt(sort: Desc)])
+  @@index([submittedByUserId, createdAt])
 }
 
 /// Append-only. Plain ids without foreign keys, so events outlive what they describe (spec §7.4).

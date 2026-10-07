@@ -73,6 +73,7 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | ----------------------------------------------- | ------------------------------------------------------------- |
 | `pnpm install`                                  | Install dependencies                                          |
 | `pnpm infra:up` / `pnpm infra:down`             | Start (and wait for healthy) / stop Postgres, Mailpit and the S3 emulator |
+| `pnpm mailpit`                                  | Start Mailpit alone (if not running) and open its inbox, http://127.0.0.1:8025 |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
@@ -145,7 +146,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `COOKIE_SECURE` | api | no | Adds `Secure` to cookies; default `true` in production, else `false` |
 | `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
 | `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |
-| `OPERATOR_EMAILS` | api | no | Comma-separated operator emails (ADR 0013), default empty |
+| `OPERATOR_EMAILS` | api, worker | no | Comma-separated operator e-mails (ADR 0013): a dedicated service mailbox such as `moderation@<domain>`, never a personal account. The API grants the operator role (the `/ops` console); the worker sends each new report there. Default empty |
 | `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback`. `true` is rejected (it would trust any client's `X-Forwarded-For`) |
 | `APP_SECRET` | api | yes | Base64 of ≥ 32 random bytes; root key for HKDF-derived keys. Distinct per environment |
 | `SMTP_URL` | api | yes | `smtp://` or `smtps://` URL of the mail server (Mailpit locally) |
@@ -191,17 +192,22 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
 | `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
 | `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames per client IP per minute; default `120` |
+| `LIMIT_REPORTS_PER_IP_PER_HOUR` | api | no | Guest content reports per client IP per hour, across sessions; default `60` |
+| `LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Reports one guest session may send per rolling hour; default `10` |
+| `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY` | api | no | Appeals one admin account may send per rolling 24 hours (slice 9b); default `20` |
+| `MODERATION_QUARANTINE_DAYS` | api | no | Days a frame the operator deleted stays in quarantine, restorable, before the sweep purges it (slice 9b); default `90` |
 | `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
+| `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |
-| `LEGAL_CONTACT_EMAIL` | web | in production | E-mail for privacy requests and content complaints, shown in the «Контакти» block of `/legal/terms` and `/legal/privacy` (spec §15). May be unset only with `LEGAL_ALLOW_DRAFT=true` (the block is then omitted) |
+| `LEGAL_CONTACT_EMAIL` | web, api, worker | web: in production; api, worker: no | E-mail for privacy requests and content complaints, shown in the «Контакти» block of `/legal/terms` and `/legal/privacy` (spec §15). May be unset only with `LEGAL_ALLOW_DRAFT=true` (the block is then omitted). On the api and the worker (slice 9, optional) it is the appeal address in the blocked-account notice and the reporter's decision mail; set the same value |
 | `LEGAL_ALLOW_DRAFT` | web | no | `true` lets a built server start on placeholder legal texts (`draft: true` in the registry) and without `LEGAL_CONTACT_EMAIL`: CI, the image check and staging set it; **production never does**, so the server refuses to start until the real texts are published (`docs/legal/README.md`, [C20]). `next dev` always allows drafts; default `false` |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
-The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables and the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` rows above; it needs no SMTP, Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
+The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables, the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` / `REPORT_EMAIL_RETENTION_DAYS` rows above and, for the report mail (slice 9), the API's `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, `OPERATOR_EMAILS` and optional `LEGAL_CONTACT_EMAIL`; it needs no Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
 
 ## Dependency policy
 

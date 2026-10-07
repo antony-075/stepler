@@ -15,7 +15,23 @@ export type AuditAction =
   | 'guest_link.revoke'
   | 'guest_link.delete'
   | 'guest_link.rotate'
-  | 'content.delete';
+  | 'content.delete'
+  // Slice 9: moderation (ADR 0013).
+  | 'content.hide'
+  | 'content.unhide'
+  | 'report.create'
+  | 'report.admin_dismiss'
+  | 'report.resolve'
+  | 'collection.block'
+  | 'collection.unblock'
+  | 'account.block'
+  | 'account.unblock'
+  // Slice 9b: the operator's deletion is a quarantine; appeals.
+  | 'content.quarantine'
+  | 'content.restore'
+  | 'appeal.create'
+  | 'appeal.uphold'
+  | 'appeal.reject';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -24,11 +40,12 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link' | 'content';
+  targetType: 'collection' | 'guest_link' | 'content' | 'report' | 'user' | 'appeal';
   targetId: string;
   /**
    * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other
-   * user content, and never tokens or URLs (spec §7.4).
+   * user content, and never tokens or URLs (spec §7.4). The operator's own reasons and notes are
+   * allowed (`reason`, `note`): operator-authored text, not user content.
    */
   metadata?: Record<string, string | number | boolean | null>;
   requestId?: string;

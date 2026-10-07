@@ -1,4 +1,7 @@
 import {
+  type CreateReportRequest,
+  type CreateReportResponse,
+  createReportResponseSchema,
   type CreateUploadRequest,
   type GuestContentDetail,
   type GuestContentItem,
@@ -148,3 +151,20 @@ export const guestUploadApi: GuestUploadApi = {
   completeUpload,
   cancelUpload,
 };
+
+/**
+ * «Поскаржитися» on another guest's frame (slice 9). One `idempotencyKey` per opened form, kept
+ * across retries, so a retry never files a second report.
+ */
+export const reportContent = (
+  collectionId: string,
+  contentId: string,
+  body: CreateReportRequest,
+  idempotencyKey: string,
+): Promise<CreateReportResponse> =>
+  apiRequest(`${base(collectionId)}/content/${encodeURIComponent(contentId)}/reports`, {
+    method: 'POST',
+    body,
+    headers: { 'idempotency-key': idempotencyKey },
+    schema: createReportResponseSchema,
+  });

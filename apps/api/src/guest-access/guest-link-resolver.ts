@@ -21,16 +21,21 @@ export interface ResolvedGuestLink {
 /** The states that decide whether a guest may use a link right now. */
 export interface LinkState {
   link: { status: GuestLinkStatus };
-  collection: { status: CollectionStatus; owner: { status: UserStatus } };
+  collection: { status: CollectionStatus; blockedAt: Date | null; owner: { status: UserStatus } };
 }
 
 /**
  * [G5] order, so the most permanent state wins:
- * collection gone or owner blocked → 410; link revoked → 410; collection archived → 403;
+ * collection gone, blocked by the operator or its owner blocked → 410 (slice 9 [P6]: the one
+ * place every guest route passes through); link revoked → 410; collection archived → 403;
  * link paused → 403. Shared by link resolution and every guest-session request.
  */
 export function assertLinkUsable({ link, collection }: LinkState): void {
-  if (collection.status === 'DELETING' || collection.owner.status === 'BLOCKED') {
+  if (
+    collection.status === 'DELETING' ||
+    collection.blockedAt !== null ||
+    collection.owner.status === 'BLOCKED'
+  ) {
     throw new AppError('COLLECTION_UNAVAILABLE', 410);
   }
   if (link.status === 'REVOKED') throw new AppError('LINK_REVOKED', 410);
@@ -53,7 +58,8 @@ export class GuestLinkResolver {
   /**
    * The published page's look for a link in any state (live, paused, revoked, its collection
    * archived): the guest page draws its loading and state screens in it (owner remarks 99, 100).
-   * Unknown token, or the collection gone (deleting, owner blocked) → 404. Never the title.
+   * Unknown token, or the collection gone (deleting, blocked, owner blocked) → 404. Never the
+   * title.
    */
   async themeOf(rawToken: string): Promise<GuestLinkThemeResponse> {
     const tokenHash = this.tokens.hashForLookup(rawToken);
@@ -66,6 +72,7 @@ export class GuestLinkResolver {
               collection: {
                 select: {
                   status: true,
+                  blockedAt: true,
                   owner: { select: { status: true } },
                   guestPageVersions: {
                     where: { state: 'PUBLISHED' },
@@ -79,6 +86,7 @@ export class GuestLinkResolver {
     if (
       row === null ||
       row.collection.status === 'DELETING' ||
+      row.collection.blockedAt !== null ||
       row.collection.owner.status === 'BLOCKED'
     ) {
       throw new AppError('NOT_FOUND', 404);
@@ -106,6 +114,7 @@ export class GuestLinkResolver {
                 select: {
                   ...CONTEXT_COLLECTION,
                   status: true,
+                  blockedAt: true,
                   owner: { select: { status: true } },
                 },
               },

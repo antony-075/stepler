@@ -13,6 +13,9 @@ describe('job names', () => {
       'media.video-poster': true,
       'media.collection-image': true,
       'collection-image.purge': true,
+      'mail.report-received': true,
+      'mail.report-decision': true,
+      'mail.appeal-received': true,
     };
     expect([...JOB_NAMES].sort()).toEqual(Object.keys(expected).sort());
     for (const name of JOB_NAMES) expect(JOB_OPTIONS[name].retryLimit).toBeGreaterThan(0);
@@ -34,6 +37,15 @@ describe('job names', () => {
     ).toBe('collection-image.purge:k');
     expect(singletonKeyFor('media.collection-image', { collectionId: 'c', imageId: 'k' })).toBe(
       'media.collection-image:k',
+    );
+    expect(singletonKeyFor('mail.report-received', { reportId: 'r' })).toBe(
+      'mail.report-received:r',
+    );
+    expect(singletonKeyFor('mail.report-decision', { reportId: 'r' })).toBe(
+      'mail.report-decision:r',
+    );
+    expect(singletonKeyFor('mail.appeal-received', { appealId: 'p' })).toBe(
+      'mail.appeal-received:p',
     );
     expect(singletonKeyFor('maintenance.sweep', {})).toBe('maintenance.sweep');
     expect(singletonKeyFor('uploads.expire', {})).toBe('uploads.expire');

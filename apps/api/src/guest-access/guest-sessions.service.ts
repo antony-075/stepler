@@ -8,6 +8,7 @@ import { AppError } from '../errors/app-error.js';
 import type { GuestSession as GuestSessionRow } from '../generated/prisma/client.js';
 import { ImageUrls } from '../images/image-urls.js';
 import { LimitsService } from '../limits/limits.service.js';
+import { GUEST_VISIBLE } from '../moderation/content-visibility.js';
 import { permissionsOf } from './guest-link-dto.js';
 import { assertLinkUsable, GuestLinkResolver } from './guest-link-resolver.js';
 import { CONTEXT_COLLECTION, type ContextCollection } from './guest-context-select.js';
@@ -154,7 +155,9 @@ export class GuestSessionsService {
       where: { tokenHash: hashToken(cookieToken) },
       include: {
         currentLink: true,
-        collection: { select: { status: true, owner: { select: { status: true } } } },
+        collection: {
+          select: { status: true, blockedAt: true, owner: { select: { status: true } } },
+        },
       },
     });
   }
@@ -210,7 +213,7 @@ export class GuestSessionsService {
 
   private async counts(collectionId: string): Promise<GuestContext['counts']> {
     const result = await this.prisma.contentItem.aggregate({
-      where: { collectionId, deletedAt: null },
+      where: { collectionId, ...GUEST_VISIBLE },
       _count: { _all: true },
       _max: { createdAt: true },
     });

@@ -175,7 +175,11 @@ describe('saveGuestPageDraftRequestSchema', () => {
 });
 
 describe('error codes', () => {
-  test('the two guest page codes are appended', () => {
-    expect(ERROR_CODES.slice(-2)).toEqual(['GUEST_PAGE_DRAFT_CONFLICT', 'THEME_CONTRAST_TOO_LOW']);
+  test('the two guest page codes are in the catalog, in order', () => {
+    const at = ERROR_CODES.indexOf('GUEST_PAGE_DRAFT_CONFLICT');
+    expect(ERROR_CODES.slice(at, at + 2)).toEqual([
+      'GUEST_PAGE_DRAFT_CONFLICT',
+      'THEME_CONTRAST_TOO_LOW',
+    ]);
   });
 });

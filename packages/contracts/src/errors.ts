@@ -41,6 +41,12 @@ export const ERROR_CODES = [
   'LEGAL_VERSION_OUTDATED',
   'GUEST_PAGE_DRAFT_CONFLICT',
   'THEME_CONTRAST_TOO_LOW',
+  'CONTENT_MODERATED',
+  'REPORT_RESOLVED',
+  // Slice 9b: appeals.
+  'APPEAL_NOT_APPLICABLE',
+  'APPEAL_OPEN',
+  'APPEAL_RESOLVED',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

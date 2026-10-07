@@ -79,14 +79,30 @@ describe('adminContentItemSchema', () => {
     processingStatus: 'NOT_REQUIRED',
     text: 'Вітаємо!',
     ...media,
+    moderation: { hidden: null, quarantined: null, openReports: 0 },
   };
 
   test('accepts a text frame; the detail adds original and download links', () => {
     expect(adminContentItemSchema.parse(item)).toEqual(item);
-    const detail = { ...item, originalUrl: null, downloadUrl: null };
+    const detail = { ...item, originalUrl: null, downloadUrl: null, reports: [], appeal: null };
     expect(adminContentDetailSchema.parse(detail)).toEqual(detail);
     expect(adminContentItemSchema.safeParse({ ...item, frameNo: 0 }).success).toBe(false);
     expect(adminContentItemSchema.safeParse({ ...item, deletedAt: null }).success).toBe(false);
+  });
+
+  test('carries its moderation state (slice 9)', () => {
+    const hidden = {
+      ...item,
+      moderation: {
+        hidden: { by: 'OPERATOR', at: '2026-10-06T10:00:00.000Z', reason: 'Спам' },
+        quarantined: null,
+        openReports: 2,
+      },
+    };
+    expect(adminContentItemSchema.parse(hidden)).toEqual(hidden);
+    const withoutModeration: Partial<typeof item> = { ...item };
+    delete withoutModeration.moderation;
+    expect(adminContentItemSchema.safeParse(withoutModeration).success).toBe(false);
   });
 });
 
@@ -161,6 +177,23 @@ describe('list queries', () => {
     ).toEqual({ kind: 'TEXT', sort: 'frame', limit: 100 });
     expect(adminContentListQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
     expect(adminContentListQuerySchema.safeParse({ kind: 'AUDIO' }).success).toBe(false);
+    // The state filter (slice 9 F1): one state or several (OR), with a kind.
+    expect(adminContentListQuerySchema.parse({ state: 'REPORTED', kind: 'PHOTO' })).toMatchObject({
+      state: 'REPORTED',
+      kind: 'PHOTO',
+    });
+    expect(adminContentListQuerySchema.parse({ state: ['ACTIVE', 'REPORTED'] })).toMatchObject({
+      state: ['ACTIVE', 'REPORTED'],
+    });
+    expect(adminContentListQuerySchema.safeParse({ state: 'reported' }).success).toBe(false);
+    expect(adminContentListQuerySchema.safeParse({ state: [] }).success).toBe(false);
+    expect(
+      adminContentListQuerySchema.safeParse({
+        state: ['ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE', 'ACTIVE'],
+      }).success,
+    ).toBe(false);
+    expect(adminContentListQuerySchema.safeParse({ state: 'QUARANTINED' }).success).toBe(true);
+    expect(adminContentListQuerySchema.safeParse({ reported: 'true' }).success).toBe(false);
   });
 
   test('guest: the scope is required', () => {

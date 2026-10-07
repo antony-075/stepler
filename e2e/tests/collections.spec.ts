@@ -33,7 +33,6 @@ const T = {
   deleted: 'Колекцію видалено',
   contentEmpty: 'Тут з’являться фото, відео й побажання гостей',
   notFound: 'Колекцію не знайдено',
-  filterLabel: 'Показати',
   details: 'Основна інформація',
 };
 
@@ -113,7 +112,7 @@ test.describe('dashboard', () => {
     await expect(dialog.getByLabel(T.title)).toHaveAttribute('aria-invalid', 'true');
   });
 
-  test('active and archived collections share one list; the chips filter it by status', async ({
+  test('active and archived collections share one list; the «Стан» menu filters it', async ({
     page,
   }) => {
     await signIn(page, newEmail());
@@ -123,10 +122,17 @@ test.describe('dashboard', () => {
     await page.reload();
 
     await expect(page.getByText('1 з 3 активних колекцій')).toBeVisible();
-    const filter = page.getByRole('radiogroup', { name: T.filterLabel });
-    // Counts are of what is loaded, as data next to each chip.
-    await expect(filter.getByRole('radio')).toHaveText(['Усі2', 'Активні1', 'Архів1']);
-    await expect(filter.getByRole('radio', { name: /^Усі/ })).toBeChecked();
+    // The «Стан» filter (S2): a menu of checkboxes with counts of what is loaded; nothing checked
+    // shows everything with the «Архів · 1» group heading.
+    const filter = page.getByRole('button', { name: /^Стан:/ });
+    await expect(filter).toHaveText('Стан: Усі');
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveText('Архів · 1');
+    await filter.click();
+    await expect(page.getByRole('menuitemcheckbox')).toHaveText([
+      'Активні1',
+      'В архіві1',
+      'Заблоковані0',
+    ]);
     const archivedCard = card(page, 'Випускний 2025');
     await expect(archivedCard.getByText(T.archived, { exact: true })).toBeVisible();
     await expect(
@@ -137,10 +143,25 @@ test.describe('dashboard', () => {
       `/app/collections/${kept.id}`,
     );
 
-    await filter.getByRole('radio', { name: /^Архів/ }).click();
+    // One state: only its collections, no group heading, the URL carries it. The menu stays
+    // open while ticking (the admin usually ticks more than one).
+    await page.getByRole('menuitemcheckbox', { name: /^В архіві/ }).click();
+    await expect(filter).toHaveText('Стан: В архіві');
+    await expect(page).toHaveURL(/[?&]state=archived/);
     await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
     await expect(archivedCard).toBeVisible();
-    await filter.getByRole('radio', { name: /^Активні/ }).click();
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveCount(0);
+    // Two states (OR): both back, «2 вибрано»; the menu stayed open for the second tick.
+    await page.getByRole('menuitemcheckbox', { name: /^Активні/ }).click();
+    await expect(filter).toHaveText('Стан: 2 вибрано');
+    await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(2);
+    // «Скинути» clears to all.
+    await page.getByRole('menuitem', { name: 'Скинути' }).click();
+    await expect(filter).toHaveText('Стан: Усі');
+    await expect(page).not.toHaveURL(/state=/);
+    await expect(page.locator('[data-slot="collections-group"]')).toHaveText('Архів · 1');
+    // Only active, from the URL.
+    await page.goto('/app?state=active');
     await expect(page.locator('[data-slot="collection-card"]')).toHaveCount(1);
     await expect(card(page, 'Ювілей бабусі')).toBeVisible();
   });
@@ -729,6 +750,73 @@ test.describe('admin navigation (owner decisions 2026-10-02)', () => {
     await expect(page.getByRole('button', { name: 'Розгорнути меню' })).toBeVisible();
     await page.getByRole('button', { name: 'Розгорнути меню' }).click();
     await expect(page.getByRole('button', { name: 'Згорнути меню' })).toBeVisible();
+  });
+
+  test('the collection mini-nav folds to a rail, is remembered, and starts folded in the editor under 1700px @desktop', async ({
+    page,
+  }) => {
+    await signIn(page, newEmail());
+    const { id } = await createCollectionViaApi(page, 'Весілля Олі та Тараса');
+    const miniNav = page.locator('#collection-mini-nav');
+    const tab = (name: string) => miniNav.getByRole('tab', { name });
+    const sidebarBefore = async () => (await page.locator('#admin-sidebar').boundingBox())!;
+
+    // 1512×982 (a 14-inch laptop): the content tab starts expanded.
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await page.goto(`/app/collections/${id}`);
+    const fold = page.getByRole('button', { name: 'Згорнути панель колекції' });
+    await expect(fold).toHaveAttribute('aria-expanded', 'true');
+    await expect(fold).toHaveAttribute('aria-controls', 'collection-mini-nav');
+    await expect(miniNav.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
+    const expandedWidth = (await miniNav.boundingBox())!.width;
+    expect(Math.round(expandedWidth)).toBe(350);
+    const sidebar = await sidebarBefore();
+
+    // From the keyboard; the rail keeps the tab names (tooltips), the h1 and «Поділитися».
+    await fold.focus();
+    await page.keyboard.press('Enter');
+    const unfold = page.getByRole('button', { name: 'Розгорнути панель колекції' });
+    await expect(unfold).toHaveAttribute('aria-expanded', 'false');
+    await expect.poll(async () => Math.round((await miniNav.boundingBox())!.width)).toBe(64);
+    await expect(miniNav.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
+    await expect(miniNav.getByRole('button', { name: 'Поділитися' })).toBeVisible();
+    await expect(tab('Вміст')).toHaveAttribute('aria-selected', 'true');
+    // The highlight sits on the active icon (the tab's own state, not the tooltip's).
+    await expect(tab('Вміст')).toHaveAttribute('data-state', 'active');
+    await expect(miniNav.locator('[data-slot="segment-thumb"]')).toHaveCSS('opacity', '1');
+    await tab('Посилання').focus();
+    await expect(page.getByRole('tooltip', { name: 'Посилання' })).toBeVisible();
+    // The admin sidebar never moves (remark 29), nor does the top bar's trail.
+    expect(await sidebarBefore()).toEqual(sidebar);
+    await expect(page.getByRole('banner').getByRole('link', { name: 'Колекції' })).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+
+    // Remembered on reload and on the other tabs.
+    await page.reload();
+    await expect(unfold).toBeVisible();
+    await tab('Посилання').click();
+    await expect(page).toHaveURL(/tab=links/);
+    await expect(unfold).toBeVisible();
+    await unfold.click();
+    await expect(fold).toBeVisible();
+
+    // The editor under 1700px starts folded, though the other tabs are expanded…
+    await tab('Гостьова сторінка').click();
+    await expect(unfold).toBeVisible();
+    // …until expanded there, which is remembered for the editor.
+    await unfold.click();
+    await expect(fold).toBeVisible();
+    await page.reload();
+    await expect(tab('Гостьова сторінка')).toHaveAttribute('aria-selected', 'true');
+    await expect(fold).toBeVisible();
+
+    // A fresh browser state at 1920: the editor follows the other tabs (expanded).
+    await page.evaluate(() => window.localStorage.clear());
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.reload();
+    await expect(fold).toBeVisible();
+    await page.setViewportSize({ width: 1512, height: 982 });
+    await expect(unfold).toBeVisible();
   });
 
   test('on phones the sections open from the menu button', async ({ page, isMobile }) => {

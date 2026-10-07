@@ -27,7 +27,7 @@ export function TemplateSection({ editor, readOnly }: SectionProps) {
         aria-label={tSection('label')}
         // Tiles grow with the panel (remarks 104, 114): three columns until a tile reaches 10rem,
         // then more; never under 4.5rem. Each keeps its 3:4 picture.
-        className="grid grid-cols-[repeat(auto-fill,minmax(clamp(4.5rem,28%,10rem),1fr))] gap-3"
+        className="grid grid-cols-[repeat(auto-fill,minmax(clamp(4.5rem,28%,10rem),1fr))] gap-x-2.5 gap-y-3"
       >
         {ORDER.map((id) => {
           const template = TEMPLATES[id];

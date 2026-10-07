@@ -9,10 +9,13 @@ const valid = {
   S3_BUCKET: 'stepler-staging',
   S3_ACCESS_KEY_ID: 'key-id',
   S3_SECRET_ACCESS_KEY: 'secret-key',
+  APP_ORIGIN: 'https://stepler.app',
+  SMTP_URL: 'smtp://mail.internal:587',
+  MAIL_FROM: 'Stepler <no-reply@stepler.app>',
 };
 
 describe('loadWorkerEnv', () => {
-  test('needs no SMTP, Turnstile or APP_SECRET and applies defaults', () => {
+  test('needs no Turnstile or APP_SECRET and applies defaults', () => {
     const env = loadWorkerEnv(valid);
     expect(env).toMatchObject({
       LOG_LEVEL: 'info',
@@ -20,7 +23,25 @@ describe('loadWorkerEnv', () => {
       WORKER_MEDIA_CONCURRENCY: 1,
       WORKER_PURGE_BATCH_SIZE: 500,
       GUEST_SESSION_IDLE_DAYS: 400,
+      OPERATOR_EMAILS: [],
+      REPORT_EMAIL_RETENTION_DAYS: 90,
     });
+    expect(env.LEGAL_CONTACT_EMAIL).toBeUndefined();
+  });
+
+  test('sends the report mail (slice 9): SMTP, the sender and the app origin are required', () => {
+    for (const name of ['SMTP_URL', 'MAIL_FROM', 'APP_ORIGIN'] as const) {
+      let error: unknown;
+      try {
+        loadWorkerEnv({ ...valid, [name]: undefined });
+      } catch (caught) {
+        error = caught;
+      }
+      expect((error as EnvValidationError).variables).toEqual([name]);
+    }
+    expect(
+      loadWorkerEnv({ ...valid, OPERATOR_EMAILS: ' Moderation@Stepler.app ,' }).OPERATOR_EMAILS,
+    ).toEqual(['moderation@stepler.app']);
   });
 
   test('names a missing S3_BUCKET without printing values', () => {
