@@ -328,3 +328,26 @@ export const ModeratedTextDark: Story = {
   ...ModeratedText,
   globals: { theme: 'dark' },
 };
+
+/** Deleted by moderation (slice 9b): the picture greyed, the mark and the ring at full strength. */
+export const Quarantined: Story = {
+  args: {
+    accessibleName: 'Кадр 86, фото, 21:10, Ірина, видалено модерацією',
+    marks: <Badge variant="danger">Видалено модерацією</Badge>,
+    ring: 'destructive',
+    dimmed: true,
+  },
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvas.getByRole('button', { name: /видалено модерацією/ })).toBeInTheDocument();
+    const face = canvasElement.querySelector<HTMLElement>('[data-slot="frame-face"]');
+    await expect(face).toHaveAttribute('data-dimmed', 'true');
+    await expect(face).toHaveClass('grayscale');
+    const marks = canvasElement.querySelector<HTMLElement>('[data-slot="frame-marks"]');
+    await expect(getComputedStyle(marks!).opacity).toBe('1');
+  },
+};
+
+export const QuarantinedDark: Story = {
+  ...Quarantined,
+  globals: { theme: 'dark' },
+};

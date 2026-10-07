@@ -81,6 +81,11 @@ type FrameProps = {
   marks?: ReactNode;
   /** A 2px inner ring in the marks' colour (`warning` report, `muted` admin hide, `destructive` operator hide). */
   ring?: FrameRing;
+  /**
+   * Greyed (slice 9b: «Видалено модерацією»): the picture only, in grayscale at 70%; the marks
+   * and the ring stay at full strength. Add the state's words to `accessibleName`.
+   */
+  dimmed?: boolean;
   className?: string;
 };
 
@@ -283,6 +288,7 @@ function Frame({
   outlined = false,
   marks,
   ring,
+  dimmed = false,
   className,
 }: FrameProps) {
   const interactive = selectable ? onToggleSelect !== undefined : onOpen !== undefined;
@@ -298,10 +304,12 @@ function Frame({
       {/* Selected, the picture steps back to 90% (V1): the tile's soft accent shows around it. */}
       <div
         data-slot="frame-face"
+        data-dimmed={dimmed || undefined}
         className={cn(
           'absolute inset-0 overflow-hidden rounded-frame transition-transform duration-(--duration-menu) ease-out motion-reduce:transition-none',
           kind === 'empty' ? 'bg-transparent' : 'bg-muted',
           selected && 'scale-90 rounded-control',
+          dimmed && 'opacity-70 grayscale',
         )}
       >
         <FrameFace
