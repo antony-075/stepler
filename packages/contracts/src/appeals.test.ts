@@ -52,8 +52,10 @@ describe('what the admin sees', () => {
   });
 });
 
-test('the appeal error codes are appended', () => {
-  expect(ERROR_CODES.slice(-3)).toEqual([
+test('the appeal error codes follow the moderation ones', () => {
+  const at = ERROR_CODES.indexOf('APPEAL_NOT_APPLICABLE');
+  expect(ERROR_CODES[at - 1]).toBe('REPORT_RESOLVED');
+  expect(ERROR_CODES.slice(at, at + 3)).toEqual([
     'APPEAL_NOT_APPLICABLE',
     'APPEAL_OPEN',
     'APPEAL_RESOLVED',

@@ -46,7 +46,17 @@
               "REPORT_RESOLVED",
               "APPEAL_NOT_APPLICABLE",
               "APPEAL_OPEN",
-              "APPEAL_RESOLVED"
+              "APPEAL_RESOLVED",
+              "ACCOUNT_READ_ONLY",
+              "COLLECTION_READ_ONLY",
+              "COLLECTING_CLOSED",
+              "OFFER_UNAVAILABLE",
+              "PAYMENT_PENDING",
+              "PLAN_DOWNGRADE_BLOCKED",
+              "SUBSCRIPTION_EXISTS",
+              "REFUND_EXCEEDS_PAID",
+              "PAYMENT_PROVIDER_UNAVAILABLE",
+              "BILLING_SIGNATURE_INVALID"
             ],
             "type": "string"
           },

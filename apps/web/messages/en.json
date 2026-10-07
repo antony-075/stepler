@@ -40,7 +40,17 @@
     "REPORT_RESOLVED": "This report was already decided differently.",
     "APPEAL_NOT_APPLICABLE": "Nothing to appeal here: the moderation measure is already lifted.",
     "APPEAL_OPEN": "An appeal is already filed and under review.",
-    "APPEAL_RESOLVED": "This appeal was already decided differently."
+    "APPEAL_RESOLVED": "This appeal was already decided differently.",
+    "ACCOUNT_READ_ONLY": "Your account is view-only: choose a plan to add and change things again.",
+    "COLLECTION_READ_ONLY": "This collection is view-only.",
+    "COLLECTING_CLOSED": "Collecting has ended for this collection.",
+    "OFFER_UNAVAILABLE": "This plan is not available right now.",
+    "PAYMENT_PENDING": "A previous payment is still being processed. Please wait a few minutes.",
+    "PLAN_DOWNGRADE_BLOCKED": "Your current usage does not fit the chosen plan.",
+    "SUBSCRIPTION_EXISTS": "You already have an active subscription.",
+    "REFUND_EXCEEDS_PAID": "The refund is more than was paid.",
+    "PAYMENT_PROVIDER_UNAVAILABLE": "Payments are temporarily unavailable. Please try again later.",
+    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified."
   },
   "login": {
     "pageTitle": "Sign in",
