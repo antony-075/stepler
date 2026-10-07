@@ -108,4 +108,16 @@ describe('v2 drafts', () => {
     expect(text).not.toContain('підтверджуємо отримання');
     expect(text).toContain('Поскаржитися');
   });
+
+  // Slice 9b: the in-app appeal and the 90-day quarantine, in both languages.
+  test('the terms describe the in-app appeal and the 90-day quarantine', () => {
+    const uk = readFileSync(legalDocumentFile('TERMS', 'uk'), 'utf8');
+    expect(uk).toContain('апеляц');
+    expect(uk).toContain('90 днів');
+    const en = readFileSync(legalDocumentFile('TERMS', 'en'), 'utf8');
+    expect(en).toContain('appeal');
+    expect(en).toContain('90 days');
+    const privacy = readFileSync(legalDocumentFile('PRIVACY', 'uk'), 'utf8');
+    expect(privacy).toContain('карантині');
+  });
 });

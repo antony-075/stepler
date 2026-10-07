@@ -81,7 +81,7 @@ We may hide or remove content, block a collection or account, or otherwise restr
 
 Anyone who can access content may report potentially illegal, abusive, privacy-infringing, spam or otherwise problematic content: in the app, with «Report» in the viewer of another guest's frame, or by e-mail to [LEGAL_CONTACT_EMAIL]. An e-mail address is optional in an in-app report; we use it only to tell you our decision. [LAWYER TO CONFIRM]
 
-The administrator of the collection sees reports on its content in the app (the reason and the description, without the reporter's contact details) and may hide or delete the content. The Stepler operator reviews every report and may hide or delete content, block a collection or an account, and take other measures permitted or required by law and these Terms. The administrator cannot undo a hide or a block applied by the operator. [LAWYER TO CONFIRM]
+The administrator of the collection sees reports on its content in the app (the reason and the description, without the reporter's contact details) and may hide or delete the content. The Stepler operator reviews every report and may hide or delete content, block a collection or an account, and take other measures permitted or required by law and these Terms. The administrator cannot undo a hide, a deletion or a block applied by the operator themselves, but may appeal it in the app (see «Challenging a decision»). Content the operator deletes is first kept for 90 days in quarantine: guests cannot see it, and the administrator sees the reason and the date of permanent deletion. [LAWYER TO CONFIRM]
 
 Where specific notice-and-action obligations apply to Stepler, reports will be handled in accordance with those obligations.
 
@@ -90,7 +90,7 @@ Where specific notice-and-action obligations apply to Stepler, reports will be h
 - **What to include.** A report is easier to act on if it contains: the link to the collection or content and, where possible, a description of the item (for example, the frame number); why you believe the content is illegal or breaks these Terms; your name and e-mail address (not required for reports of child sexual abuse material); and a statement that you make the report in good faith and that it is accurate and complete to the best of your knowledge.
 - **What happens next.** We review reports diligently and without undue delay and, if the reporter left an e-mail address, tell them what we decided. We do not use automated systems to decide on reports, and a report does not hide content by itself.
 - **Statement of reasons.** If we remove or restrict content, a collection or an account, we tell the affected person the reasons, the measure taken and how to challenge it, where we have a way to contact them. Guests do not give us contact details, so we usually cannot notify a guest directly; the collection administrator is informed in the app instead where appropriate.
-- **Challenging a decision.** A reporter or an affected user may ask us to review a decision by writing to [LEGAL_CONTACT_EMAIL]. This does not affect the right to go to court or to any other remedy available under applicable law.
+- **Challenging a decision.** The administrator of a collection may appeal in the app against the operator hiding or deleting content and against a collection block, with «Appeal» next to the decision. They see our decision on the appeal there too; if it is upheld, the measure is reversed (deleted content is restored from quarantine). A reporter, a guest, the owner of a blocked account and anyone else affected by a decision may ask us to review it by writing to [LEGAL_CONTACT_EMAIL]. [LAWYER TO CONFIRM] This does not affect the right to go to court or to any other remedy available under applicable law.
 - **Misuse.** We may stop processing reports from a person who frequently sends manifestly unfounded reports.
 
 ## 8. Deletion and archiving
@@ -131,7 +131,7 @@ We may suspend or terminate access to Stepler, a collection or an account where 
 
 Where reasonably possible and not prohibited by law or security considerations, we will communicate the reason for such action.
 
-A blocked collection is unavailable to guests; its administrator sees the reason in the app. The owner of a blocked account cannot sign in, and none of their collections are available to guests. To challenge a block, write to [LEGAL_CONTACT_EMAIL]. [LAWYER TO CONFIRM]
+A blocked collection is unavailable to guests; its administrator sees the reason in the app. The owner of a blocked account cannot sign in, and none of their collections are available to guests. The administrator of a blocked collection may appeal the block in the app; to challenge an account block, write to [LEGAL_CONTACT_EMAIL]. Content the operator deletes is kept for 90 days in quarantine and then deleted for good unless an appeal is upheld. [LAWYER TO CONFIRM]
 
 You may stop using Stepler at any time. You can delete your collections yourself and ask us to close your account (section 8).
 

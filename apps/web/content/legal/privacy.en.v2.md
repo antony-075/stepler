@@ -50,6 +50,8 @@ We use the e-mail address only to tell you our decision: we delete it once the d
 
 You may also report content by e-mail to [LEGAL_CONTACT_EMAIL]; we then process your e-mail address and what you write to us.
 
+If a collection administrator appeals a moderation decision in the app, we process the appeal text, the identifiers of the collection and of the content it concerns, their account, the time of the appeal and our decision with its note. Only the Stepler operator sees the appeal text. [LAWYER TO CONFIRM]
+
 ### Technical data
 
 For security, rate limiting and abuse prevention, the Service may temporarily process an IP address and other technical request attributes. An IP address is not used as the identity of a guest or as the ownership mechanism for guest content.
@@ -167,7 +169,8 @@ Security and audit records may be retained longer where reasonably necessary for
 - audit records (which action was done to which collection or item, by which kind of actor, when; no content, names or filenames): currently kept without a fixed period — [RETENTION PERIOD];
 - server request logs: kept by the hosting provider for [LOG RETENTION PERIOD];
 - rate-limit counters: in memory, for up to one hour;
-- reports (without the reporter's address): [RETENTION PERIOD];
+- reports (without the reporter's address) and administrators' appeals: [RETENTION PERIOD];
+- content deleted by moderation: 90 days in quarantine (hidden from guests and not counted in the owner's storage), then deleted for good unless an appeal is upheld;
 - the reporter's e-mail address: until the decision is sent, at most 90 days after the report.
 
 ## 10. Security

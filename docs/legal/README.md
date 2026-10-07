@@ -45,6 +45,7 @@ Replacing a text **without** a new version (a typo) is an edit of the current fi
   - Privacy «Дані зі скарг» / «Report data»: what an in-app report stores (no IP address), the e-mail kept until the decision is sent and 90 days at most, never shown to the administrator; e-mail reports still accepted.
   - Privacy §9: retention lines for reports (`[СТРОК ЗБЕРІГАННЯ]`) and for the reporter's address.
   - Privacy §14: both report channels and the operator's measures.
+  - Slice 9b (2026-10-07, still unreleased, so edited in place): Terms §7 — the operator's deletion is a 90-day quarantine, the administrator appeals in the app («Подати апеляцію») against a hide, a deletion or a collection block, an upheld appeal reverses the measure; e-mail stays for reporters, guests, blocked accounts and anyone else. Terms §12 — a collection block is appealed in the app, an account block by e-mail; the 90-day quarantine. Privacy «Дані зі скарг» / «Report data» — what an appeal stores (its text is seen only by the operator). Privacy §9 — appeals in the reports' retention line; content deleted by moderation kept 90 days in quarantine, outside the owner's storage.
 
   Everyone who accepted v1 accepts v2 once at the next sign-in or page load (the existing `/accept-terms` flow).
 
