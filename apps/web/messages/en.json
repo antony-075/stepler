@@ -1394,7 +1394,7 @@
       "blockReason": "Block reason",
       "owner": "Owner",
       "email": "Email",
-      "quarantined": "Quarantined until {date}. Reason: {reason}"
+      "quarantined": "Quarantined until {date} · Reason: {reason}"
     },
     "actions": {
       "reason": "Reason",

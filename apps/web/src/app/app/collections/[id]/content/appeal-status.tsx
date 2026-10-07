@@ -75,7 +75,11 @@ export function AppealOutcome({ appeal }: { appeal: AdminAppeal | null }) {
 }
 
 /** An outlined button on the viewer's dark stage. */
-const stageButton = cn(viewerButton, 'border border-[rgb(255_255_255/0.24)] justify-center');
+// While an appeal is under review it stays in place, visibly unavailable (and `aria-disabled`).
+const stageButton = cn(
+  viewerButton,
+  'border border-[rgb(255_255_255/0.24)] justify-center aria-disabled:cursor-not-allowed aria-disabled:opacity-50',
+);
 
 export function AppealStatus({
   appeal,

@@ -1394,7 +1394,7 @@
       "blockReason": "Причина блокування",
       "owner": "Власник",
       "email": "E-mail",
-      "quarantined": "У карантині до {date}. Причина: {reason}"
+      "quarantined": "У карантині до {date} · Причина: {reason}"
     },
     "actions": {
       "reason": "Причина",
