@@ -82,4 +82,11 @@ describe('loadWorkerEnv', () => {
       30,
     );
   });
+
+  test('reads the payment provider like the API (ADR 0018)', () => {
+    expect(loadWorkerEnv(valid).BILLING_PROVIDER).toBe('disabled');
+    expect(() => loadWorkerEnv({ ...valid, BILLING_PROVIDER: 'liqpay' })).toThrow(
+      /LIQPAY_PUBLIC_KEY/,
+    );
+  });
 });

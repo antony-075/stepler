@@ -133,4 +133,62 @@ describe('loadApiEnv', () => {
       /s3cr3t/,
     );
   });
+
+  describe('billing (ADR 0018)', () => {
+    const liqpay = {
+      BILLING_PROVIDER: 'liqpay',
+      LIQPAY_PUBLIC_KEY: 'sandbox_i00000000',
+      LIQPAY_PRIVATE_KEY: 'sandbox_test-private',
+    };
+    const production = {
+      ...base,
+      NODE_ENV: 'production',
+      BILLING_CALLBACK_URL: 'https://api.stepler.test/api/v1/billing/liqpay/callback',
+    };
+
+    test('payments are disabled by default and the keys are optional then', () => {
+      const env = loadApiEnv(base);
+      expect(env).toMatchObject({
+        BILLING_PROVIDER: 'disabled',
+        LIQPAY_API_BASE: 'https://www.liqpay.ua',
+        BILLING_PENDING_TTL_MINUTES: 30,
+        BILLING_FISCAL_MODE: 'none',
+        BILLING_FISCAL_WAIVED: false,
+        LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE: 120,
+        LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR: 20,
+      });
+      expect(env.BILLING_CALLBACK_URL).toBeUndefined();
+    });
+
+    test('BILLING_PROVIDER=liqpay without both keys fails naming them', () => {
+      expect(() => loadApiEnv({ ...base, BILLING_PROVIDER: 'liqpay' })).toThrow(
+        /LIQPAY_PUBLIC_KEY.*LIQPAY_PRIVATE_KEY/s,
+      );
+      expect(loadApiEnv({ ...base, ...liqpay }).BILLING_PROVIDER).toBe('liqpay');
+    });
+
+    test('production needs the callback URL', () => {
+      expect(() => loadApiEnv({ ...production, ...liqpay, BILLING_CALLBACK_URL: '' })).toThrow(
+        /BILLING_CALLBACK_URL/,
+      );
+      expect(loadApiEnv({ ...production, ...liqpay }).BILLING_PROVIDER).toBe('liqpay');
+    });
+
+    test('live keys in production need a fiscal mode or the deliberate waiver [P14]', () => {
+      const live = { ...production, ...liqpay, LIQPAY_PUBLIC_KEY: 'i12345678' };
+      expect(() => loadApiEnv(live)).toThrow(/BILLING_FISCAL_MODE/);
+      expect(loadApiEnv({ ...live, BILLING_FISCAL_MODE: 'liqpay_rro' }).BILLING_FISCAL_MODE).toBe(
+        'liqpay_rro',
+      );
+      expect(loadApiEnv({ ...live, BILLING_FISCAL_WAIVED: 'true' }).BILLING_FISCAL_WAIVED).toBe(
+        true,
+      );
+    });
+
+    test('a key never appears in the error', () => {
+      expect(() =>
+        loadApiEnv({ ...base, BILLING_PROVIDER: 'liqpay', LIQPAY_PRIVATE_KEY: 'top-secret-key' }),
+      ).not.toThrow(/top-secret-key/);
+    });
+  });
 });

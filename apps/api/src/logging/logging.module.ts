@@ -47,6 +47,10 @@ function httpOptions(env: Pick<ApiEnv, 'LOG_LEVEL'>, pretty: boolean): Options {
         // Untrusted when invalid; the effective id is logged as `req.id`.
         'req.headers["x-request-id"]',
         'res.headers["set-cookie"]',
+        // Billing (ADR 0018): never a key or a signed payload, even if one reached a log object.
+        '*.LIQPAY_PRIVATE_KEY',
+        '*.privateKey',
+        '*.signature',
       ],
       censor: REDACTED,
     },

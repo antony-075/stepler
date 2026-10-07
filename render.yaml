@@ -65,6 +65,16 @@ services:
       # the admin's blocked banner with its own LEGAL_CONTACT_EMAIL.
       - key: LEGAL_CONTACT_EMAIL
         sync: false
+      # Payments (ADR 0018, O2): `liqpay` with the sandbox pair on staging; the callback URL is
+      # https://<staging-api-host>/api/v1/billing/liqpay/callback. Live keys never on staging.
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
+        sync: false
+      - key: BILLING_CALLBACK_URL
+        sync: false
       - key: S3_ENDPOINT
         sync: false
       - key: S3_REGION
@@ -131,6 +141,14 @@ services:
         value: '12'
       - key: BILLING_RETENTION_DELETE_ENABLED
         value: 'false'
+      # Payments (ADR 0018): reconciliation through LiqPay's status API; the same sandbox keys as
+      # the API (O2). Live keys never on staging.
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
+        sync: false
 
   - type: web
     name: stepler-staging
