@@ -4,6 +4,7 @@ import {
   checkoutRequestSchema,
   collectionSchema,
   ERROR_CODES,
+  guestContextSchema,
   moneySchema,
   usageResponseSchema,
 } from './index.js';
@@ -112,6 +113,14 @@ describe('access in the existing responses', () => {
     expect(usageResponseSchema.parse(usage)).toEqual(usage);
     const { access: _omitted, ...withoutAccess } = usage;
     expect(usageResponseSchema.safeParse(withoutAccess).success).toBe(false);
+  });
+
+  test('the guest context says whether guests may still contribute', () => {
+    expect(guestContextSchema.shape.contribution.options).toEqual([
+      'OPEN',
+      'COLLECTING_CLOSED',
+      'READ_ONLY',
+    ]);
   });
 
   test('a collection carries its entitlement, access, pack and deletion date', () => {

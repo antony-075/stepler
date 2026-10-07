@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { EntitlementGate } from './entitlement-gate.js';
 import { EntitlementResolver } from './entitlement-resolver.js';
 
 /**
@@ -6,5 +7,8 @@ import { EntitlementResolver } from './entitlement-resolver.js';
  * path reaches entitlements through `LimitsService` or the gate, never through its own query.
  */
 @Global()
-@Module({ providers: [EntitlementResolver], exports: [EntitlementResolver] })
+@Module({
+  providers: [EntitlementResolver, EntitlementGate],
+  exports: [EntitlementResolver, EntitlementGate],
+})
 export class BillingModule {}

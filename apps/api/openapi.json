@@ -1219,6 +1219,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "409": {
             "description": "COLLECTION_LIMIT_REACHED: the active limit is reached"
           },
@@ -1987,6 +1990,9 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
           },
           "default": {
             "content": {
@@ -3672,6 +3678,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not one of your collections"
           },
@@ -5242,6 +5251,9 @@
           "400": {
             "description": "VALIDATION_FAILED: unknown template (path templateId) or settings the template does not allow (paths under settings)"
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted)"
           },
@@ -6503,6 +6515,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted), or no such live frame in it"
           },
@@ -7150,6 +7165,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted), or the image is gone (nothing referenced it)"
           },
@@ -7285,6 +7303,9 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
           },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted)"
@@ -8781,6 +8802,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection (another owner’s, or being deleted)"
           },
@@ -9197,6 +9221,9 @@
             },
             "description": ""
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection, or no such live frame in it"
           },
@@ -9326,6 +9353,9 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
           },
           "404": {
             "description": "NOT_FOUND: not the owner’s collection"
@@ -10246,6 +10276,9 @@
               }
             },
             "description": ""
+          },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
           },
           "409": {
             "description": "COLLECTION_LIMIT_REACHED: the active limit is reached"
@@ -11389,6 +11422,9 @@
           "400": {
             "description": "VALIDATION_FAILED: invalid permissions, or a label on the default link"
           },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
+          },
           "404": {
             "description": "NOT_FOUND: not a link of one of your collections"
           },
@@ -11528,6 +11564,9 @@
               }
             },
             "description": "Resumed"
+          },
+          "403": {
+            "description": "ACCOUNT_READ_ONLY: the trial or plan ended (view, download and delete only); COLLECTION_READ_ONLY: the collection's pack retention ended"
           },
           "404": {
             "description": "NOT_FOUND: not a link of one of your collections"
@@ -12471,6 +12510,14 @@
                       ],
                       "type": "object"
                     },
+                    "contribution": {
+                      "enum": [
+                        "OPEN",
+                        "COLLECTING_CLOSED",
+                        "READ_ONLY"
+                      ],
+                      "type": "string"
+                    },
                     "counts": {
                       "additionalProperties": false,
                       "nullable": true,
@@ -12821,7 +12868,8 @@
                     "permissions",
                     "guest",
                     "limits",
-                    "counts"
+                    "counts",
+                    "contribution"
                   ],
                   "type": "object"
                 }
@@ -12917,6 +12965,14 @@
                       ],
                       "type": "object"
                     },
+                    "contribution": {
+                      "enum": [
+                        "OPEN",
+                        "COLLECTING_CLOSED",
+                        "READ_ONLY"
+                      ],
+                      "type": "string"
+                    },
                     "counts": {
                       "additionalProperties": false,
                       "nullable": true,
@@ -13267,7 +13323,8 @@
                     "permissions",
                     "guest",
                     "limits",
-                    "counts"
+                    "counts",
+                    "contribution"
                   ],
                   "type": "object"
                 }
@@ -13369,6 +13426,14 @@
                       ],
                       "type": "object"
                     },
+                    "contribution": {
+                      "enum": [
+                        "OPEN",
+                        "COLLECTING_CLOSED",
+                        "READ_ONLY"
+                      ],
+                      "type": "string"
+                    },
                     "counts": {
                       "additionalProperties": false,
                       "nullable": true,
@@ -13719,7 +13784,8 @@
                     "permissions",
                     "guest",
                     "limits",
-                    "counts"
+                    "counts",
+                    "contribution"
                   ],
                   "type": "object"
                 }
@@ -13915,7 +13981,7 @@
             "description": "GUEST_SESSION_REQUIRED"
           },
           "403": {
-            "description": "FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE"
+            "description": "FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE, COLLECTION_READ_ONLY (the collection is view-only) or COLLECTING_CLOSED (its collection window ended)"
           },
           "404": {
             "description": "CONTENT_NOT_FOUND: a retry of a text the admin has deleted since"
@@ -14037,7 +14103,7 @@
             "description": "GUEST_SESSION_REQUIRED"
           },
           "403": {
-            "description": "FORBIDDEN (the link takes no such files), COLLECTION_UNAVAILABLE or LINK_REVOKED (410), COLLECTION_ARCHIVED or LINK_INACTIVE (403)"
+            "description": "FORBIDDEN (the link takes no such files), COLLECTION_UNAVAILABLE or LINK_REVOKED (410), COLLECTION_ARCHIVED or LINK_INACTIVE (403), COLLECTION_READ_ONLY (the collection is view-only) or COLLECTING_CLOSED (its collection window ended)"
           },
           "409": {
             "description": "QUOTA_EXCEEDED (collection or account full), IDEMPOTENCY_CONFLICT (clientUploadId used for another file), UPLOAD_CLOSED"

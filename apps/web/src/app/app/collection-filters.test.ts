@@ -31,6 +31,10 @@ const collection = (
   welcomeMessage: null,
   image: null,
   blocked: blocked ? { at: createdAt, reason: 'Спам' } : null,
+  entitlement: 'ACCOUNT',
+  access: { state: 'ACTIVE', reason: 'TRIAL', endsAt: null },
+  pack: null,
+  deleteAfter: null,
 });
 
 function hash(text: string): number {

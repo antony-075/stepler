@@ -9,6 +9,7 @@ import type {
 } from '@stepler/contracts';
 import { type AuditAction, AuditService } from '../audit/audit.service.js';
 import type { AccountPrincipal } from '../auth/principal.js';
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -42,6 +43,7 @@ export class CollectionsService {
     private readonly images: ImageUrls,
     private readonly pages: GuestPageRepository,
     private readonly entitlements: EntitlementResolver,
+    private readonly gate: EntitlementGate,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -54,6 +56,7 @@ export class CollectionsService {
     const { userId } = principal;
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
+      await this.gate.assertAdminCanWrite({ userId }, tx);
       const limits = await this.limits.forUser(userId, tx);
 
       const now = Date.now();
@@ -182,6 +185,9 @@ export class CollectionsService {
     body: UpdateCollectionRequest,
   ): Promise<Collection> {
     return this.prisma.$transaction(async (tx) => {
+      // Ownership first (a stranger gets 404), then the access state.
+      await this.findOwned(id, principal.userId, tx);
+      await this.gate.assertAdminCanWrite({ collectionId: id }, tx);
       let row: CollectionWithDefaultLink;
       try {
         row = await tx.collection.update({
@@ -234,6 +240,7 @@ export class CollectionsService {
       await this.usage.lockOwner(tx, userId);
       const row = await this.findOwned(id, userId, tx);
       if (row.status !== 'ARCHIVED') return this.toDto(row, tx);
+      await this.gate.assertAdminCanWrite({ collectionId: id }, tx);
       // A pack collection is not counted against the account's active collections [P1].
       const limits = await this.limits.forUser(userId, tx);
       if (

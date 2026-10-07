@@ -129,6 +129,7 @@ function context({ welcomeMessage = null, cover = null, ...collection }: Fields)
       textMaxChars: 1,
     },
     counts: null,
+    contribution: 'OPEN',
   };
 }
 

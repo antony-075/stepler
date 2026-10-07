@@ -38,6 +38,7 @@ const context: GuestContext = {
     textMaxChars: 5000,
   },
   counts: null,
+  contribution: 'OPEN',
 };
 
 /** A File that reports `size` without holding the bytes. */

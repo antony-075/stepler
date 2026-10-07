@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { canContribute, type GuestContext, TEXT_MAX_CHARS } from '@stepler/contracts';
 import { resolveTheme } from '@stepler/templates/core';
 import type { GuestPrincipal } from '../auth/principal.js';
@@ -29,6 +30,7 @@ export class GuestSessionsService {
     private readonly resolver: GuestLinkResolver,
     private readonly limits: LimitsService,
     private readonly images: ImageUrls,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -208,6 +210,7 @@ export class GuestSessionsService {
       },
       // Contribution-only guests learn nothing about how much others added (DESIGN-SYSTEM §11.3).
       counts: canListAll(p) ? await this.counts(p.collectionId) : null,
+      contribution: await this.gate.guestContribution(p.collectionId),
     };
   }
 

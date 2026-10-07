@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiAdminReadOnlyResponse } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -64,6 +65,7 @@ export class CollectionImageController {
 
   /** Copies a guest photo's original into the collection image; the frame itself is untouched. */
   @Post('from-frame')
+  @ApiAdminReadOnlyResponse()
   @RateLimit('admin-cover', 'admin-cover-user')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: collectionSchema })
@@ -108,6 +110,7 @@ export class CollectionImageController {
 
   /** Opens an upload (photos only); the same `clientUploadId` and file returns the open one. */
   @Post('uploads')
+  @ApiAdminReadOnlyResponse()
   @RateLimit('admin-cover', 'admin-cover-user')
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: 201, standardSchema: uploadSessionResponseSchema })
