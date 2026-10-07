@@ -553,6 +553,47 @@
                       "items": {
                         "additionalProperties": false,
                         "properties": {
+                          "access": {
+                            "additionalProperties": false,
+                            "properties": {
+                              "endsAt": {
+                                "format": "date-time",
+                                "nullable": true,
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "reason": {
+                                "enum": [
+                                  "TRIAL",
+                                  "TRIAL_ENDED",
+                                  "SUBSCRIPTION",
+                                  "SUBSCRIPTION_PAST_DUE",
+                                  "SUBSCRIPTION_ENDED",
+                                  "COMPLIMENTARY",
+                                  "PACK",
+                                  "PACK_WINDOW_ENDED",
+                                  "PACK_RETENTION_ENDED",
+                                  "NONE"
+                                ],
+                                "type": "string"
+                              },
+                              "state": {
+                                "enum": [
+                                  "ACTIVE",
+                                  "GRACE",
+                                  "COLLECTING_CLOSED",
+                                  "READ_ONLY"
+                                ],
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "reason",
+                              "endsAt"
+                            ],
+                            "type": "object"
+                          },
                           "archivedAt": {
                             "format": "date-time",
                             "nullable": true,
@@ -629,8 +670,21 @@
                             "nullable": true,
                             "type": "string"
                           },
+                          "deleteAfter": {
+                            "format": "date-time",
+                            "nullable": true,
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
                           "description": {
                             "nullable": true,
+                            "type": "string"
+                          },
+                          "entitlement": {
+                            "enum": [
+                              "ACCOUNT",
+                              "PACK"
+                            ],
                             "type": "string"
                           },
                           "id": {
@@ -700,6 +754,50 @@
                             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                             "type": "string"
                           },
+                          "pack": {
+                            "additionalProperties": false,
+                            "nullable": true,
+                            "properties": {
+                              "offerTitle": {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "en": {
+                                    "type": "string"
+                                  },
+                                  "uk": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "uk",
+                                  "en"
+                                ],
+                                "type": "object"
+                              },
+                              "retentionEndsAt": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              },
+                              "storageBytes": {
+                                "maximum": 9007199254740991,
+                                "minimum": 0,
+                                "type": "integer"
+                              },
+                              "windowEndsAt": {
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "offerTitle",
+                              "storageBytes",
+                              "windowEndsAt",
+                              "retentionEndsAt"
+                            ],
+                            "type": "object"
+                          },
                           "status": {
                             "enum": [
                               "ACTIVE",
@@ -740,7 +838,11 @@
                           "storageBytes",
                           "welcomeMessage",
                           "image",
-                          "blocked"
+                          "blocked",
+                          "entitlement",
+                          "access",
+                          "pack",
+                          "deleteAfter"
                         ],
                         "type": "object"
                       },
@@ -820,6 +922,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -896,8 +1039,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -967,6 +1123,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -1007,7 +1207,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -1102,6 +1306,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -1178,8 +1423,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -1249,6 +1507,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -1310,6 +1612,10 @@
                     "welcomeMessage",
                     "image",
                     "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter",
                     "storage"
                   ],
                   "type": "object"
@@ -1385,6 +1691,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -1461,8 +1808,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -1532,6 +1892,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -1572,7 +1976,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -1908,6 +2316,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -1984,8 +2433,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -2055,6 +2517,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -2095,7 +2601,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -8390,6 +8900,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -8466,8 +9017,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -8537,6 +9101,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -8577,7 +9185,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -8845,6 +9457,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -8921,8 +9574,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -8992,6 +9658,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -9032,7 +9742,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -9236,6 +9950,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "archivedAt": {
                       "format": "date-time",
                       "nullable": true,
@@ -9312,8 +10067,21 @@
                       "nullable": true,
                       "type": "string"
                     },
+                    "deleteAfter": {
+                      "format": "date-time",
+                      "nullable": true,
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    },
                     "description": {
                       "nullable": true,
+                      "type": "string"
+                    },
+                    "entitlement": {
+                      "enum": [
+                        "ACCOUNT",
+                        "PACK"
+                      ],
                       "type": "string"
                     },
                     "id": {
@@ -9383,6 +10151,50 @@
                       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
                       "type": "string"
                     },
+                    "pack": {
+                      "additionalProperties": false,
+                      "nullable": true,
+                      "properties": {
+                        "offerTitle": {
+                          "additionalProperties": false,
+                          "properties": {
+                            "en": {
+                              "type": "string"
+                            },
+                            "uk": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "uk",
+                            "en"
+                          ],
+                          "type": "object"
+                        },
+                        "retentionEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "storageBytes": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "windowEndsAt": {
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "offerTitle",
+                        "storageBytes",
+                        "windowEndsAt",
+                        "retentionEndsAt"
+                      ],
+                      "type": "object"
+                    },
                     "status": {
                       "enum": [
                         "ACTIVE",
@@ -9423,7 +10235,11 @@
                     "storageBytes",
                     "welcomeMessage",
                     "image",
-                    "blocked"
+                    "blocked",
+                    "entitlement",
+                    "access",
+                    "pack",
+                    "deleteAfter"
                   ],
                   "type": "object"
                 }
@@ -14565,6 +15381,47 @@
                 "schema": {
                   "additionalProperties": false,
                   "properties": {
+                    "access": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "endsAt": {
+                          "format": "date-time",
+                          "nullable": true,
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                          "type": "string"
+                        },
+                        "reason": {
+                          "enum": [
+                            "TRIAL",
+                            "TRIAL_ENDED",
+                            "SUBSCRIPTION",
+                            "SUBSCRIPTION_PAST_DUE",
+                            "SUBSCRIPTION_ENDED",
+                            "COMPLIMENTARY",
+                            "PACK",
+                            "PACK_WINDOW_ENDED",
+                            "PACK_RETENTION_ENDED",
+                            "NONE"
+                          ],
+                          "type": "string"
+                        },
+                        "state": {
+                          "enum": [
+                            "ACTIVE",
+                            "GRACE",
+                            "COLLECTING_CLOSED",
+                            "READ_ONLY"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "reason",
+                        "endsAt"
+                      ],
+                      "type": "object"
+                    },
                     "activeCollections": {
                       "additionalProperties": false,
                       "properties": {
@@ -14608,7 +15465,8 @@
                   },
                   "required": [
                     "activeCollections",
-                    "storage"
+                    "storage",
+                    "access"
                   ],
                   "type": "object"
                 }

@@ -7,6 +7,7 @@ import {
   type MagicLinkPreviewResponse,
   type MagicLinkRequest,
 } from '@stepler/contracts';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
 import { deriveKey, hashIp } from '../crypto/keys.js';
@@ -43,6 +44,7 @@ export class MagicLinkService {
     @Inject(TURNSTILE_VERIFIER) private readonly turnstile: TurnstileVerifier,
     @Inject(API_ENV) private readonly env: ApiEnv,
     @InjectThrottlerStorage() private readonly throttle: ThrottlerStorage,
+    private readonly entitlements: EntitlementResolver,
   ) {
     this.ipKey = deriveKey(env.APP_SECRET, 'ip-hash');
   }
@@ -167,8 +169,11 @@ export class MagicLinkService {
     const existing = await this.prisma.user.findUnique({ where: { email }, select });
     if (existing !== null) return existing;
     try {
+      // A new account starts its trial (ADR 0018 [B7]); an existing one never gets another.
+      const createdAt = new Date();
+      const trialEndsAt = await this.entitlements.trialEndsAtFor(createdAt);
       return await this.prisma.user.create({
-        data: { email, locale, emailVerifiedAt: new Date() },
+        data: { email, locale, emailVerifiedAt: createdAt, createdAt, trialEndsAt },
         select,
       });
     } catch (error) {

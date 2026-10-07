@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { EnvValidationError, loadApiEnv } from './env.js';
+import { EnvValidationError, loadApiEnv, retiredVariablesIn } from './env.js';
 
 const SECRET_32 = Buffer.alloc(32, 7).toString('base64');
 
@@ -36,10 +36,7 @@ describe('loadApiEnv', () => {
       LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: 5,
       LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: 20,
       LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: 60,
-      LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: 3,
       LIMIT_COLLECTION_CREATIONS_PER_DAY: 10,
-      LIMIT_STORAGE_BYTES_PER_ACCOUNT: 20n * 1024n ** 3n,
-      LIMIT_STORAGE_BYTES_PER_COLLECTION: 10n * 1024n ** 3n,
       LIMIT_REPORTS_PER_IP_PER_HOUR: 60,
       LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR: 10,
       LIMIT_APPEALS_PER_ACCOUNT_PER_DAY: 20,
@@ -48,6 +45,20 @@ describe('loadApiEnv', () => {
     expect(env.APP_SECRET).toHaveLength(32);
     expect(env.GOOGLE_CLIENT_ID).toBeUndefined();
     expect(env.S3_ENDPOINT).toBeUndefined();
+  });
+
+  test('the limits that became entitlements are accepted, ignored and named for a warning', () => {
+    const source = {
+      ...base,
+      LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '3',
+      LIMIT_GUEST_LINKS_PER_COLLECTION: 'x',
+    };
+    expect(loadApiEnv(source)).not.toHaveProperty('LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT');
+    expect(retiredVariablesIn(source)).toEqual([
+      'LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT',
+      'LIMIT_GUEST_LINKS_PER_COLLECTION',
+    ]);
+    expect(retiredVariablesIn(base)).toEqual([]);
   });
 
   test('coerces API_PORT', () => {

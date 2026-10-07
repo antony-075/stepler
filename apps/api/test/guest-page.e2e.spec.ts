@@ -24,6 +24,7 @@ import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys } from './support/storage.js';
+import { useTestPlanLimits } from './support/billing.js';
 import {
   bigBuffer,
   draftImageUploadCalls,
@@ -629,12 +630,12 @@ describe('guest page editor API: quota', () => {
   let q: Started;
 
   beforeAll(async () => {
-    q = await startApp(
-      testEnv({ ...UPLOAD_ENV, LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10 * MB) }),
-    );
+    useTestPlanLimits({ collectionStorageBytes: BigInt(10 * MB) });
+    q = await startApp(testEnv(UPLOAD_ENV));
   });
 
   afterAll(async () => {
+    useTestPlanLimits();
     await q.app.close();
   });
 

@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-const GIB = 1024n ** 3n;
-
 export const bool = z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] });
 export const positiveInt = (fallback: number) =>
   z.coerce.number().int().positive().default(fallback);
@@ -109,11 +107,9 @@ const apiEnvSchema = z
     LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: positiveInt(5),
     LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: positiveInt(20),
     LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: positiveInt(60),
-    LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: positiveInt(3),
+    // Active collections, storage and guest links come from entitlements now (ADR 0018); the
+    // creations per day stay here: abuse, not sold.
     LIMIT_COLLECTION_CREATIONS_PER_DAY: positiveInt(10),
-    LIMIT_STORAGE_BYTES_PER_ACCOUNT: byteCount(20n * GIB),
-    LIMIT_STORAGE_BYTES_PER_COLLECTION: byteCount(10n * GIB),
-    LIMIT_GUEST_LINKS_PER_COLLECTION: positiveInt(10),
     LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(120),
     LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: positiveInt(120),
     LIMIT_TEXTS_PER_IP_PER_MINUTE: positiveInt(60),
@@ -191,4 +187,20 @@ export function parseEnv<S extends z.ZodType>(
 
 export function loadApiEnv(source: Record<string, string | undefined>): ApiEnv {
   return parseEnv(apiEnvSchema, source);
+}
+
+/**
+ * Limits that became entitlements (ADR 0018): their values moved to the seeded trial offer. Still
+ * accepted (ignored) for one release so existing deployments keep starting; `main.ts` warns.
+ */
+export const RETIRED_LIMIT_VARIABLES = [
+  'LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT',
+  'LIMIT_STORAGE_BYTES_PER_ACCOUNT',
+  'LIMIT_STORAGE_BYTES_PER_COLLECTION',
+  'LIMIT_GUEST_LINKS_PER_COLLECTION',
+] as const;
+
+/** The retired variables that are still set: names only, never values. */
+export function retiredVariablesIn(source: Record<string, string | undefined>): string[] {
+  return RETIRED_LIMIT_VARIABLES.filter((name) => source[name] !== undefined);
 }

@@ -104,7 +104,7 @@ export class GuestLinksService {
       const live = await tx.guestLink.count({
         where: { collectionId, isDefault: false, status: { not: 'REVOKED' } },
       });
-      if (live >= this.limits.forCollection({ id: collectionId }).guestLinks) {
+      if (live >= (await this.limits.forCollection(collectionId, tx)).guestLinks) {
         throw new AppError('GUEST_LINK_LIMIT_REACHED', 409);
       }
       const created = await this.insert(tx, collectionId, {

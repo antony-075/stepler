@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'vitest';
-import { accessSchema, checkoutRequestSchema, ERROR_CODES, moneySchema } from './index.js';
+import {
+  accessSchema,
+  checkoutRequestSchema,
+  collectionSchema,
+  ERROR_CODES,
+  moneySchema,
+  usageResponseSchema,
+} from './index.js';
 
 const priceId = '0190f0a0-0000-7000-8000-000000000001';
 const collectionId = '0190f0a0-0000-7000-8000-000000000002';
@@ -91,4 +98,25 @@ test('the billing error codes are appended', () => {
     'PAYMENT_PROVIDER_UNAVAILABLE',
     'BILLING_SIGNATURE_INVALID',
   ]);
+});
+
+describe('access in the existing responses', () => {
+  const access = { state: 'READ_ONLY', reason: 'TRIAL_ENDED', endsAt: null } as const;
+
+  test('usage carries the account access', () => {
+    const usage = {
+      activeCollections: { used: 1, limit: 1 },
+      storage: { usedBytes: 0, limitBytes: 1024 },
+      access,
+    };
+    expect(usageResponseSchema.parse(usage)).toEqual(usage);
+    const { access: _omitted, ...withoutAccess } = usage;
+    expect(usageResponseSchema.safeParse(withoutAccess).success).toBe(false);
+  });
+
+  test('a collection carries its entitlement, access, pack and deletion date', () => {
+    expect(Object.keys(collectionSchema.shape)).toEqual(
+      expect.arrayContaining(['entitlement', 'access', 'pack', 'deleteAfter']),
+    );
+  });
 });

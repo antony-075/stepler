@@ -49,7 +49,8 @@ export type CollectionEntitlement = z.infer<typeof collectionEntitlementSchema>;
 /** A pack collection's own clocks [P4]. */
 export const collectionPackSchema = z
   .object({
-    offerTitle: z.string(),
+    /** The pack's name in both languages (offers are named per language, [B10]). */
+    offerTitle: z.object({ uk: z.string(), en: z.string() }).strict(),
     storageBytes: z.int().min(0),
     windowEndsAt: z.iso.datetime(),
     retentionEndsAt: z.iso.datetime(),

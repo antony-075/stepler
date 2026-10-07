@@ -2,11 +2,16 @@ import type { INestApplication } from '@nestjs/common';
 import { LEGAL_DOCUMENTS } from '@stepler/contracts';
 import { SessionService } from '../../src/auth/session.service.js';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
+import { freshTrialEnd, grantTestPlan } from './billing.js';
 
 /**
  * Creates a user and a session for them, skipping the sign-in flow. By default the user has
  * accepted the current legal documents, as every sign-in through the card does (ADR 0016);
  * `legal = false` makes a pre-slice account that the acceptance gate stops.
+ *
+ * Like a real sign-up, the account starts a 7-day trial (ADR 0018). Unless `plan` is `'trial'`,
+ * it also gets a complimentary plan with the pre-billing limits (`TEST_PLAN_LIMITS`), so suites
+ * that are not about entitlements are not bound by the trial's 1 collection and 1 GiB.
  */
 export async function signInAs(
   app: INestApplication,
@@ -14,10 +19,12 @@ export async function signInAs(
   email: string,
   verified = true,
   legal = true,
+  plan: 'test' | 'trial' = 'test',
 ): Promise<{ cookie: string; userId: string }> {
   const user = await prisma.user.create({
     data: {
       email,
+      trialEndsAt: freshTrialEnd(),
       ...(verified ? { emailVerifiedAt: new Date() } : {}),
       ...(legal
         ? {
@@ -28,6 +35,7 @@ export async function signInAs(
         : {}),
     },
   });
+  if (plan === 'test') await grantTestPlan(prisma, user.id);
   const { token } = await app.get(SessionService).create(user.id);
   return { cookie: `st_session=${token}`, userId: user.id };
 }

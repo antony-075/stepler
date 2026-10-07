@@ -235,6 +235,16 @@ describe('magic link sign-in', () => {
     expect(row.requestIpHash).not.toContain('127.0.0.1');
   });
 
+  test('a new account starts a 7-day trial; signing in again does not renew it', async () => {
+    const email = newEmail();
+    await verify(await linkFor(email)).expect(200);
+    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+    expect(user.trialEndsAt?.getTime()).toBe(user.createdAt.getTime() + 7 * 24 * 3600_000);
+    await verify(await linkFor(email)).expect(200);
+    const again = await prisma.user.findUniqueOrThrow({ where: { email } });
+    expect(again.trialEndsAt).toEqual(user.trialEndsAt);
+  });
+
   test('preview does not consume: 10 previews, then verify still succeeds', async () => {
     const token = await linkFor(newEmail());
     for (let i = 0; i < 10; i++) await preview(token).expect(200);

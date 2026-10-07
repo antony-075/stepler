@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { LegalVersions } from '@stepler/contracts';
+import { EntitlementResolver } from '../../billing/entitlement-resolver.js';
 import { constraintViolation } from '../../database/constraint-violation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AppError } from '../../errors/app-error.js';
@@ -31,6 +32,7 @@ export class GoogleSignInService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly legal: LegalService,
+    private readonly entitlements: EntitlementResolver,
   ) {}
 
   async signIn(
@@ -99,10 +101,15 @@ export class GoogleSignInService {
   private async createUser(email: string, name: string | undefined) {
     const displayName = displayNameFromGoogle(name);
     try {
+      // A new account starts its trial (ADR 0018 [B7]), as with a magic link.
+      const createdAt = new Date();
+      const trialEndsAt = await this.entitlements.trialEndsAtFor(createdAt);
       return await this.prisma.user.create({
         data: {
           email,
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: createdAt,
+          createdAt,
+          trialEndsAt,
           ...(displayName === undefined ? {} : { displayName }),
         },
         select: { id: true, status: true },

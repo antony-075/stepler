@@ -244,6 +244,8 @@ describe('legal acceptance (ADR 0016)', () => {
       prisma.legalAcceptance.create({ data: { userId, document: 'TERMS', version: 'x1' } }),
     ).rejects.toThrow();
     await accept(cookie, BOTH).expect(200);
+    // Plans are billing history and restrict the user's deletion (ADR 0018); the fixture's goes first.
+    await prisma.subscription.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
     expect(await prisma.legalAcceptance.count()).toBe(0);
   });

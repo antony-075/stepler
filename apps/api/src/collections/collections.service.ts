@@ -9,6 +9,7 @@ import type {
 } from '@stepler/contracts';
 import { type AuditAction, AuditService } from '../audit/audit.service.js';
 import type { AccountPrincipal } from '../auth/principal.js';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -40,6 +41,7 @@ export class CollectionsService {
     private readonly guestLinks: GuestLinksService,
     private readonly images: ImageUrls,
     private readonly pages: GuestPageRepository,
+    private readonly entitlements: EntitlementResolver,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -50,9 +52,9 @@ export class CollectionsService {
     requestId?: string,
   ): Promise<Collection> {
     const { userId } = principal;
-    const limits = this.limits.forUser({ id: userId });
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
+      const limits = await this.limits.forUser(userId, tx);
 
       const now = Date.now();
       const creations = await this.usage.collectionCreationsSince(
@@ -87,12 +89,18 @@ export class CollectionsService {
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
       // And its guest page: the default template with its defaults, published (ADR 0017).
       await this.pages.ensurePublished(tx, row.id);
-      return toCollectionDto({
-        ...row,
-        guestLinks: [link],
-        guestPageVersions: [{ welcomeMessage: null }],
-        image: null,
-      });
+      return toCollectionDto(
+        {
+          ...row,
+          guestLinks: [link],
+          guestPageVersions: [{ welcomeMessage: null }],
+          image: null,
+          pack: null,
+        },
+        undefined,
+        null,
+        limits.access,
+      );
     });
   }
 
@@ -129,10 +137,23 @@ export class CollectionsService {
     const content = await this.contentStats(items.map((row) => row.id));
     // One signing moment for the page, so every URL falls in the same window.
     const now = new Date();
+    // The account's access once per page; pack collections resolve from their own row.
+    const account = await this.entitlements.forAccount(principal.userId, this.prisma, now);
     return {
       items: await Promise.all(
         items.map(async (row) =>
-          toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image, now)),
+          toCollectionDto(
+            row,
+            content.get(row.id),
+            await this.images.forAdmin(row.image, now),
+            await this.entitlements.forOwnedCollection(
+              principal.userId,
+              row,
+              this.prisma,
+              now,
+              account,
+            ),
+          ),
         ),
       ),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
@@ -209,12 +230,16 @@ export class CollectionsService {
     requestId?: string,
   ): Promise<Collection> {
     const { userId } = principal;
-    const limits = this.limits.forUser({ id: userId });
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
       const row = await this.findOwned(id, userId, tx);
       if (row.status !== 'ARCHIVED') return this.toDto(row, tx);
-      if ((await this.usage.activeCollections(userId, tx)) >= limits.activeCollections) {
+      // A pack collection is not counted against the account's active collections [P1].
+      const limits = await this.limits.forUser(userId, tx);
+      if (
+        row.entitlement === 'ACCOUNT' &&
+        (await this.usage.activeCollections(userId, tx)) >= limits.activeCollections
+      ) {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
       const { count } = await tx.collection.updateMany({
@@ -283,7 +308,12 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Collection> {
     const content = await this.contentStats([row.id], tx);
-    return toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image));
+    return toCollectionDto(
+      row,
+      content.get(row.id),
+      await this.images.forAdmin(row.image),
+      await this.entitlements.forOwnedCollection(row.ownerId, row, tx),
+    );
   }
 
   /** One grouped query for a whole page, never one per collection (no N+1). */

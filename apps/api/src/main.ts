@@ -1,4 +1,4 @@
-import { EnvValidationError, loadApiEnv } from './config/env.js';
+import { EnvValidationError, loadApiEnv, retiredVariablesIn } from './config/env.js';
 import { createApp } from './create-app.js';
 
 let env;
@@ -10,6 +10,13 @@ try {
     process.exit(1);
   }
   throw error;
+}
+
+const retired = retiredVariablesIn(process.env);
+if (retired.length > 0) {
+  process.stderr.write(
+    `Ignored (now billing entitlements, ADR 0018; remove them): ${retired.join(', ')}\n`,
+  );
 }
 
 const app = await createApp(env);

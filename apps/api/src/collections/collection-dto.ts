@@ -1,4 +1,7 @@
 import type { AdminImage, Collection } from '@stepler/contracts';
+import { toAccessDto } from '../billing/access-dto.js';
+import type { AccessResult } from '../billing/domain/access.js';
+import { type CollectionEntitlementRow, WITH_PACK } from '../billing/entitlement-resolver.js';
 import { AppError } from '../errors/app-error.js';
 import type {
   Collection as CollectionRow,
@@ -13,6 +16,7 @@ import { IMAGE_SELECT, type ImageRow } from '../images/image-urls.js';
  * may add per collection and the collection's mark.
  */
 export const WITH_DEFAULT_LINK = {
+  ...WITH_PACK,
   guestPageVersions: {
     where: { state: 'PUBLISHED' },
     select: { welcomeMessage: true },
@@ -50,7 +54,7 @@ export type CollectionWithDefaultLink = CollectionRow & {
   /** The published version (one at most). */
   guestPageVersions: { welcomeMessage: string | null }[];
   image: ImageRow | null;
-};
+} & CollectionEntitlementRow;
 
 /**
  * Non-deleted frames of a collection and the bytes it holds (`UsageService`'s definition); read
@@ -69,7 +73,9 @@ export function toCollectionDto(
   row: CollectionWithDefaultLink,
   content: ContentStats = NO_CONTENT,
   /** `row.image`, signed. */
-  image: AdminImage | null = null,
+  image: AdminImage | null,
+  /** Resolved by `EntitlementResolver.forOwnedCollection` (ADR 0018). */
+  access: AccessResult,
 ): Collection {
   // Owner-scoped queries exclude DELETING rows; reaching here with one is a bug.
   if (row.status === 'DELETING') throw new AppError('NOT_FOUND', 404);
@@ -93,6 +99,18 @@ export function toCollectionDto(
       row.blockedAt === null || row.blockedReason === null
         ? null
         : { at: row.blockedAt.toISOString(), reason: row.blockedReason },
+    entitlement: row.entitlement,
+    access: toAccessDto(access),
+    pack:
+      row.entitlement === 'PACK' && row.pack !== null
+        ? {
+            offerTitle: { uk: row.pack.offer.titleUk, en: row.pack.offer.titleEn },
+            storageBytes: Number(row.pack.storageBytes),
+            windowEndsAt: row.pack.windowEndsAt.toISOString(),
+            retentionEndsAt: row.pack.retentionEndsAt.toISOString(),
+          }
+        : null,
+    deleteAfter: row.deleteAfter?.toISOString() ?? null,
   };
 }
 

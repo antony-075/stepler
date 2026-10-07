@@ -252,6 +252,8 @@ describe('Google sign-in', () => {
     expect(me.body).toMatchObject({ email: google.claims.email });
     const user = await prisma.user.findUniqueOrThrow({ where: { email: google.claims.email } });
     expect(user.emailVerifiedAt).not.toBeNull();
+    // A new account starts its 7-day trial (ADR 0018).
+    expect(user.trialEndsAt?.getTime()).toBe(user.createdAt.getTime() + 7 * 24 * 3600_000);
   });
 
   test('the same Google account signs in to the same user again', async () => {

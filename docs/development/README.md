@@ -165,11 +165,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
 | `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
 | `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |
-| `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` | api | no | Default `3` |
+| `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_COLLECTION`, `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | **Retired** (ADR 0018): active collections, storage and guest links come from the account's trial, plan or grant, or the collection's pack (`BillingOffer` rows, edited in `/ops`). Still accepted and ignored for one release; the API warns at startup when one is set |
 | `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
-| `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
-| `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
-| `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
 | `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |
 | `LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE` | api | no | Guest session exchanges (opening a guest link) per client IP per minute; default `120` (venue NAT, as above) |
 | `LIMIT_FILE_BYTES_PHOTO` | api | no | Largest photo in bytes (decimal); default `50000000` (50 MB) |
