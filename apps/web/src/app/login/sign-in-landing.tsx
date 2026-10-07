@@ -42,11 +42,13 @@ export async function SignInLanding({ error }: { error?: unknown }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <SiteHeader>
-        <div className="flex items-center gap-1 sm:gap-3">
+        <div className="flex items-center gap-3">
+          {/* From `sm`: at 320–639px the header holds the wordmark and the language only; the
+              footer carries «Тарифи» there. */}
           <Link
             href="/pricing"
             className={cn(
-              'inline-flex min-h-11 items-center rounded-control px-2 text-sm font-medium text-foreground-soft no-underline hover:text-foreground',
+              'hidden min-h-11 items-center rounded-control px-2 text-sm font-medium text-foreground-soft no-underline hover:text-foreground sm:inline-flex',
               focusRing,
             )}
           >
