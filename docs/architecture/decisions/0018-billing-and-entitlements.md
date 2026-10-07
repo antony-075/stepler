@@ -1,0 +1,69 @@
+# ADR 0018 — Billing, Plans and Entitlements (LiqPay)
+
+Status: Proposed (owner decisions B1–B12, 2026-10-07; plan `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`)
+Date: 2026-10-07
+
+## Context
+
+Stepler is going to charge for collections before the production launch. ADR 0010 deliberately kept limits in environment configuration and named `LimitsService.forUser()` / `forCollection()` as "the future entitlements seam"; it rejected plan tables "without billing". Billing now exists as a requirement (PRODUCT §22–23 left the model open; the owner decided it on 2026-10-07):
+
+- a hybrid model: one-time **collection packs** for private customers and account-level **subscriptions** for event businesses (B1);
+- UAH now, other currencies later (B2); card payments only, through LiqPay (B3, B12);
+- a 7-day **trial** without a card, no Free plan; an unpaid account or collection becomes **read-only** and its content is kept 12 more months (B7, B8);
+- entitlements are limits only today, feature flags later (B9); plans and prices are edited by the operator in `/ops` without a deploy, and purchases snapshot what was bought (B10);
+- refunds are manual, from `/ops` (B11).
+
+The owner has a ФОП/ТОВ but no LiqPay merchant yet, and the fiscalisation (ПРРО) obligation is not confirmed by an accountant.
+
+## Decision
+
+1. **Hybrid model, two kinds of entitlement source.**
+   - An **account entitlement** comes from either the trial or a subscription (at most one live at a time). It bounds active collections, account storage and the per-collection defaults for collections that have no pack.
+   - A **collection entitlement** comes from a one-time pack bought for one collection (plus its extensions). A pack collection is counted against its pack, not against the account's subscription or trial.
+   - `LimitsService` stays the single resolver (ADR 0010) and becomes asynchronous and database-backed: `forUser(userId, tx?)` and `forCollection(collectionId, tx?)` return effective limits plus an **access state** (`ACTIVE` | `GRACE` | `COLLECTING_CLOSED` for a pack after its collection window | `READ_ONLY`) and the reason. Every caller already goes through it.
+2. **Plans and prices in the database (B10).** `BillingOffer` rows (kind `TRIAL` | `PACK` | `PACK_EXTENSION` | `SUBSCRIPTION`) carry the limits, a `features` JSON map (unused by the UI now, B9), an `active` flag (deactivate, never delete) and one `BillingPrice` row per currency and period, amounts in **integer minor units** with an ISO currency column (B2; no floats anywhere). A `Purchase` or `Subscription` stores a **snapshot** of the price and limits at purchase time; editing an offer never changes what was already bought. The env-based `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_COLLECTION` and `LIMIT_GUEST_LINKS_PER_COLLECTION` stop being entitlements: their values move into the seeded trial offer. Abuse and rate limits (per IP, per session, file sizes, creations per day) stay in env; they are not sold.
+3. **One read-only checkpoint.** `EntitlementGate.assertGuestCanContribute(collectionId)` (guest upload initiation, texts) and `assertAdminCanWrite(account | collection)` (collection create, unarchive and edit, link create/rotate/activate/update, guest-page and collection-image writes) are called by every write path that creates or grows content or capability. Reads, downloads, archive, delete, export and billing itself stay allowed. A route-enumeration test keeps new write routes from skipping it. Read-only guests see a dedicated state; the gallery stays viewable when the link allows it.
+4. **LiqPay behind a port.** `PaymentProvider` (port) with a `LiqPayProvider` adapter in `apps/api/src/billing/liqpay/`: checkout form building, signature, callback verification, `status`, `refund`, `unsubscribe`, `subscribe_update`. No SDK: LiqPay's own SDKs sign with SHA-1 while the current docs specify SHA3-256 (below); the signing is ~20 lines on `node:crypto`. The private key exists only in the API and the worker. The browser receives only the signed `data` + `signature` form for `https://www.liqpay.ua/api/3/checkout` and never the key. A test double of the port exists only in tests (rule 18).
+5. **Callbacks are the source of payment truth, reconciled by polling.** `POST /api/v1/billing/liqpay/callback` is public, verifies the signature before parsing, stores every callback in `PaymentEvent` (raw `data`, verified flag, unique dedupe key), and applies state transitions idempotently under a row lock on the `Purchase` / `Subscription`. `result_url` query parameters are never trusted: the return page polls our own API. A worker job reconciles non-final payments and subscription periods through the `status` API.
+6. **Fiscalisation is a switchable adapter.** `FiscalReceipts` port with `NoFiscalReceipts` (default) and `LiqPayRroReceipts` (adds `rro_info` to the checkout). Which one production uses is the owner's accountant's decision and a production blocker.
+7. **Retention after the paid period (B8).** Read-only content is kept 12 months from the moment access ended, with e-mails to the admin 30 and 7 days before deletion, then deleted by the worker through the existing collection deletion path.
+
+## Alternatives considered
+
+- **Stripe.** Best API and recurring support, but does not onboard Ukrainian merchants directly (needs a foreign entity); the owner chose a Ukrainian acquirer. Re-evaluate if EUR/USD sales to foreign customers grow.
+- **WayForPay / monobank acquiring (Plata by mono).** Both are viable Ukrainian acquirers with recurring support. Not chosen because the owner banks with PrivatBank and LiqPay is its acquirer; the port keeps a switch possible (one adapter, the callback route, and the provider ids in `Purchase` / `Subscription`).
+- **Account-only subscriptions.** Simpler entitlement resolution, but private customers buy once for one event (B1); a subscription would mean auto-renewal they do not want and cancellations.
+- **A Free plan.** Rejected by the owner (B8): storage costs without revenue and an abuse surface. The trial covers evaluation.
+- **Plans in code/env.** A price change would need a deploy, which B10 rules out.
+- **LiqPay SDK.** Unmaintained for Node (last push 2023), SHA-1 only; we sign ourselves.
+
+## Consequences
+
+- ADR 0010's "plan/entitlement tables: premature" no longer holds; this ADR supersedes that bullet. `LimitsService` becomes async, so every caller changes once (mechanical, compiler-guided).
+- A new public, unauthenticated endpoint. It is protected by the signature, not by obscurity, and is rate-limited.
+- Payment state can diverge from LiqPay if callbacks are missed; the reconciliation job and the operator's purchase view are the mitigation. An unfinished renewal is never treated as paid.
+- Read-only becomes a cross-cutting rule; the route-enumeration test is what keeps it whole.
+- Legal texts need payment terms, auto-renewal consent, refunds, read-only and retention (a v3 of Terms and Privacy).
+- Production is blocked until: the merchant is registered and its keys are set, the tax regime and the fiscalisation obligation are confirmed by an accountant, and the legal texts are final.
+
+## Unverified at the time of writing (spike tasks in the plan)
+
+- Which hash LiqPay actually sends in callbacks for `version: 7` (docs: SHA3-256; SDKs and some doc snippets: SHA-1). Verify with a real sandbox callback; the verifier accepts only the documented algorithm unless the spike proves otherwise.
+- The `order_id` and status a recurring (`action: regular`) charge carries in its callback.
+- Whether sandbox keys deliver `server_url` callbacks, and with which status; whether a `sandbox=1` parameter exists (not on the current pages).
+- Callback retry policy and source IPs (not documented).
+- Whether `subscribe_update` takes effect on the next charge or immediately.
+
+## Sources (LiqPay official documentation, read 2026-10-07)
+
+The older `/documentation/...` URLs return 404; the docs live under `/en/doc/`.
+
+- Checkout (params, `data`/`signature`, SHA3-256, `version` 7, `rro_info`, `server_url`, `result_url`, currencies, `order_id` ≤ 255): https://www.liqpay.ua/en/doc/api/internet_acquiring/checkout
+- Callback (POST `data` + `signature`, fields, status list): https://www.liqpay.ua/en/doc/api/callback
+- Payment status API and the status list: https://www.liqpay.ua/en/doc/api/information/status_payment
+- Subscriptions (`subscribe`, `subscribe_date_start`, `subscribe_periodicity`, `unsubscribe`, `subscribe_update`, 3 retries in 72 h, `action: regular`): https://www.liqpay.ua/en/doc/api/internet_acquiring/subscription
+- Refund (full or partial, `wait_amount`): https://www.liqpay.ua/en/doc/api/internet_acquiring/refund
+- Testing (sandbox keys `sandbox_…`, test cards): https://www.liqpay.ua/en/doc/api/testing
+- Receipt re-send (`action: ticket`): https://www.liqpay.ua/en/doc/api/information/receive_a_receipt
+- Error codes: https://www.liqpay.ua/en/doc/api/errors
+- SDKs (SHA-1, for comparison only): https://github.com/liqpay/sdk-nodejs, https://github.com/liqpay/sdk-php
