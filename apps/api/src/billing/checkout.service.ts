@@ -170,6 +170,7 @@ export class CheckoutService {
       select: {
         id: true,
         entitlement: true,
+        blockedAt: true,
         pack: { select: { offer: { select: { id: true, rank: true } } } },
       },
     });
@@ -186,8 +187,11 @@ export class CheckoutService {
     if (priced.offer.kind !== 'PACK') throw new AppError('OFFER_UNAVAILABLE', 409);
     if (collectionId !== null) {
       const collection = await this.lockCollection(tx, userId, collectionId);
-      // A pack collection is extended or upgraded, never bought twice.
-      if (collection.entitlement !== 'ACCOUNT') throw new AppError('OFFER_UNAVAILABLE', 409);
+      // A pack collection is extended or upgraded, never bought twice; a collection the operator
+      // blocked is not sold anything.
+      if (collection.entitlement !== 'ACCOUNT' || collection.blockedAt !== null) {
+        throw new AppError('OFFER_UNAVAILABLE', 409);
+      }
     }
     return {
       kind: 'PACK',
@@ -213,7 +217,11 @@ export class CheckoutService {
   ): Promise<Target> {
     const collection = await this.lockCollection(tx, userId, collectionId);
     const current = collection.pack?.offer;
-    if (collection.entitlement !== 'PACK' || current === undefined) {
+    if (
+      collection.entitlement !== 'PACK' ||
+      current === undefined ||
+      collection.blockedAt !== null
+    ) {
       throw new AppError('OFFER_UNAVAILABLE', 409);
     }
     const base = {

@@ -976,6 +976,9 @@
             },
             "description": ""
           },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
           "default": {
             "content": {
               "application/problem+json": {

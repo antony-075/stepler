@@ -1,6 +1,6 @@
-# Billing — operating runbook (M1)
+# Billing — operating runbook (M1 + M2)
 
-Architecture and reasons: ADR 0018 (Proposed). Plan: `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`. This page covers what exists after PR M1: the trial, read-only, complimentary plans and the retention clock. **There are no payments yet**: nobody can buy anything until M2.
+Architecture and reasons: ADR 0018 (Proposed). Plan: `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`. This page covers the trial, read-only, complimentary plans and the retention clock (M1) and **one-time packs paid by card through LiqPay** (M2). Subscriptions arrive with M3; the `/ops` price editor and refunds with M4.
 
 ## What happens on release
 
@@ -33,18 +33,41 @@ Reload `/app`: the banner, the disabled buttons and the guest «Колекція
 - The worker's `billing.retention` job runs daily at 03:17 UTC. It schedules read-only collections for deletion (`deleteAfter` = the end of the trial or plan + `READ_ONLY_RETENTION_MONTHS`, 12; a pack's at its own retention end), e-mails the owner once per read-only episode, sends warnings 30 and 7 days before `deleteAfter`, and lifts all of it when access returns.
 - **Deletion is off** (`BILLING_RETENTION_DELETE_ENABLED=false`) until the Terms and Privacy describe retention (M4). With it on, a due collection goes the same way as the admin's own delete (`collection.purge`, audit actor `SYSTEM`, `{reason: 'retention'}`), and never sooner than 7 days after its 7-day warning.
 
-## Prices for staging (later, M2)
+## Packs and payments (M2)
 
-M1 seeds the offers **without prices** and inactive (except the trial). Prices are set by the operator in `/ops` from M4; until then, for staging only, the owner may insert them by hand:
+- **What can be bought:** the active `PACK` offers («Старт», «Подія») for one collection or for a new one, and, for a pack collection, «Продовжити збір на 30 днів», «Продовжити зберігання на рік» and «Збільшити обсяг» (the difference between the two tiers' current prices). Public price list: `/pricing`; buying: «Тариф і оплата» (`/app/billing`) or a collection's page.
+- **How a payment goes:** the API prices the checkout and returns LiqPay's signed form; the browser posts it to LiqPay; LiqPay calls `POST /api/v1/billing/liqpay/callback` (`BILLING_CALLBACK_URL`) and sends the payer back to `/app/billing/return?payment=…`. The return page asks our API, which asks LiqPay's `status` API while the payment is pending, so a payment settles even without a callback. The worker's `billing.reconcile` job (every 10 minutes) does the same for pending payments, expires checkouts nobody paid (30 minutes + 15) and re-applies stored callbacks whose processing failed.
+- **A declined card** (LiqPay's anti-fraud, a bank refusal) sends no callback and LiqPay keeps the order payable: the return page says «Оплату ще не підтверджено» after 20 seconds and offers to pay the same order again.
+- **Payments off:** with `BILLING_PROVIDER=disabled` (the default) checkout answers `503 PAYMENT_PROVIDER_UNAVAILABLE` and nothing is granted; `/pricing` still lists the prices.
+
+### Prices (until the `/ops` editor, M4)
+
+Offers are seeded **inactive and without prices**. For staging (and your local dev database), insert prices by hand ([Q10]: the owner's prices are not decided yet):
 
 ```sql
--- [PRICE]: placeholders; amounts are kopecks (49900 = 499,00 грн). Staging only.
+-- [PRICE]: placeholders; amounts are kopecks (49900 = 499,00 ₴). Never on production by hand.
 INSERT INTO "BillingPrice" ("offerId", "interval", "currency", "amountMinor")
-SELECT id, 'ONE_TIME', 'UAH', [PRICE] FROM "BillingOffer" WHERE code = 'pack-start';
-UPDATE "BillingOffer" SET active = true WHERE code = 'pack-start';
+SELECT o.id, 'ONE_TIME', 'UAH', v.amount FROM "BillingOffer" o
+JOIN (VALUES ('pack-start', [PRICE]), ('pack-event', [PRICE]), ('ext-window-30', [PRICE]), ('ext-retention-365', [PRICE])) AS v(code, amount) ON v.code = o.code;
+UPDATE "BillingOffer" SET active = true WHERE code IN ('pack-start', 'pack-event', 'ext-window-30', 'ext-retention-365');
 ```
 
-Nothing can be bought in M1 even with prices: checkout arrives in M2.
+To change a price, set the old row `active = false` and insert a new one (payments keep pointing at the price they were made with). `ext-storage` has no price of its own.
+
+### LiqPay sandbox on your laptop (O1)
+
+1. In the LiqPay cabinet copy the **sandbox** key pair (it starts with `sandbox_`) into `apps/api/.env` yourself: `LIQPAY_PUBLIC_KEY=…`, `LIQPAY_PRIVATE_KEY=…`, and add `BILLING_PROVIDER=liqpay`. Restart `pnpm dev` and `pnpm worker:dev` (the worker reads the same file).
+2. Price the packs in your dev database (the SQL above).
+3. Without a tunnel, LiqPay cannot reach your API: payments settle through the `status` API instead (the return page and the worker). To receive real callbacks, run `pnpm dev:tunnel` instead of `pnpm dev` (needs `cloudflared`); stop it when done.
+4. Buy: `/app/billing` → «Купити» → choose a collection or «Нова колекція» → «Перейти до оплати». LiqPay's page shows «Тестовий режим». Card `4242 4242 4242 4242`, any future date, CVV `123`, any first and last name → success; then press «Повернутися на сайт». `4000 0000 0000 0002` is refused by LiqPay's anti-fraud (no callback; try again on the return page).
+
+### Staging (O2)
+
+Set on **both** `stepler-api-staging` and the worker in Render (`sync: false`): `BILLING_PROVIDER=liqpay`, `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` (the sandbox pair; live keys never on staging), and on the API `BILLING_CALLBACK_URL=https://<staging-api-host>/api/v1/billing/liqpay/callback`. Price the offers with the SQL above. Production refuses to start with live keys and `BILLING_FISCAL_MODE=none` unless `BILLING_FISCAL_WAIVED=true` ([Q1], accountant).
+
+### What the operator sees
+
+Until M4's payment list, a payment is diagnosed in the database: `Payment` (status, `mismatch` = LiqPay reported another amount, `needsReview` = paid but nothing could be granted, e.g. a second pack for the same collection — refund it) and `PaymentEvent` (each verified callback once: whitelisted fields, outcome, processing error). Logs: `billing.callback`, `billing.checkout`, `billing.payment.*`, `billing.reconcile`; never data, signatures, keys or card data.
 
 ## Environment
 
@@ -52,5 +75,12 @@ Nothing can be bought in M1 even with prices: checkout arrives in M2.
 |---|---|---|---|
 | `READ_ONLY_RETENTION_MONTHS` | worker | `12` | How long read-only content of an account is kept after its trial or plan ended |
 | `BILLING_RETENTION_DELETE_ENABLED` | worker | `false` | Lets the retention clock delete due collections; warnings go out either way |
-
-The LiqPay and checkout variables (`BILLING_PROVIDER`, `LIQPAY_*`, …) arrive with M2.
+| `BILLING_PROVIDER` | api, worker | `disabled` | `liqpay` turns payments on; needs both keys |
+| `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` | api, worker | — | The merchant's key pair (sandbox on staging and locally); secrets, `sync: false` |
+| `LIQPAY_API_BASE` | api, worker | `https://www.liqpay.ua` | LiqPay's server API; tests point it at a local stub |
+| `BILLING_CALLBACK_URL` | api | — | Our public callback URL (`server_url`); required in production |
+| `BILLING_PENDING_TTL_MINUTES` | api, worker | `30` | How long a checkout stays payable (also LiqPay's `expired_date`) |
+| `BILLING_FISCAL_MODE` | api, worker | `none` | `liqpay_rro` adds fiscal receipt lines (`rro_info`) to every checkout |
+| `BILLING_FISCAL_WAIVED` | api, worker | `false` | Set deliberately after the accountant's answer to run live keys without receipts |
+| `LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE` | api | `120` | The public callback route, per client IP |
+| `LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR` | api | `20` | Checkouts per account |

@@ -200,6 +200,14 @@ These are names only; real values never go into the repository. Staging and prod
 | `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
 | `READ_ONLY_RETENTION_MONTHS` | worker | no | Billing (ADR 0018): read-only content of an account is kept this many months after its trial or plan ended, then deleted after warnings 30 and 7 days before; default `12` |
 | `BILLING_RETENTION_DELETE_ENABLED` | worker | no | `true` lets the daily `billing.retention` job delete due collections; default `false` until the legal texts describe retention (warnings go out either way) |
+| `BILLING_PROVIDER` | api, worker | no | Payments (ADR 0018): `liqpay` or `disabled` (default; checkout then answers 503). With `liqpay` both keys are required |
+| `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` | api, worker | with `liqpay` | The LiqPay key pair: the **sandbox** pair locally and on staging, live keys only on production; secrets, never committed or logged |
+| `LIQPAY_API_BASE` | api, worker | no | LiqPay's server API origin; default `https://www.liqpay.ua` (tests use a local stub) |
+| `BILLING_CALLBACK_URL` | api | in production | Our public `server_url` (`https://<api-host>/api/v1/billing/liqpay/callback`); unset locally, where payments settle through LiqPay's status API (`pnpm dev:tunnel` sets it) |
+| `BILLING_PENDING_TTL_MINUTES` | api, worker | no | How long a checkout stays payable; default `30` |
+| `BILLING_FISCAL_MODE`, `BILLING_FISCAL_WAIVED` | api, worker | no | Fiscal receipts: `none` (default) or `liqpay_rro`; production with live keys refuses `none` unless the waiver is `true` (accountant's decision, [Q1]) |
+| `LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE` | api | no | LiqPay callbacks per client IP per minute; default `120` |
+| `LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR` | api | no | Checkouts per account per hour; default `20` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |

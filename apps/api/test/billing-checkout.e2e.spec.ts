@@ -183,6 +183,15 @@ describe('POST /billing/checkouts', () => {
       })
       .expect(409);
     expect(sub.body).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
+    // A collection the operator blocked is not sold anything.
+    const blocked = await seedCollection(prisma, app.get(GuestLinkTokens), {
+      ownerId: s.owner.userId,
+    });
+    await prisma.collection.update({
+      where: { id: blocked.collectionId },
+      data: { blockedAt: new Date(), blockedReason: 'Порушення' },
+    });
+    await s.checkout(packFor(blocked.collectionId)).expect(409);
     expect(await prisma.payment.count()).toBe(0);
   });
 

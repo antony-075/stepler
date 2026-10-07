@@ -42,10 +42,12 @@ export class BillingController {
     private readonly reconciliation: ReconciliationService,
   ) {}
 
-  /** Public: `/pricing` renders it signed out. */
+  /** Public: `/pricing` renders it signed out. Counted per IP like the guests' reads. */
   @Get('offers')
   @Public()
+  @RateLimit('guest-read')
   @ApiResponse({ status: 200, standardSchema: offerListSchema })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
   offers(@Query({ schema: offerListQuerySchema }) query: OfferListQuery): Promise<OfferList> {
     return this.queries.offers(query.locale);
   }
