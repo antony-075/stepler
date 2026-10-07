@@ -685,6 +685,8 @@ UNIQUE (paymentId, idempotencyKey)
 
 ## Open questions for the owner (recommended default first; tasks follow the default)
 
+**Owner answers (2026-10-07):** Q2 — the pack's year is the whole keeping period (no extra 12 months for packs) — confirmed. Q3 — existing accounts get a fresh 7-day trial; the operator grants complimentary plans in `/ops` — confirmed. Q5 — all four PRs (subscriptions included) ship before production — confirmed. Q9 — only the important mails (renewal failed, read-only, deletion warnings; receipts come from LiqPay) — confirmed. Q1 is with the owner's accountant (production blocker). The other questions follow their defaults unless the owner says otherwise.
+
 1. **[Q1] Tax regime and fiscal receipts.** «ФОП 4 групи» is normally the agricultural single-tax group, which does not fit КВЕД 63.11 — please confirm the actual group (likely 2 or 3) or the ТОВ, and whether card payments for a digital service require ПРРО receipts in your case.
    - **Default:** build with `BILLING_FISCAL_MODE=none` and the `liqpay_rro` adapter ready; **production is blocked** until the accountant answers (startup guard [P14]).
    - **Alternative:** a separate ПРРО provider (Checkbox, etc.) — a second adapter behind the same port, later.
