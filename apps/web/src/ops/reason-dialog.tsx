@@ -19,21 +19,26 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
-import { DESTRUCTIVE, type OpsAction } from './actions';
+import { DESTRUCTIVE, NOTE_ACTIONS, type OpsAction, OPTIONAL_NOTE } from './actions';
 
 const COUNTER = 'type-data block text-right';
 const COUNTER_OVER = 'type-data block text-right text-destructive';
 const DESTRUCTIVE_BUTTON = 'destructive';
 const DEFAULT_BUTTON = 'default';
 
-const formSchema = z.object({ reason: moderationTextSchema });
+/**
+ * An empty value passes the schema so «Задовольнити» (slice 9b) may leave its note empty; every
+ * other action checks for it on submit.
+ */
+const formSchema = z.object({ reason: z.literal('').or(moderationTextSchema) });
 type FormValues = z.infer<typeof formSchema>;
 
 /**
  * Every operator action asks for a reason (R5): one required field with a code-point counter,
  * validated by the contract's own schema. The error of a failed call stays in the dialog; it
- * closes only on success (the caller then toasts). The confirm button is destructive for delete
- * and block.
+ * closes only on success (the caller then toasts). The confirm button is destructive for the
+ * quarantine and the blocks. The appeal decisions (slice 9b) ask for a note to the admin instead,
+ * optional on «Задовольнити» (an empty note is passed as `''`).
  */
 export function ReasonDialog({
   action,
@@ -47,6 +52,8 @@ export function ReasonDialog({
   onConfirm: (reason: string) => Promise<void>;
 }) {
   const t = useTranslations('ops.actions');
+  const optional = action !== null && OPTIONAL_NOTE.has(action);
+  const note = action !== null && NOTE_ACTIONS.has(action);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { reason: '' },
@@ -59,6 +66,14 @@ export function ReasonDialog({
   const counterClass = over ? COUNTER_OVER : COUNTER;
   const confirmVariant =
     action !== null && DESTRUCTIVE.has(action) ? DESTRUCTIVE_BUTTON : DEFAULT_BUTTON;
+  const label = note ? t(optional ? 'noteOptional' : 'note') : t('reason');
+  const requiredMessage = t(note ? 'noteRequired' : 'reasonRequired');
+  const errorMessage =
+    error === undefined
+      ? undefined
+      : over
+        ? t('reasonTooLong', { max: MODERATION_TEXT_MAX_CHARS })
+        : requiredMessage;
 
   const changeOpen = (open: boolean) => {
     if (!open && pending) return;
@@ -71,6 +86,10 @@ export function ReasonDialog({
 
   const submit = form.handleSubmit(async ({ reason }) => {
     if (pending) return;
+    if (reason === '' && !optional) {
+      form.setError('reason', { type: 'required' }, { shouldFocus: true });
+      return;
+    }
     setPending(true);
     setFailure(null);
     try {
@@ -97,19 +116,13 @@ export function ReasonDialog({
               {failure === null ? null : <Alert variant="error">{failure}</Alert>}
               <Field
                 id="ops-reason"
-                label={t('reason')}
+                label={label}
                 description={
                   <span className={counterClass}>
                     {t('counter', { count: length, max: MODERATION_TEXT_MAX_CHARS })}
                   </span>
                 }
-                error={
-                  error === undefined
-                    ? undefined
-                    : length > MODERATION_TEXT_MAX_CHARS
-                      ? t('reasonTooLong', { max: MODERATION_TEXT_MAX_CHARS })
-                      : t('reasonRequired')
-                }
+                error={errorMessage}
               >
                 {(control) => <Textarea {...control} rows={3} {...form.register('reason')} />}
               </Field>

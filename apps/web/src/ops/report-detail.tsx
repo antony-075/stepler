@@ -9,48 +9,46 @@
 // - the right column is four plain sections in the order of the decision: the report, other
 //   reports on the frame, the collection, the owner; each section carries its own actions, so an
 //   action sits next to what it changes (no separate toolbar to map back);
-// - every action opens the reason dialog; destructive ones (delete, block) are the only red;
+// - every action opens the reason dialog; destructive ones (quarantine, block) are the only red;
+// - the frame, the collection and the owner sections live in `content-stage.tsx`, shared with
+//   the appeal detail (slice 9b);
 // - states in words and badges, never colour alone: «Видимий / Прихований / Видалений», «Заблоковано:
 //   {причина}», «Адміністратор відхилив», «Заявник залишив контакт / Без контакту»;
 // - a missing report is the page's empty state with a way back; loading is the layout's skeleton.
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { collectionDisplayStatus, type OperatorReportDetail } from '@stepler/contracts';
+import type { OperatorReportDetail } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
-import { CollectionStatusBadge } from '@stepler/ui/components/collection-status-badge';
 import { Button } from '@stepler/ui/components/button';
-import { EmptyState, formatFrameNumber } from '@stepler/ui/components/empty-state';
+import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useToast } from '@stepler/ui/components/toast';
-import { ChevronLeft, ExternalLink, FileText } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { ACTION_GROUPS, availableActions, DESTRUCTIVE, type OpsAction } from './actions';
 import { isOpsApiError } from './api/client';
 import {
   blockAccount,
   blockCollection,
-  deleteContent,
   fetchReport,
   hideContent,
   opsKeys,
+  quarantineContent,
   resolveReport,
+  restoreContent,
   unblockAccount,
   unblockCollection,
   unhideContent,
 } from './api/operator';
-import { ContentKindIcon } from './content-kind-icon';
+import { CollectionSection, ContentStage, Fact, OwnerSection, Section } from './content-stage';
 import { ReasonDialog } from './reason-dialog';
-import { STATE_BADGE } from './report-labels';
 
 type Detail = OperatorReportDetail;
 
 const DESTRUCTIVE_BUTTON = 'destructive';
 const OUTLINE_BUTTON = 'outline';
-const NO_REASON = '';
-const DANGER = 'danger';
-const NEUTRAL = 'neutral';
 const statusBadge = (status: string) => (status === 'OPEN' ? 'info' : 'neutral');
 
 /** Runs `action` on what the detail names; every call is scoped server-side ([P5]). */
@@ -63,8 +61,10 @@ async function run(action: OpsAction, detail: Detail, reason: string): Promise<v
       return hideContent(contentId, reason);
     case 'unhide':
       return unhideContent(contentId, reason);
-    case 'delete':
-      return deleteContent(contentId, reason);
+    case 'quarantine':
+      return quarantineContent(contentId, reason);
+    case 'restore':
+      return restoreContent(contentId, reason);
     case 'dismiss':
       await resolveReport(detail.report.id, { status: 'DISMISSED', note: reason });
       return;
@@ -181,12 +181,15 @@ export function ReportDetail({ id }: { id: string }) {
       {back}
       <h1 className="type-h1">{t(`reasons.${detail.report.reason}`)}</h1>
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <ContentStage detail={detail} actions={buttons(ACTION_GROUPS.content)} />
+        <ContentStage content={detail.content} actions={buttons(ACTION_GROUPS.content)} />
         <div className="grid gap-4">
           <ReportSection detail={detail} actions={buttons(ACTION_GROUPS.report)} />
           <OtherReports detail={detail} />
-          <CollectionSection detail={detail} actions={buttons(ACTION_GROUPS.collection)} />
-          <OwnerSection detail={detail} actions={buttons(ACTION_GROUPS.account)} />
+          <CollectionSection
+            collection={detail.collection}
+            actions={buttons(ACTION_GROUPS.collection)}
+          />
+          <OwnerSection owner={detail.owner} actions={buttons(ACTION_GROUPS.account)} />
         </div>
       </div>
       <ReasonDialog
@@ -197,113 +200,6 @@ export function ReportDetail({ id }: { id: string }) {
         onConfirm={confirm}
       />
     </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  const headingId = useId();
-  return (
-    <section
-      aria-labelledby={headingId}
-      className="grid gap-2 rounded-sheet border bg-card p-4 md:p-5"
-    >
-      <h2 id={headingId} className="type-h3">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-/** A label and its value, as one line of a section. */
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid gap-0.5 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-3">
-      <dt className="text-[0.8125rem] text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 [overflow-wrap:anywhere]">{children}</dd>
-    </div>
-  );
-}
-
-function ContentStage({ detail, actions }: { detail: Detail; actions: ReactNode }) {
-  const t = useTranslations('ops');
-  const format = useFormatter();
-  const content = detail.content;
-  if (content === null) {
-    return (
-      <Section title={t('detail.content')}>
-        <p className="text-muted-foreground">{t('detail.contentPurged')}</p>
-      </Section>
-    );
-  }
-  const state = content.deleted ? 'DELETED' : content.hidden === null ? 'VISIBLE' : 'HIDDEN';
-  const image =
-    content.media?.previewUrl ?? content.media?.posterUrl ?? content.media?.thumbnailUrl;
-  return (
-    <section
-      aria-labelledby="ops-content"
-      className="grid gap-3 rounded-sheet border bg-card p-4 md:p-5 lg:sticky lg:top-4"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="ops-content" className="type-h3 flex items-center gap-2">
-          <ContentKindIcon kind={content.kind} />
-          <span>
-            {t(`kinds.${content.kind}`)}{' '}
-            <span className="font-mono">{formatFrameNumber(content.frameNo)}</span>
-          </span>
-        </h2>
-        <Badge variant={STATE_BADGE[state]}>{t(`states.${state}`)}</Badge>
-      </div>
-      {content.deleted ? (
-        <p className="rounded-frame bg-muted p-4 text-muted-foreground">
-          {t('detail.contentDeleted')}
-        </p>
-      ) : content.kind === 'TEXT' ? (
-        <blockquote className="max-h-[60vh] overflow-y-auto rounded-frame bg-muted p-4 whitespace-pre-wrap [overflow-wrap:anywhere]">
-          {content.text}
-        </blockquote>
-      ) : image ? (
-        // A presigned link of a reported frame: shown as is, never optimised or cached by Next.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={image}
-          alt={t('detail.frameAlt', { frame: formatFrameNumber(content.frameNo) })}
-          className="max-h-[60vh] w-full rounded-frame bg-muted object-contain"
-        />
-      ) : (
-        <p className="flex items-center gap-2 rounded-frame bg-muted p-4 text-muted-foreground">
-          <FileText aria-hidden="true" className="size-5" />
-          {t('detail.noPreview')}
-        </p>
-      )}
-      {!content.deleted && content.originalUrl !== null ? (
-        <a
-          href={content.originalUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex min-h-11 items-center gap-1.5 text-[0.875rem] text-link hover:underline md:min-h-9"
-        >
-          <ExternalLink aria-hidden="true" className="size-4" />
-          {t('detail.openOriginal')}
-        </a>
-      ) : null}
-      {content.hidden === null || content.deleted ? null : (
-        <p className="text-[0.875rem]">
-          {content.hidden.by === 'OPERATOR'
-            ? t('detail.hiddenByOperator', { reason: content.hidden.reason ?? NO_REASON })
-            : t('detail.hiddenByAdmin')}
-        </p>
-      )}
-      <p className="text-[0.8125rem] text-muted-foreground">
-        {t('detail.addedAt', {
-          at: format.dateTime(new Date(content.createdAt), {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          }),
-        })}
-      </p>
-      {actions}
-    </section>
   );
 }
 
@@ -388,55 +284,6 @@ function OtherReports({ detail }: { detail: Detail }) {
           </li>
         ))}
       </ul>
-    </Section>
-  );
-}
-
-function CollectionSection({ detail, actions }: { detail: Detail; actions: ReactNode }) {
-  const t = useTranslations('ops');
-  const { collection } = detail;
-  return (
-    <Section title={t('detail.collection')}>
-      {collection === null ? (
-        <p className="text-muted-foreground">{t('queue.collectionGone')}</p>
-      ) : (
-        <dl className="grid gap-2 text-[0.9375rem]">
-          <Fact label={t('detail.title')}>{collection.title}</Fact>
-          <Fact label={t('detail.status')}>
-            {/* One truthful status (S1): «Заблоковано» replaces «Активна», never beside it. */}
-            <CollectionStatusBadge
-              status={collectionDisplayStatus(collection)}
-              label={t(`collectionStatuses.${collectionDisplayStatus(collection)}`)}
-            />
-          </Fact>
-          {collection.blocked === null ? null : (
-            <Fact label={t('detail.blockReason')}>{collection.blocked.reason}</Fact>
-          )}
-        </dl>
-      )}
-      {actions}
-    </Section>
-  );
-}
-
-function OwnerSection({ detail, actions }: { detail: Detail; actions: ReactNode }) {
-  const t = useTranslations('ops');
-  const { owner } = detail;
-  if (owner === null) return null;
-  return (
-    <Section title={t('detail.owner')}>
-      <dl className="grid gap-2 text-[0.9375rem]">
-        <Fact label={t('detail.email')}>{owner.email}</Fact>
-        <Fact label={t('detail.status')}>
-          <Badge variant={owner.status === 'BLOCKED' ? DANGER : NEUTRAL}>
-            {t(`ownerStatuses.${owner.status}`)}
-          </Badge>
-        </Fact>
-        {owner.blockedReason === null ? null : (
-          <Fact label={t('detail.blockReason')}>{owner.blockedReason}</Fact>
-        )}
-      </dl>
-      {actions}
     </Section>
   );
 }

@@ -38,7 +38,7 @@ describe('availableActions', () => {
   test('an open report on a visible frame of an active collection', () => {
     expect(availableActions(detail())).toEqual([
       'hide',
-      'delete',
+      'quarantine',
       'dismiss',
       'action',
       'blockCollection',
@@ -59,11 +59,27 @@ describe('availableActions', () => {
     expect(admin).toEqual(expect.arrayContaining(['hide', 'unhide']));
   });
 
-  test('a deleted frame: neither hide nor delete', () => {
+  test('a deleted frame: neither hide nor quarantine nor restore', () => {
     const actions = availableActions(detail({ content: { ...detail().content!, deleted: true } }));
     expect(actions).not.toContain('hide');
-    expect(actions).not.toContain('delete');
+    expect(actions).not.toContain('quarantine');
     expect(actions).not.toContain('unhide');
+    expect(actions).not.toContain('restore');
+  });
+
+  test('a quarantined frame: restore only, no hide or second quarantine', () => {
+    const actions = availableActions(
+      detail({
+        content: {
+          ...detail().content!,
+          quarantined: { at, reason: 'Незаконний вміст', purgeAfter: at },
+        },
+      }),
+    );
+    expect(actions).toContain('restore');
+    expect(actions).not.toContain('hide');
+    expect(actions).not.toContain('unhide');
+    expect(actions).not.toContain('quarantine');
   });
 
   test('a decided report: no decision', () => {

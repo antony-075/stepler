@@ -25,7 +25,7 @@ import { isApiError } from '@/api/client';
 import { createContentAppeal } from '@/api/appeals';
 import { dismissReports, hideContent, unhideContent } from '@/api/content';
 import { viewerButton } from '@/media/viewer-stage';
-import { AppealStatus } from './appeal-status';
+import { AppealOutcome, AppealStatus } from './appeal-status';
 
 /** An outlined button on the dark stage. */
 const stageButton = cn(viewerButton, 'border border-[rgb(255_255_255/0.24)] justify-center');
@@ -152,6 +152,7 @@ export function ModerationPanel({
             )}
             {hidden === null ? t('hide') : t('show')}
           </button>
+          <AppealOutcome appeal={detail.appeal} />
         </>
       )}
 

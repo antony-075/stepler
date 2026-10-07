@@ -10,7 +10,8 @@
 // - content in one column of at most 1200px, 16px gutters on phones; the header wraps the
 //   address under the title below 480px instead of truncating the sign-out away;
 // - focus on the dark header uses `--inverse-ring`, as the selection dock does; sign-out is a
-//   44px target on touch screens.
+//   44px target on touch screens;
+// - slice 9b: `OpsNav` (guest reports | admin appeals) leads the page, under the header.
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@stepler/ui/components/button';
 import { useToast } from '@stepler/ui/components/toast';
@@ -19,6 +20,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { type ReactNode, useState } from 'react';
 import { signOut } from './api/operator';
+import { OpsNav } from './ops-nav';
 
 export function OpsShell({ email, children }: { email: string | null; children: ReactNode }) {
   const t = useTranslations('ops');
@@ -74,6 +76,8 @@ export function OpsShell({ email, children }: { email: string | null; children: 
         </div>
       </header>
       <main id="main" className="mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
+        {/* Slice 9b: guest reports and admin appeals, once the operator is signed in. */}
+        {email === null ? null : <OpsNav />}
         {children}
       </main>
     </div>

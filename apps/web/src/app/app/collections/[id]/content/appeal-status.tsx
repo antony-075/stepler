@@ -37,6 +37,43 @@ export function canAppeal(appeal: AdminAppeal | null): boolean {
   return appeal === null || appeal.status !== 'OPEN';
 }
 
+/** The appeal's state in one line: «… · Розглядається», «Апеляцію задоволено …», «… відхилено: …». */
+function useAppealLine() {
+  const t = useTranslations('appeals');
+  const format = useFormatter();
+  const date = (iso: string) => format.dateTime(new Date(iso), { day: 'numeric', month: 'long' });
+  return (appeal: AdminAppeal | null): string | null => {
+    switch (appealStatusKey(appeal)) {
+      case 'none':
+        return null;
+      case 'open':
+        return t('open', { date: date(appeal!.createdAt) });
+      case 'upheld':
+        return t('upheld', { date: date(appeal!.resolution?.at ?? appeal!.createdAt) });
+      case 'rejected':
+        return t('rejected', { note: appeal!.resolution?.note ?? t('noNote') });
+    }
+  };
+}
+
+/**
+ * The outcome alone, where no appeal can be made any more (the measure was reversed, e.g. an
+ * upheld appeal): the admin still reads what happened.
+ */
+export function AppealOutcome({ appeal }: { appeal: AdminAppeal | null }) {
+  const line = useAppealLine()(appeal);
+  if (line === null) return null;
+  return (
+    <p
+      data-slot="appeal-status"
+      data-status={appealStatusKey(appeal)}
+      className="text-[0.9375rem] leading-snug [overflow-wrap:anywhere]"
+    >
+      {line}
+    </p>
+  );
+}
+
 /** An outlined button on the viewer's dark stage. */
 const stageButton = cn(viewerButton, 'border border-[rgb(255_255_255/0.24)] justify-center');
 
@@ -57,13 +94,11 @@ export function AppealStatus({
   onChanged: () => Promise<void>;
 }) {
   const t = useTranslations('appeals');
-  const format = useFormatter();
   const { toast } = useToast();
   const hintId = useId();
   const [open, setOpen] = useState(false);
   const key = appealStatusKey(appeal);
   const allowed = canAppeal(appeal);
-  const date = (iso: string) => format.dateTime(new Date(iso), { day: 'numeric', month: 'long' });
 
   const create = useMutation({
     mutationFn: (text: string) => submit(text),
@@ -101,15 +136,7 @@ export function AppealStatus({
   const dialogDescription = t(
     target === 'content' ? 'dialog.descriptionContent' : 'dialog.descriptionCollection',
   );
-  const note = appeal?.resolution?.note ?? null;
-  const statusLine =
-    appeal === null
-      ? null
-      : key === 'open'
-        ? t('open', { date: date(appeal.createdAt) })
-        : key === 'upheld'
-          ? t('upheld', { date: date(appeal.resolution?.at ?? appeal.createdAt) })
-          : t('rejected', { note: note ?? t('noNote') });
+  const statusLine = useAppealLine()(appeal);
 
   return (
     <div data-slot="appeal-status" data-status={key} className="grid gap-2">

@@ -1393,7 +1393,8 @@
       "blocked": "Blocked",
       "blockReason": "Block reason",
       "owner": "Owner",
-      "email": "Email"
+      "email": "Email",
+      "quarantined": "Quarantined until {date}. Reason: {reason}"
     },
     "actions": {
       "reason": "Reason",
@@ -1419,13 +1420,6 @@
         "description": "Guests will see the frame again.",
         "confirm": "Show",
         "done": "Frame visible to guests again"
-      },
-      "delete": {
-        "button": "Delete frame",
-        "title": "Delete frame",
-        "description": "The frame disappears for everyone for good; its files are deleted.",
-        "confirm": "Delete",
-        "done": "Frame deleted"
       },
       "dismiss": {
         "button": "Dismiss report",
@@ -1468,7 +1462,86 @@
         "description": "The owner can sign in again and their collections open for guests.",
         "confirm": "Unblock",
         "done": "Account unblocked"
+      },
+      "note": "Note to the admin",
+      "noteOptional": "Note to the admin (optional)",
+      "noteRequired": "Say why the appeal is rejected",
+      "quarantine": {
+        "button": "Delete (90-day quarantine)",
+        "title": "Delete frame (90-day quarantine)",
+        "description": "Guests stop seeing the frame at once. Its files are kept for 90 days: the frame can be restored until then, after that it is deleted for good.",
+        "confirm": "Delete",
+        "done": "Frame quarantined"
+      },
+      "restore": {
+        "button": "Restore frame",
+        "title": "Restore frame",
+        "description": "The quarantine ends: guests see the frame again (unless its admin hid it).",
+        "confirm": "Restore",
+        "done": "Frame restored"
+      },
+      "uphold": {
+        "button": "Uphold",
+        "title": "Uphold appeal",
+        "description": "The measure is reversed: the frame is restored or shown, the collection unblocked. The admin sees the decision and the note.",
+        "confirm": "Uphold",
+        "done": "Appeal upheld"
+      },
+      "reject": {
+        "button": "Reject",
+        "title": "Reject appeal",
+        "description": "The measure stays. The admin sees your note in the app.",
+        "confirm": "Reject",
+        "done": "Appeal rejected"
       }
+    },
+    "nav": {
+      "label": "Console sections",
+      "reports": "Guest reports",
+      "appeals": "Admin appeals"
+    },
+    "appeals": {
+      "title": "Admin appeals",
+      "tabsLabel": "Appeal status",
+      "statuses": {
+        "OPEN": "New",
+        "UPHELD": "Upheld",
+        "REJECTED": "Rejected"
+      },
+      "columns": {
+        "received": "Received",
+        "target": "About",
+        "measure": "Measure",
+        "collection": "Collection"
+      },
+      "measures": {
+        "HIDDEN": "Hidden",
+        "QUARANTINED": "Quarantined",
+        "BLOCKED": "Blocked",
+        "NONE": "Lifted"
+      },
+      "empty": {
+        "OPEN": "No new appeals",
+        "UPHELD": "No upheld appeals",
+        "REJECTED": "No rejected appeals"
+      },
+      "error": "Couldn’t load the appeals.",
+      "detailError": "Couldn’t load the appeal.",
+      "collectionTarget": "Collection",
+      "back": "Back to appeals",
+      "notFound": "Appeal not found",
+      "headingContent": "Appeal about a frame",
+      "headingCollection": "Appeal against a collection block",
+      "appeal": "Appeal",
+      "noNote": "No note",
+      "measure": "Measure",
+      "measureNow": "Now",
+      "purgeAfter": "Deleted for good",
+      "measureGone": "The measure is gone: reversed, or the content was deleted.",
+      "previous": "Earlier appeals ({count})",
+      "previousNote": "Decision: {note}",
+      "reports": "Reports on this frame ({count})",
+      "resolvedElsewhere": "The appeal was already decided the other way."
     }
   },
   "notFound": {
