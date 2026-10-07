@@ -25,6 +25,9 @@ export class DisabledPaymentProvider implements PaymentProvider {
   verifyCallback(): never {
     return this.unavailable();
   }
+  eventFromPayload(): never {
+    return this.unavailable();
+  }
   status(): Promise<never> {
     return Promise.reject(new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503));
   }

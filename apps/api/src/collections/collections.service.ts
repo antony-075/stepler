@@ -21,6 +21,7 @@ import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
 import { ImageUrls } from '../images/image-urls.js';
+import { insertCollection } from './collection-creation.js';
 import { CollectionDeletion } from './collection-deletion.js';
 import {
   type CollectionWithDefaultLink,
@@ -77,22 +78,15 @@ export class CollectionsService {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
 
-      const row = await tx.collection.create({
-        data: { ownerId: userId, title: body.title, description: body.description ?? null },
-      });
-      await this.audit.record(tx, {
-        collectionId: row.id,
-        actor: principal,
-        action: 'collection.create',
-        targetType: 'collection',
-        targetId: row.id,
-        metadata: { toStatus: 'ACTIVE' },
-        ...(requestId === undefined ? {} : { requestId }),
-      });
+      const row = await insertCollection(
+        tx,
+        { audit: this.audit, pages: this.pages },
+        { ownerId: userId, title: body.title, description: body.description ?? null },
+        principal,
+        requestId,
+      );
       // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
-      // And its guest page: the default template with its defaults, published (ADR 0017).
-      await this.pages.ensurePublished(tx, row.id);
       return toCollectionDto(
         {
           ...row,

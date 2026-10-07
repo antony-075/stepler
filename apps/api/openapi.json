@@ -732,6 +732,65 @@
         ]
       }
     },
+    "/api/v1/billing/liqpay/callback": {
+      "post": {
+        "operationId": "LiqPayCallbackController_callback_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "signature": {
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "data",
+                  "signature"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Stored (and applied, or left for reconciliation)"
+          },
+          "400": {
+            "description": "BILLING_SIGNATURE_INVALID: not signed with our key; VALIDATION_FAILED: no data"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit"
+          },
+          "503": {
+            "description": "PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
     "/api/v1/billing/offers": {
       "get": {
         "operationId": "BillingController_offers_v1",

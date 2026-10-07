@@ -911,11 +911,35 @@ model Payment {
   price              BillingPrice? @relation(fields: [priceId], references: [id], onDelete: Restrict)
   collection         Collection?   @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   subscription       Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  events             PaymentEvent[]
 
   @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([collectionId])
   @@index([offerId])
   @@index([priceId])
   @@index([subscriptionId])
+}
+
+/// A verified provider callback (plan Task 12). Unverified bodies are never stored. `dedupeKey`
+/// is the SHA-256 of the raw `data` string, so a replay is one row; the raw string itself is
+/// discarded. `payload` keeps whitelisted fields only (no names, phone, IP or card data). An
+/// event whose transition failed stays `processedAt` NULL until the reconciliation job reapplies
+/// it (partial index "PaymentEvent_unprocessed_idx").
+model PaymentEvent {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  provider    String    @default("liqpay")
+  dedupeKey   String    @unique
+  verified    Boolean
+  orderId     String?
+  paymentId   String?   @db.Uuid
+  payload     Json
+  /// `applied` | `noop` | `mismatch` | `review` | `unknown_order`.
+  outcome     String?
+  processedAt DateTime? @db.Timestamptz(3)
+  error       String?
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
 }
 

@@ -63,6 +63,8 @@ export interface PaymentProvider {
   checkoutForm(input: CheckoutInput): CheckoutForm;
   /** Throws `400 BILLING_SIGNATURE_INVALID` unless `signature` signs `data` with our key. */
   verifyCallback(body: { data: string; signature: string }): ProviderEvent;
+  /** Rebuilds an event from a stored safe payload (a verified callback reapplied later). */
+  eventFromPayload(orderId: string, payload: Record<string, unknown>): ProviderEvent;
   /** `null` = the provider has no such order. Provider trouble → `503 PAYMENT_PROVIDER_UNAVAILABLE`. */
   status(orderId: string): Promise<ProviderEvent | null>;
   refund(orderId: string, amountMinor: number): Promise<ProviderRefundResult>;

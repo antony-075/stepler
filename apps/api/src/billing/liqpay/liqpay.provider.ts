@@ -132,6 +132,10 @@ export class LiqPayProvider implements PaymentProvider {
     return this.toEvent(decoded, orderId);
   }
 
+  eventFromPayload(orderId: string, payload: Record<string, unknown>): ProviderEvent {
+    return this.toEvent(payload, orderId);
+  }
+
   async status(orderId: string): Promise<ProviderEvent | null> {
     const answer = await this.request({ action: 'status', order_id: orderId });
     if (text(answer.order_id) === null) {

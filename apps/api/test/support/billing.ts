@@ -1,3 +1,4 @@
+import { encodeData, liqpaySign } from '../../src/billing/liqpay/liqpay-signature.js';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 
 const GiB = 1024n ** 3n;
@@ -146,4 +147,35 @@ export async function priceCatalogue(
     out[code] = { offerId: offer.id, priceId: price.id };
   }
   return out;
+}
+
+/** A LiqPay callback body (`data` + `signature`) signed with the test key, as LiqPay posts it. */
+export function signedCallback(
+  fields: Record<string, unknown>,
+  key: string = TEST_LIQPAY.privateKey,
+): { data: string; signature: string } {
+  const data = encodeData(fields);
+  return { data, signature: liqpaySign(key, data) };
+}
+
+/** The fields of a LiqPay `pay` callback for one of our payments (amount as LiqPay's decimal). */
+export function payFields(
+  payment: { id: string; amountMinor: number; currency: string },
+  status: string,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    action: 'pay',
+    status,
+    version: 7,
+    order_id: payment.id,
+    liqpay_order_id: `LQ${payment.id.slice(0, 8)}`,
+    payment_id: Number.parseInt(payment.id.replace(/-/g, '').slice(-10), 16),
+    amount: payment.amountMinor / 100,
+    currency: payment.currency,
+    end_date: Date.now(),
+    sender_first_name: 'Олена',
+    sender_card_mask2: '424242*42',
+    ...extra,
+  };
 }

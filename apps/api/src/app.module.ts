@@ -3,6 +3,7 @@ import type { DestinationStream } from 'pino';
 import { AuditModule } from './audit/audit.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BillingModule } from './billing/billing.module.js';
+import { BillingPaymentsModule } from './billing/billing-payments.module.js';
 import { CollectionsModule } from './collections/collections.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { ContentModule } from './content/content.module.js';
@@ -54,6 +55,7 @@ export class AppModule {
         ContentModule,
         UploadsModule,
         OperatorModule,
+        BillingPaymentsModule,
         HealthModule,
       ],
     };
