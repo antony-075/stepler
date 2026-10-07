@@ -140,6 +140,7 @@ const STATES_OF = {
   active: 'ACTIVE',
   'hidden-admin': 'HIDDEN_ADMIN',
   'hidden-operator': 'HIDDEN_OPERATOR',
+  quarantined: 'QUARANTINED',
   reported: 'REPORTED',
 } as const;
 
@@ -735,6 +736,7 @@ export function ContentTab({
       />
 
       <ContentViewer
+        collectionId={collection.id}
         items={items}
         frameNo={frameNo}
         onNavigate={(n) => navigate({ frame: String(n) }, 'replace')}
@@ -807,13 +809,16 @@ function AdminFrame({
       : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
   // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
   const ring = moderationRing(marks);
+  // Deleted by moderation (slice 9b): greyed, and nothing to download until a restore.
+  const quarantined = item.moderation.quarantined !== null;
   const quick = {
     outlined: true,
     marks: <ModerationMarks marks={marks} />,
     ...(ring === undefined ? {} : { ring }),
+    dimmed: quarantined,
     overlay: (
       <>
-        {item.kind === 'TEXT' ? null : (
+        {item.kind === 'TEXT' || quarantined ? null : (
           <TileAction label={t('tile.download', { number: item.frameNo })} onClick={onDownload}>
             <Download aria-hidden="true" />
           </TileAction>

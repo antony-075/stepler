@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { stateCount, stateFilterOf, statesFromParams } from './content-filters';
-import { moderationMarks } from './moderation-marks';
+import { moderationMarks, moderationRing } from './moderation-marks';
 
 const at = '2026-10-06T10:00:00.000Z';
 
@@ -32,6 +32,19 @@ describe('moderation marks', () => {
     ).toEqual(['moderated']);
   });
 
+  test('a quarantined frame has the one mark «Видалено модерацією» and a destructive ring', () => {
+    const marks = moderationMarks({
+      moderation: {
+        hidden: { by: 'ADMIN', at, reason: null },
+        quarantined: { at, reason: 'Незаконний вміст', purgeAfter: at },
+        openReports: 2,
+      },
+    });
+    expect(marks).toEqual(['quarantined']);
+    expect(moderationRing(marks)).toBe('destructive');
+    expect(moderationRing(['reported', 'hidden'])).toBe('muted');
+  });
+
   test('?state=… (repeatable) is the state filter (F1a); unknown values are dropped', () => {
     expect(statesFromParams(['active'])).toEqual(['ACTIVE']);
     expect(statesFromParams(['reported', 'hidden-admin', 'reported', 'x'])).toEqual([
@@ -41,9 +54,17 @@ describe('moderation marks', () => {
     expect(statesFromParams(['REPORTED'])).toEqual([]);
     expect(statesFromParams([])).toEqual([]);
     expect(stateFilterOf('HIDDEN_OPERATOR')).toBe('hidden-operator');
-    const counts = { active: 3, hiddenByAdmin: 1, hiddenByOperator: 2, reported: 4 };
+    const counts = {
+      active: 3,
+      hiddenByAdmin: 1,
+      hiddenByOperator: 2,
+      quarantined: 5,
+      reported: 4,
+    };
     expect(stateCount(counts, 'active')).toBe(3);
     expect(stateCount(counts, 'hidden-operator')).toBe(2);
     expect(stateCount(counts, 'reported')).toBe(4);
+    expect(stateCount(counts, 'quarantined')).toBe(5);
+    expect(statesFromParams(['quarantined'])).toEqual(['QUARANTINED']);
   });
 });

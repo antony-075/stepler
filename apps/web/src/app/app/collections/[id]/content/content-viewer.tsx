@@ -33,6 +33,7 @@ const DETAIL_STALE_MS = 30 * 60_000;
  * words: guests stop seeing it and its number is never reused.
  */
 export function ContentViewer({
+  collectionId,
   items,
   frameNo,
   onNavigate,
@@ -41,6 +42,7 @@ export function ContentViewer({
   contactEmail,
   onModerationChanged,
 }: {
+  collectionId: string;
   items: AdminContentItem[];
   frameNo: number | undefined;
   onNavigate: (frameNo: number) => void;
@@ -158,6 +160,7 @@ export function ContentViewer({
             )}
             {detail.data === undefined ? null : (
               <ModerationPanel
+                collectionId={collectionId}
                 detail={detail.data}
                 contactEmail={contactEmail}
                 onChanged={() => onModerationChanged(item)}

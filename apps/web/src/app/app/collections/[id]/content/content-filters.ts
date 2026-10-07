@@ -29,14 +29,21 @@ export function filterOf(kind: ContentKind | undefined): KindFilter {
   return kind === undefined ? 'all' : (kind.toLowerCase() as KindFilter);
 }
 
-/** The state menu's options in order (slice 9 F1); none checked = every frame. */
-export const STATE_FILTERS = ['active', 'hidden-admin', 'hidden-operator', 'reported'] as const;
+/** The state menu's options in order (slice 9 F1, 9b quarantine); none checked = every frame. */
+export const STATE_FILTERS = [
+  'active',
+  'hidden-admin',
+  'hidden-operator',
+  'quarantined',
+  'reported',
+] as const;
 export type StateFilter = (typeof STATE_FILTERS)[number];
 
 const STATES: Record<StateFilter, ContentState> = {
   active: 'ACTIVE',
   'hidden-admin': 'HIDDEN_ADMIN',
   'hidden-operator': 'HIDDEN_OPERATOR',
+  quarantined: 'QUARANTINED',
   reported: 'REPORTED',
 };
 
@@ -52,7 +59,10 @@ export function stateFilterOf(state: ContentState): StateFilter {
 
 /** The count a state option shows. */
 export function stateCount(
-  counts: Pick<ContentCounts, 'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'reported'>,
+  counts: Pick<
+    ContentCounts,
+    'active' | 'hiddenByAdmin' | 'hiddenByOperator' | 'quarantined' | 'reported'
+  >,
   filter: StateFilter,
 ): number {
   switch (filter) {
@@ -62,6 +72,8 @@ export function stateCount(
       return counts.hiddenByAdmin;
     case 'hidden-operator':
       return counts.hiddenByOperator;
+    case 'quarantined':
+      return counts.quarantined;
     case 'reported':
       return counts.reported;
   }

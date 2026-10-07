@@ -171,7 +171,11 @@ function Overview({
   const notice = (
     <>
       {collection.blocked === null ? null : (
-        <BlockedBanner reason={collection.blocked.reason} contactEmail={contactEmail} />
+        <BlockedBanner
+          collectionId={collection.id}
+          reason={collection.blocked.reason}
+          contactEmail={contactEmail}
+        />
       )}
       {archivedNotice}
     </>

@@ -10,6 +10,9 @@
 // - then the open reports, oldest first: the reason, the description (or «Без опису»), the
 //   time; never who reported or their contact; «Відхилити скарги» asks first;
 // - buttons are 44px, outlined on the dark stage, never hover-only.
+// - slice 9b: a frame the operator deleted is «Видалено модерацією» with the reason and the date
+//   it is deleted for good, and no hide/show; on it and on an operator hide the admin appeals in
+//   place (`AppealStatus`), the status following below.
 import type { AdminContentDetail } from '@stepler/contracts';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { useToast } from '@stepler/ui/components/toast';
@@ -19,17 +22,21 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { isApiError } from '@/api/client';
+import { createContentAppeal } from '@/api/appeals';
 import { dismissReports, hideContent, unhideContent } from '@/api/content';
 import { viewerButton } from '@/media/viewer-stage';
+import { AppealStatus } from './appeal-status';
 
 /** An outlined button on the dark stage. */
 const stageButton = cn(viewerButton, 'border border-[rgb(255_255_255/0.24)] justify-center');
 
 export function ModerationPanel({
+  collectionId,
   detail,
   contactEmail,
   onChanged,
 }: {
+  collectionId: string;
   detail: AdminContentDetail;
   /** `LEGAL_CONTACT_EMAIL`, the address to disagree with an operator's hide; may be unset. */
   contactEmail: string | null;
@@ -42,6 +49,31 @@ export function ModerationPanel({
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const hidden = detail.moderation.hidden;
+  const quarantined = detail.moderation.quarantined;
+  const contactLine =
+    contactEmail === null ? null : (
+      <p className="text-[var(--viewer-muted)]">
+        {t.rich('moderatedContact', {
+          email: () => (
+            <a
+              href={`mailto:${contactEmail}`}
+              className="text-viewer-foreground underline underline-offset-2"
+            >
+              {contactEmail}
+            </a>
+          ),
+        })}
+      </p>
+    );
+  const appealStatus = (
+    <AppealStatus
+      appeal={detail.appeal}
+      target="content"
+      tone="stage"
+      submit={(text) => createContentAppeal(collectionId, detail.id, text)}
+      onChanged={onChanged}
+    />
+  );
 
   const visibility = useMutation({
     mutationFn: (hide: boolean) => (hide ? hideContent(detail.id) : unhideContent(detail.id)),
@@ -67,28 +99,38 @@ export function ModerationPanel({
       <h3 id="moderation-title" className="text-xs text-[var(--viewer-muted)]">
         {t('title')}
       </h3>
-      {hidden?.by === 'OPERATOR' ? (
-        <div className="grid gap-1 border-l-2 border-[#FF7A7A] pl-3 text-[0.9375rem] leading-snug">
-          <p className="font-semibold">{t('moderatedTitle')}</p>
-          {hidden.reason === null ? null : (
+      {quarantined !== null ? (
+        <div className="grid gap-3">
+          <div className="grid gap-1 border-l-2 border-[#FF7A7A] pl-3 text-[0.9375rem] leading-snug">
+            <p className="font-semibold">{t('quarantinedTitle')}</p>
             <p className="[overflow-wrap:anywhere]">
-              {t('moderatedReason', { reason: hidden.reason })}
+              {t('moderatedReason', { reason: quarantined.reason })}
             </p>
-          )}
-          {contactEmail === null ? null : (
             <p className="text-[var(--viewer-muted)]">
-              {t.rich('moderatedContact', {
-                email: () => (
-                  <a
-                    href={`mailto:${contactEmail}`}
-                    className="text-viewer-foreground underline underline-offset-2"
-                  >
-                    {contactEmail}
-                  </a>
-                ),
+              {t('quarantinedPurge', {
+                date: format.dateTime(new Date(quarantined.purgeAfter), {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                }),
               })}
             </p>
-          )}
+            {contactLine}
+          </div>
+          {appealStatus}
+        </div>
+      ) : hidden?.by === 'OPERATOR' ? (
+        <div className="grid gap-3">
+          <div className="grid gap-1 border-l-2 border-[#FF7A7A] pl-3 text-[0.9375rem] leading-snug">
+            <p className="font-semibold">{t('moderatedTitle')}</p>
+            {hidden.reason === null ? null : (
+              <p className="[overflow-wrap:anywhere]">
+                {t('moderatedReason', { reason: hidden.reason })}
+              </p>
+            )}
+            {contactLine}
+          </div>
+          {appealStatus}
         </div>
       ) : (
         <>

@@ -272,7 +272,7 @@
       "badge": "Blocked",
       "title": "Collection blocked by moderation",
       "text": "Guests can’t open it. Reason: {reason}.",
-      "contact": "If you disagree, write to <email></email>."
+      "contact": "Other questions: <email></email>."
     }
   },
   "collection": {
@@ -450,7 +450,8 @@
       "marks": {
         "reported": "Report",
         "hidden": "Hidden",
-        "moderated": "Hidden by moderation"
+        "moderated": "Hidden by moderation",
+        "quarantined": "Deleted by moderation"
       },
       "title": "Moderation",
       "visible": "Guests see this frame.",
@@ -461,7 +462,7 @@
       "shownDone": "Guests see the frame again",
       "moderatedTitle": "Hidden by moderation",
       "moderatedReason": "Reason: {reason}",
-      "moderatedContact": "If you disagree, write to <email></email>.",
+      "moderatedContact": "Other questions: <email></email>.",
       "moderatedConflict": "Moderation hid this frame — it can’t be shown",
       "reportsTitle": "Reports ({count})",
       "noDescription": "No description",
@@ -473,7 +474,9 @@
       "dismissDone": "Reports dismissed",
       "cancel": "Cancel",
       "pending": "Saving…",
-      "failed": "Could not save. Try again."
+      "failed": "Could not save. Try again.",
+      "quarantinedTitle": "Deleted by moderation",
+      "quarantinedPurge": "Guests can’t see this frame. It will be deleted for good on {date} unless an appeal is upheld."
     },
     "state": {
       "label": "State",
@@ -490,8 +493,10 @@
         "hidden-admin": "No frames hidden by the admin",
         "hidden-operator": "No frames hidden by moderation",
         "reported": "No reported frames",
-        "several": "No frames in the chosen states"
-      }
+        "several": "No frames in the chosen states",
+        "quarantined": "No frames deleted by moderation"
+      },
+      "quarantined": "Deleted by moderation"
     }
   },
   "guestLinks": {
@@ -1471,5 +1476,37 @@
     "title": "Page not found",
     "text": "The link may be out of date or mistyped.",
     "home": "Go to the home page"
+  },
+  "appeals": {
+    "open": "Appeal sent {date} · Under review",
+    "upheld": "Appeal upheld {date}",
+    "rejected": "Appeal rejected: {note}",
+    "submit": "Appeal",
+    "openHint": "Stepler moderation is still reviewing your appeal.",
+    "dialog": {
+      "titleContent": "Appeal about this frame",
+      "titleCollection": "Appeal against the block",
+      "descriptionContent": "Explain why the moderation decision on this frame is wrong. The answer will appear here, in the app.",
+      "descriptionCollection": "Explain why the collection was blocked by mistake. The answer will appear here, in the app.",
+      "textLabel": "Your explanation",
+      "textHint": "Stepler moderation reads it alongside the frame or collection.",
+      "required": "Write an explanation",
+      "tooLong": "At most {max} characters",
+      "counter": "{count}/{max}",
+      "send": "Send",
+      "sending": "Sending…",
+      "cancel": "Cancel",
+      "sentTitle": "Appeal sent",
+      "sentText": "Stepler moderation will review it. The decision will appear here.",
+      "close": "Close"
+    },
+    "errors": {
+      "open": "An appeal is already under review",
+      "notApplicable": "This frame no longer needs an appeal",
+      "notApplicableCollection": "The collection is no longer blocked",
+      "rateLimited": "Too many appeals. Try again tomorrow.",
+      "failed": "Couldn’t send the appeal. Try again."
+    },
+    "noNote": "no note"
   }
 }
