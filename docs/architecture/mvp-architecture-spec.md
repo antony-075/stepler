@@ -264,6 +264,11 @@ ContentItem (additions, slice 9, 2026-10-06; ADR 0013)
   SQL CHECK (hiddenBy = 'OPERATOR' ⇒ hiddenReason set)            ("ContentItem_operator_hide_reason")
   INDEX (collectionId, createdAt DESC, id DESC) WHERE deletedAt IS NULL AND hiddenAt IS NULL -- guest feed
   the own index above is re-created with … AND hiddenAt IS NULL (only the guest «own» scope reads it)
+ContentItem (additions, slice 9b, 2026-10-07; ADR 0013 addendum) — the operator's deletion is a quarantine
+  quarantinedAt?, quarantinedByUserId? (uuid, no FK), quarantineReason? (1–500), purgeAfter?
+  SQL CHECK the four all set or all NULL                         ("ContentItem_quarantine_consistent")
+  SQL CHECK quarantinedAt IS NULL OR hiddenBy IS DISTINCT FROM 'OPERATOR' ("ContentItem_quarantine_not_operator_hidden")
+  INDEX (purgeAfter) WHERE quarantinedAt IS NOT NULL AND deletedAt IS NULL ("ContentItem_quarantine_purge_idx", the sweep)
 
 MediaObject
   id, contentItemId → ContentItem (cascade), role (ORIGINAL|THUMBNAIL|PREVIEW|POSTER),
@@ -290,7 +295,7 @@ UploadSession                                       (as built in PR C and slice 
 - One table for all content kinds: the gallery is a single mixed, cursor-paginated feed. The cost is nullable columns guarded by CHECKs. Alternatives rejected: table-per-kind (UNION feeds), EAV (loses integrity).
 - `contributorName` is stored per submission (D6), never exposed in guest DTOs.
 - `contributorUserId` was drafted so admin uploads are not structurally forbidden later (D14); it does not exist on `ContentItem` ([C19]). The admin identity lands on `UploadSession.uploaderUserId` instead (the draft's `userId?`), used by the collection cover (slice 8a): an admin's upload is a cover, never content.
-- `hiddenAt` is the first moderation state (operator/admin "hide"), *implemented in slice 9*: every guest content read spreads `GUEST_VISIBLE = { deletedAt: null, hiddenAt: null }`; admin reads do not (the admin sees hidden frames with their state). Hidden frames still count towards usage. Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
+- `hiddenAt` is the first moderation state (operator/admin "hide"), *implemented in slice 9*: every guest content read spreads `GUEST_VISIBLE = { deletedAt: null, hiddenAt: null }`; admin reads do not (the admin sees hidden frames with their state). Hidden frames still count towards usage. *Slice 9b:* `GUEST_VISIBLE` also has `quarantinedAt: null`; a quarantined frame (the operator's deletion) keeps `deletedAt` NULL until the sweep ends the quarantine, is shown to its admin greyed without an original link, and does not count towards usage (§13.2). Future moderation (`pending/approved/rejected`) becomes a status column on `ContentItem` (D10).
 - `UploadSession` is separate from `ContentItem`: unfinished uploads never pollute content and have their own lifecycle/cleanup.
 - Future folders: nullable `folderId` on `ContentItem`. Storage keys do not depend on organization (§10.6).
 - **Frame numbers (ADR 0015), implemented in slice 3 [C8]:** `UPDATE "Collection" SET "nextFrameNo" = "nextFrameNo" + 1 WHERE id = $1 AND status = 'ACTIVE' RETURNING "nextFrameNo" - 1` inside the transaction that creates the item; that statement row-locks the collection (so concurrent creations get consecutive numbers, and a rolled-back one gives its number back) and is the "still active" re-check. Texts and files share the sequence; gaps after deletion are never filled. The owner sees every number; a guest only their own. Lock order [C9]: a transaction that locks both takes the owner's `User` row first, then the `Collection`.
@@ -319,7 +324,9 @@ AuditEvent (append-only)
   INDEX (collectionId, createdAt)
 ```
 
-`ContentReport` and `AuditEvent` reference content/collections by plain IDs **without foreign keys**: they must survive permanent deletion of content rows and collections (history and abuse evidence).
+*Slice 9b:* `ModerationAppeal { id, collectionId, targetType (CONTENT|COLLECTION), targetId, submittedByUserId, text (1–1000), status (OPEN|UPHELD|REJECTED), resolvedByUserId?, resolvedAt?, resolutionNote? (required on REJECTED), requestId?, operatorNotifiedAt?, createdAt }`, no FKs; partial UNIQUE `(targetType, targetId) WHERE status = 'OPEN'`; indexes for the operator queue `(status, createdAt DESC, id DESC)`, the target `(targetType, targetId, createdAt DESC)`, the admin list `(collectionId, createdAt DESC)` and the daily limit `(submittedByUserId, createdAt)`. Audit actions `appeal.create` / `appeal.uphold` / `appeal.reject` (target type `appeal`, metadata ids and the note only, never the text), `content.quarantine`, `content.restore`.
+
+`ContentReport`, `ModerationAppeal` and `AuditEvent` reference content/collections by plain IDs **without foreign keys**: they must survive permanent deletion of content rows and collections (history and abuse evidence).
 
 *`AuditEvent` implemented in slice 1* (Phase 4), with a second index `(actorId, action, createdAt)` for the collection creation limit (§13.1). Slice 1 records `collection.create`, `collection.archive`, `collection.unarchive` and `collection.delete`.
 
@@ -350,6 +357,8 @@ Guest context is valid only if: session exists, `currentLink.status = ACTIVE`, t
 | View reports | own collections (reasons and descriptions, never the reporter's contact) | all | — |
 | Decide a report | dismiss for themselves only ([Q1]) | dismiss / actioned, per item | — |
 | Block collection / account | — | reported scope only | — |
+| Quarantine / restore item (9b) | — (their own delete still works) | reported or appealed items | — |
+| Appeal (9b) | own collection: an operator-hidden or quarantined item, a blocked collection | decides (uphold reverses the measure, reject keeps it) | — |
 
 - Access to a resource outside the principal's scope returns **404**, not 403 (no existence disclosure).
 - *Slice 9:* the operator's "reported items" are enforced in SQL (`OperatorScope`): a frame with a report, a collection with a report, an account owning such a collection; anything else, and every `/operator/*` route for a non-operator, is `404`. A hidden item is `404` on every guest path, the contributor's own delete and report included. A blocked collection or owner is `410 COLLECTION_UNAVAILABLE` on every guest route (one choke point, `assertLinkUsable`); upload cancel still runs, since it only frees space.
@@ -411,6 +420,9 @@ Admin
   POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
   POST                /content/{id}/hide | /unhide            (slice 9; unhide of an operator hide → 409 CONTENT_MODERATED)
   POST                /content/{id}/reports/dismiss           (slice 9; for the admin only, [Q1])
+  POST                /collections/{id}/content/{itemId}/appeals  {text} → 201 AdminAppeal (slice 9b; 409 APPEAL_NOT_APPLICABLE | APPEAL_OPEN, 429)
+  POST                /collections/{id}/appeals               {text} → 201 (a blocked collection)
+  GET                 /collections/{id}/appeals               → {items} newest first, ≤ 50; the frame's latest is also `appeal` on GET /content/{id}
   -- the admin's reports are read through the content routes: `?reported=true`, `counts.reported`,
   -- `moderation` on each item and `reports` on GET /content/{id} (the drafted /collections/{id}/reports
   -- and PATCH /reports/{id} were not built)
@@ -420,7 +432,10 @@ Operator
   GET                 /operator/reports?status=&cursor=&limit=
   GET                 /operator/reports/{id}
   PATCH               /operator/reports/{id}           {status, note}: every open report on the item
-  POST                /operator/content/{id}/hide | /unhide | /delete   {reason} (delete is a POST: the reason is a body)
+  POST                /operator/content/{id}/hide | /unhide | /quarantine | /restore   {reason} (slice 9b: /delete became /quarantine)
+  GET                 /operator/appeals?status=&cursor=&limit=          (slice 9b)
+  GET                 /operator/appeals/{id}
+  PATCH               /operator/appeals/{id}           {status: UPHELD|REJECTED, note?}: 409 APPEAL_RESOLVED the other way
   POST                /operator/collections/{id}/block | /unblock
   POST                /operator/users/{id}/block | /unblock
 
@@ -562,7 +577,8 @@ Decision details: ADR 0009.
   - `cover.purge` `{collectionId, coverId}` — *removed in PR L*, as above. The prefix of a replaced or removed cover, unless a row with that id is live. Implemented (slice 8a).
   - `media.collection-image` `{collectionId, imageId}` — an admin image's renditions for its slot: cover 480 + 1600 px, background 480 + 1600 + 2400 px (q 72), collection image 480 px (PR I). The two slice 8a names ran the new handlers until PR L removed them.
   - `collection-image.purge` `{collectionId, imageId, slot}` — the image's prefix, unless its row is live (PR I).
-  - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I), and deletes reporters' addresses older than `REPORT_EMAIL_RETENTION_DAYS` (slice 9).
+  - The hourly sweep also marks `FAILED` an image still `PENDING` an hour after it was set with no rendition job left (PR I), and deletes reporters' addresses older than `REPORT_EMAIL_RETENTION_DAYS` (slice 9). *Slice 9b:* it ends quarantines past `purgeAfter` (soft delete through `ContentDeletion`, actor `SYSTEM`, reason `quarantine_expired`, then the usual `content.purge`), up to `WORKER_PURGE_BATCH_SIZE` a run.
+  - `mail.appeal-received` `{appealId}` — slice 9b: one «нова апеляція» per appeal to each `OPERATOR_EMAILS` address (the target type and the console link only), stamped `operatorNotifiedAt`.
   - `mail.report-received` / `mail.report-decision` `{reportId}` — the report e-mails (slice 9, ADR 0009 addendum): to each `OPERATOR_EMAILS` address, and to a reporter who left an address; stamped `operatorNotifiedAt` / `reporterNotifiedAt` after the send, so a rerun sends nothing (at least once). The worker needs the API's SMTP settings, `APP_ORIGIN` and `OPERATOR_EMAILS`.
 - Retries with exponential backoff; terminal failure → `processingStatus = FAILED` (a file the tools cannot decode fails at once, without retries). Content stays available; the UI shows a type tile instead of a preview, and the original can be downloaded.
 - The API never performs heavy media work synchronously.
@@ -617,6 +633,8 @@ Decision details: ADR 0010. All values come from typed configuration — never h
 
 "Actual storage" (F1) = sum of `MediaObject.sizeBytes` over **all roles** (originals + derivatives) of non-deleted content + every `CollectionImage`'s `originalSizeBytes + derivedSizeBytes`, all slots (PR I; the slice 8a cover before it) + `declaredSizeBytes` of `INITIATED` and `COMPLETING` upload sessions (reservations, guest and cover uploads alike).
 
+*Slice 9b:* content the operator quarantined does not count either (`quarantinedAt IS NULL` in the three sums): the owner cannot use it; its files stay until the purge.
+
 [assumption] Content marked deleted stops counting immediately, even before the purge completes (purge lag is our responsibility; otherwise deleting to free space would not work for the user).
 
 MVP computes usage with indexed aggregate queries under a row lock. Counter columns are added only if measurements show a need.
@@ -637,6 +655,7 @@ Decision details: ADR 0013.
 - The collection admin sees reports for their collections in the app only (never by e-mail, never the reporter's contact), and can delete, hide or dismiss (for themselves, [Q1]).
 - The operator — a dedicated service account in `OPERATOR_EMAILS` on the API and the worker — sees all reports and can hide/delete content, block/unblock collections and accounts, and dismiss or action reports; every action needs a reason and is audited. MVP surface: operator API endpoints (`OperatorModule`, *implemented in slice 9 M1*) plus the console at `/ops` (M2) — no full admin panel.
 - E-mails go through the worker (ADR 0009 addendum): «нова скарга» to the operator with the reason and a console link only; the decision to a reporter who left an address.
+- *Slice 9b (ADR 0013 addendum):* the operator's deletion is a 90-day quarantine (`MODERATION_QUARANTINE_DAYS`), restorable; the collection admin appeals operator hides, quarantines and collection blocks in the app (`LIMIT_APPEALS_PER_ACCOUNT_PER_DAY`, 20); the console splits «Скарги гостей» and «Апеляції адміністраторів».
 - A public abuse contact email is published in the legal documents.
 - **Open (legal):** whether reported illegal content must be preserved (evidence hold) instead of purged ([Q7]). Decided: no reporter IP is stored. Default until decided: normal purge.
 - The applicability of specific DSA obligations to Stepler is not assumed; it requires legal review before public launch.

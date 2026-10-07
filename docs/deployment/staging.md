@@ -177,4 +177,6 @@ Guests report frames; the Stepler operator decides in the console at `/ops` (ADR
 
 A new report sends «Stepler: нова скарга (…)» to the service mailbox with a link to `/ops/reports/<id>`; the collection's admin gets no e-mail.
 
+**Slice 9b (appeals and quarantine).** Nothing to set: `MODERATION_QUARANTINE_DAYS` (90) and `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY` (20) are optional API variables with these defaults. The migration `appeals_and_quarantine` runs with the deploy. Each admin appeal sends «Stepler: нова апеляція (…)» to the service mailbox with a link to `/ops/appeals/<id>` (the worker needs no new setting). The console's «Видалити (карантин 90 днів)» no longer purges at once: the hourly sweep purges a quarantined frame once its 90 days are over.
+
 Last full verification: 2026-09-30 (ADR 0014, "Staging verified").

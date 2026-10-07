@@ -1,7 +1,7 @@
 # ADR 0013 — Content Reports and Platform Operator Role
 
-Status: Implemented (slice 9, M1–M3, 2026-10-06; plan `docs/superpowers/plans/2026-10-06-content-reports-and-operator.md`); legal specifics open (evidence hold, DSA)
-Date: 2026-09-29, updated 2026-10-06
+Status: Implemented (slice 9, M1–M3, 2026-10-06; plan `docs/superpowers/plans/2026-10-06-content-reports-and-operator.md`; slice 9b appeals and quarantine, 2026-10-07, addendum below); legal specifics open (evidence hold, DSA)
+Date: 2026-09-29, updated 2026-10-07
 
 ## Context
 
@@ -45,3 +45,20 @@ The console is `/ops` in the same Next app and API, built so it can later become
 - A reporter's address is kept at most 90 days; report rows are kept as abuse history without a fixed term (`[СТРОК ЗБЕРІГАННЯ]` in Privacy v2).
 - Media URLs signed just before a hide stay valid for at most 2 × `MEDIA_URL_WINDOW_SECONDS` ([Q4]); copies of a frame made earlier as a guest page image are untouched ([Q5]).
 - Open legal decisions: evidence preservation for content reported as illegal ([Q7]), DSA applicability.
+
+## Addendum 2026-10-07 — appeals, the moderation quarantine and the ops split (slice 9b)
+
+Plan: `docs/superpowers/plans/2026-10-06-appeals-and-quarantine.md`.
+
+**Context.** Trying slice 9, the owner asked that the collection admin can contest the operator's measures in the app, that an operator mistake be recoverable, and that the console keep guest reports and admin appeals apart.
+
+**Decision.**
+- *Quarantine (Q-A1).* The operator's «Видалити» is a quarantine, not a soft delete: `ContentItem.quarantinedAt / quarantinedByUserId / quarantineReason / purgeAfter` (`purgeAfter` = now + `MODERATION_QUARANTINE_DAYS`, default 90, an API variable). `deletedAt` stays `NULL`, so `content.purge` cannot take it early. Guests lose it at once (`GUEST_VISIBLE` gains `quarantinedAt: null`); the admin still sees it, greyed, with the reason and the purge date, without a download link, and cannot hide or show it (`409 CONTENT_MODERATED`); the admin's own delete still works. A quarantine replaces an operator hide (CHECK `ContentItem_quarantine_not_operator_hidden`); an admin hide is kept. The operator restores it (`POST /operator/content/{id}/restore`) until the hourly sweep soft-deletes it past `purgeAfter` through `ContentDeletion` (actor `SYSTEM`, reason `quarantine_expired`), and the usual purge removes the files. Admin and guest deletions keep the prompt purge.
+- *Quota.* Quarantined bytes do not count toward the owner's quota or the collection size (`UsageService`); they stay in storage until the purge.
+- *Appeals (Q-A2–Q-A5).* `ModerationAppeal` (no FKs, so it survives purges; one `OPEN` per target by a partial unique index). Only the collection's admin appeals, on a frame the operator hid or quarantined, or on a blocked collection; a target in no appealable state is `409 APPEAL_NOT_APPLICABLE`, a second open one `409 APPEAL_OPEN`, `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY` (20) per rolling day. The operator upholds (the measure is reversed in the same transaction through its own use case: restore, unhide or unblock, each audited) or rejects with a note the admin reads. Decisions never touch guest reports. The admin learns the outcome in the app only; the operator gets one `mail.appeal-received` per appeal (target type and console link only). Audit: `appeal.create`, `appeal.uphold`, `appeal.reject`, `content.quarantine`, `content.restore`.
+- *Scope.* The operator's reach ([P5]) widens to «reported or appealed» targets.
+- *Ops split (Q-A6).* The console has two sections, «Скарги гостей» (`/ops/reports`) and «Апеляції адміністраторів» (`/ops/appeals`), API `/api/v1/operator/appeals…` in `OperatorModule`.
+
+**Alternatives considered.** A general user trash (all deletions restorable): a separate feature, rejected for now. Appeals by e-mail only: not traceable in the console and invisible to the admin. Hard-deleting on the operator's decision with backups as the safety net: no in-product recovery.
+
+**Consequences.** Quarantined files cost storage for up to 90 days outside the owner's quota. A frame may outlive `purgeAfter` by up to an hour (the sweep's interval). Two new optional API variables (`MODERATION_QUARANTINE_DAYS`, `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY`). Blocked accounts still appeal by e-mail (they cannot sign in). Legal v2 drafts describe the in-app appeal and the quarantine (unreleased, edited in place).

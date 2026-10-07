@@ -194,6 +194,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames per client IP per minute; default `120` |
 | `LIMIT_REPORTS_PER_IP_PER_HOUR` | api | no | Guest content reports per client IP per hour, across sessions; default `60` |
 | `LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Reports one guest session may send per rolling hour; default `10` |
+| `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY` | api | no | Appeals one admin account may send per rolling 24 hours (slice 9b); default `20` |
+| `MODERATION_QUARANTINE_DAYS` | api | no | Days a frame the operator deleted stays in quarantine, restorable, before the sweep purges it (slice 9b); default `90` |
 | `WORKER_MEDIA_CONCURRENCY` | worker | no | Media jobs one worker runs at once; default `1` (memory, spike S5) |
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
