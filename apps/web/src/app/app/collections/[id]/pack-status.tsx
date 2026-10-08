@@ -151,7 +151,13 @@ export function PackStatus({ collection }: { collection: Collection | Collection
 
 type Extension = { key: string; label: string; priceId: string; amount: PricedOffer['price'] };
 
-function PackExtensions({ collectionId, offerId }: { collectionId: string; offerId: string }) {
+export function PackExtensions({
+  collectionId,
+  offerId,
+}: {
+  collectionId: string;
+  offerId: string;
+}) {
   const tExtend = useTranslations('billing.extend');
   const format = useFormatter();
   const locale = useLocale();

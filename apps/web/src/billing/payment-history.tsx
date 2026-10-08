@@ -1,19 +1,23 @@
 'use client';
 
-// Design pass (billing M2, Task 14; web-design-guidelines, responsive-design). The account's
-// payments, newest first: date (Kyiv, tabular figures; Cyrillic months stay in Golos), what was bought, the amount (tabular figures, right-aligned
-// so the decimals line up) and the state as a badge in words (Оплачено / Не пройшла / Очікує /
-// Повернено частково / Повернено). From `md` a table with real headers; on phones each payment is
-// one row of two lines, so nothing scrolls sideways at 320px. Empty, loading and error states.
+// Design pass (billing page v2; web-design-guidelines, responsive-design). The account's
+// payments, newest first, styled like the dashboard's table (DESIGN-SYSTEM.md §0.8, §0.9b): a
+// quiet 36px header row on `--subtle`, rows with a top border, every column left-aligned, numbers
+// in mono. Columns: date and time (Kyiv, tabular figures), what was bought with the collection's
+// name under it when known, the amount (mono) and the state as a badge in words. From `md` a real
+// table with headers; below it each payment is a stacked block (what and amount, then date and
+// state), so nothing scrolls sideways at 320px. Empty, loading and error states.
 import type { PaymentStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
-import { Panel, PanelContent, PanelHeader, PanelTitle } from '@stepler/ui/components/panel';
 import { Skeleton } from '@stepler/ui/components/skeleton';
+import { cn } from '@stepler/ui/lib/utils';
 import { useQuery } from '@tanstack/react-query';
+import { ReceiptText } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { listPayments, PAYMENTS_KEY } from '@/api/billing';
+import { monoDigits } from '@/format/mono-digits';
 import { formatMoney } from './offers';
 
 const KYIV = 'Europe/Kyiv';
@@ -28,79 +32,121 @@ export const PAYMENT_BADGE: Record<PaymentStatus, BadgeVariant> = {
   PARTIALLY_REFUNDED: 'neutral',
 };
 
-export function PaymentHistory() {
+const SURFACE = 'rounded-sheet border bg-card shadow-card';
+const HEAD_CELL = 'h-9 px-4 text-left align-middle text-xs font-medium first:pl-4 last:pr-4';
+const CELL = 'px-4 py-3.5 align-middle max-md:p-0';
+
+export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<string, string> }) {
   const t = useTranslations('billing.history');
   const tBilling = useTranslations('billing');
   const format = useFormatter();
   const payments = useQuery({ queryKey: PAYMENTS_KEY, queryFn: listPayments });
-  const date = (iso: string) =>
-    format.dateTime(new Date(iso), { dateStyle: 'medium', timeZone: KYIV });
+  const when = (iso: string) =>
+    format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short', timeZone: KYIV });
 
   return (
-    <Panel>
-      <PanelHeader>
-        <PanelTitle>{t('title')}</PanelTitle>
-      </PanelHeader>
-      <PanelContent>
-        {payments.isPending ? (
-          <Skeleton className="h-24 w-full" />
-        ) : payments.isError ? (
-          <Alert
-            variant="error"
-            action={
-              <Button variant="outline" onClick={() => void payments.refetch()}>
-                {tBilling('retry')}
-              </Button>
-            }
-          >
-            {t('loadFailed')}
-          </Alert>
-        ) : payments.data.items.length === 0 ? (
-          <p className="text-muted-foreground">{t('empty')}</p>
-        ) : (
-          <table className="w-full text-left text-sm max-md:block">
-            <thead className="max-md:sr-only">
-              <tr className="border-b text-muted-foreground">
-                <th scope="col" className="py-2 pr-4 font-medium">
-                  {t('date')}
+    <section aria-labelledby="history-title" className="grid gap-3">
+      <h2 id="history-title" className="type-h2">
+        {t('title')}
+      </h2>
+      {payments.isPending ? (
+        <div className={cn(SURFACE, 'grid gap-px overflow-hidden')}>
+          <Skeleton className="h-9 w-full rounded-none" />
+          <Skeleton className="h-14 w-full rounded-none" />
+          <Skeleton className="h-14 w-full rounded-none" />
+        </div>
+      ) : payments.isError ? (
+        <Alert
+          variant="error"
+          action={
+            <Button variant="outline" onClick={() => void payments.refetch()}>
+              {tBilling('retry')}
+            </Button>
+          }
+        >
+          {t('loadFailed')}
+        </Alert>
+      ) : payments.data.items.length === 0 ? (
+        <div className={cn(SURFACE, 'flex items-center gap-3 p-4 text-muted-foreground sm:p-5')}>
+          <ReceiptText aria-hidden="true" className="size-5 shrink-0" />
+          <p>{t('empty')}</p>
+        </div>
+      ) : (
+        <div className={cn(SURFACE, 'overflow-hidden')}>
+          <table className="w-full border-collapse text-[0.875rem] max-md:block">
+            <thead className="bg-subtle text-muted-foreground max-md:sr-only">
+              <tr>
+                <th scope="col" className={HEAD_CELL}>
+                  {t('time')}
                 </th>
-                <th scope="col" className="py-2 pr-4 font-medium">
+                <th scope="col" className={HEAD_CELL}>
                   {t('what')}
                 </th>
-                <th scope="col" className="py-2 pr-4 text-right font-medium">
+                <th scope="col" className={HEAD_CELL}>
                   {t('amount')}
                 </th>
-                <th scope="col" className="py-2 font-medium">
+                <th scope="col" className={HEAD_CELL}>
                   {t('status')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y max-md:block">
-              {payments.data.items.map((payment) => (
-                <tr
-                  key={payment.id}
-                  className="max-md:grid max-md:grid-cols-[1fr_auto] max-md:gap-x-4 max-md:gap-y-1 max-md:py-3"
-                >
-                  <td className="py-3 pr-4 whitespace-nowrap tabular-nums max-md:col-start-1 max-md:row-start-2 max-md:p-0 max-md:text-muted-foreground">
-                    {date(payment.createdAt)}
-                  </td>
-                  <td className="py-3 pr-4 max-md:col-start-1 max-md:row-start-1 max-md:p-0 max-md:font-medium">
-                    {payment.offerTitle}
-                  </td>
-                  <td className="py-3 pr-4 text-right whitespace-nowrap tabular-nums max-md:col-start-2 max-md:row-start-1 max-md:p-0">
-                    {formatMoney(format.number, payment)}
-                  </td>
-                  <td className="py-3 max-md:col-start-2 max-md:row-start-2 max-md:p-0 max-md:text-right">
-                    <Badge variant={PAYMENT_BADGE[payment.status]}>
-                      {t(`statuses.${payment.status}`)}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="max-md:block">
+              {payments.data.items.map((payment) => {
+                const collection =
+                  payment.collectionId === null
+                    ? undefined
+                    : collectionTitles.get(payment.collectionId);
+                return (
+                  <tr
+                    key={payment.id}
+                    className="border-t max-md:grid max-md:grid-cols-[minmax(0,1fr)_auto] max-md:gap-x-4 max-md:gap-y-1.5 max-md:px-4 max-md:py-3.5 max-md:first:border-t-0"
+                  >
+                    <td
+                      className={cn(
+                        CELL,
+                        'whitespace-nowrap text-foreground-soft tabular-nums md:w-[13rem] max-md:col-start-1 max-md:row-start-2 max-md:text-muted-foreground',
+                      )}
+                    >
+                      {when(payment.createdAt)}
+                    </td>
+                    <td className={cn(CELL, 'max-md:col-start-1 max-md:row-start-1')}>
+                      <span className="block font-medium [overflow-wrap:anywhere]">
+                        {payment.offerTitle}
+                      </span>
+                      {collection === undefined ? null : (
+                        <span className="block text-[0.8125rem] text-muted-foreground [overflow-wrap:anywhere]">
+                          {collection}
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      className={cn(
+                        CELL,
+                        'whitespace-nowrap md:w-[9rem] max-md:col-start-2 max-md:row-start-1',
+                      )}
+                    >
+                      {monoDigits(
+                        formatMoney(format.number, payment),
+                        'font-mono font-medium tabular-nums',
+                      )}
+                    </td>
+                    <td
+                      className={cn(
+                        CELL,
+                        'md:w-[11rem] max-md:col-start-2 max-md:row-start-2 max-md:justify-self-end',
+                      )}
+                    >
+                      <Badge variant={PAYMENT_BADGE[payment.status]}>
+                        {t(`statuses.${payment.status}`)}
+                      </Badge>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        )}
-      </PanelContent>
-    </Panel>
+        </div>
+      )}
+    </section>
   );
 }

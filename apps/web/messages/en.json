@@ -1686,7 +1686,6 @@
     "pageTitle": "Plan and billing",
     "title": "Plan and billing",
     "intro": "What your account can do now, and until when.",
-    "current": "Now",
     "states": {
       "ACTIVE": "Active",
       "GRACE": "Grace period",
@@ -1704,10 +1703,6 @@
       "COMPLIMENTARY_OPEN": "Free plan with no end",
       "NONE": "No plan in force"
     },
-    "limits": "Limits",
-    "collectionsUsage": "{used} of {limit, plural, one {# active collection} other {# active collections}}",
-    "storageUsage": "{used} of {limit} storage",
-    "readOnlyExplained": "View only means guests cannot add anything, while you can still view, download and delete. Content is kept for 12 months after the plan ends, then deleted; we e-mail you 30 and 7 days before.",
     "loadFailed": "Could not load your plan.",
     "retry": "Try again",
     "access": {
@@ -1806,12 +1801,15 @@
         "REVERSED": "Reversed by the bank",
         "REFUNDED": "Refunded",
         "PARTIALLY_REFUNDED": "Partly refunded"
-      }
+      },
+      "time": "Date and time"
     },
     "packs": {
       "title": "Buy a pack",
       "intro": "A pack is a one-time payment for one collection, with no automatic charges.",
-      "unavailable": "Packs can't be bought right now."
+      "unavailable": "Packs can't be bought right now.",
+      "howTitle": "How a pack works",
+      "howOne": "It covers one collection, separately from the account plan: its own storage, collecting and keeping."
     },
     "extend": {
       "storageUse": "{used} of {limit}",
@@ -1823,6 +1821,39 @@
       "failed": "Couldn't start the payment.",
       "buyForCollection": "Buy a pack for this collection",
       "buyForCollectionText": "A pack takes this collection off the account's limits: its own storage, collecting time and keeping term."
+    },
+    "plan": {
+      "title": "Your plan",
+      "names": {
+        "TRIAL": "Trial",
+        "SUBSCRIPTION": "Subscription",
+        "COMPLIMENTARY": "Free plan",
+        "NONE": "No plan"
+      },
+      "trialBadge": "Trial",
+      "until": "Valid until {date}",
+      "open": "No end date",
+      "daysLeft": "{days, plural, =0 {last day} one {# day left} other {# days left}}",
+      "buyPack": "Buy a pack"
+    },
+    "usage": {
+      "title": "Account limits",
+      "note": "Collections with a pack have their own limits and are not counted here.",
+      "collections": "Active collections",
+      "storage": "Storage",
+      "of": "{used} of {limit}"
+    },
+    "after": {
+      "title": "What happens when it ends?",
+      "readOnlyTitle": "What does “view only” mean?",
+      "guests": "Guests cannot add anything.",
+      "you": "You can view, download and delete content.",
+      "kept": "Content is kept for 12 months after the plan ends, then deleted.",
+      "warned": "We e-mail you 30 and 7 days before deletion."
+    },
+    "yours": {
+      "title": "Your packs",
+      "intro": "Collections with their own pack."
     }
   }
 }

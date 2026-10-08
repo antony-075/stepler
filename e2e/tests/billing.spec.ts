@@ -47,6 +47,7 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
   await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
+  expect(await horizontalOverflow(page)).toBe(0);
 
   // Guests can still open the link, but there is nothing to add.
   const guest = await openGuestLink(browser, guestPath);
@@ -120,6 +121,10 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
 
   await page.goto('/app/billing');
   await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
+  // The pack's collection under «Ваші пакети» and its name in the payment history.
+  const yours = page.getByRole('region', { name: 'Ваші пакети' });
+  await expect(yours.getByRole('link', { name: 'Весілля Олени' })).toBeVisible();
+  await expect(page.getByRole('cell', { name: /Весілля Олени/ })).toBeVisible();
 });
 
 test('a declined card: «Оплата не пройшла» and a way to try again @desktop', async ({ page }) => {

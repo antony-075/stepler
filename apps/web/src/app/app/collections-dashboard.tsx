@@ -91,7 +91,7 @@ import {
 } from './collection-filters';
 import { CreateCollectionDialog } from './create-collection-dialog';
 import { ACCOUNT_ACCESS_REASON_ID, daysLeft } from './access-model';
-import { meterPercent } from './usage-meter';
+import { UsageBar } from './usage-bar';
 
 // The view this tab chose, so a storage that cannot keep it (private windows) still switches.
 let chosenView: DashboardView | null = null;
@@ -656,18 +656,6 @@ function monoDigits(text: string): ReactNode[] {
   );
 }
 
-/** A thin decorative meter beside a usage figure: the share used, in the accent. */
-function Meter({ used, limit }: { used: number; limit: number }) {
-  return (
-    <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-track">
-      <span
-        className="block h-full rounded-full bg-primary"
-        style={{ width: `${meterPercent(used, limit)}%` }}
-      />
-    </span>
-  );
-}
-
 /**
  * «2 з 3 активних колекцій ▬ | 3,2 ГБ з 20 ГБ ▬»: the limits as one quiet line, the numbers in
  * mono, each with a meter. The sentence is the information; the meters only show it.
@@ -701,12 +689,12 @@ function UsageLine({
       )}
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(collections)}</span>
-        <Meter {...slots} />
+        <UsageBar {...slots} />
       </span>
       <span aria-hidden="true" className="h-3 w-px bg-border-strong max-sm:hidden" />
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(storage)}</span>
-        <Meter {...bytes} />
+        <UsageBar {...bytes} />
       </span>
     </span>
   );
