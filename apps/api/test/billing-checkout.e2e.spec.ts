@@ -147,7 +147,7 @@ describe('POST /billing/checkouts', () => {
     expect(await prisma.payment.count()).toBe(0);
   });
 
-  test('an inactive price or offer, a second pack and subscriptions are OFFER_UNAVAILABLE', async () => {
+  test('an inactive price or offer, a second pack and a pack price as a subscription are OFFER_UNAVAILABLE', async () => {
     const s = await scene();
     await prisma.billingPrice.update({
       where: { id: catalogue['pack-event'].priceId },

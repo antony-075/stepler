@@ -7,6 +7,8 @@ import { PaymentEvents } from '../billing/payment-events.service.js';
 import { PaymentTransitions } from '../billing/payment-transitions.js';
 import { PAYMENT_PROVIDERS } from '../billing/provider/provider-factory.js';
 import { ReconciliationService } from '../billing/reconciliation.service.js';
+import { SubscriptionProviderSync } from '../billing/subscription-provider-sync.js';
+import { SubscriptionTransitions } from '../billing/subscription-transitions.js';
 import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
 import { CollectionDeletion } from '../collections/collection-deletion.js';
 import { ConfigModule } from '../config/config.module.js';
@@ -38,6 +40,7 @@ import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
 import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
 import { BillingReconcileHandler } from './handlers/billing-reconcile.handler.js';
+import { BillingRenewalFailedMailHandler } from './handlers/billing-renewal-failed-mail.handler.js';
 import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
@@ -109,12 +112,15 @@ export class WorkerModule {
         ...PAYMENT_PROVIDERS,
         GuestPageRepository,
         PackGrants,
+        SubscriptionTransitions,
+        SubscriptionProviderSync,
         PaymentTransitions,
         PaymentEvents,
         ReconciliationService,
         BillingReconcileHandler,
         BillingReadOnlyMailHandler,
         BillingDeletionWarningMailHandler,
+        BillingRenewalFailedMailHandler,
         JobRunner,
       ],
     };

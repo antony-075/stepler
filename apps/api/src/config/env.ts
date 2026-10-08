@@ -75,6 +75,13 @@ export const billingEnvShape = {
   BILLING_CALLBACK_URL: z.url({ protocol: /^https?$/ }).optional(),
   /** A checkout stays payable this long (also LiqPay's `expired_date`). */
   BILLING_PENDING_TTL_MINUTES: positiveInt(30),
+  /**
+   * Days a subscription keeps working after a failed renewal [P12]: LiqPay retries a failed
+   * charge 3 times within 72 hours, so 4 days cover the retries and a late callback.
+   */
+  BILLING_GRACE_DAYS: positiveInt(4),
+  /** An upgrade's prorated charge below this (kopecks; 100 = 1 грн) is waived [P10]. */
+  BILLING_MIN_CHARGE_MINOR: positiveInt(100),
   /** Fiscal receipts [P14]: `liqpay_rro` adds `rro_info` to every checkout. */
   BILLING_FISCAL_MODE: z.enum(['none', 'liqpay_rro']).default('none'),
   /** Set deliberately after the accountant's answer ([Q1]) to run live keys without receipts. */

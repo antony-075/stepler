@@ -33,6 +33,8 @@ interface JobPayloads {
   'mail.billing-deletion-warning': { collectionId: string; days: 30 | 7 };
   /** Plan Task 13: open payments asked through LiqPay's `status` API; stuck callbacks reapplied. */
   'billing.reconcile': Record<never, never>;
+  /** Plan Task 15: «не вдалося списати оплату», once per failed period (`renewalFailureNotifiedFor`). */
+  'mail.billing-renewal-failed': { subscriptionId: string; periodEnd: string };
 }
 
 /** Job payloads by queue name (ADR 0009). Payloads hold ids only, never user content. */
@@ -97,6 +99,7 @@ export const JOB_OPTIONS = {
   'mail.billing-read-only': MAIL,
   'mail.billing-deletion-warning': MAIL,
   'billing.reconcile': PERIODIC,
+  'mail.billing-renewal-failed': MAIL,
 } as const satisfies Record<JobName, JobOptions>;
 
 export const JOB_NAMES = Object.keys(JOB_OPTIONS) as JobName[];
@@ -118,6 +121,7 @@ const ENTITY_KEY: { [N in JobName]: (data: JobData[N]) => string | null } = {
   'mail.billing-read-only': (data) => data.userId,
   'mail.billing-deletion-warning': (data) => `${data.collectionId}:${data.days}`,
   'billing.reconcile': () => null,
+  'mail.billing-renewal-failed': (data) => `${data.subscriptionId}:${data.periodEnd}`,
 };
 
 /**

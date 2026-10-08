@@ -22,10 +22,12 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
 import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { RequestId } from '../logging/request-id.decorator.js';
+import { AppError } from '../errors/app-error.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { CheckoutService } from './checkout.service.js';
 import { PaymentQueries, toPaymentDto } from './payment-queries.js';
 import { ReconciliationService } from './reconciliation.service.js';
+import { SubscriptionsService } from './subscriptions.service.js';
 
 /**
  * The account's billing (ADR 0018): the public catalogue, checkouts and the account's own
@@ -40,6 +42,7 @@ export class BillingController {
     private readonly checkouts: CheckoutService,
     private readonly queries: PaymentQueries,
     private readonly reconciliation: ReconciliationService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   /** Public: `/pricing` renders it signed out. Counted per IP like the guests' reads. */
@@ -71,8 +74,9 @@ export class BillingController {
     status: 409,
     description:
       'OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an ' +
-      'extension for an account collection, a smaller tier) or subscriptions (not yet sold); ' +
-      'PAYMENT_PENDING: another offer is waiting for payment for this collection',
+      'extension for an account collection, a smaller tier, a subscription price that is not ' +
+      'monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan; ' +
+      'PAYMENT_PENDING: another offer is waiting for payment for this collection or account',
   })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
   @ApiResponse({
@@ -84,7 +88,15 @@ export class BillingController {
     @Body({ schema: checkoutRequestSchema }) body: CheckoutRequest,
     @RequestId() requestId: string | undefined,
   ): Promise<CheckoutResponse> {
-    return this.checkouts.create(principal, body, requestId);
+    switch (body.kind) {
+      case 'SUBSCRIPTION':
+        return this.subscriptions.checkout(principal, body, requestId);
+      case 'SUBSCRIPTION_CHANGE':
+        // Plan changes arrive with plan Task 17.
+        throw new AppError('OFFER_UNAVAILABLE', 409);
+      default:
+        return this.checkouts.create(principal, body, requestId);
+    }
   }
 
   /**

@@ -17,6 +17,7 @@ import { VideoPosterHandler } from './handlers/video-poster.handler.js';
 import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
 import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
 import { BillingReconcileHandler } from './handlers/billing-reconcile.handler.js';
+import { BillingRenewalFailedMailHandler } from './handlers/billing-renewal-failed-mail.handler.js';
 import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { type JobHandler, WORKER_ENV } from './job-handler.js';
 import type { WorkerEnv } from './worker-env.js';
@@ -61,6 +62,7 @@ export class JobRunner implements OnApplicationBootstrap {
     billingReadOnly: BillingReadOnlyMailHandler,
     billingDeletionWarning: BillingDeletionWarningMailHandler,
     billingReconcile: BillingReconcileHandler,
+    billingRenewalFailed: BillingRenewalFailedMailHandler,
   ) {
     this.handlers = [
       purgeContent,
@@ -79,6 +81,7 @@ export class JobRunner implements OnApplicationBootstrap {
       billingReadOnly,
       billingDeletionWarning,
       billingReconcile,
+      billingRenewalFailed,
     ] as JobHandler[];
   }
 

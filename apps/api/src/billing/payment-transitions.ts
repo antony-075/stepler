@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service.js';
 import type { Payment, Prisma } from '../generated/prisma/client.js';
 import { type GrantResult, PackGrants } from './pack-grants.js';
+import { SubscriptionTransitions } from './subscription-transitions.js';
 import type { ProviderEvent } from './provider/payment-provider.js';
 
 type Db = Prisma.TransactionClient;
@@ -26,6 +27,7 @@ export class PaymentTransitions {
   constructor(
     private readonly grants: PackGrants,
     private readonly audit: AuditService,
+    private readonly subscriptions: SubscriptionTransitions,
   ) {}
 
   async apply(
@@ -35,8 +37,11 @@ export class PaymentTransitions {
     source: 'callback' | 'status',
     now = new Date(),
   ): Promise<TransitionOutcome> {
-    // Subscriptions arrive with PR M3; their events are stored and left alone until then.
-    if (payment.kind !== 'PACK' && payment.kind !== 'PACK_EXTENSION') return 'noop';
+    // Subscription payments (the first one, renewals on its order, upgrades) have their own
+    // machine; it writes their `Payment.status` the same way.
+    if (payment.kind !== 'PACK' && payment.kind !== 'PACK_EXTENSION') {
+      return this.subscriptions.apply(tx, payment, ev, source, now);
+    }
     if (ev.outcome === 'SUCCEEDED' || ev.outcome === 'REVERSED') {
       if (ev.amountMinor !== payment.amountMinor || ev.currency !== payment.currency) {
         if (!payment.mismatch) {
@@ -65,6 +70,9 @@ export class PaymentTransitions {
   async expire(tx: Db, payment: Payment): Promise<TransitionOutcome> {
     if (payment.status !== 'PENDING') return 'noop';
     await tx.payment.update({ where: { id: payment.id }, data: { status: 'EXPIRED' } });
+    if (payment.kind === 'SUBSCRIPTION' && payment.subscriptionId !== null) {
+      await this.subscriptions.checkoutExpired(tx, payment.subscriptionId);
+    }
     return 'applied';
   }
 

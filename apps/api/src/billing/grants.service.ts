@@ -12,14 +12,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import { toAccessDto } from './access-dto.js';
 import { toOperatorOffer, toSubscriptionDto } from './billing-dto.js';
 import { EntitlementResolver } from './entitlement-resolver.js';
-
-/** A live plan: what the partial unique index `Subscription_one_live_per_user` allows once. */
-const LIVE: Prisma.SubscriptionWhereInput = {
-  OR: [
-    { status: { in: ['PENDING', 'ACTIVE', 'PAST_DUE'] } },
-    { status: 'CANCELED', endedAt: null },
-  ],
-};
+import { LIVE_SUBSCRIPTION } from './subscriptions.service.js';
 
 /**
  * Complimentary plans (ADR 0018 [P13]): the operator gives an account a subscription offer's
@@ -46,7 +39,7 @@ export class GrantsService {
     const [access, live, locale] = await Promise.all([
       this.entitlements.forAccount(user.id),
       this.prisma.subscription.findFirst({
-        where: { userId: user.id, ...LIVE },
+        where: { userId: user.id, ...LIVE_SUBSCRIPTION },
         include: { offer: { select: { titleUk: true, titleEn: true } } },
       }),
       this.localeOf(op),
@@ -98,7 +91,9 @@ export class GrantsService {
       const [user] = await tx.$queryRaw<{ id: string }[]>`
         SELECT "id"::text AS "id" FROM "User" WHERE "id" = ${input.userId}::uuid FOR UPDATE`;
       if (user === undefined) throw new AppError('NOT_FOUND', 404);
-      const live = await tx.subscription.findFirst({ where: { userId: user.id, ...LIVE } });
+      const live = await tx.subscription.findFirst({
+        where: { userId: user.id, ...LIVE_SUBSCRIPTION },
+      });
       if (live?.source === 'LIQPAY') throw new AppError('SUBSCRIPTION_EXISTS', 409);
       if (live !== null) {
         await tx.subscription.update({

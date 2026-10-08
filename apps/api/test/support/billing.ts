@@ -179,3 +179,72 @@ export function payFields(
     ...extra,
   };
 }
+
+/** Draft subscription prices for tests (kopecks per period). */
+export const TEST_SUBSCRIPTION_PRICES = {
+  'sub-pro': { MONTH: 50_000, YEAR: 500_000 },
+  'sub-business': { MONTH: 120_000, YEAR: 1_200_000 },
+} as const;
+
+export type SubscriptionCode = keyof typeof TEST_SUBSCRIPTION_PRICES;
+export type SubscriptionPrices = Record<
+  SubscriptionCode,
+  { offerId: string; MONTH: string; YEAR: string }
+>;
+
+/** Prices and activates «Pro» and «Business», monthly and yearly; returns the price ids. */
+export async function priceSubscriptions(prisma: PrismaClient): Promise<SubscriptionPrices> {
+  const out = {} as SubscriptionPrices;
+  for (const [code, amounts] of Object.entries(TEST_SUBSCRIPTION_PRICES) as [
+    SubscriptionCode,
+    { MONTH: number; YEAR: number },
+  ][]) {
+    const offer = await prisma.billingOffer.update({ where: { code }, data: { active: true } });
+    const ids = { offerId: offer.id } as { offerId: string; MONTH: string; YEAR: string };
+    for (const interval of ['MONTH', 'YEAR'] as const) {
+      const price = await prisma.billingPrice.create({
+        data: { offerId: offer.id, interval, currency: 'UAH', amountMinor: amounts[interval] },
+      });
+      ids[interval] = price.id;
+    }
+    out[code] = ids;
+  }
+  return out;
+}
+
+/**
+ * The fields of LiqPay's answer for a paid `subscribe` checkout, as spike S1b observed it: status
+ * `subscribed` (not `success`), action `subscribe`, the charged amount and a `payment_id`.
+ */
+export function subscribeFields(
+  payment: { id: string; amountMinor: number; currency: string },
+  status = 'subscribed',
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return { ...payFields(payment, status), action: 'subscribe', ...extra };
+}
+
+let regularSeq = 1;
+
+/** A recurring charge (`action: regular`) on the subscription's order, with its own payment id. */
+export function regularFields(
+  orderId: string,
+  status: 'success' | 'failure',
+  amountMinor: number,
+  extra: Record<string, unknown> = {},
+): Record<string, unknown> {
+  regularSeq += 1;
+  return {
+    action: 'regular',
+    status,
+    version: 7,
+    order_id: orderId,
+    liqpay_order_id: `LQR${regularSeq}`,
+    payment_id: 9_000_000_000 + regularSeq,
+    amount: amountMinor / 100,
+    currency: 'UAH',
+    end_date: Date.now(),
+    ...(status === 'failure' ? { err_code: 'limit' } : {}),
+    ...extra,
+  };
+}

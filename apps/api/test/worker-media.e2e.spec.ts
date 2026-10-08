@@ -461,6 +461,7 @@ describe('JobRunner', () => {
       noop('mail.billing-read-only') as never,
       noop('mail.billing-deletion-warning') as never,
       noop('billing.reconcile') as never,
+      noop('mail.billing-renewal-failed') as never,
     );
   }
   const job = (retryCount: number) =>

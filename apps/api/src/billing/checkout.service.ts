@@ -13,15 +13,12 @@ import type {
   PaymentKind,
   Prisma,
 } from '../generated/prisma/client.js';
-import { FISCAL_RECEIPTS, type FiscalReceipts } from './fiscal/fiscal-receipts.js';
-import { type OfferSnapshot, readSnapshot, snapshotOf, snapshotTitle } from './offer-snapshot.js';
-import {
-  type CheckoutForm,
-  PAYMENT_PROVIDER,
-  type PaymentProvider,
-} from './provider/payment-provider.js';
+import { CheckoutForms } from './checkout-forms.js';
+import { type OfferSnapshot, snapshotOf } from './offer-snapshot.js';
 
 type Db = Prisma.TransactionClient;
+/** Subscriptions are checked out by `SubscriptionsService`. */
+export type PackCheckoutRequest = Extract<CheckoutRequest, { kind: 'PACK' | 'PACK_EXTENSION' }>;
 type PricedOffer = BillingPrice & { offer: BillingOffer };
 
 const MINUTE_MS = 60_000;
@@ -52,22 +49,17 @@ export class CheckoutService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     @Inject(API_ENV) private readonly env: ApiEnv,
-    @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
-    @Inject(FISCAL_RECEIPTS) private readonly fiscal: FiscalReceipts,
+    private readonly forms: CheckoutForms,
   ) {}
 
   async create(
     principal: AccountPrincipal,
-    request: CheckoutRequest,
+    request: PackCheckoutRequest,
     requestId?: string,
   ): Promise<CheckoutResponse> {
     // Honest when payments are off (rule 18): nothing is written, nothing granted.
     if (this.env.BILLING_PROVIDER !== 'liqpay') {
       throw new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503);
-    }
-    // Subscriptions arrive with PR M3 (plan Tasks 15–17); until then they cannot be bought.
-    if (request.kind === 'SUBSCRIPTION' || request.kind === 'SUBSCRIPTION_CHANGE') {
-      throw new AppError('OFFER_UNAVAILABLE', 409);
     }
     const { userId } = principal;
     const now = new Date();
@@ -85,7 +77,7 @@ export class CheckoutService {
       const reused = await this.pendingFor(tx, userId, target, now);
       const row = reused ?? (await this.insert(tx, principal, target, now, requestId));
       // Built inside the transaction: a fiscal refusal rolls the new row back.
-      const checkoutForm = this.formFor(row, target.offer, user);
+      const checkoutForm = this.forms.formFor(row, target.offer, user);
       return { payment: row, form: checkoutForm };
     });
     this.logger.log({ msg: 'billing.checkout', paymentId: payment.id, kind: payment.kind });
@@ -110,41 +102,23 @@ export class CheckoutService {
       if (user === undefined) throw new AppError('NOT_FOUND', 404);
       const row = await tx.payment.findFirst({
         where: { id: paymentId, userId: principal.userId },
-        include: { offer: true },
+        include: { offer: true, subscription: { select: { interval: true } } },
       });
       if (row === null) throw new AppError('NOT_FOUND', 404);
       if (row.status !== 'PENDING' || row.expiresAt.getTime() <= now.getTime()) {
         throw new AppError('OFFER_UNAVAILABLE', 409);
       }
-      return this.formFor(row, row.offer, user);
+      // A subscription's first payment is signed as a recurring checkout again, starting now.
+      const interval = row.kind === 'SUBSCRIPTION' ? row.subscription?.interval : undefined;
+      return this.forms.formFor(
+        row,
+        row.offer,
+        user,
+        interval === 'MONTH' || interval === 'YEAR' ? { interval, startAt: now } : undefined,
+      );
     });
     this.logger.log({ msg: 'billing.checkout.resume', paymentId });
     return { paymentId, status: 'PENDING', form };
-  }
-
-  /** LiqPay's signed form for one of our payments; everything in it comes from the row. */
-  private formFor(
-    row: Payment,
-    offer: BillingOffer,
-    user: { email: string; locale: 'uk' | 'en' },
-  ): CheckoutForm {
-    return this.provider.checkoutForm({
-      orderId: row.providerOrderId,
-      action: 'pay',
-      amountMinor: row.amountMinor,
-      currency: row.currency,
-      description: `Stepler: ${snapshotTitle(readSnapshot(row.offerSnapshot), user.locale)}`,
-      language: user.locale,
-      resultUrl: `${this.env.APP_ORIGIN}/app/billing/return?payment=${row.id}`,
-      serverUrl: this.env.BILLING_CALLBACK_URL ?? null,
-      expiresAt: row.expiresAt,
-      ...this.fiscalFor(offer, row.amountMinor, user.email),
-    });
-  }
-
-  private fiscalFor(offer: BillingOffer, amountMinor: number, email: string) {
-    const fiscal = this.fiscal.rroInfo(offer, amountMinor, email);
-    return fiscal === undefined ? {} : { fiscal };
   }
 
   /** The live price of a live offer, in a currency we sell; else `409 OFFER_UNAVAILABLE`. */

@@ -12,6 +12,9 @@ const offerSnapshotSchema = z
     extension: z.enum(['WINDOW', 'RETENTION', 'STORAGE']).nullable(),
     titleUk: z.string(),
     titleEn: z.string(),
+    /** A subscription's account-wide limits (absent in snapshots written before M3). */
+    activeCollections: z.int().nullable().optional(),
+    storageBytes: z.string().regex(/^\d+$/).nullable().optional(),
     collectionStorageBytes: z.string().regex(/^\d+$/).nullable(),
     guestLinks: z.int().nullable(),
     windowDays: z.int().nullable(),
@@ -30,6 +33,8 @@ export function snapshotOf(
     extension,
     titleUk: offer.titleUk,
     titleEn: offer.titleEn,
+    activeCollections: offer.activeCollections,
+    storageBytes: offer.storageBytes?.toString() ?? null,
     collectionStorageBytes: offer.collectionStorageBytes?.toString() ?? null,
     guestLinks: offer.guestLinks,
     windowDays: offer.windowDays,

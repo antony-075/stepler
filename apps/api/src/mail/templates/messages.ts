@@ -221,6 +221,37 @@ export const BILLING_DELETION_WARNING_COPY: Readonly<
   },
 };
 
+interface BillingRenewalFailedCopy {
+  subject: string;
+  heading: string;
+  /** `{plan}`. */
+  text: string;
+  /** `{date}`: when the grace period ends. */
+  grace: string;
+  /** `{url}`: «Тариф і оплата». */
+  act: string;
+}
+
+/** Billing (ADR 0018 [P12]): a renewal charge failed; the plan is in its grace period. */
+export const BILLING_RENEWAL_FAILED_COPY: Readonly<Record<MailLocale, BillingRenewalFailedCopy>> = {
+  uk: {
+    subject: 'Stepler: не вдалося списати оплату за тариф',
+    heading: 'Не вдалося списати оплату',
+    text: 'Банк не підтвердив щомісячне списання за тариф «{plan}». LiqPay спробує ще кілька разів.',
+    grace:
+      'Усе працює як раніше до {date}. Якщо оплата не пройде, колекції стануть доступні лише для перегляду.',
+    act: 'Перевірте картку або оформіть тариф знову: {url}',
+  },
+  en: {
+    subject: 'Stepler: we could not charge your plan',
+    heading: 'Your plan payment failed',
+    text: 'Your bank did not confirm the charge for the “{plan}” plan. LiqPay will try a few more times.',
+    grace:
+      'Everything keeps working until {date}. If the payment does not go through, your collections become view-only.',
+    act: 'Check your card or subscribe again: {url}',
+  },
+};
+
 /** A date as the reader says it, in Kyiv time (billing mails). */
 export function formatMailDate(locale: MailLocale, date: Date): string {
   return new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', {

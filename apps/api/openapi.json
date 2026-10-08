@@ -703,7 +703,7 @@
             "description": "NOT_FOUND: the collection is not yours, unknown, or being deleted"
           },
           "409": {
-            "description": "OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an extension for an account collection, a smaller tier) or subscriptions (not yet sold); PAYMENT_PENDING: another offer is waiting for payment for this collection"
+            "description": "OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an extension for an account collection, a smaller tier, a subscription price that is not monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan; PAYMENT_PENDING: another offer is waiting for payment for this collection or account"
           },
           "429": {
             "description": "RATE_LIMITED: checkouts per account per hour"

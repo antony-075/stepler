@@ -3,7 +3,9 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Payment, Prisma } from '../generated/prisma/client.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { PaymentTransitions, type TransitionOutcome } from './payment-transitions.js';
+import { SubscriptionProviderSync } from './subscription-provider-sync.js';
 import {
   PAYMENT_PROVIDER,
   type PaymentProvider,
@@ -26,7 +28,9 @@ export class PaymentEvents {
   constructor(
     private readonly prisma: PrismaService,
     private readonly transitions: PaymentTransitions,
+    private readonly sync: SubscriptionProviderSync,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
   /** The callback body; `400 BILLING_SIGNATURE_INVALID` for anything not signed with our key. */
@@ -90,6 +94,10 @@ export class PaymentEvents {
     source: 'callback',
   ): Promise<EventOutcome | null> {
     try {
+      // A transition may enqueue a mail (a failed renewal); the queue is started outside the
+      // transaction (ADR 0009).
+      await this.jobs.ready();
+      let upgraded: string | null = null;
       const outcome = await this.prisma.$transaction(async (tx) => {
         const payment = await this.lockByOrder(tx, ev.orderId);
         // Another worker processed it while this one waited for the lock.
@@ -102,6 +110,7 @@ export class PaymentEvents {
           payment === null
             ? 'unknown_order'
             : await this.transitions.apply(tx, payment, ev, source);
+        upgraded = result === 'applied' ? upgradedSubscription(payment) : null;
         await tx.paymentEvent.update({
           where: { id: eventId },
           data: {
@@ -113,6 +122,7 @@ export class PaymentEvents {
         });
         return result;
       });
+      if (upgraded !== null) await this.sync.syncAmount(upgraded);
       this.logger.log({
         msg: 'billing.callback',
         eventId,
@@ -144,13 +154,17 @@ export class PaymentEvents {
   async applyStatus(
     ev: ProviderEvent,
   ): Promise<{ payment: Payment; outcome: TransitionOutcome } | null> {
-    return this.prisma.$transaction(async (tx) => {
+    await this.jobs.ready();
+    const result = await this.prisma.$transaction(async (tx) => {
       const payment = await this.lockByOrder(tx, ev.orderId);
       if (payment === null) return null;
       const outcome = await this.transitions.apply(tx, payment, ev, 'status');
       const fresh = await tx.payment.findUniqueOrThrow({ where: { id: payment.id } });
       return { payment: fresh, outcome };
     });
+    const upgraded = result?.outcome === 'applied' ? upgradedSubscription(result.payment) : null;
+    if (upgraded !== null) await this.sync.syncAmount(upgraded);
+    return result;
   }
 
   /**
@@ -170,4 +184,9 @@ export class PaymentEvents {
     await tx.$queryRaw`SELECT 1 FROM "Payment" WHERE "id" = ${found.id}::uuid FOR UPDATE`;
     return tx.payment.findUniqueOrThrow({ where: { id: found.id } });
   }
+}
+
+/** A paid upgrade's subscription: LiqPay is told its new price right after the commit. */
+function upgradedSubscription(payment: Payment | null): string | null {
+  return payment?.kind === 'SUBSCRIPTION_CHANGE' ? payment.subscriptionId : null;
 }

@@ -810,43 +810,52 @@ model BillingPrice {
 /// [P13]). Limits are a snapshot of the offer at start [B10]. At most one live per user (partial
 /// unique "Subscription_one_live_per_user").
 model Subscription {
-  id                     String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  userId                 String             @db.Uuid
-  source                 SubscriptionSource
-  status                 SubscriptionStatus
-  offerId                String             @db.Uuid
-  priceId                String?            @db.Uuid
-  interval               BillingInterval?
-  amountMinor            Int?
-  currency               Currency?
-  activeCollections      Int
-  storageBytes           BigInt
-  collectionStorageBytes BigInt
-  guestLinks             Int
-  features               Json               @default("{}")
-  currentPeriodStart     DateTime?          @db.Timestamptz(3)
+  id                         String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId                     String             @db.Uuid
+  source                     SubscriptionSource
+  status                     SubscriptionStatus
+  offerId                    String             @db.Uuid
+  priceId                    String?            @db.Uuid
+  interval                   BillingInterval?
+  amountMinor                Int?
+  currency                   Currency?
+  activeCollections          Int
+  storageBytes               BigInt
+  collectionStorageBytes     BigInt
+  guestLinks                 Int
+  features                   Json               @default("{}")
+  currentPeriodStart         DateTime?          @db.Timestamptz(3)
   /// NULL = a grant without an end.
-  currentPeriodEnd       DateTime?          @db.Timestamptz(3)
-  graceEndsAt            DateTime?          @db.Timestamptz(3)
-  cancelAtPeriodEnd      Boolean            @default(false)
-  canceledAt             DateTime?          @db.Timestamptz(3)
-  endedAt                DateTime?          @db.Timestamptz(3)
-  pendingOfferId         String?            @db.Uuid
-  pendingPriceId         String?            @db.Uuid
-  providerOrderId        String?            @unique
-  autoRenewConsentAt     DateTime?          @db.Timestamptz(3)
-  consentTermsVersion    String?
+  currentPeriodEnd           DateTime?          @db.Timestamptz(3)
+  graceEndsAt                DateTime?          @db.Timestamptz(3)
+  cancelAtPeriodEnd          Boolean            @default(false)
+  canceledAt                 DateTime?          @db.Timestamptz(3)
+  endedAt                    DateTime?          @db.Timestamptz(3)
+  pendingOfferId             String?            @db.Uuid
+  pendingPriceId             String?            @db.Uuid
+  providerOrderId            String?            @unique
+  autoRenewConsentAt         DateTime?          @db.Timestamptz(3)
+  consentTermsVersion        String?
   /// The operator's reason for a grant; shown in /ops only.
-  grantReason            String?
-  grantedByUserId        String?            @db.Uuid
-  createdAt              DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt              DateTime           @updatedAt @db.Timestamptz(3)
-  user                   User               @relation(fields: [userId], references: [id], onDelete: Restrict)
-  offer                  BillingOffer       @relation("SubscriptionOffer", fields: [offerId], references: [id], onDelete: Restrict)
-  price                  BillingPrice?      @relation("SubscriptionPrice", fields: [priceId], references: [id], onDelete: Restrict)
-  pendingOffer           BillingOffer?      @relation("SubscriptionPendingOffer", fields: [pendingOfferId], references: [id], onDelete: Restrict)
-  pendingPrice           BillingPrice?      @relation("SubscriptionPendingPrice", fields: [pendingPriceId], references: [id], onDelete: Restrict)
-  payments               Payment[]
+  grantReason                String?
+  grantedByUserId            String?            @db.Uuid
+  /// The last `status` call for this subscription (reconciliation) and whether LiqPay answered.
+  lastRefreshAt              DateTime?          @db.Timestamptz(3)
+  lastRefreshOk              Boolean            @default(false)
+  /// LiqPay confirmed it charges no more (our `unsubscribe`, or the payer at the bank).
+  providerUnsubscribedAt     DateTime?          @db.Timestamptz(3)
+  /// A new price LiqPay has not confirmed yet (`subscribe_update`); the reconcile job retries.
+  pendingProviderAmountMinor Int?
+  /// The period end whose failed renewal was mailed (one mail per period).
+  renewalFailureNotifiedFor  DateTime?          @db.Timestamptz(3)
+  createdAt                  DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime           @updatedAt @db.Timestamptz(3)
+  user                       User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer                      BillingOffer       @relation("SubscriptionOffer", fields: [offerId], references: [id], onDelete: Restrict)
+  price                      BillingPrice?      @relation("SubscriptionPrice", fields: [priceId], references: [id], onDelete: Restrict)
+  pendingOffer               BillingOffer?      @relation("SubscriptionPendingOffer", fields: [pendingOfferId], references: [id], onDelete: Restrict)
+  pendingPrice               BillingPrice?      @relation("SubscriptionPendingPrice", fields: [pendingPriceId], references: [id], onDelete: Restrict)
+  payments                   Payment[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status, currentPeriodEnd], map: "Subscription_period_end_idx")
@@ -877,40 +886,43 @@ model CollectionPack {
 /// CHECKs: "Payment_amount_positive", "Payment_refund_bounds", "Payment_paid_consistent"; one
 /// pending pack checkout per collection and offer ("Payment_one_pending_per_target").
 model Payment {
-  id                 String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  userId             String        @db.Uuid
+  id                 String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId             String         @db.Uuid
   kind               PaymentKind
-  status             PaymentStatus @default(PENDING)
-  offerId            String        @db.Uuid
-  priceId            String?       @db.Uuid
-  collectionId       String?       @db.Uuid
-  subscriptionId     String?       @db.Uuid
+  status             PaymentStatus  @default(PENDING)
+  offerId            String         @db.Uuid
+  priceId            String?        @db.Uuid
+  collectionId       String?        @db.Uuid
+  subscriptionId     String?        @db.Uuid
   /// A pack that creates its collection (`collectionId` NULL at checkout): the title to use.
   newCollectionTitle String?
   amountMinor        Int
   currency           Currency
   /// What was bought: the offer's code, kind, titles and limits at checkout.
   offerSnapshot      Json
-  providerOrderId    String        @unique
-  providerPaymentId  String?       @unique
-  expiresAt          DateTime      @db.Timestamptz(3)
-  paidAt             DateTime?     @db.Timestamptz(3)
-  failedAt           DateTime?     @db.Timestamptz(3)
+  providerOrderId    String         @unique
+  providerPaymentId  String?        @unique
+  expiresAt          DateTime       @db.Timestamptz(3)
+  paidAt             DateTime?      @db.Timestamptz(3)
+  failedAt           DateTime?      @db.Timestamptz(3)
   errCode            String?
-  refundedMinor      Int           @default(0)
+  refundedMinor      Int            @default(0)
   /// A success that could not be granted as bought (e.g. a second pack): for the operator.
-  needsReview        Boolean       @default(false)
+  needsReview        Boolean        @default(false)
   /// The provider reported another amount or currency: nothing was granted.
-  mismatch           Boolean       @default(false)
+  mismatch           Boolean        @default(false)
   /// The last `status` call for this payment (the return page's refresh is throttled by it).
-  lastCheckedAt      DateTime?     @db.Timestamptz(3)
-  createdAt          DateTime      @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime      @updatedAt @db.Timestamptz(3)
-  user               User          @relation(fields: [userId], references: [id], onDelete: Restrict)
-  offer              BillingOffer  @relation(fields: [offerId], references: [id], onDelete: Restrict)
-  price              BillingPrice? @relation(fields: [priceId], references: [id], onDelete: Restrict)
-  collection         Collection?   @relation(fields: [collectionId], references: [id], onDelete: SetNull)
-  subscription       Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  lastCheckedAt      DateTime?      @db.Timestamptz(3)
+  /// A subscription payment: the paid period (a renewal's new period, an upgrade's current one).
+  periodStart        DateTime?      @db.Timestamptz(3)
+  periodEnd          DateTime?      @db.Timestamptz(3)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @db.Timestamptz(3)
+  user               User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer              BillingOffer   @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  price              BillingPrice?  @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  collection         Collection?    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  subscription       Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
   events             PaymentEvent[]
 
   @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
@@ -942,4 +954,3 @@ model PaymentEvent {
 
   @@index([paymentId])
 }
-
