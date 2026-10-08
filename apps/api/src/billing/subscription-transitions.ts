@@ -32,7 +32,8 @@ type BillingEnv = Pick<ApiEnv, 'BILLING_GRACE_DAYS'>;
  * arrive as action `regular` on the same `order_id`, each with its own `payment_id`, which is
  * what makes a renewal idempotent here.
  * - start: the first payment succeeds → `ACTIVE` for one interval from the charge (or from the
- *   end of the plan it continues: a resumed or switched subscription); a complimentary grant is
+ *   end of the plan it continues: a resumed subscription, or a monthly ↔ yearly switch whose old
+ *   subscription the reconcile job stopped at the period end, B14); a complimentary grant is
  *   replaced; a second paid plan is never stacked (`needsReview`, the worker unsubscribes it);
  * - renewal success → the period advances by one interval from its end, a scheduled change
  *   applies; after `EXPIRED` it starts again at the charge (the money was taken);
@@ -99,10 +100,11 @@ export class SubscriptionTransitions {
     const predecessors = await tx.subscription.findMany({
       where: { userId: sub.userId, id: { not: sub.id }, ...LIVE },
     });
-    // A paid plan that is neither cancelled nor being switched from is never stacked.
+    // A paid plan LiqPay may still charge (neither cancelled nor stopped for a monthly ↔ yearly
+    // switch, B14) is never stacked.
     const conflicting = predecessors.find(
       (row) =>
-        row.source === 'LIQPAY' && row.status !== 'CANCELED' && row.pendingPriceId !== sub.priceId,
+        row.source === 'LIQPAY' && row.status !== 'CANCELED' && row.providerUnsubscribedAt === null,
     );
     const continued = predecessors.find((row) => row.source === 'LIQPAY' && row !== conflicting);
     const review =
@@ -233,7 +235,7 @@ export class SubscriptionTransitions {
             include: { offer: true },
           });
     // (A pending price of another interval marks a monthly ↔ yearly switch, paid by its own
-    // checkout: never applied by a renewal.)
+    // checkout at the period end, B14: never applied by a renewal.)
     const switchNow =
       pending !== null && pending.interval === sub.interval && pending.amountMinor === amountMinor;
     const expected = new Set(
@@ -269,7 +271,12 @@ export class SubscriptionTransitions {
           : {}),
       },
     });
-    const review = !expected.has(amountMinor) || sub.status === 'CANCELED';
+    // A charge after we stopped LiqPay (cancelled, or a switch's old plan charged before the job
+    // reached it) is honoured but the operator looks at it.
+    const review =
+      !expected.has(amountMinor) ||
+      sub.status === 'CANCELED' ||
+      sub.providerUnsubscribedAt !== null;
     await this.renewalRow(tx, sub, ev, existing, {
       status: 'SUCCEEDED',
       amountMinor,
@@ -335,7 +342,8 @@ export class SubscriptionTransitions {
 
   /**
    * `PAST_DUE` until `currentPeriodEnd + BILLING_GRACE_DAYS` (kept if already set) and the
-   * renewal-failed mail once per period. Also the reconcile job's step when no renewal came.
+   * renewal-failed mail once per period (worded as «підтвердіть оплату» for a switch whose old
+   * plan was stopped, B14). Also the reconcile job's step when no renewal came.
    */
   async enterGrace(tx: Db, sub: Subscription): Promise<void> {
     if (sub.currentPeriodEnd === null) return;
@@ -359,8 +367,8 @@ export class SubscriptionTransitions {
   }
 
   /**
-   * A subscription checkout nobody paid: the pending subscription ends, and a monthly ↔ yearly
-   * switch it was for is no longer pending on the plan it would have replaced.
+   * A subscription checkout nobody paid: the pending subscription ends. (A monthly ↔ yearly
+   * switch it was to confirm stays pending on the old plan, B14: the owner may pay again.)
    */
   async checkoutExpired(tx: Db, subscriptionId: string): Promise<void> {
     const sub = await lockSubscription(tx, subscriptionId);
@@ -368,10 +376,6 @@ export class SubscriptionTransitions {
     await tx.subscription.update({
       where: { id: sub.id },
       data: { status: 'EXPIRED', endedAt: new Date() },
-    });
-    await tx.subscription.updateMany({
-      where: { userId: sub.userId, id: { not: sub.id }, pendingPriceId: sub.priceId, ...LIVE },
-      data: { pendingOfferId: null, pendingPriceId: null },
     });
   }
 
@@ -384,6 +388,11 @@ export class SubscriptionTransitions {
     now: Date,
   ): Promise<SubscriptionOutcome> {
     if (sub.source !== 'LIQPAY') return 'noop';
+    // We stopped it ourselves for a monthly ↔ yearly switch (B14): it runs to its period end and
+    // then into grace until the new plan is paid; it is not a cancellation.
+    if (sub.status === 'ACTIVE' && sub.providerUnsubscribedAt !== null && sub.pendingPriceId) {
+      return 'noop';
+    }
     const cancel = sub.status === 'ACTIVE';
     if (!cancel && sub.providerUnsubscribedAt !== null) return 'noop';
     await tx.subscription.update({

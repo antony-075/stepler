@@ -696,7 +696,7 @@
                 }
               }
             },
-            "description": "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated charge was waived, applied now) or SCHEDULED (a downgrade from the period end), no form"
+            "description": "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated charge was waived, applied now) or SCHEDULED (a downgrade, or a monthly ↔ yearly switch that is confirmed by its own checkout at the period end), no form"
           },
           "400": {
             "description": "VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule"
@@ -705,7 +705,7 @@
             "description": "NOT_FOUND: the collection is not yours, unknown, or being deleted; a plan change without a paid plan"
           },
           "409": {
-            "description": "OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an extension for an account collection, a smaller tier, a subscription price that is not monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan; PAYMENT_PENDING: another offer is waiting for payment for this collection or account, or a plan change while the renewal is unpaid (grace); PLAN_DOWNGRADE_BLOCKED: the smaller plan would not hold current usage (`excess`: what to reduce, by how much)"
+            "description": "OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an extension for an account collection, a smaller tier, a subscription price that is not monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan that LiqPay still charges; PAYMENT_PENDING: another offer is waiting for payment for this collection or account, or a plan change while the renewal or a switched plan is unpaid; PLAN_DOWNGRADE_BLOCKED: the smaller plan would not hold current usage (`excess`: what to reduce, by how much)"
           },
           "429": {
             "description": "RATE_LIMITED: checkouts per account per hour"
@@ -1517,6 +1517,9 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "awaitingPayment": {
+                          "type": "boolean"
+                        },
                         "effectiveAt": {
                           "format": "date-time",
                           "nullable": true,
@@ -1528,6 +1531,13 @@
                             "ONE_TIME",
                             "MONTH",
                             "YEAR"
+                          ],
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "DOWNGRADE",
+                            "SWITCH"
                           ],
                           "type": "string"
                         },
@@ -1562,14 +1572,22 @@
                             "currency"
                           ],
                           "type": "object"
+                        },
+                        "priceId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
                         }
                       },
                       "required": [
+                        "kind",
                         "offerId",
+                        "priceId",
                         "offerTitle",
                         "interval",
                         "price",
-                        "effectiveAt"
+                        "effectiveAt",
+                        "awaitingPayment"
                       ],
                       "type": "object"
                     },
@@ -1817,7 +1835,7 @@
             "description": "NOT_FOUND: the account has no paid plan"
           },
           "409": {
-            "description": "OFFER_UNAVAILABLE: not a live subscription price, the current one, or the plan is cancelled; PAYMENT_PENDING: the renewal is unpaid (grace)"
+            "description": "OFFER_UNAVAILABLE: not a live subscription price, the current one, or the plan is cancelled; PAYMENT_PENDING: the renewal or a switched plan is unpaid"
           },
           "default": {
             "content": {
@@ -1953,6 +1971,9 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "awaitingPayment": {
+                          "type": "boolean"
+                        },
                         "effectiveAt": {
                           "format": "date-time",
                           "nullable": true,
@@ -1964,6 +1985,13 @@
                             "ONE_TIME",
                             "MONTH",
                             "YEAR"
+                          ],
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "DOWNGRADE",
+                            "SWITCH"
                           ],
                           "type": "string"
                         },
@@ -1998,14 +2026,22 @@
                             "currency"
                           ],
                           "type": "object"
+                        },
+                        "priceId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
                         }
                       },
                       "required": [
+                        "kind",
                         "offerId",
+                        "priceId",
                         "offerTitle",
                         "interval",
                         "price",
-                        "effectiveAt"
+                        "effectiveAt",
+                        "awaitingPayment"
                       ],
                       "type": "object"
                     },
@@ -2076,6 +2112,9 @@
           },
           "404": {
             "description": "NOT_FOUND: no plan change is scheduled"
+          },
+          "409": {
+            "description": "PAYMENT_PENDING: the switch is under way (the old subscription has stopped); pay the new plan with a SUBSCRIPTION checkout of `pendingChange.priceId`"
           },
           "503": {
             "description": "PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed)"
@@ -2398,6 +2437,9 @@
                           "additionalProperties": false,
                           "nullable": true,
                           "properties": {
+                            "awaitingPayment": {
+                              "type": "boolean"
+                            },
                             "effectiveAt": {
                               "format": "date-time",
                               "nullable": true,
@@ -2409,6 +2451,13 @@
                                 "ONE_TIME",
                                 "MONTH",
                                 "YEAR"
+                              ],
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": [
+                                "DOWNGRADE",
+                                "SWITCH"
                               ],
                               "type": "string"
                             },
@@ -2443,14 +2492,22 @@
                                 "currency"
                               ],
                               "type": "object"
+                            },
+                            "priceId": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             }
                           },
                           "required": [
+                            "kind",
                             "offerId",
+                            "priceId",
                             "offerTitle",
                             "interval",
                             "price",
-                            "effectiveAt"
+                            "effectiveAt",
+                            "awaitingPayment"
                           ],
                           "type": "object"
                         },
@@ -19146,6 +19203,9 @@
                           "additionalProperties": false,
                           "nullable": true,
                           "properties": {
+                            "awaitingPayment": {
+                              "type": "boolean"
+                            },
                             "effectiveAt": {
                               "format": "date-time",
                               "nullable": true,
@@ -19157,6 +19217,13 @@
                                 "ONE_TIME",
                                 "MONTH",
                                 "YEAR"
+                              ],
+                              "type": "string"
+                            },
+                            "kind": {
+                              "enum": [
+                                "DOWNGRADE",
+                                "SWITCH"
                               ],
                               "type": "string"
                             },
@@ -19191,14 +19258,22 @@
                                 "currency"
                               ],
                               "type": "object"
+                            },
+                            "priceId": {
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                              "type": "string"
                             }
                           },
                           "required": [
+                            "kind",
                             "offerId",
+                            "priceId",
                             "offerTitle",
                             "interval",
                             "price",
-                            "effectiveAt"
+                            "effectiveAt",
+                            "awaitingPayment"
                           ],
                           "type": "object"
                         },
@@ -19465,6 +19540,9 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "awaitingPayment": {
+                          "type": "boolean"
+                        },
                         "effectiveAt": {
                           "format": "date-time",
                           "nullable": true,
@@ -19476,6 +19554,13 @@
                             "ONE_TIME",
                             "MONTH",
                             "YEAR"
+                          ],
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "DOWNGRADE",
+                            "SWITCH"
                           ],
                           "type": "string"
                         },
@@ -19510,14 +19595,22 @@
                             "currency"
                           ],
                           "type": "object"
+                        },
+                        "priceId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
                         }
                       },
                       "required": [
+                        "kind",
                         "offerId",
+                        "priceId",
                         "offerTitle",
                         "interval",
                         "price",
-                        "effectiveAt"
+                        "effectiveAt",
+                        "awaitingPayment"
                       ],
                       "type": "object"
                     },
@@ -19760,6 +19853,9 @@
                       "additionalProperties": false,
                       "nullable": true,
                       "properties": {
+                        "awaitingPayment": {
+                          "type": "boolean"
+                        },
                         "effectiveAt": {
                           "format": "date-time",
                           "nullable": true,
@@ -19771,6 +19867,13 @@
                             "ONE_TIME",
                             "MONTH",
                             "YEAR"
+                          ],
+                          "type": "string"
+                        },
+                        "kind": {
+                          "enum": [
+                            "DOWNGRADE",
+                            "SWITCH"
                           ],
                           "type": "string"
                         },
@@ -19805,14 +19908,22 @@
                             "currency"
                           ],
                           "type": "object"
+                        },
+                        "priceId": {
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                          "type": "string"
                         }
                       },
                       "required": [
+                        "kind",
                         "offerId",
+                        "priceId",
                         "offerTitle",
                         "interval",
                         "price",
-                        "effectiveAt"
+                        "effectiveAt",
+                        "awaitingPayment"
                       ],
                       "type": "object"
                     },

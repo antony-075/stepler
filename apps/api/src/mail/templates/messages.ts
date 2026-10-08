@@ -252,6 +252,29 @@ export const BILLING_RENEWAL_FAILED_COPY: Readonly<Record<MailLocale, BillingRen
   },
 };
 
+/**
+ * A monthly ↔ yearly switch at the period end (owner decision B14): the old LiqPay subscription
+ * is stopped and the new one waits for the owner to confirm it through a checkout.
+ */
+export const BILLING_SWITCH_CONFIRM_COPY: Readonly<Record<MailLocale, BillingRenewalFailedCopy>> = {
+  uk: {
+    subject: 'Stepler: підтвердіть новий спосіб оплати тарифу',
+    heading: 'Підтвердіть оплату тарифу',
+    text: 'Ви обрали інший період оплати тарифу «{plan}». Попередню підписку зупинено, нову треба підтвердити в LiqPay.',
+    grace:
+      'Усе працює як раніше до {date}. Якщо нову підписку не підтвердити, колекції стануть доступні лише для перегляду.',
+    act: 'Підтвердити оплату: {url}',
+  },
+  en: {
+    subject: 'Stepler: confirm your new billing period',
+    heading: 'Confirm your plan payment',
+    text: 'You chose another billing period for the “{plan}” plan. The previous subscription has stopped; confirm the new one with LiqPay.',
+    grace:
+      'Everything keeps working until {date}. If the new subscription is not confirmed, your collections become view-only.',
+    act: 'Confirm the payment: {url}',
+  },
+};
+
 /** A date as the reader says it, in Kyiv time (billing mails). */
 export function formatMailDate(locale: MailLocale, date: Date): string {
   return new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', {

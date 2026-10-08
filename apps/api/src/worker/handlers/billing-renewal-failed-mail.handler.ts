@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { isSwitchAwaitingPayment } from '../../billing/billing-dto.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { JobData } from '../../jobs/job-names.js';
 import { MAILER, type Mailer } from '../../mail/mailer.js';
@@ -10,7 +11,10 @@ import { sendWithoutLeaking } from './report-mail.js';
 /**
  * «Не вдалося списати оплату» to the account's own address (ADR 0018 [P12]). The transition
  * stamps `renewalFailureNotifiedFor` when it enqueues this, so it goes once per period; a
- * renewal that succeeded meanwhile (the subscription left `PAST_DUE`) sends nothing.
+ * renewal that succeeded meanwhile (the subscription left `PAST_DUE`) sends nothing. A
+ * monthly ↔ yearly switch whose old LiqPay subscription was stopped at the period end (owner
+ * decision B14) gets the «підтвердіть оплату» words instead: nothing failed, the new plan waits
+ * for its checkout.
  */
 @Injectable()
 export class BillingRenewalFailedMailHandler implements JobHandler<'mail.billing-renewal-failed'> {
@@ -28,6 +32,9 @@ export class BillingRenewalFailedMailHandler implements JobHandler<'mail.billing
       select: {
         status: true,
         graceEndsAt: true,
+        interval: true,
+        providerUnsubscribedAt: true,
+        pendingPrice: { select: { interval: true } },
         offer: { select: { titleUk: true, titleEn: true } },
         user: { select: { email: true, locale: true, status: true } },
       },
@@ -42,6 +49,7 @@ export class BillingRenewalFailedMailHandler implements JobHandler<'mail.billing
         plan: locale === 'en' ? sub.offer.titleEn : sub.offer.titleUk,
         graceEndsAt: sub.graceEndsAt,
         url: `${this.env.APP_ORIGIN}/app/billing`,
+        reason: isSwitchAwaitingPayment(sub) ? 'switch' : 'failed',
       }),
     });
   }

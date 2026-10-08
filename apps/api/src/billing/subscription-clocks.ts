@@ -9,8 +9,15 @@ import { lockSubscription, SubscriptionTransitions } from './subscription-transi
 const BATCH = 100;
 /** LiqPay charges at the period end; a renewal is looked for from an hour after it. */
 const RENEWAL_DUE_MS = 60 * 60_000;
+/**
+ * A monthly ↔ yearly switch stops the old LiqPay subscription this long before the period end
+ * (B14): LiqPay charges on its own schedule, which can run minutes ahead of our period (it counts
+ * from the checkout, we from the payment), and a day leaves the job many runs if LiqPay is down.
+ */
+export const SWITCH_STOP_LEAD_MS = 24 * 60 * 60_000;
 
 export interface SubscriptionClockRun {
+  switchesStopped: number;
   renewalsDue: number;
   graced: number;
   expired: number;
@@ -23,6 +30,9 @@ export interface SubscriptionClockRun {
  * The subscription clocks of the `billing.reconcile` job (ADR 0018 [P12], plan Task 16, Review
  * Focus 5). Every step is idempotent and catches up after a pause: a plan whose period ended
  * days ago goes through grace and expiry in one run, exactly as if the job had run on time.
+ * 0. `ACTIVE` with a monthly ↔ yearly switch due within `SWITCH_STOP_LEAD_MS` → the old LiqPay
+ *    subscription is stopped (B14); the plan runs to its end, then step 1 puts it into grace
+ *    with the «підтвердіть оплату» mail until the new plan's checkout is paid;
  * 1. `ACTIVE` an hour past its period end: LiqPay is asked (a lost renewal callback is applied);
  *    still not renewed → `PAST_DUE` with grace and the mail;
  * 2. `PAST_DUE`: asked hourly; past `graceEndsAt` and LiqPay answered within the hour with no
@@ -47,6 +57,7 @@ export class SubscriptionClocks {
 
   async run(now: Date): Promise<SubscriptionClockRun> {
     const result: SubscriptionClockRun = {
+      switchesStopped: 0,
       renewalsDue: 0,
       graced: 0,
       expired: 0,
@@ -55,6 +66,25 @@ export class SubscriptionClocks {
       priceSynced: 0,
     };
     await this.jobs.ready();
+
+    const switching = await this.prisma.subscription.findMany({
+      where: {
+        source: 'LIQPAY',
+        status: 'ACTIVE',
+        providerUnsubscribedAt: null,
+        pendingPriceId: { not: null },
+        currentPeriodEnd: { lte: new Date(now.getTime() + SWITCH_STOP_LEAD_MS) },
+      },
+      take: BATCH,
+      select: { id: true, interval: true, pendingPrice: { select: { interval: true } } },
+    });
+    for (const row of switching) {
+      if (row.pendingPrice === null || row.pendingPrice.interval === row.interval) continue;
+      if (await this.sync.unsubscribe(row.id, now)) {
+        result.switchesStopped += 1;
+        this.logger.log({ msg: 'billing.subscription.switch_stopped', subscriptionId: row.id });
+      }
+    }
 
     const due = await this.prisma.subscription.findMany({
       where: {

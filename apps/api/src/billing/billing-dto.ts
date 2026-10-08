@@ -49,14 +49,35 @@ export function toSubscriptionDto(row: SubscriptionRow, locale: 'uk' | 'en'): Su
       pendingOffer === null || pendingPrice === null || row.pendingOfferId === null
         ? null
         : {
+            kind: pendingPrice.interval === row.interval ? 'DOWNGRADE' : 'SWITCH',
             offerId: row.pendingOfferId,
+            priceId: pendingPrice.id,
             offerTitle: locale === 'en' ? pendingOffer.titleEn : pendingOffer.titleUk,
             interval: pendingPrice.interval,
             price: { amountMinor: pendingPrice.amountMinor, currency: pendingPrice.currency },
             effectiveAt: row.currentPeriodEnd?.toISOString() ?? null,
+            awaitingPayment: isSwitchAwaitingPayment(row),
           },
     createdAt: row.createdAt.toISOString(),
   };
+}
+
+/**
+ * A monthly ↔ yearly switch whose old LiqPay subscription was stopped at the period end (owner
+ * decision B14): the plan runs on (then in grace) until the new one is paid through a checkout.
+ */
+export function isSwitchAwaitingPayment(
+  row: Pick<Subscription, 'interval' | 'providerUnsubscribedAt' | 'status'> & {
+    pendingPrice?: Pick<BillingPrice, 'interval'> | null;
+  },
+): boolean {
+  const pending = row.pendingPrice ?? null;
+  return (
+    pending !== null &&
+    pending.interval !== row.interval &&
+    row.providerUnsubscribedAt !== null &&
+    (row.status === 'ACTIVE' || row.status === 'PAST_DUE')
+  );
 }
 
 export function offerLimits(row: BillingOffer): EntitlementLimits {

@@ -1,6 +1,6 @@
 # ADR 0018 — Billing, Plans and Entitlements (LiqPay)
 
-Status: Proposed (owner decisions B1–B12, 2026-10-07; plan `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`)
+Status: Proposed (owner decisions B1–B12, 2026-10-07, and B14, 2026-10-08; plan `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`)
 Date: 2026-10-07
 
 ## Context
@@ -27,6 +27,7 @@ The owner has a ФОП/ТОВ but no LiqPay merchant yet, and the fiscalisation 
 5. **Callbacks are the source of payment truth, reconciled by polling.** `POST /api/v1/billing/liqpay/callback` is public, verifies the signature before parsing, stores every verified callback once in `PaymentEvent` (whitelisted fields only — no names, phone, IP or card data — and the SHA-256 of the raw `data` as the dedupe key; unverified bodies are not stored), and applies state transitions idempotently under row locks (owner, collection, then the `Payment` / `Subscription`). `result_url` query parameters are never trusted: the return page polls our own API. A worker job reconciles non-final payments and subscription periods through the `status` API.
 6. **Fiscalisation is a switchable adapter.** `FiscalReceipts` port with `NoFiscalReceipts` (default) and `LiqPayRroReceipts` (adds `rro_info` to the checkout). Which one production uses is the owner's accountant's decision and a production blocker.
 7. **Retention after the paid period (B8).** Read-only content is kept 12 months from the moment access ended, with e-mails to the admin 30 and 7 days before deletion, then deleted by the worker through the existing collection deletion path.
+8. **Monthly ↔ yearly is scheduled for the period end (B14, owner 2026-10-08).** LiqPay cannot change a subscription's periodicity, so a switch needs a new subscription. Nothing is charged when it is chosen: the plan records the pending price and «Тариф і оплата» shows it with «Скасувати зміну». Within the last 24 h of the period the reconcile job unsubscribes the old LiqPay subscription (before LiqPay's own charge, which counts from the checkout and can run minutes ahead of our period end). From then the change cannot be withdrawn; the plan runs to its end, then into the usual grace with one «підтвердіть оплату» mail (the renewal-failed pattern, other words) and a banner, and the owner pays the new plan through a normal `SUBSCRIPTION` checkout of the pending price. Its first period starts at the old period's end (or at the payment, if later). Unpaid by the end of grace → read-only as usual. A charge LiqPay still makes on a stopped plan is honoured and flagged `needsReview`. Rejected: paying the new plan up front at the moment of the switch (Task 17's first version) — the owner does not want a full year charged weeks before it starts.
 
 ## Alternatives considered
 

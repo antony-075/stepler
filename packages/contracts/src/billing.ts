@@ -99,17 +99,23 @@ export const subscriptionSourceSchema = z.enum(['LIQPAY', 'COMPLIMENTARY']);
 export type SubscriptionSource = z.infer<typeof subscriptionSourceSchema>;
 
 /**
- * A plan change waiting for the next period (a downgrade, [P11]) or for its own checkout (a
- * monthly ↔ yearly switch): the plan and price it moves to.
+ * A plan change scheduled for the current period's end: a downgrade ([P11], applied with the
+ * next charge) or a monthly ↔ yearly switch (owner decision B14: nothing is charged now; at the
+ * period end the old LiqPay subscription is stopped and the owner confirms the new one through a
+ * checkout of `priceId`, `awaitingPayment: true` from then on, grace as usual until paid).
  */
 export const pendingPlanChangeSchema = z
   .object({
+    kind: z.enum(['DOWNGRADE', 'SWITCH']),
     offerId: z.uuid(),
+    priceId: z.uuid(),
     offerTitle: z.string(),
     interval: billingIntervalSchema,
     price: moneySchema,
     /** When it takes effect: the current period's end. */
     effectiveAt: z.iso.datetime().nullable(),
+    /** A switch whose old subscription has stopped: the new one is paid with `kind: 'SUBSCRIPTION'`. */
+    awaitingPayment: z.boolean(),
   })
   .strict();
 export type PendingPlanChange = z.infer<typeof pendingPlanChangeSchema>;
@@ -187,8 +193,8 @@ export type CheckoutRequest = z.infer<typeof checkoutRequestSchema>;
 /**
  * The provider's checkout form: the browser posts these fields to `action` (ADR 0018: the only
  * direct browser → provider step). A plan change may need no payment: `SUCCEEDED` (an upgrade
- * whose prorated charge was waived, applied now) or `SCHEDULED` (a downgrade from the next
- * period); then `form` and `paymentId` are `null`.
+ * whose prorated charge was waived, applied now) or `SCHEDULED` (a downgrade or a monthly ↔
+ * yearly switch from the next period); then `form` and `paymentId` are `null`.
  */
 export const checkoutResponseSchema = z
   .object({
@@ -289,8 +295,9 @@ export type PlanChangePreviewQuery = z.infer<typeof planChangePreviewQuerySchema
 /**
  * What changing to `priceId` would do, computed on the server [P10], [P11]: an upgrade is
  * charged now (`chargeMinor`, waived under the minimum) and applies now; a downgrade applies
- * from the period end; a monthly ↔ yearly switch is paid now in full and starts at the period
- * end. `blocked` lists what to reduce before a smaller plan can be chosen.
+ * from the period end; a monthly ↔ yearly switch is scheduled for the period end and charges
+ * nothing now (`chargeMinor: 0`, B14: its own checkout follows then). `blocked` lists what to
+ * reduce before a smaller plan can be chosen.
  */
 export const planChangePreviewSchema = z
   .object({

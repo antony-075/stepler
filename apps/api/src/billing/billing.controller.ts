@@ -86,7 +86,8 @@ export class BillingController {
     standardSchema: checkoutResponseSchema,
     description:
       "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated " +
-      'charge was waived, applied now) or SCHEDULED (a downgrade from the period end), no form',
+      'charge was waived, applied now) or SCHEDULED (a downgrade, or a monthly ↔ yearly switch ' +
+      'that is confirmed by its own checkout at the period end), no form',
   })
   @ApiResponse({
     status: 400,
@@ -103,9 +104,10 @@ export class BillingController {
     description:
       'OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an ' +
       'extension for an account collection, a smaller tier, a subscription price that is not ' +
-      'monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan; ' +
+      'monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan that ' +
+      'LiqPay still charges; ' +
       'PAYMENT_PENDING: another offer is waiting for payment for this collection or account, or ' +
-      'a plan change while the renewal is unpaid (grace); PLAN_DOWNGRADE_BLOCKED: the smaller ' +
+      'a plan change while the renewal or a switched plan is unpaid; PLAN_DOWNGRADE_BLOCKED: the smaller ' +
       'plan would not hold current usage (`excess`: what to reduce, by how much)',
   })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
@@ -200,7 +202,7 @@ export class BillingController {
     status: 409,
     description:
       'OFFER_UNAVAILABLE: not a live subscription price, the current one, or the plan is ' +
-      'cancelled; PAYMENT_PENDING: the renewal is unpaid (grace)',
+      'cancelled; PAYMENT_PENDING: the renewal or a switched plan is unpaid',
   })
   preview(
     @CurrentPrincipal() principal: AccountPrincipal,
@@ -257,10 +259,19 @@ export class BillingController {
     return this.subscriptions.resume(principal, body.termsVersion, requestId);
   }
 
-  /** Withdraws a scheduled downgrade (LiqPay gets the current price back) or a pending switch. */
+  /**
+   * Withdraws a scheduled downgrade (LiqPay gets the current price back) or a scheduled monthly
+   * ↔ yearly switch, until the job has stopped the old subscription at the period end.
+   */
   @Delete('subscription/pending-change')
   @ApiResponse({ status: 200, standardSchema: subscriptionDtoSchema })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: no plan change is scheduled' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'PAYMENT_PENDING: the switch is under way (the old subscription has stopped); pay the ' +
+      'new plan with a SUBSCRIPTION checkout of `pendingChange.priceId`',
+  })
   @ApiResponse({
     status: 503,
     description: 'PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed)',

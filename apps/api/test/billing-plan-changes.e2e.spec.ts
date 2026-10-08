@@ -11,6 +11,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { addInterval } from '../src/billing/domain/periods.js';
 import { prorate } from '../src/billing/domain/proration.js';
+import { SubscriptionClocks } from '../src/billing/subscription-clocks.js';
 import { createApp } from '../src/create-app.js';
 import type { Payment } from '../src/generated/prisma/client.js';
 import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
@@ -20,12 +21,13 @@ import {
   payFields,
   priceSubscriptions,
   regularFields,
+  setTrialEnd,
   signedCallback,
   type SubscriptionCode,
   type SubscriptionPrices,
   subscribeFields,
 } from './support/billing.js';
-import { createTestPrisma, resetDatabase } from './support/database.js';
+import { createTestPrisma, queuedJobs, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { LiqPayStub } from './support/liqpay-stub.js';
@@ -382,30 +384,122 @@ describe('downgrade', () => {
   });
 });
 
-describe('monthly ↔ yearly', () => {
-  test('a yearly checkout now; its first year starts when the month ends; the month ends', async () => {
+describe('monthly ↔ yearly (owner decision B14)', () => {
+  const clocks = () => app.get(SubscriptionClocks);
+  const summary = async (s: Awaited<ReturnType<typeof subscriber>>) =>
+    billingSummarySchema.parse((await s.call('get', '/summary').expect(200)).body);
+
+  test('scheduled for the period end: nothing charged, nothing told to LiqPay, withdrawable', async () => {
     const s = await subscriber('sub-pro');
+    const preview = planChangePreviewSchema.parse(
+      (
+        await s
+          .call('get', `/subscription/change-preview?priceId=${prices['sub-pro'].YEAR}`)
+          .expect(200)
+      ).body,
+    );
+    expect(preview).toMatchObject({ kind: 'SWITCH', chargeMinor: 0, effective: 'NEXT_PERIOD' });
+    expect(preview.effectiveAt).toBe(s.periodEnd.toISOString());
+
     const res = await s.change(prices['sub-pro'].YEAR).expect(201);
+    expect(checkoutResponseSchema.parse(res.body)).toEqual({
+      paymentId: null,
+      status: 'SCHEDULED',
+      form: null,
+    });
+    expect(await prisma.payment.count({ where: { userId: s.userId } })).toBe(1);
+    expect(await prisma.subscription.count({ where: { userId: s.userId } })).toBe(1);
+    expect(calls('subscribe_update')).toHaveLength(0);
+    expect(calls('unsubscribe')).toHaveLength(0);
+    expect((await summary(s)).subscription?.pendingChange).toMatchObject({
+      kind: 'SWITCH',
+      priceId: prices['sub-pro'].YEAR,
+      interval: 'YEAR',
+      price: { amountMinor: 500_000 },
+      effectiveAt: s.periodEnd.toISOString(),
+      awaitingPayment: false,
+    });
+
+    // A day before the end is still early: the job leaves it alone.
+    await clocks().run(new Date(s.periodEnd.getTime() - 2 * DAY_MS));
+    expect(calls('unsubscribe')).toHaveLength(0);
+
+    await s.call('delete', '/subscription/pending-change').expect(200);
+    expect((await subOf(s.subscriptionId)).pendingPriceId).toBeNull();
+    expect(calls('subscribe_update')).toHaveLength(0);
+  });
+
+  test('at the period end the old plan stops, grace and one mail, the new plan is confirmed by its checkout', async () => {
+    const s = await subscriber('sub-pro');
+    await s.change(prices['sub-pro'].YEAR).expect(201);
+
+    // Within a day of the end: LiqPay's monthly charges are stopped; access runs to the end.
+    await clocks().run(new Date(s.periodEnd.getTime() - 2 * 3600_000));
+    expect(calls('unsubscribe')).toHaveLength(1);
+    expect(await subOf(s.subscriptionId)).toMatchObject({ status: 'ACTIVE' });
+    expect((await subOf(s.subscriptionId)).providerUnsubscribedAt).not.toBeNull();
+    expect((await summary(s)).subscription?.pendingChange?.awaitingPayment).toBe(true);
+    await s.call('delete', '/subscription/pending-change').expect(409);
+    await s.change(prices['sub-business'].MONTH).expect(409);
+
+    // Past the end: LiqPay says the order is unsubscribed; that is not a cancellation.
+    stub.answers.set(`status:${s.start.id}`, {
+      ...subscribeFields(s.start, 'unsubscribed', { action: 'unsubscribe' }),
+    });
+    const after = new Date(s.periodEnd.getTime() + 2 * 3600_000);
+    await clocks().run(after);
+    await clocks().run(new Date(after.getTime() + 3600_000));
+    expect(await subOf(s.subscriptionId)).toMatchObject({
+      status: 'PAST_DUE',
+      graceEndsAt: new Date(s.periodEnd.getTime() + 4 * DAY_MS),
+    });
+    expect(calls('unsubscribe')).toHaveLength(1);
+    expect(await queuedJobs(prisma, 'mail.billing-renewal-failed')).toHaveLength(1);
+    expect((await s.usage()).access.state).toBe('GRACE');
+
+    const res = await s
+      .call('post', '/checkouts')
+      .send({
+        kind: 'SUBSCRIPTION',
+        priceId: prices['sub-pro'].YEAR,
+        autoRenewConsent: true,
+        termsVersion: 'v2',
+      })
+      .expect(201);
     const body = checkoutResponseSchema.parse(res.body);
     expect(body.status).toBe('PENDING');
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.paymentId ?? '' } });
     expect(payment).toMatchObject({ kind: 'SUBSCRIPTION', amountMinor: 500_000 });
-    expect((await subOf(s.subscriptionId)).pendingPriceId).toBe(prices['sub-pro'].YEAR);
 
     await post(subscribeFields(payment));
     const yearly = await subOf(payment.subscriptionId ?? '');
-    expect(yearly).toMatchObject({
-      status: 'ACTIVE',
-      interval: 'YEAR',
-      currentPeriodStart: s.periodEnd,
-    });
-    expect(yearly.currentPeriodEnd).toEqual(addInterval(s.periodEnd, 'YEAR'));
-    expect(await subOf(s.subscriptionId)).toMatchObject({
-      status: 'EXPIRED',
-      providerUnsubscribedAt: null,
-    });
+    expect(yearly).toMatchObject({ status: 'ACTIVE', interval: 'YEAR' });
+    const start = yearly.currentPeriodStart ?? new Date(0);
+    expect(start.getTime()).toBeGreaterThanOrEqual(s.periodEnd.getTime());
+    expect(yearly.currentPeriodEnd).toEqual(addInterval(start, 'YEAR'));
+    expect(await subOf(s.subscriptionId)).toMatchObject({ status: 'EXPIRED' });
     expect(await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).toMatchObject({
       needsReview: false,
+    });
+    expect((await s.usage()).access.state).toBe('ACTIVE');
+    // The stopped plan is not unsubscribed a second time.
+    await clocks().run(new Date(after.getTime() + 2 * 3600_000));
+    expect(calls('unsubscribe')).toHaveLength(1);
+  });
+
+  test('never confirmed: read-only after the grace, as for a failed renewal', async () => {
+    const s = await subscriber('sub-pro');
+    await setTrialEnd(prisma, s.userId, new Date(Date.now() - 60 * DAY_MS));
+    await s.change(prices['sub-pro'].YEAR).expect(201);
+    stub.answers.set(`status:${s.start.id}`, {
+      ...subscribeFields(s.start, 'unsubscribed', { action: 'unsubscribe' }),
+    });
+    await clocks().run(new Date(s.periodEnd.getTime() - 3600_000));
+    await clocks().run(new Date(s.periodEnd.getTime() + 2 * 3600_000));
+    await clocks().run(new Date(s.periodEnd.getTime() + 5 * DAY_MS));
+    expect(await subOf(s.subscriptionId)).toMatchObject({
+      status: 'EXPIRED',
+      endedAt: s.periodEnd,
     });
   });
 });

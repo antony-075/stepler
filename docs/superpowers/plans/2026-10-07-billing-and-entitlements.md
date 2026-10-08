@@ -13,7 +13,7 @@
 **Tech Stack:** As in slices 1–10: NestJS 12 ESM, Prisma 7 on PostgreSQL 18, Zod 4 contracts, pg-boss, nodemailer behind the `Mailer` port, Next.js 16 App Router + next-intl, TanStack Query 5, React Hook Form + Zod, Tailwind 4 + shadcn/Radix in `@stepler/ui`, Storybook 10 + Vitest browser + axe, Playwright with Mailpit. **No new dependency** (`node:crypto` has `sha3-256`).
 
 **Spec:**
-- **Owner decisions B1–B12** (2026-10-07, below).
+- **Owner decisions B1–B12** (2026-10-07) and **B14** (2026-10-08), below.
 - ADR 0018 (this plan's draft, `docs/architecture/decisions/0018-billing-and-entitlements.md`, Proposed); ADR 0010 (limits seam, partly superseded), 0009 (jobs), 0013 (operator), 0016 (legal acceptance).
 - `docs/product/PRODUCT.md` §22–23; `docs/architecture/discovery-questions.md` D2, D13, F1 (l.140–153, 409–428, 479–505; the "no billing in MVP" lines are superseded by B1–B12).
 - LiqPay docs (URLs in ADR 0018 "Sources"; read 2026-10-07).
@@ -46,6 +46,7 @@
 10. **[B10] Plans and prices live in the database and are edited in `/ops`** (no deploy to change a price). A purchase snapshots price and limits; editing an offer never changes what was bought. Offers are deactivated, never deleted.
 11. **[B11] Refunds are manual from `/ops`** (full or partial) through the LiqPay API, audited; the rules are in the Terms. No self-service refunds.
 12. **[B12] Card only** through LiqPay (no invoices, acts or bank transfer). Receipts follow the fiscalisation decision.
+14. **[B14] Monthly ↔ yearly is scheduled, not paid up front** (owner, 2026-10-08; replaces Task 17's "paid now, starts at the period end"). Nothing is charged when the switch is chosen; «Тариф і оплата» shows the pending change («З <дата> — щорічно, 4 990 ₴») with «Скасувати зміну». At the period end the old LiqPay subscription is unsubscribed and the owner is asked — a banner on «Тариф і оплата» and one important mail (the renewal-failed pattern) — to confirm the new subscription through a LiqPay checkout. Until it is paid the normal grace period applies, then read-only as usual. Implementation: the reconcile job stops the old subscription within the last 24 h of the period (LiqPay's own charge can run minutes ahead of our period end); from then the change can no longer be withdrawn, and the new plan's checkout (`SUBSCRIPTION` with the pending price) may be paid at once — its first period still starts at the old period's end.
 
 ## Decisions made by this plan (recommendation first; override if you disagree)
 
@@ -594,7 +595,8 @@ INDEX (processedAt) WHERE processedAt IS NULL AND verified
 - `POST /billing/subscription/resume` (`CANCELED` before period end) → a new checkout `SUBSCRIPTION` charged now (S1b: a recurring checkout charges at once; a future `subscribe_date_start` was not verifiable), whose first period starts at the cancelled plan's `currentPeriodEnd`, so nothing paid is lost; returns a checkout form (the card must be re-confirmed at LiqPay). [Q6]
 - `POST /billing/checkouts {kind: 'SUBSCRIPTION_CHANGE', priceId}`:
   - **upgrade** (target rank > current, same interval, status `ACTIVE`) → `prorate(...)`; waived → apply now + `provider.updateSubscription(newAmount)` → `{status: 'SUCCEEDED', form: null}`; else a `pay` checkout `Payment {kind: SUBSCRIPTION_UPGRADE}`; its success applies the new snapshot immediately (period unchanged) and calls `updateSubscription`; a failing `updateSubscription` leaves `pendingProviderAmountMinor` set and the reconcile job retries it (until it succeeds, renewals are charged at the old price → the job flags `needsReview` if a renewal at the old amount arrives);
-  - **downgrade** or interval change → usage check (`PLAN_DOWNGRADE_BLOCKED` with `details.excess: [{limit: 'activeCollections'|'storageBytes'|'collectionStorageBytes'|'guestLinks', used, allowed, collectionId?}]`) → `pendingOfferId/pendingPriceId`, applied at the next successful renewal (re-checked; if usage no longer fits → the pending change is dropped and an audit `billing.subscription_change` `{applied:false, reason:'usage'}` is recorded and the summary shows why);
+  - **monthly ↔ yearly** [B14] → usage check as for a downgrade, then scheduled (`SCHEDULED`, nothing charged, nothing sent to LiqPay); at the period end the reconcile job unsubscribes the old plan and the owner pays the new one with a `SUBSCRIPTION` checkout of `pendingChange.priceId` (grace until then);
+  - **downgrade** → usage check (`PLAN_DOWNGRADE_BLOCKED` with `details.excess: [{limit: 'activeCollections'|'storageBytes'|'collectionStorageBytes'|'guestLinks', used, allowed, collectionId?}]`) → `pendingOfferId/pendingPriceId`, applied at the next successful renewal (re-checked; if usage no longer fits → the pending change is dropped and an audit `billing.subscription_change` `{applied:false, reason:'usage'}` is recorded and the summary shows why);
   - in `PAST_DUE` → `409 PAYMENT_PENDING`.
 - `DELETE /billing/subscription/pending-change` → clears a scheduled downgrade.
 

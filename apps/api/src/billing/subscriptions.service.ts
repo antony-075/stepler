@@ -20,7 +20,7 @@ import type {
 } from '../generated/prisma/client.js';
 import { UsageService } from '../limits/usage.service.js';
 import { toAccessDto } from './access-dto.js';
-import { toSubscriptionDto, WITH_PLAN_TITLES } from './billing-dto.js';
+import { isSwitchAwaitingPayment, toSubscriptionDto, WITH_PLAN_TITLES } from './billing-dto.js';
 import { CheckoutForms, type FormUser } from './checkout-forms.js';
 import { prorate } from './domain/proration.js';
 import { EntitlementResolver } from './entitlement-resolver.js';
@@ -75,8 +75,11 @@ const asCalendar = (interval: string | null): Calendar => (interval === 'YEAR' ?
  * - **downgrade** (anything else of the same interval): only if current usage fits the smaller
  *   plan; LiqPay is told the lower price at once, and the plan switches with the first charge at
  *   that price (the next renewal); cancelling the scheduled change restores the price;
- * - **monthly ↔ yearly**: LiqPay cannot change a subscription's periodicity, so it is a new
- *   recurring checkout, paid now in full, whose first period starts when the current one ends.
+ * - **monthly ↔ yearly** (owner decision B14): LiqPay cannot change a subscription's
+ *   periodicity, so the switch is scheduled for the period end and nothing is charged now. Near
+ *   the period end the reconcile job stops the old LiqPay subscription (before LiqPay's own
+ *   charge) and the owner is asked to confirm the new one through a checkout of the pending
+ *   price; until it is paid the plan runs into the usual grace, then read-only.
  */
 @Injectable()
 export class SubscriptionsService {
@@ -131,7 +134,7 @@ export class SubscriptionsService {
       const charge =
         kind === 'UPGRADE'
           ? this.prorated(sub, target, new Date())
-          : { chargeMinor: kind === 'SWITCH' ? target.amountMinor : 0, waived: false };
+          : { chargeMinor: 0, waived: false };
       return {
         kind,
         chargeMinor: charge.chargeMinor,
@@ -153,8 +156,9 @@ export class SubscriptionsService {
 
   /**
    * `POST /billing/checkouts {kind: 'SUBSCRIPTION'}`. A live paid plan → `409
-   * SUBSCRIPTION_EXISTS`, unless it is cancelled (then the new plan continues it: its first
-   * period starts when the cancelled one ends). A live complimentary grant is replaced when the
+   * SUBSCRIPTION_EXISTS`, unless LiqPay no longer charges it (cancelled, or a monthly ↔ yearly
+   * switch waiting for this checkout, B14): then the new plan continues it, its first period
+   * starting when the old one ends (or at the payment, if that is later). A live complimentary grant is replaced when the
    * payment succeeds. The same price while its checkout is pending → the same payment, freshly
    * signed; another price while one is pending → `409 PAYMENT_PENDING` (LiqPay keeps the first
    * order payable).
@@ -171,9 +175,11 @@ export class SubscriptionsService {
       const price = await this.subscriptionPrice(tx, request.priceId);
       const live = await tx.subscription.findFirst({
         where: { userId: principal.userId, source: 'LIQPAY', ...LIVE_SUBSCRIPTION },
-        select: { status: true },
+        select: { status: true, providerUnsubscribedAt: true },
       });
-      if (live !== null && live.status !== 'CANCELED') {
+      // A plan LiqPay no longer charges (cancelled, or a switch waiting for its checkout) is
+      // continued by the new one; any other live paid plan is never stacked.
+      if (live !== null && live.status !== 'CANCELED' && live.providerUnsubscribedAt === null) {
         throw new AppError('SUBSCRIPTION_EXISTS', 409);
       }
       return this.recurringCheckout(
@@ -283,22 +289,29 @@ export class SubscriptionsService {
         throw new AppError('PLAN_DOWNGRADE_BLOCKED', 409, { extensions: { excess } });
       }
       if (kind === 'DOWNGRADE') return { downgrade: { sub, target } };
-      // Monthly ↔ yearly: the new recurring plan, marked on the one it will replace.
+      // Monthly ↔ yearly (B14): only marked; LiqPay hears of it at the period end. A downgrade
+      // it replaces had told LiqPay a lower price: the current one goes back (the job retries).
+      const restore = sub.pendingPrice?.interval === sub.interval && sub.amountMinor !== null;
       await tx.subscription.update({
         where: { id: sub.id },
-        data: { pendingOfferId: target.offerId, pendingPriceId: target.id },
+        data: {
+          pendingOfferId: target.offerId,
+          pendingPriceId: target.id,
+          ...(restore ? { pendingProviderAmountMinor: sub.amountMinor } : {}),
+        },
       });
-      const checkout = await this.recurringCheckout(
-        tx,
-        principal,
-        user,
-        target,
-        sub.consentTermsVersion ?? 'v2',
-        now,
-        requestId,
-        sub.priceId,
-      );
-      return { response: { ...checkout, status: 'PENDING' }, sync: null };
+      await this.audit.record(tx, {
+        actor: principal,
+        action: 'billing.subscription_change',
+        targetType: 'subscription',
+        targetId: sub.id,
+        metadata: { applied: false, kind: 'switch', offerId: target.offerId, scheduled: true },
+        ...(requestId === undefined ? {} : { requestId }),
+      });
+      return {
+        response: { paymentId: null, status: 'SCHEDULED', form: null },
+        sync: restore ? sub.id : null,
+      };
     });
 
     if ('downgrade' in decided) {
@@ -312,8 +325,9 @@ export class SubscriptionsService {
 
   /**
    * `DELETE /billing/subscription/pending-change`: the scheduled downgrade (LiqPay gets the
-   * current price back first; `503` if it cannot be told) or the pending monthly ↔ yearly switch
-   * (its checkout is withdrawn).
+   * current price back first; `503` if it cannot be told) or the scheduled monthly ↔ yearly
+   * switch (nothing at LiqPay yet). Once a switch's old subscription has been stopped it can no
+   * longer be withdrawn (`409 PAYMENT_PENDING`): the new plan is confirmed by its checkout (B14).
    */
   async cancelPendingChange(
     principal: AccountPrincipal,
@@ -324,31 +338,20 @@ export class SubscriptionsService {
       include: { pendingPrice: true },
     });
     if (sub?.pendingPrice == null) throw new AppError('NOT_FOUND', 404);
+    if (isSwitchAwaitingPayment(sub)) throw new AppError('PAYMENT_PENDING', 409);
     const isSwitch = sub.pendingPrice.interval !== sub.interval;
     if (!isSwitch) await this.tellPrice(sub, sub.amountMinor ?? sub.pendingPrice.amountMinor);
     await this.prisma.$transaction(async (tx) => {
       await lockUser(tx, principal.userId);
-      await lockSubscription(tx, sub.id);
+      const locked = await lockSubscription(tx, sub.id);
+      // The job may have stopped the old subscription meanwhile.
+      if (isSwitch && locked.providerUnsubscribedAt !== null) {
+        throw new AppError('PAYMENT_PENDING', 409);
+      }
       await tx.subscription.update({
         where: { id: sub.id },
         data: { pendingOfferId: null, pendingPriceId: null },
       });
-      if (isSwitch) {
-        const pending = await tx.subscription.findFirst({
-          where: { userId: principal.userId, status: 'PENDING' },
-          select: { id: true },
-        });
-        if (pending !== null) {
-          await tx.payment.updateMany({
-            where: { subscriptionId: pending.id, status: 'PENDING' },
-            data: { status: 'EXPIRED' },
-          });
-          await tx.subscription.update({
-            where: { id: pending.id },
-            data: { status: 'EXPIRED', endedAt: new Date() },
-          });
-        }
-      }
       await this.audit.record(tx, {
         actor: principal,
         action: 'billing.subscription_change',
@@ -383,15 +386,23 @@ export class SubscriptionsService {
   }
 
   /**
-   * The account's paid plan that may change: `ACTIVE`. In grace the renewal is paid first
+   * The account's paid plan that may change: `ACTIVE`. In grace (or while a switch waits for
+   * its checkout) the plan is paid first
    * (`409 PAYMENT_PENDING`, [Q6]); a cancelled plan is resumed instead (`409`); none → `404`.
    */
-  private async changeable(tx: Db, userId: string): Promise<Subscription> {
+  private async changeable(
+    tx: Db,
+    userId: string,
+  ): Promise<Subscription & { pendingPrice: Pick<BillingPrice, 'interval'> | null }> {
     const sub = await tx.subscription.findFirst({
       where: { userId, source: 'LIQPAY', ...LIVE_SUBSCRIPTION },
+      include: { pendingPrice: { select: { interval: true } } },
     });
     if (sub === null) throw new AppError('NOT_FOUND', 404);
-    if (sub.status === 'PAST_DUE') throw new AppError('PAYMENT_PENDING', 409);
+    // A switch whose old subscription has stopped is confirmed by its checkout first (B14).
+    if (sub.status === 'PAST_DUE' || isSwitchAwaitingPayment(sub)) {
+      throw new AppError('PAYMENT_PENDING', 409);
+    }
     if (sub.status !== 'ACTIVE') throw new AppError('OFFER_UNAVAILABLE', 409);
     return sub;
   }
@@ -575,7 +586,6 @@ export class SubscriptionsService {
     termsVersion: string,
     now: Date,
     requestId: string | undefined,
-    replacesPriceId: string | null = null,
   ): Promise<{ paymentId: string; form: CheckoutForm }> {
     const { userId } = principal;
     const interval = asCalendar(price.interval);
@@ -636,7 +646,6 @@ export class SubscriptionsService {
         interval,
         amountMinor: payment.amountMinor,
         currency: payment.currency,
-        replacesPriceId,
       },
       ...(requestId === undefined ? {} : { requestId }),
     });
