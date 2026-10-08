@@ -73,7 +73,7 @@ function Meter({
       <p className="text-lg leading-none font-medium text-foreground-soft">
         {monoDigits(value, 'font-mono font-semibold tracking-tight text-foreground tabular-nums')}
       </p>
-      <UsageBar used={used} limit={limit} className="h-1.5 w-full" />
+      <UsageBar used={used} limit={limit} className="h-1.5 w-full bg-border" />
     </div>
   );
 }

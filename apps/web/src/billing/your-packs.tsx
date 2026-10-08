@@ -3,9 +3,9 @@
 // Design pass (billing page v2; frontend-design, web-design-guidelines, responsive-design).
 // «Ваші пакети», only when the account has pack collections: one panel, a row per collection like
 // the account page's sections: the collection's picture or initials (44px), its name as a link,
-// the pack's name, the two clocks as dates, the pack's storage used (mono, a thin meter), and on
-// the right the extensions on sale (the collection page's `PackExtensions`: confirm, then LiqPay).
-// On phones the actions wrap under the facts.
+// the pack's name, the two clocks as dates, the pack's storage used (mono, a thin meter), and
+// under them the extensions on sale (the collection page's `PackExtensions`: confirm, then LiqPay).
+// The buttons wrap; on phones each takes the full width.
 import type { Collection, CollectionPack } from '@stepler/contracts';
 import { Panel } from '@stepler/ui/components/panel';
 import { focusRing } from '@stepler/ui/lib/focus';
@@ -55,10 +55,7 @@ function PackRow({ collection }: { collection: PackCollection }) {
   const { pack, access } = collection;
   const live = collection.status === 'ACTIVE' && collection.blocked === null;
   return (
-    <li
-      data-slot="pack-row"
-      className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
-    >
+    <li data-slot="pack-row" className="grid gap-4 p-4 sm:p-5">
       <div className="flex min-w-0 items-start gap-3.5">
         <CollectionMark collection={collection} size="sm" className="rounded-control text-sm" />
         <div className="grid min-w-0 flex-1 gap-1.5">
@@ -97,15 +94,17 @@ function PackRow({ collection }: { collection: PackCollection }) {
             <UsageBar
               used={collection.storageBytes}
               limit={pack.storageBytes}
-              className="w-full min-w-12"
+              className="w-full min-w-12 bg-border"
             />
           </div>
         </div>
       </div>
       {live ? (
-        <div className="lg:max-w-md">
-          <PackExtensions collectionId={collection.id} offerId={pack.offerId} />
-        </div>
+        <PackExtensions
+          collectionId={collection.id}
+          offerId={pack.offerId}
+          className="sm:pl-[3.625rem] max-sm:*:w-full"
+        />
       ) : null}
     </li>
   );

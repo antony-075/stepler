@@ -88,7 +88,7 @@ export function PlanCard({
         <span>{t('plan.until', { date: date(access.endsAt) })}</span>
         {days === null ? null : (
           <>
-            <span aria-hidden="true" className="h-3 w-px bg-border-strong" />
+            <span aria-hidden="true" className="h-3 w-px bg-border-strong max-sm:hidden" />
             <span className={closeToEnd ? WARNING_TEXT : MUTED_TEXT}>
               {monoDigits(t('plan.daysLeft', { days }), 'font-mono text-[0.875rem] tabular-nums')}
             </span>
@@ -127,7 +127,7 @@ export function PlanCard({
             </a>
           </Button>
         </div>
-        {span === null ? null : <UsageBar {...span} className="h-1.5 w-full" />}
+        {span === null ? null : <UsageBar {...span} className="h-1.5 w-full bg-border" />}
         <AfterEnd readOnly={readOnly} open={attention} />
       </PanelContent>
     </Panel>

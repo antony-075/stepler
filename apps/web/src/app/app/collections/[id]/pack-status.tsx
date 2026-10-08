@@ -22,6 +22,7 @@ import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { Progress } from '@stepler/ui/components/progress';
+import { cn } from '@stepler/ui/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { CreditCard } from 'lucide-react';
 import { useFormatter, useLocale, useTranslations } from 'next-intl';
@@ -154,9 +155,12 @@ type Extension = { key: string; label: string; priceId: string; amount: PricedOf
 export function PackExtensions({
   collectionId,
   offerId,
+  className = 'md:max-w-sm md:justify-end',
 }: {
   collectionId: string;
   offerId: string;
+  /** Where the buttons sit: right-aligned beside the pack on the collection page by default. */
+  className?: string;
 }) {
   const tExtend = useTranslations('billing.extend');
   const format = useFormatter();
@@ -193,7 +197,7 @@ export function PackExtensions({
   if (extensions.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 md:max-w-sm md:justify-end">
+    <div className={cn('flex flex-wrap gap-2', className)}>
       {extensions.map((extension) => (
         <Button key={extension.key} variant="outline" onClick={() => setChosen(extension)}>
           {extension.label}
