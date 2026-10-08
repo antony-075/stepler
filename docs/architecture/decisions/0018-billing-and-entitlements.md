@@ -55,9 +55,21 @@ Run through the product's own `LiqPayProvider` and the owner's local app with th
 - **Cards**: `4242424242424242` → success. `4000000000003063` → success with no 3DS challenge in the sandbox. `4000000000000002` → LiqPay's page says «Платіж відхилено системою AntiFraud» and offers «Спробувати ще раз»: **no callback**, the order stays payable, and `status` reports no failure (the payment stayed pending and the reconcile job expired it after its time). The return page therefore says «Оплату ще не підтверджено» after 20 s and offers to pay the same order again (`POST /billing/payments/:id/checkout`).
 - **Checkout page**: the card form asks for the holder's first and last name; the result page does not redirect by itself (the payer presses «Повернутися на сайт», which opens `result_url`). The page shows «Тестовий режим» for sandbox keys; no `sandbox=1` parameter is used.
 
+## Verified by spike S1b (2026-10-08)
+
+Run like S1: the product's own subscription checkout (`action: subscribe`, `version: 7`, SHA3-256) through the owner's local app and sandbox keys, a local test account, card `4242424242424242`. For the spike only (never in the product) `subscribe_periodicity` was `day` and a temporary, uncommitted route called `status` / `subscribe_update`.
+
+- **The sandbox accepts `subscribe_periodicity: day`.** LiqPay's page shows «Періодичність списання: щодня» and «Дата першого списання» = our `subscribe_date_start` (Kyiv time), and asks for the holder's first and last name as for `pay`.
+- **The first charge is taken at checkout and reported as status `subscribed`**, not `success`: `action: subscribe`, `amount` (JSON number) = the plan's price, a `payment_id`, a `liqpay_order_id`, `order_id` = our payment id. The success page says «Платіж успішно відправлено» with that payment id. So the first payment is settled by `subscribed` (or `success`) with the checkout's amount.
+- **`status` on the subscription's order** answers that same `subscribe` transaction (`subscribed`, the first `payment_id`). After `subscribe_update` it reports the **new** amount on the same `payment_id`: `status` describes the subscription's current terms, not a new charge, so a `subscribed` answer for a settled subscription is never treated as a payment.
+- **`subscribe_update {order_id, amount, currency, description}`** answers at once with `status: subscribed` and the new amount; **nothing is charged now** (no new `payment_id`). It changes the next recurring charges. It also accepted a `server_url` parameter without an error (whether it moves future callbacks is not confirmed).
+- The owner's tunnel URL had changed before the payment, so this subscription's `subscribe` callback never arrived (its `server_url` pointed at a dead host); the `status` API settled it, which is exactly the reconciliation path.
+
 ## Still unverified
 
-- **Subscriptions** ([S1b], plan Task 15 step 0, PR M3): the first callback of `subscribe`, the `order_id` / `liqpay_order_id` / `status` of a `regular` charge, what `subscribe_update` changes and when, `unsubscribe`'s answer. M2 sells no subscription, so none could be observed.
+- **The `regular` (renewal) callback** ([S1b] remainder): the daily sandbox subscription's first recurring charge was due a day after the spike. The implementation follows the LiqPay docs: a recurring charge arrives as `action: regular` on the subscription's `order_id`, each with its own `payment_id` (the idempotency key). Whether `status` on the order ever reports a `regular` charge is unknown, so a lost renewal callback may push a paid plan into grace until the callback is reapplied or the operator checks (staging checklist).
+- **A `subscribe_date_start` in the future** (whether the checkout still charges at once): LiqPay's anti-bot answered 403 to further automated checkouts, so it was not tried. The product always starts recurring checkouts now (a resumed or switched plan's new period begins when the old one ends, so nothing paid is lost).
+- **`unsubscribe`'s answer** in the sandbox: assumed `status: unsubscribed`; if LiqPay answers otherwise, the product asks `status` and keeps retrying (it never shows «скасовано» before LiqPay confirms).
 - **Refunds** (M4): `refund`'s answer and callbacks.
 - The exact `err_code` the `status` API returns for an order it does not know (treated as "unknown" when `payment_not_found` / `order_not_found`; any other error is a provider error and changes nothing).
 - Callback retry policy and source IPs (not documented; the design does not depend on them: signature + reconciliation).
