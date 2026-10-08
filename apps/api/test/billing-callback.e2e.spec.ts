@@ -69,7 +69,7 @@ async function scene() {
       .send(body)
       .expect(201);
     const { paymentId } = checkoutResponseSchema.parse(res.body);
-    return prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    return prisma.payment.findUniqueOrThrow({ where: { id: paymentId ?? '' } });
   };
   const pack = (code: PricedCode = 'pack-start', collection: string | null = collectionId) =>
     checkout({

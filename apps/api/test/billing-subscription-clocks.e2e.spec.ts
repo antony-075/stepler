@@ -89,7 +89,7 @@ async function lapsed(endedAgoMs: number) {
     })
     .expect(201);
   const start = await prisma.payment.findUniqueOrThrow({
-    where: { id: checkoutResponseSchema.parse(res.body).paymentId },
+    where: { id: checkoutResponseSchema.parse(res.body).paymentId ?? '' },
   });
   await post(subscribeFields(start));
   // The trial is long over: when the plan ends, nothing else holds the account's access.
@@ -252,14 +252,14 @@ describe('a lost `subscribe` callback', () => {
       .expect(201);
     const { paymentId } = checkoutResponseSchema.parse(res.body);
     const payment: Payment = await prisma.payment.update({
-      where: { id: paymentId },
+      where: { id: paymentId ?? '' },
       data: { createdAt: new Date(Date.now() - 60_000) },
     });
-    stub.answers.set(paymentId, subscribeFields(payment));
+    stub.answers.set(payment.id, subscribeFields(payment));
     const polled = paymentDtoSchema.parse(
       (
         await request(server)
-          .get(`/api/v1/billing/payments/${paymentId}`)
+          .get(`/api/v1/billing/payments/${payment.id}`)
           .set('Cookie', account.cookie)
           .expect(200)
       ).body,

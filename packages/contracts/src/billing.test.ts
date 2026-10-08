@@ -144,3 +144,35 @@ describe('billing lists (M2)', () => {
     expect(accountPaymentListQuerySchema.safeParse({ limit: '101' }).success).toBe(false);
   });
 });
+
+describe('subscriptions (plan Task 17)', () => {
+  test('a plan change may answer without a payment; any other field is refused', async () => {
+    const { checkoutResponseSchema, planChangePreviewSchema, subscriptionResumeSchema } =
+      await import('./index.js');
+    expect(
+      checkoutResponseSchema.parse({ paymentId: null, status: 'SCHEDULED', form: null }).status,
+    ).toBe('SCHEDULED');
+    expect(subscriptionResumeSchema.safeParse({ termsVersion: 'v2' }).success).toBe(false);
+    expect(
+      subscriptionResumeSchema.safeParse({
+        autoRenewConsent: true,
+        termsVersion: 'v2',
+        priceId: 'x',
+      }).success,
+    ).toBe(false);
+    const preview = {
+      kind: 'UPGRADE',
+      chargeMinor: 35_000,
+      waived: false,
+      effective: 'NOW',
+      effectiveAt: '2026-10-08T10:00:00.000Z',
+      offerTitle: 'Business',
+      interval: 'MONTH',
+      price: { amountMinor: 120_000, currency: 'UAH' },
+      blocked: null,
+    };
+    expect(planChangePreviewSchema.parse(preview)).toEqual(preview);
+    expect(planChangePreviewSchema.safeParse({ ...preview, chargeMinor: -1 }).success).toBe(false);
+    expect(planChangePreviewSchema.safeParse({ ...preview, chargeMinor: 1.5 }).success).toBe(false);
+  });
+});

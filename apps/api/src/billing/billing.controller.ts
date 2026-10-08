@@ -1,8 +1,29 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   type AccountPaymentListQuery,
   accountPaymentListQuerySchema,
+  type BillingSummary,
+  billingSummarySchema,
+  type PlanChangePreview,
+  type PlanChangePreviewQuery,
+  planChangePreviewQuerySchema,
+  planChangePreviewSchema,
+  type SubscriptionDto,
+  subscriptionDtoSchema,
+  type SubscriptionResume,
+  subscriptionResumeSchema,
   type CheckoutRequest,
   checkoutRequestSchema,
   type CheckoutResponse,
@@ -22,7 +43,6 @@ import type { AccountPrincipal } from '../auth/principal.js';
 import { Public } from '../auth/public.decorator.js';
 import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
 import { RequestId } from '../logging/request-id.decorator.js';
-import { AppError } from '../errors/app-error.js';
 import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
 import { CheckoutService } from './checkout.service.js';
 import { PaymentQueries, toPaymentDto } from './payment-queries.js';
@@ -61,14 +81,22 @@ export class BillingController {
    */
   @Post('checkouts')
   @RateLimit('billing-checkout')
-  @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
+  @ApiResponse({
+    status: 201,
+    standardSchema: checkoutResponseSchema,
+    description:
+      "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated " +
+      'charge was waived, applied now) or SCHEDULED (a downgrade from the period end), no form',
+  })
   @ApiResponse({
     status: 400,
     description: 'VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule',
   })
   @ApiResponse({
     status: 404,
-    description: 'NOT_FOUND: the collection is not yours, unknown, or being deleted',
+    description:
+      'NOT_FOUND: the collection is not yours, unknown, or being deleted; a plan change ' +
+      'without a paid plan',
   })
   @ApiResponse({
     status: 409,
@@ -76,7 +104,9 @@ export class BillingController {
       'OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an ' +
       'extension for an account collection, a smaller tier, a subscription price that is not ' +
       'monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan; ' +
-      'PAYMENT_PENDING: another offer is waiting for payment for this collection or account',
+      'PAYMENT_PENDING: another offer is waiting for payment for this collection or account, or ' +
+      'a plan change while the renewal is unpaid (grace); PLAN_DOWNGRADE_BLOCKED: the smaller ' +
+      'plan would not hold current usage (`excess`: what to reduce, by how much)',
   })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
   @ApiResponse({
@@ -92,8 +122,7 @@ export class BillingController {
       case 'SUBSCRIPTION':
         return this.subscriptions.checkout(principal, body, requestId);
       case 'SUBSCRIPTION_CHANGE':
-        // Plan changes arrive with plan Task 17.
-        throw new AppError('OFFER_UNAVAILABLE', 409);
+        return this.subscriptions.change(principal, body.priceId, requestId);
       default:
         return this.checkouts.create(principal, body, requestId);
     }
@@ -150,5 +179,96 @@ export class BillingController {
     const own = await this.queries.ownPayment(principal.userId, params.id);
     const row = await this.reconciliation.refreshPayment(own.id);
     return toPaymentDto(row, await this.queries.localeOf(principal.userId));
+  }
+
+  /** «Тариф і оплата»: access, the trial, the live plan (with a scheduled change) and usage. */
+  @Get('summary')
+  @ApiResponse({ status: 200, standardSchema: billingSummarySchema })
+  summary(@CurrentPrincipal() principal: AccountPrincipal): Promise<BillingSummary> {
+    return this.subscriptions.summary(principal.userId);
+  }
+
+  /**
+   * What changing the plan to `priceId` would do: the prorated charge now, or the date it takes
+   * effect, and what usage blocks a smaller plan. Nothing is written.
+   */
+  @Get('subscription/change-preview')
+  @ApiResponse({ status: 200, standardSchema: planChangePreviewSchema })
+  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: priceId is not a uuid' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'OFFER_UNAVAILABLE: not a live subscription price, the current one, or the plan is ' +
+      'cancelled; PAYMENT_PENDING: the renewal is unpaid (grace)',
+  })
+  preview(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Query({ schema: planChangePreviewQuerySchema }) query: PlanChangePreviewQuery,
+  ): Promise<PlanChangePreview> {
+    return this.subscriptions.preview(principal.userId, query.priceId);
+  }
+
+  /**
+   * Cancels the paid plan: LiqPay stops charging first, then the plan is cancelled with access
+   * to the period end. Repeating it changes nothing.
+   */
+  @Post('subscription/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: subscriptionDtoSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 503,
+    description:
+      'PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed; try again)',
+  })
+  cancel(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @RequestId() requestId: string | undefined,
+  ): Promise<SubscriptionDto> {
+    return this.subscriptions.cancel(principal, requestId);
+  }
+
+  /**
+   * A cancelled plan again before it ends: a new LiqPay checkout at its price (the card is
+   * confirmed again), charged now; the new period starts when the cancelled one ends.
+   */
+  @Post('subscription/resume')
+  @RateLimit('billing-checkout')
+  @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
+  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: no auto-renewal consent' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'SUBSCRIPTION_EXISTS: the plan is not cancelled; OFFER_UNAVAILABLE: its price is no ' +
+      'longer sold (choose a plan); PAYMENT_PENDING: another plan is waiting for payment',
+  })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server',
+  })
+  resumeSubscription(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Body({ schema: subscriptionResumeSchema }) body: SubscriptionResume,
+    @RequestId() requestId: string | undefined,
+  ): Promise<CheckoutResponse> {
+    return this.subscriptions.resume(principal, body.termsVersion, requestId);
+  }
+
+  /** Withdraws a scheduled downgrade (LiqPay gets the current price back) or a pending switch. */
+  @Delete('subscription/pending-change')
+  @ApiResponse({ status: 200, standardSchema: subscriptionDtoSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no plan change is scheduled' })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed)',
+  })
+  cancelPendingChange(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @RequestId() requestId: string | undefined,
+  ): Promise<SubscriptionDto> {
+    return this.subscriptions.cancelPendingChange(principal, requestId);
   }
 }

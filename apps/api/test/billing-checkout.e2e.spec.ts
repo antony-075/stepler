@@ -103,7 +103,7 @@ describe('POST /billing/checkouts', () => {
     expect(JSON.stringify(res.body)).not.toContain(TEST_LIQPAY.privateKey);
     expect(Buffer.from(fields.data, 'base64').toString()).not.toContain(TEST_LIQPAY.privateKey);
 
-    const row = await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId } });
+    const row = await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId ?? '' } });
     expect(row).toMatchObject({
       userId: s.owner.userId,
       kind: 'PACK',
@@ -213,7 +213,7 @@ describe('POST /billing/checkouts', () => {
     expect(busy.body).toMatchObject({ code: 'PAYMENT_PENDING' });
 
     await prisma.payment.update({
-      where: { id: first.response.paymentId },
+      where: { id: first.response.paymentId ?? '' },
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
     const next = decodedForm(
@@ -221,7 +221,8 @@ describe('POST /billing/checkouts', () => {
     );
     expect(next.response.paymentId).not.toBe(first.response.paymentId);
     expect(
-      (await prisma.payment.findUniqueOrThrow({ where: { id: first.response.paymentId } })).status,
+      (await prisma.payment.findUniqueOrThrow({ where: { id: first.response.paymentId ?? '' } }))
+        .status,
     ).toBe('EXPIRED');
   });
 
@@ -230,7 +231,7 @@ describe('POST /billing/checkouts', () => {
     const res = await s.checkout(packFor(null, 'pack-event', 'Ювілей бабусі')).expect(201);
     const { response } = decodedForm(res.body);
     expect(
-      await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId } }),
+      await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId ?? '' } }),
     ).toMatchObject({
       collectionId: null,
       newCollectionTitle: 'Ювілей бабусі',
@@ -260,7 +261,7 @@ describe('POST /billing/checkouts', () => {
     );
     expect(ext.data).toMatchObject({ amount: '150.00' });
     await prisma.payment.update({
-      where: { id: ext.response.paymentId },
+      where: { id: ext.response.paymentId ?? '' },
       data: { status: 'FAILED', failedAt: new Date() },
     });
 
@@ -274,7 +275,7 @@ describe('POST /billing/checkouts', () => {
     const { response, data } = decodedForm(upgrade.body);
     expect(data).toMatchObject({ amount: '700.00' });
     expect(
-      await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId } }),
+      await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId ?? '' } }),
     ).toMatchObject({
       kind: 'PACK_EXTENSION',
       amountMinor: 70_000,
@@ -376,14 +377,14 @@ describe('POST /billing/payments/:id/checkout (pay the same order again)', () =>
     await resume(stranger.cookie).expect(404);
 
     await prisma.payment.update({
-      where: { id: response.paymentId },
+      where: { id: response.paymentId ?? '' },
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
     expect((await resume(s.owner.cookie).expect(409)).body).toMatchObject({
       code: 'OFFER_UNAVAILABLE',
     });
     await prisma.payment.update({
-      where: { id: response.paymentId },
+      where: { id: response.paymentId ?? '' },
       data: { expiresAt: new Date(Date.now() + 60_000), status: 'FAILED', failedAt: new Date() },
     });
     await resume(s.owner.cookie).expect(409);

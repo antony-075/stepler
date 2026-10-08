@@ -1,15 +1,27 @@
 import type { EntitlementLimits, OperatorOffer, SubscriptionDto } from '@stepler/contracts';
-import type { BillingOffer, Subscription } from '../generated/prisma/client.js';
+import type { BillingOffer, BillingPrice, Subscription } from '../generated/prisma/client.js';
 
 type OfferTitles = Pick<BillingOffer, 'titleUk' | 'titleEn'>;
+
+/** Include in a subscription query for `toSubscriptionDto`'s pending change. */
+export const WITH_PLAN_TITLES = {
+  offer: { select: { titleUk: true, titleEn: true } },
+  pendingOffer: { select: { titleUk: true, titleEn: true } },
+  pendingPrice: true,
+} as const;
+
+type SubscriptionRow = Subscription & {
+  offer: OfferTitles;
+  pendingOffer?: OfferTitles | null;
+  pendingPrice?: BillingPrice | null;
+};
 
 const bytes = (value: bigint | null): string | null => (value === null ? null : value.toString());
 
 /** Explicit mapping; never a Prisma row as the contract (rule 06). */
-export function toSubscriptionDto(
-  row: Subscription & { offer: OfferTitles },
-  locale: 'uk' | 'en',
-): SubscriptionDto {
+export function toSubscriptionDto(row: SubscriptionRow, locale: 'uk' | 'en'): SubscriptionDto {
+  const pendingOffer = row.pendingOffer ?? null;
+  const pendingPrice = row.pendingPrice ?? null;
   return {
     id: row.id,
     source: row.source,
@@ -33,6 +45,16 @@ export function toSubscriptionDto(
     currentPeriodEnd: row.currentPeriodEnd?.toISOString() ?? null,
     graceEndsAt: row.graceEndsAt?.toISOString() ?? null,
     cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+    pendingChange:
+      pendingOffer === null || pendingPrice === null || row.pendingOfferId === null
+        ? null
+        : {
+            offerId: row.pendingOfferId,
+            offerTitle: locale === 'en' ? pendingOffer.titleEn : pendingOffer.titleUk,
+            interval: pendingPrice.interval,
+            price: { amountMinor: pendingPrice.amountMinor, currency: pendingPrice.currency },
+            effectiveAt: row.currentPeriodEnd?.toISOString() ?? null,
+          },
     createdAt: row.createdAt.toISOString(),
   };
 }

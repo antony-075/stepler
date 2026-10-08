@@ -73,7 +73,7 @@ async function owner(email = 'olena@example.com') {
       termsVersion: 'v2',
     }).expect(201);
     const { paymentId } = checkoutResponseSchema.parse(res.body);
-    return prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    return prisma.payment.findUniqueOrThrow({ where: { id: paymentId ?? '' } });
   };
   const usage = async () =>
     usageResponseSchema.parse(
@@ -142,7 +142,7 @@ describe('checkout', () => {
       subscribe_periodicity: 'year',
     });
     expect(JSON.stringify(body)).not.toContain(liqpayEnv().LIQPAY_PRIVATE_KEY);
-    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.paymentId } });
+    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.paymentId ?? '' } });
     expect(payment).toMatchObject({
       kind: 'SUBSCRIPTION',
       status: 'PENDING',

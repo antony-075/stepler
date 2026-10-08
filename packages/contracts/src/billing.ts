@@ -99,6 +99,22 @@ export const subscriptionSourceSchema = z.enum(['LIQPAY', 'COMPLIMENTARY']);
 export type SubscriptionSource = z.infer<typeof subscriptionSourceSchema>;
 
 /**
+ * A plan change waiting for the next period (a downgrade, [P11]) or for its own checkout (a
+ * monthly ↔ yearly switch): the plan and price it moves to.
+ */
+export const pendingPlanChangeSchema = z
+  .object({
+    offerId: z.uuid(),
+    offerTitle: z.string(),
+    interval: billingIntervalSchema,
+    price: moneySchema,
+    /** When it takes effect: the current period's end. */
+    effectiveAt: z.iso.datetime().nullable(),
+  })
+  .strict();
+export type PendingPlanChange = z.infer<typeof pendingPlanChangeSchema>;
+
+/**
  * An account-level plan: a paid subscription or a complimentary grant. The limits are the
  * snapshot taken when it started [B10]; `currentPeriodEnd: null` = a grant without an end.
  */
@@ -116,6 +132,7 @@ export const subscriptionDtoSchema = z
     currentPeriodEnd: z.iso.datetime().nullable(),
     graceEndsAt: z.iso.datetime().nullable(),
     cancelAtPeriodEnd: z.boolean(),
+    pendingChange: pendingPlanChangeSchema.nullable(),
     createdAt: z.iso.datetime(),
   })
   .strict();
@@ -169,12 +186,14 @@ export type CheckoutRequest = z.infer<typeof checkoutRequestSchema>;
 
 /**
  * The provider's checkout form: the browser posts these fields to `action` (ADR 0018: the only
- * direct browser → provider step). `null` with `SUCCEEDED` when nothing was left to pay.
+ * direct browser → provider step). A plan change may need no payment: `SUCCEEDED` (an upgrade
+ * whose prorated charge was waived, applied now) or `SCHEDULED` (a downgrade from the next
+ * period); then `form` and `paymentId` are `null`.
  */
 export const checkoutResponseSchema = z
   .object({
-    paymentId: z.uuid(),
-    status: z.enum(['PENDING', 'SUCCEEDED']),
+    paymentId: z.uuid().nullable(),
+    status: z.enum(['PENDING', 'SUCCEEDED', 'SCHEDULED']),
     form: z
       .object({
         action: z.url(),
@@ -244,3 +263,46 @@ export const paymentListSchema = z
 export type PaymentList = z.infer<typeof paymentListSchema>;
 
 export const paymentIdParamsSchema = z.object({ id: z.uuid() }).strict();
+
+/** `POST /api/v1/billing/subscription/resume`: a cancelled plan again, with a new consent. */
+export const subscriptionResumeSchema = z
+  .object({ autoRenewConsent: z.literal(true), termsVersion: z.string().min(1).max(20) })
+  .strict();
+export type SubscriptionResume = z.infer<typeof subscriptionResumeSchema>;
+
+/** What a smaller plan would not hold, and by how much (`409 PLAN_DOWNGRADE_BLOCKED`). */
+export const planExcessSchema = z
+  .object({
+    limit: z.enum(['activeCollections', 'storageBytes', 'collectionStorageBytes', 'guestLinks']),
+    used: z.number().int().min(0),
+    allowed: z.number().int().min(0),
+    /** The collection over a per-collection limit. */
+    collectionId: z.uuid().nullable(),
+  })
+  .strict();
+export type PlanExcess = z.infer<typeof planExcessSchema>;
+
+/** `GET /api/v1/billing/subscription/change-preview?priceId=`. */
+export const planChangePreviewQuerySchema = z.object({ priceId: z.uuid() }).strict();
+export type PlanChangePreviewQuery = z.infer<typeof planChangePreviewQuerySchema>;
+
+/**
+ * What changing to `priceId` would do, computed on the server [P10], [P11]: an upgrade is
+ * charged now (`chargeMinor`, waived under the minimum) and applies now; a downgrade applies
+ * from the period end; a monthly ↔ yearly switch is paid now in full and starts at the period
+ * end. `blocked` lists what to reduce before a smaller plan can be chosen.
+ */
+export const planChangePreviewSchema = z
+  .object({
+    kind: z.enum(['UPGRADE', 'DOWNGRADE', 'SWITCH']),
+    chargeMinor: z.int().min(0),
+    waived: z.boolean(),
+    effective: z.enum(['NOW', 'NEXT_PERIOD']),
+    effectiveAt: z.iso.datetime().nullable(),
+    offerTitle: z.string(),
+    interval: billingIntervalSchema,
+    price: moneySchema,
+    blocked: z.array(planExcessSchema).nullable(),
+  })
+  .strict();
+export type PlanChangePreview = z.infer<typeof planChangePreviewSchema>;

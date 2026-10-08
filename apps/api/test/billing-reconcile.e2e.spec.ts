@@ -77,7 +77,7 @@ async function pendingPack(ageMs = MINUTE_MS) {
     .expect(201);
   const { paymentId } = checkoutResponseSchema.parse(res.body);
   const payment = await prisma.payment.update({
-    where: { id: paymentId },
+    where: { id: paymentId ?? '' },
     data: { createdAt: new Date(Date.now() - ageMs) },
   });
   const poll = async () =>
