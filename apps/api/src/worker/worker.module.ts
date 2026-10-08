@@ -7,6 +7,7 @@ import { PaymentEvents } from '../billing/payment-events.service.js';
 import { PaymentTransitions } from '../billing/payment-transitions.js';
 import { PAYMENT_PROVIDERS } from '../billing/provider/provider-factory.js';
 import { ReconciliationService } from '../billing/reconciliation.service.js';
+import { SubscriptionClocks } from '../billing/subscription-clocks.js';
 import { SubscriptionProviderSync } from '../billing/subscription-provider-sync.js';
 import { SubscriptionTransitions } from '../billing/subscription-transitions.js';
 import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
@@ -117,6 +118,7 @@ export class WorkerModule {
         PaymentTransitions,
         PaymentEvents,
         ReconciliationService,
+        SubscriptionClocks,
         BillingReconcileHandler,
         BillingReadOnlyMailHandler,
         BillingDeletionWarningMailHandler,

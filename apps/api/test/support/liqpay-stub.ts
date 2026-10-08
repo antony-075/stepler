@@ -8,12 +8,13 @@ export type StubAnswer = Record<string, unknown> | 'down';
 
 /**
  * A local stand-in for LiqPay's server API (`/api/request`), reached through `LIQPAY_API_BASE`:
- * it checks our signature like LiqPay does and answers `status` from what a test set. It replaces
+ * it checks our signature like LiqPay does and answers `status`, `unsubscribe` and
+ * `subscribe_update` from what a test set. It replaces
  * only LiqPay's endpoint; the product's `LiqPayProvider` runs unchanged (rule 18).
  */
 export class LiqPayStub {
   readonly answers = new Map<string, StubAnswer>();
-  readonly calls: { action: string; orderId: string }[] = [];
+  readonly calls: { action: string; orderId: string; amount?: string }[] = [];
   private server: Server | undefined;
   base = '';
 
@@ -34,8 +35,14 @@ export class LiqPayStub {
           return;
         }
         const orderId = String(params.order_id);
-        this.calls.push({ action: String(params.action), orderId });
-        const answer = this.answers.get(orderId);
+        const action = String(params.action);
+        this.calls.push({
+          action,
+          orderId,
+          ...(typeof params.amount === 'string' ? { amount: params.amount } : {}),
+        });
+        // `"<action>:<order>"` answers one action (e.g. `unsubscribe`); `"<order>"` all of them.
+        const answer = this.answers.get(`${action}:${orderId}`) ?? this.answers.get(orderId);
         if (answer === 'down') send(500, {});
         else if (answer === undefined) {
           send(200, { result: 'error', status: 'error', err_code: 'payment_not_found' });

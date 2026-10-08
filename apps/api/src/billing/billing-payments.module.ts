@@ -11,6 +11,7 @@ import { PaymentEvents } from './payment-events.service.js';
 import { PaymentQueries } from './payment-queries.js';
 import { PaymentTransitions } from './payment-transitions.js';
 import { ReconciliationService } from './reconciliation.service.js';
+import { SubscriptionClocks } from './subscription-clocks.js';
 import { SubscriptionProviderSync } from './subscription-provider-sync.js';
 import { SubscriptionTransitions } from './subscription-transitions.js';
 import { SubscriptionsService } from './subscriptions.service.js';
@@ -34,6 +35,7 @@ import { SubscriptionsService } from './subscriptions.service.js';
     SubscriptionProviderSync,
     PackGrants,
     ReconciliationService,
+    SubscriptionClocks,
     GuestPageRepository,
     { provide: DEFAULT_LINK_CREATOR, useExisting: GuestLinksService },
   ],

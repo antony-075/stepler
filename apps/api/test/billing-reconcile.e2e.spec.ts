@@ -5,6 +5,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { PaymentEvents } from '../src/billing/payment-events.service.js';
 import { ReconciliationService } from '../src/billing/reconciliation.service.js';
+import { SubscriptionClocks } from '../src/billing/subscription-clocks.js';
 import { createApp } from '../src/create-app.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import type { Payment } from '../src/generated/prisma/client.js';
@@ -46,6 +47,7 @@ beforeAll(async () => {
     app.get(PrismaService),
     app.get(ReconciliationService),
     app.get(PaymentEvents),
+    app.get(SubscriptionClocks),
   );
 });
 

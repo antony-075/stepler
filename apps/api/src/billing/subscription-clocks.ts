@@ -1,0 +1,194 @@
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service.js';
+import { PrismaService } from '../database/prisma.service.js';
+import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
+import { ReconciliationService, SUBSCRIPTION_CHECK_INTERVAL_MS } from './reconciliation.service.js';
+import { SubscriptionProviderSync } from './subscription-provider-sync.js';
+import { lockSubscription, SubscriptionTransitions } from './subscription-transitions.js';
+
+const BATCH = 100;
+/** LiqPay charges at the period end; a renewal is looked for from an hour after it. */
+const RENEWAL_DUE_MS = 60 * 60_000;
+
+export interface SubscriptionClockRun {
+  renewalsDue: number;
+  graced: number;
+  expired: number;
+  ended: number;
+  unsubscribed: number;
+  priceSynced: number;
+}
+
+/**
+ * The subscription clocks of the `billing.reconcile` job (ADR 0018 [P12], plan Task 16, Review
+ * Focus 5). Every step is idempotent and catches up after a pause: a plan whose period ended
+ * days ago goes through grace and expiry in one run, exactly as if the job had run on time.
+ * 1. `ACTIVE` an hour past its period end: LiqPay is asked (a lost renewal callback is applied);
+ *    still not renewed → `PAST_DUE` with grace and the mail;
+ * 2. `PAST_DUE`: asked hourly; past `graceEndsAt` and LiqPay answered within the hour with no
+ *    renewal → `EXPIRED` (`endedAt = currentPeriodEnd`) and LiqPay's charges are stopped. While
+ *    LiqPay cannot be asked, nothing expires;
+ * 3. `CANCELED` past its period end → `EXPIRED`;
+ * 4. an ended paid plan LiqPay still charges → `unsubscribe` again; a price LiqPay has not
+ *    confirmed → `subscribe_update` again.
+ */
+@Injectable()
+export class SubscriptionClocks {
+  private readonly logger = new Logger(SubscriptionClocks.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reconciliation: ReconciliationService,
+    private readonly transitions: SubscriptionTransitions,
+    private readonly sync: SubscriptionProviderSync,
+    private readonly audit: AuditService,
+    @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+  ) {}
+
+  async run(now: Date): Promise<SubscriptionClockRun> {
+    const result: SubscriptionClockRun = {
+      renewalsDue: 0,
+      graced: 0,
+      expired: 0,
+      ended: 0,
+      unsubscribed: 0,
+      priceSynced: 0,
+    };
+    await this.jobs.ready();
+
+    const due = await this.prisma.subscription.findMany({
+      where: {
+        source: 'LIQPAY',
+        status: 'ACTIVE',
+        currentPeriodEnd: { lt: new Date(now.getTime() - RENEWAL_DUE_MS) },
+      },
+      orderBy: { currentPeriodEnd: 'asc' },
+      take: BATCH,
+      select: { id: true },
+    });
+    for (const { id } of due) {
+      result.renewalsDue += 1;
+      await this.reconciliation.refreshSubscription(id, now);
+      if (await this.graceIfUnrenewed(id, now)) result.graced += 1;
+    }
+
+    const pastDue = await this.prisma.subscription.findMany({
+      where: { source: 'LIQPAY', status: 'PAST_DUE' },
+      orderBy: { graceEndsAt: 'asc' },
+      take: BATCH,
+      select: { id: true, graceEndsAt: true },
+    });
+    for (const row of pastDue) {
+      const over = row.graceEndsAt !== null && row.graceEndsAt.getTime() <= now.getTime();
+      await this.reconciliation.refreshSubscription(row.id, now, over);
+      if (over && (await this.expireAfterGrace(row.id, now))) result.expired += 1;
+    }
+
+    const canceled = await this.prisma.subscription.findMany({
+      where: {
+        source: 'LIQPAY',
+        status: 'CANCELED',
+        endedAt: null,
+        currentPeriodEnd: { lte: now },
+      },
+      take: BATCH,
+      select: { id: true, currentPeriodEnd: true },
+    });
+    for (const row of canceled) {
+      const { count } = await this.prisma.subscription.updateMany({
+        where: { id: row.id, status: 'CANCELED', endedAt: null },
+        data: { status: 'EXPIRED', endedAt: row.currentPeriodEnd },
+      });
+      result.ended += count;
+    }
+
+    // A plan that once ran at LiqPay and has ended, while LiqPay may still charge it.
+    const charging = await this.prisma.subscription.findMany({
+      where: {
+        source: 'LIQPAY',
+        status: 'EXPIRED',
+        providerUnsubscribedAt: null,
+        payments: { some: { kind: 'SUBSCRIPTION', paidAt: { not: null } } },
+      },
+      take: BATCH,
+      select: { id: true },
+    });
+    for (const { id } of charging) {
+      if (await this.sync.unsubscribe(id, now)) result.unsubscribed += 1;
+    }
+
+    const unsynced = await this.prisma.subscription.findMany({
+      where: {
+        pendingProviderAmountMinor: { not: null },
+        status: { in: ['ACTIVE', 'PAST_DUE', 'CANCELED'] },
+        endedAt: null,
+      },
+      take: BATCH,
+      select: { id: true },
+    });
+    for (const { id } of unsynced) {
+      if (await this.sync.syncAmount(id)) result.priceSynced += 1;
+    }
+    return result;
+  }
+
+  /** Still `ACTIVE` an hour past the period end after asking LiqPay → grace. */
+  private async graceIfUnrenewed(id: string, now: Date): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const owner = await tx.subscription.findUniqueOrThrow({
+        where: { id },
+        select: { userId: true },
+      });
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${owner.userId}::uuid FOR UPDATE`;
+      const sub = await lockSubscription(tx, id);
+      const end = sub.currentPeriodEnd;
+      if (sub.status !== 'ACTIVE' || end === null) return false;
+      if (end.getTime() + RENEWAL_DUE_MS >= now.getTime()) return false;
+      await this.transitions.enterGrace(tx, sub);
+      this.logger.log({ msg: 'billing.subscription.grace', subscriptionId: id });
+      return true;
+    });
+  }
+
+  /**
+   * Past grace with an answered check in the last hour and no renewal → `EXPIRED`, then LiqPay's
+   * charges are stopped (best effort; the next run retries until LiqPay confirms).
+   */
+  private async expireAfterGrace(id: string, now: Date): Promise<boolean> {
+    const expired = await this.prisma.$transaction(async (tx) => {
+      const owner = await tx.subscription.findUniqueOrThrow({
+        where: { id },
+        select: { userId: true },
+      });
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${owner.userId}::uuid FOR UPDATE`;
+      const sub = await lockSubscription(tx, id);
+      if (sub.status !== 'PAST_DUE' || sub.graceEndsAt === null) return false;
+      if (sub.graceEndsAt.getTime() > now.getTime()) return false;
+      const checked =
+        sub.lastRefreshOk &&
+        sub.lastRefreshAt !== null &&
+        sub.lastRefreshAt.getTime() > now.getTime() - SUBSCRIPTION_CHECK_INTERVAL_MS;
+      if (!checked) {
+        this.logger.warn({ msg: 'billing.subscription.expiry_deferred', subscriptionId: id });
+        return false;
+      }
+      await tx.subscription.update({
+        where: { id },
+        data: { status: 'EXPIRED', endedAt: sub.currentPeriodEnd ?? now },
+      });
+      await this.audit.record(tx, {
+        actor: 'system',
+        action: 'billing.subscription_cancel',
+        targetType: 'subscription',
+        targetId: id,
+        metadata: { by: 'grace_ended' },
+      });
+      return true;
+    });
+    if (expired) {
+      this.logger.log({ msg: 'billing.subscription.expired', subscriptionId: id });
+      await this.sync.unsubscribe(id, now);
+    }
+    return expired;
+  }
+}

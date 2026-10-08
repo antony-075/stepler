@@ -15,6 +15,8 @@ export const FIRST_CHECK_AFTER_MS = 30_000;
 export const CHECK_INTERVAL_MS = 15_000;
 /** A pending payment past its TTL by this much, with no success at LiqPay, expires. */
 export const EXPIRE_GRACE_MS = 15 * 60_000;
+/** A subscription is asked at most once per this interval (plan Task 16: hourly). */
+export const SUBSCRIPTION_CHECK_INTERVAL_MS = 60 * 60_000;
 
 /**
  * Settles open payments through LiqPay's `status` API (ADR 0018 [P7]): the return page's poll and
@@ -92,5 +94,46 @@ export class ReconciliationService {
 
   private reload(id: string): Promise<Payment> {
     return this.prisma.payment.findUniqueOrThrow({ where: { id } });
+  }
+
+  /**
+   * Asks LiqPay about a subscription's order (plan Task 16, Review Focus 5) at most once per
+   * hour (`force` skips that, for the grace-end decision) and applies what it says through the
+   * same transitions as a callback: a `regular` charge renews, `unsubscribed` cancels. Spike S1b:
+   * the answer is usually the `subscribe` transaction itself (a no-op for a settled plan).
+   * Stamps `lastRefreshAt` and whether LiqPay answered (`lastRefreshOk`): the job expires a plan
+   * only after an answered check, never while LiqPay is unreachable. `true` = LiqPay answered.
+   */
+  async refreshSubscription(subscriptionId: string, now = new Date(), force = false) {
+    const due = new Date(now.getTime() - (force ? 0 : SUBSCRIPTION_CHECK_INTERVAL_MS));
+    const { count } = await this.prisma.subscription.updateMany({
+      where: {
+        id: subscriptionId,
+        source: 'LIQPAY',
+        providerOrderId: { not: null },
+        OR: [{ lastRefreshAt: null }, { lastRefreshAt: { lte: due } }],
+      },
+      data: { lastRefreshAt: now, lastRefreshOk: false },
+    });
+    if (count === 0) return false;
+    const sub = await this.prisma.subscription.findUniqueOrThrow({
+      where: { id: subscriptionId },
+      select: { providerOrderId: true },
+    });
+    let ev: ProviderEvent | null;
+    try {
+      ev = await this.provider.status(sub.providerOrderId ?? '');
+    } catch {
+      this.logger.warn({ msg: 'billing.reconcile.provider_error', subscriptionId });
+      return false;
+    }
+    if (ev !== null && (ev.action === 'regular' || ev.outcome === 'UNSUBSCRIBED')) {
+      await this.events.applyStatus(ev);
+    }
+    await this.prisma.subscription.update({
+      where: { id: subscriptionId },
+      data: { lastRefreshOk: true },
+    });
+    return true;
   }
 }
