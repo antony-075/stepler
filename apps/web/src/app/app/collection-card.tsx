@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PermissionChips } from '@/guest-links/permission-chips';
 import { CollectionMark } from './collection-mark';
-import { formatBytes } from '@/format/bytes';
+import { formatStorage } from '@/format/bytes';
 import { ARCHIVED_COVER, ARCHIVED_SURFACE as ARCHIVED, BLOCKED_ACCENT } from './archived-style';
 import { AccessBadge, CollectionStatusBadge } from './collection-row';
 import { ShareIconButton } from './collections/[id]/share-dialog';
@@ -72,7 +72,7 @@ export function CollectionCard({
           data-slot="collection-size"
           className="font-mono text-xs whitespace-nowrap tabular-nums"
         >
-          {formatBytes(format.number, collection.storageBytes)}
+          {formatStorage(format.number, collection.storageBytes)}
         </span>
       ) : null}
       {/* Archived tiles say when and the access state in their own block (below). */}

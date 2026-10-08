@@ -70,7 +70,7 @@ import {
 } from 'react';
 import { collectionsListKey, fetchUsage, listCollections, USAGE_KEY } from '@/api/collections';
 import { useMediaQuery } from '@/components/use-media-query';
-import { formatBytes } from '@/format/bytes';
+import { formatStorage } from '@/format/bytes';
 import { CollectionCard } from './collection-card';
 import { CollectionRow, CollectionTableHeader, TABLE_COLUMNS } from './collection-row';
 import {
@@ -239,8 +239,8 @@ export function CollectionsDashboard() {
               collections={t('usage', { used: slots.used, limit: slots.limit })}
               slots={slots}
               storage={t('storageUsage', {
-                used: formatBytes(format.number, usage.data.storage.usedBytes),
-                limit: formatBytes(format.number, usage.data.storage.limitBytes),
+                used: formatStorage(format.number, usage.data.storage.usedBytes),
+                limit: formatStorage(format.number, usage.data.storage.limitBytes),
               })}
               bytes={{
                 used: usage.data.storage.usedBytes,

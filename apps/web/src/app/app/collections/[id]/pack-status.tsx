@@ -29,14 +29,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { fetchOffers, offersKey } from '@/api/billing';
 import { useCheckout } from '@/billing/checkout-redirect';
-import {
-  extensionOffer,
-  formatMoney,
-  formatPlanSize,
-  type PricedOffer,
-  storageUpgrade,
-} from '@/billing/offers';
-import { formatBytes } from '@/format/bytes';
+import { extensionOffer, formatMoney, type PricedOffer, storageUpgrade } from '@/billing/offers';
+import { formatStorage } from '@/format/bytes';
 import { COLLECTION_ACCESS_REASON_ID } from '../../access-model';
 
 const KYIV = 'Europe/Kyiv';
@@ -141,10 +135,8 @@ export function PackStatus({ collection }: { collection: Collection | Collection
                 />
                 <span className="text-sm text-muted-foreground tabular-nums">
                   {tExtend('storageUse', {
-                    used: formatBytes(format.number, used),
-                    limit: formatPlanSize(format.number, pack.storageBytes, (b) =>
-                      formatBytes(format.number, b),
-                    ),
+                    used: formatStorage(format.number, used),
+                    limit: formatStorage(format.number, pack.storageBytes),
                   })}
                 </span>
               </div>
@@ -186,7 +178,7 @@ function PackExtensions({ collectionId, offerId }: { collectionId: string; offer
     extensions.push({
       key: 'STORAGE',
       label: tExtend('upgrade', {
-        size: formatPlanSize(format.number, bytes, (b) => formatBytes(format.number, b)),
+        size: formatStorage(format.number, bytes),
       }),
       priceId: upgrade.target.priceId,
       amount: upgrade.difference,

@@ -27,7 +27,7 @@ import { BuyPackDialog } from '@/billing/buy-pack-dialog';
 import { PackCard } from '@/billing/offer-card';
 import { packOffers } from '@/billing/offers';
 import { PaymentHistory } from '@/billing/payment-history';
-import { formatBytes } from '@/format/bytes';
+import { formatStorage } from '@/format/bytes';
 
 const KYIV = 'Europe/Kyiv';
 
@@ -87,8 +87,8 @@ export function BillingOverview() {
                 </li>
                 <li>
                   {t('storageUsage', {
-                    used: formatBytes(format.number, usage.data.storage.usedBytes),
-                    limit: formatBytes(format.number, usage.data.storage.limitBytes),
+                    used: formatStorage(format.number, usage.data.storage.usedBytes),
+                    limit: formatStorage(format.number, usage.data.storage.limitBytes),
                   })}
                 </li>
               </ul>

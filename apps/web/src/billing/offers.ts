@@ -118,23 +118,3 @@ export function returnView(input: {
       return 'succeeded';
   }
 }
-
-const GIB = 1024 ** 3;
-
-/**
- * A plan's size as it is sold: the seeded tiers are whole GiB (`10 × 2^30`), named «10 ГБ» like
- * every storage product does. Other sizes fall back to the decimal `formatBytes` of usage lines.
- */
-export function formatPlanSize(
-  format: (value: number, options: { style: 'unit'; unit: string }) => string,
-  bytes: number,
-  fallback: (bytes: number) => string,
-): string {
-  if (bytes > 0 && bytes % GIB === 0) {
-    const gib = bytes / GIB;
-    return gib >= 1024 && gib % 1024 === 0
-      ? format(gib / 1024, { style: 'unit', unit: 'terabyte' })
-      : format(gib, { style: 'unit', unit: 'gigabyte' });
-  }
-  return fallback(bytes);
-}

@@ -3,7 +3,6 @@ import { describe, expect, test } from 'vitest';
 import {
   extensionOffer,
   formatMoney,
-  formatPlanSize,
   packOffers,
   RETURN_CONFIRM_MS,
   retentionYears,
@@ -92,19 +91,5 @@ describe('returnView', () => {
     expect(returnView({ ...base, status: 'PARTIALLY_REFUNDED' })).toBe('succeeded');
     expect(returnView({ ...base, status: 'FAILED' })).toBe('failed');
     expect(returnView({ ...base, status: 'EXPIRED' })).toBe('expired');
-  });
-});
-
-describe('formatPlanSize', () => {
-  const uk = (value: number, options: Intl.NumberFormatOptions) =>
-    new Intl.NumberFormat('uk', options).format(value);
-  test('whole GiB tiers read as sold', () => {
-    expect(formatPlanSize(uk, 10 * 1024 ** 3, () => 'x')).toBe(
-      uk(10, { style: 'unit', unit: 'gigabyte' }),
-    );
-    expect(formatPlanSize(uk, 1024 ** 4, () => 'x')).toBe(
-      uk(1, { style: 'unit', unit: 'terabyte' }),
-    );
-    expect(formatPlanSize(uk, 1_500_000_000, () => 'fallback')).toBe('fallback');
   });
 });

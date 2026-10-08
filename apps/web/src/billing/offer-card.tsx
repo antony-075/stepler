@@ -13,8 +13,8 @@ import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { CalendarClock, HardDrive, Link2, ShieldCheck } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { formatBytes } from '@/format/bytes';
-import { formatMoney, formatPlanSize, type PricedOffer, retentionYears } from './offers';
+import { formatStorage } from '@/format/bytes';
+import { formatMoney, type PricedOffer, retentionYears } from './offers';
 
 export function PackCard({ pack, action }: { pack: PricedOffer; action: ReactNode }) {
   const t = useTranslations('billing.pack');
@@ -28,7 +28,7 @@ export function PackCard({ pack, action }: { pack: PricedOffer; action: ReactNod
     facts.push({
       icon: <HardDrive />,
       text: t('storage', {
-        size: formatPlanSize(format.number, storage, (b) => formatBytes(format.number, b)),
+        size: formatStorage(format.number, storage),
       }),
     });
   }
