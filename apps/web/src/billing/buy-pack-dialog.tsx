@@ -31,7 +31,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect, useId } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
-import { collectionsListKey, listCollections } from '@/api/collections';
+import { collectionsPageKey, listCollections } from '@/api/collections';
 import { useCheckout } from './checkout-redirect';
 import { formatMoney, type PricedOffer } from './offers';
 
@@ -65,7 +65,7 @@ export function BuyPackDialog({
   const checkout = useCheckout();
   // Packs are bought for the account's own (not yet packed) active collections, or a new one.
   const collections = useQuery({
-    queryKey: collectionsListKey('ACTIVE'),
+    queryKey: collectionsPageKey('ACTIVE'),
     queryFn: () => listCollections('ACTIVE'),
     enabled: open,
   });
