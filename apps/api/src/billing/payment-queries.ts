@@ -44,6 +44,7 @@ export function toOfferDto(
     description: (locale === 'en' ? row.descriptionEn : row.descriptionUk) ?? null,
     limits: offerLimits(row),
     rank: row.rank,
+    highlighted: row.highlighted,
     prices: row.prices.map((price) => ({
       id: price.id,
       interval: price.interval,

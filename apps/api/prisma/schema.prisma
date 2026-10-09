@@ -761,6 +761,8 @@ model BillingOffer {
   /// Set iff kind = PACK_EXTENSION.
   extension              PackExtensionKind?
   rank                   Int                @default(0)
+  /// Shown with «Найпопулярніший» on «Тарифи» and /pricing (billing page v4).
+  highlighted            Boolean            @default(false)
   titleUk                String
   titleEn                String
   descriptionUk          String?

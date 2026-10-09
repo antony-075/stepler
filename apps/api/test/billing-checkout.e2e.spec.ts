@@ -411,6 +411,21 @@ describe('GET /billing/offers', () => {
     });
     expect(JSON.stringify(res.body)).not.toMatch(/rroItemId|features|trial/);
   });
+
+  test('Business is the highlighted plan (the migration marks it); the rest are not', async () => {
+    const business = await prisma.billingOffer.update({
+      where: { code: 'sub-business' },
+      data: { active: true },
+    });
+    await prisma.billingPrice.create({
+      data: { offerId: business.id, interval: 'MONTH', currency: 'UAH', amountMinor: 120_000 },
+    });
+    const res = await request(server).get('/api/v1/billing/offers').expect(200);
+    const list = offerListSchema.parse(res.body);
+    const highlighted = list.items.filter((offer) => offer.highlighted).map((offer) => offer.code);
+    expect(highlighted).toEqual(['sub-business']);
+    expect(list.items.find((offer) => offer.code === 'pack-start')?.highlighted).toBe(false);
+  });
 });
 
 describe('BILLING_PROVIDER=disabled', () => {

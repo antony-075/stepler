@@ -80,6 +80,8 @@ export const offerDtoSchema = z
     description: z.string().nullable(),
     limits: entitlementLimitsSchema,
     rank: z.int(),
+    /** Marked «Найпопулярніший» on «Тарифи» and /pricing. */
+    highlighted: z.boolean(),
     prices: z.array(offerPriceSchema),
   })
   .strict();
