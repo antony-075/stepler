@@ -10,6 +10,7 @@ const sign = (data: string): string =>
     .digest('base64');
 
 interface CheckoutData {
+  action: string;
   order_id: string;
   amount: string;
   currency: string;
@@ -39,9 +40,11 @@ export async function payAtLiqPayStub(page: Page, outcome: StubOutcome): Promise
     expect(form.get('signature')).toBe(sign(data));
     const checkout = JSON.parse(Buffer.from(data, 'base64').toString('utf8')) as CheckoutData;
     orderId = checkout.order_id;
+    // A subscription's first charge is reported as `subscribed` (spike S1b).
+    const subscribe = checkout.action === 'subscribe';
     const fields = {
-      action: 'pay',
-      status: outcome,
+      action: subscribe ? 'subscribe' : 'pay',
+      status: subscribe && outcome === 'success' ? 'subscribed' : outcome,
       version: 7,
       order_id: checkout.order_id,
       payment_id: Math.floor(Math.random() * 1e9),

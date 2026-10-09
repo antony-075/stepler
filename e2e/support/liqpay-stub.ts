@@ -2,7 +2,8 @@
 // plan Task 14). The API reaches it through `LIQPAY_API_BASE`; only LiqPay's endpoint is
 // replaced, the product's `LiqPayProvider` runs unchanged (rule 18). It checks the request's
 // signature like LiqPay does and answers `status` from what a journey set through
-// `POST /__control/status`. Run by Playwright as a web server: `node support/liqpay-stub.ts`
+// `POST /__control/status`; `unsubscribe` and `subscribe_update` answer as the sandbox did in
+// spike S1b (`unsubscribed`; `subscribed` with the new amount, nothing charged). Run by Playwright as a web server: `node support/liqpay-stub.ts`
 // (Node strips the types), so it imports nothing but Node built-ins.
 import { createHash } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -49,7 +50,24 @@ const server = createServer((req, res) => {
       const params = JSON.parse(Buffer.from(data, 'base64').toString('utf8')) as {
         action: string;
         order_id: string;
+        amount?: number | string;
+        currency?: string;
       };
+      if (params.action === 'unsubscribe') {
+        const fields = { action: 'unsubscribe', status: 'unsubscribed', version: 7 };
+        answers.set(params.order_id, { ...answers.get(params.order_id), ...fields });
+        return json(res, 200, { result: 'ok', order_id: params.order_id, ...fields });
+      }
+      if (params.action === 'subscribe_update') {
+        const fields = {
+          action: 'subscribe',
+          status: 'subscribed',
+          version: 7,
+          amount: Number(params.amount),
+          currency: params.currency,
+        };
+        return json(res, 200, { result: 'ok', order_id: params.order_id, ...fields });
+      }
       const answer = answers.get(params.order_id);
       if (params.action !== 'status' || answer === undefined) {
         return json(res, 200, { result: 'error', status: 'error', err_code: 'payment_not_found' });

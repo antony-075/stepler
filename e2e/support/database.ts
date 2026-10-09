@@ -51,3 +51,21 @@ export function endPackWindow(collectionId: string): void {
     `UPDATE "CollectionPack" SET "windowEndsAt" = now() - interval '1 day', "activatedAt" = LEAST("activatedAt", now() - interval '2 days') WHERE "collectionId" = '${safeId(collectionId)}';`,
   );
 }
+
+/**
+ * What the reconcile job does at the period end of a monthly ↔ yearly switch (B14): the old
+ * LiqPay subscription stopped, the period over, grace for four days. The plan must have a
+ * scheduled switch.
+ */
+export function stopPlanForSwitch(email: string): void {
+  execute(
+    `UPDATE "Subscription" SET "providerUnsubscribedAt" = now(), "status" = 'PAST_DUE', "currentPeriodStart" = now() - interval '1 month', "currentPeriodEnd" = now() - interval '2 hours', "graceEndsAt" = now() + interval '4 days' - interval '2 hours' WHERE "status" = 'ACTIVE' AND "pendingPriceId" IS NOT NULL AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
+  );
+}
+
+/** A renewal LiqPay could not charge (grace until four days after the period end). */
+export function failRenewal(email: string): void {
+  execute(
+    `UPDATE "Subscription" SET "status" = 'PAST_DUE', "currentPeriodStart" = now() - interval '1 month', "currentPeriodEnd" = now() - interval '2 hours', "graceEndsAt" = now() + interval '4 days' - interval '2 hours' WHERE "status" = 'ACTIVE' AND "source" = 'LIQPAY' AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
+  );
+}

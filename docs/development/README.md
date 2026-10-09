@@ -206,6 +206,8 @@ These are names only; real values never go into the repository. Staging and prod
 | `BILLING_CALLBACK_URL` | api | in production | Our public `server_url` (`https://<api-host>/api/v1/billing/liqpay/callback`); unset locally, where payments settle through LiqPay's status API (`pnpm dev:tunnel` sets it) |
 | `BILLING_PENDING_TTL_MINUTES` | api, worker | no | How long a checkout stays payable; default `30` |
 | `BILLING_FISCAL_MODE`, `BILLING_FISCAL_WAIVED` | api, worker | no | Fiscal receipts: `none` (default) or `liqpay_rro`; production with live keys refuses `none` unless the waiver is `true` (accountant's decision, [Q1]) |
+| `BILLING_GRACE_DAYS` | api, worker | no | Days a subscription keeps working after a missed renewal or an unpaid monthly ↔ yearly switch (ADR 0018); default `4` |
+| `BILLING_MIN_CHARGE_MINOR` | api | no | An upgrade's prorated charge below this many kopecks is waived; default `100` |
 | `LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE` | api | no | LiqPay callbacks per client IP per minute; default `120` |
 | `LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR` | api | no | Checkouts per account per hour; default `20` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |

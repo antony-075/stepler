@@ -18,3 +18,9 @@ export const E2E_PRICES = {
   'ext-window-30': 19_900,
   'ext-retention-365': 29_900,
 } as const;
+
+/** The subscription plans' UAH prices in the journeys (M3), in kopecks. */
+export const E2E_PLAN_PRICES = {
+  'sub-pro': { MONTH: 50_000, YEAR: 500_000 },
+  'sub-business': { MONTH: 120_000, YEAR: 1_200_000 },
+} as const;
