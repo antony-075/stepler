@@ -72,3 +72,35 @@ export async function payAtLiqPayStub(page: Page, outcome: StubOutcome): Promise
   });
   return () => orderId;
 }
+
+let regularSeq = 0;
+
+/**
+ * A renewal LiqPay charged (or failed to charge) on its own schedule: the signed `regular`
+ * callback for the subscription's order (ADR 0018), posted to our public callback route.
+ */
+export async function postRenewalCallback(
+  page: Page,
+  orderId: string,
+  status: 'success' | 'failure',
+  amountMinor: number,
+): Promise<void> {
+  regularSeq += 1;
+  const fields = {
+    action: 'regular',
+    status,
+    version: 7,
+    order_id: orderId,
+    liqpay_order_id: `E2E-REGULAR-${Date.now()}-${regularSeq}`,
+    payment_id: 8_000_000_000 + Math.floor(Math.random() * 1e8),
+    amount: amountMinor / 100,
+    currency: 'UAH',
+    end_date: Date.now(),
+    ...(status === 'failure' ? { err_code: 'limit' } : {}),
+  };
+  const data = Buffer.from(JSON.stringify(fields), 'utf8').toString('base64');
+  const res = await page.request.post('/api/v1/billing/liqpay/callback', {
+    form: { data, signature: sign(data) },
+  });
+  expect(res.status()).toBe(200);
+}

@@ -69,3 +69,17 @@ export function failRenewal(email: string): void {
     `UPDATE "Subscription" SET "status" = 'PAST_DUE', "currentPeriodStart" = now() - interval '1 month', "currentPeriodEnd" = now() - interval '2 hours', "graceEndsAt" = now() + interval '4 days' - interval '2 hours' WHERE "status" = 'ACTIVE' AND "source" = 'LIQPAY' AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
   );
 }
+
+/** The grace after a missed renewal is over (the account is read-only from the period end). */
+export function endGrace(email: string): void {
+  execute(
+    `UPDATE "Subscription" SET "currentPeriodEnd" = now() - interval '5 days', "currentPeriodStart" = now() - interval '35 days', "graceEndsAt" = now() - interval '1 day' WHERE "status" = 'PAST_DUE' AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
+  );
+}
+
+/** Half of the paid month has passed (an upgrade is then prorated for the other half). */
+export function halfPeriodPassed(email: string): void {
+  execute(
+    `UPDATE "Subscription" SET "currentPeriodStart" = now() - interval '15 days', "currentPeriodEnd" = now() - interval '15 days' + interval '1 month' WHERE "status" = 'ACTIVE' AND "source" = 'LIQPAY' AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
+  );
+}

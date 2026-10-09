@@ -1,8 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
-import { payAtLiqPayStub } from '../support/billing.js';
-import { horizontalOverflow } from '../support/collections.js';
-import { failRenewal, stopPlanForSwitch } from '../support/database.js';
+import { LIQPAY_CHECKOUT_URL, payAtLiqPayStub, postRenewalCallback } from '../support/billing.js';
+import {
+  archiveCollectionViaApi,
+  createCollectionViaApi,
+  horizontalOverflow,
+} from '../support/collections.js';
+import { endGrace, failRenewal, halfPeriodPassed, stopPlanForSwitch } from '../support/database.js';
 
 // Billing M3 (ADR 0018, plan Task 18, owner decision B14): subscriptions through the real
 // `LiqPayProvider`; only LiqPay's checkout page and server API are replaced
@@ -15,24 +19,38 @@ const card = (page: Page) => page.locator('[data-slot="subscription-card"]');
 const plans = (page: Page) =>
   page.getByRole('region', { name: 'Підписка для організаторів подій' });
 
-/** Subscribes the signed-in account to Pro monthly through the stubbed LiqPay page. */
-async function subscribePro(page: Page): Promise<void> {
+const PLANS = {
+  'sub-pro': { title: 'Pro', consent: /^Я погоджуюся на автоматичне щомісячне списання 500,00\s₴/ },
+  'sub-business': {
+    title: 'Business',
+    consent: /^Я погоджуюся на автоматичне щомісячне списання 1\s200,00\s₴/,
+  },
+} as const;
+
+/**
+ * Subscribes the signed-in account to a monthly plan through the stubbed LiqPay page. Returns
+ * the subscription's LiqPay order id (its renewals arrive for it).
+ */
+async function subscribe(page: Page, code: keyof typeof PLANS = 'sub-pro'): Promise<string> {
+  const { title, consent } = PLANS[code];
   await page.goto('/app/billing');
-  await plans(page).getByTestId('plan-sub-pro').getByRole('button', { name: 'Оформити' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Оформити «Pro»' });
+  await plans(page).getByTestId(`plan-${code}`).getByRole('button', { name: 'Оформити' }).click();
+  const dialog = page.getByRole('dialog', { name: `Оформити «${title}»` });
   const pay = dialog.getByRole('button', { name: 'Перейти до оплати' });
   await expect(pay).toBeDisabled();
   await expect(pay).toHaveAccessibleDescription('Позначте згоду на автоматичне списання.');
-  await dialog
-    .getByRole('checkbox', { name: /^Я погоджуюся на автоматичне щомісячне списання 500,00\s₴/ })
-    .check();
-  await payAtLiqPayStub(page, 'success');
+  await dialog.getByRole('checkbox', { name: consent }).check();
+  const orderId = await payAtLiqPayStub(page, 'success');
   await pay.click();
   await expect(page).toHaveURL(/\/app\/billing\/return\?payment=/);
   await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+  await page.unroute(LIQPAY_CHECKOUT_URL);
   await page.goto('/app/billing');
   await expect(card(page).getByText('Діє', { exact: true })).toBeVisible();
+  return orderId();
 }
+
+const subscribePro = (page: Page): Promise<string> => subscribe(page, 'sub-pro');
 
 test('pricing shows the plans monthly and yearly, signing in to subscribe', async ({ page }) => {
   await page.goto('/pricing');
@@ -141,20 +159,110 @@ test('the switch at the period end: confirm the yearly plan through LiqPay @desk
   await expect(page.getByText(/Підтвердіть оплату: Pro/)).toHaveCount(0);
 });
 
-test('a renewal LiqPay could not charge: grace with its date, plan changes wait @desktop', async ({
+test('renewals arrive from LiqPay; a failed one gives grace, «Оплатити зараз» pays again @desktop', async ({
   page,
 }) => {
+  await signIn(page, newEmail());
+  const orderId = await subscribePro(page);
+  const next = card(page).getByText(/^Наступне списання /);
+  const firstDate = await next.textContent();
+
+  // LiqPay charges the next month on its own: the period moves on by one month.
+  await postRenewalCallback(page, orderId, 'success', 50_000);
+  await page.reload();
+  await expect(next).toBeVisible();
+  expect(await next.textContent()).not.toBe(firstDate);
+  await expect(card(page).getByText('Діє', { exact: true })).toBeVisible();
+
+  // The following charge fails: grace with its date; plan changes wait for the payment.
+  await postRenewalCallback(page, orderId, 'failure', 50_000);
+  await page.reload();
+  await expect(card(page).getByText('Очікує оплати', { exact: true })).toBeVisible();
+  await expect(card(page).getByText(/^Не вдалося списати оплату за новий період/)).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Змінити тариф' })).toBeDisabled();
+
+  // «Оплатити зараз»: a new LiqPay checkout of the same plan, the consent asked again.
+  await card(page).getByRole('button', { name: 'Оплатити зараз' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Оплатити «Pro» зараз' });
+  await expect(dialog.getByText(/^Попереднє списання зупинимо в LiqPay/)).toBeVisible();
+  await dialog.getByRole('checkbox', { name: PLANS['sub-pro'].consent }).check();
+  await payAtLiqPayStub(page, 'success');
+  await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+  await page.goto('/app/billing');
+  await expect(card(page).getByText('Діє', { exact: true })).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Оплатити зараз' })).toHaveCount(0);
+});
+
+test('a renewal never paid: grace with its date, then read-only @desktop', async ({ page }) => {
   const email = newEmail();
   await signIn(page, email);
   await subscribePro(page);
   failRenewal(email);
   await page.reload();
   await expect(card(page).getByText('Очікує оплати', { exact: true })).toBeVisible();
-  await expect(
-    card(page).getByText(/^Не вдалося списати оплату\. LiqPay ще спробує/),
-  ).toBeVisible();
-  await expect(card(page).getByRole('button', { name: 'Змінити тариф' })).toBeDisabled();
   // Every other admin page carries the grace banner with its date.
   await page.goto('/app');
   await expect(page.getByText(/^Оплату тарифу не підтверджено — оплатіть до /)).toBeVisible();
+
+  endGrace(email);
+  await page.reload();
+  await expect(
+    page.getByText('Тариф завершився — колекції доступні лише для перегляду'),
+  ).toBeVisible();
+});
+
+test('an upgrade half-way is prorated and paid; the new limits at once @desktop', async ({
+  page,
+}) => {
+  const email = newEmail();
+  await signIn(page, email);
+  await subscribePro(page);
+  halfPeriodPassed(email);
+  await page.reload();
+  await plans(page)
+    .getByTestId('plan-sub-business')
+    .getByRole('button', { name: 'Перейти на цей тариф' })
+    .click();
+  const upgrade = page.getByRole('dialog', { name: 'Перейти на «Business»' });
+  // (1 200 − 500) ₴ for about half a month.
+  await expect(
+    upgrade.getByText(/^Доплата зараз: 3\d\d,\d\d\s₴, далі 1\s200,00\s₴\/міс$/),
+  ).toBeVisible();
+  await payAtLiqPayStub(page, 'success');
+  await upgrade.getByRole('button', { name: 'Перейти до оплати' }).click();
+  await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
+  await page.goto('/app/billing');
+  await expect(card(page).getByRole('heading', { name: 'Business' })).toBeVisible();
+  await expect(card(page).getByText(/^1\s200,00\s₴\/міс$/)).toBeVisible();
+});
+
+test('a downgrade that does not fit lists what to reduce; once it fits it is scheduled @desktop', async ({
+  page,
+}) => {
+  await signIn(page, newEmail());
+  await subscribe(page, 'sub-business');
+  const created = [];
+  for (let i = 1; i <= 6; i += 1) created.push(await createCollectionViaApi(page, `Подія ${i}`));
+  await page.reload();
+
+  const toPro = () =>
+    plans(page)
+      .getByTestId('plan-sub-pro')
+      .getByRole('button', { name: 'Перейти на цей тариф' })
+      .click();
+  await toPro();
+  const dialog = page.getByRole('dialog', { name: 'Перейти на «Pro»' });
+  await expect(dialog.getByText('Щоб перейти на «Pro», спершу:')).toBeVisible();
+  await expect(dialog.getByText('Архівуйте або видаліть 1 колекцію')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Запланувати зміну' })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Закрити' }).first().click();
+
+  await archiveCollectionViaApi(page, created[0]?.id ?? '');
+  await toPro();
+  await expect(dialog.getByText(/^З .+: Pro, 500,00\s₴\/міс$/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Запланувати зміну' }).click();
+  await expect(page.getByText('Зміну тарифу заплановано').first()).toBeVisible();
+  await expect(card(page).getByText(/^З .+: Pro, 500,00\s₴\/міс$/)).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Скасувати зміну' })).toBeVisible();
 });
