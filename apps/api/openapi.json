@@ -2243,13 +2243,13 @@
             "description": "NOT_FOUND: the account has no paid plan"
           },
           "409": {
-            "description": "SUBSCRIPTION_EXISTS: the plan is not cancelled; OFFER_UNAVAILABLE: its price is no longer sold (choose a plan); PAYMENT_PENDING: another plan is waiting for payment"
+            "description": "SUBSCRIPTION_EXISTS: the plan is neither cancelled nor in grace; OFFER_UNAVAILABLE: its price is no longer sold (choose a plan); PAYMENT_PENDING: another plan is waiting for payment"
           },
           "429": {
             "description": "RATE_LIMITED: checkouts per account per hour"
           },
           "503": {
-            "description": "PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server"
+            "description": "PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server, or (in grace) LiqPay did not confirm stopping the old order; nothing changed"
           },
           "default": {
             "content": {
