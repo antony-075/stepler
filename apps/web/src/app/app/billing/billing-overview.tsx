@@ -11,6 +11,7 @@
 //   subscriptions and the packs as two titled groups with a rule between them, and the payment
 //   note once at the end;
 // - «Історія оплат» (`?tab=history`): the table alone.
+// «Тарифи» is at most 58rem wide from `xl`, so its two cards, rule and controls line up.
 // One spacing scale: 32px between groups, 16px inside one. Choosing a tab drops the purchase
 // parameters, so a dialog opened by a link does not open again on the way back.
 import { Alert } from '@stepler/ui/components/alert';
@@ -99,7 +100,7 @@ export function BillingOverview() {
           )}
           <YourPacks collections={own.items} />
         </TabsContent>
-        <TabsContent value="plans" className="grid gap-8">
+        <TabsContent value="plans" className="grid gap-8 xl:max-w-[58rem]">
           <SubscriptionsSection offers={offers} summary={summary.data} collectionTitles={titles} />
           <hr className="border-border" />
           <PacksSection />

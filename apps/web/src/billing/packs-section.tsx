@@ -41,10 +41,10 @@ export function PacksSection() {
           </h2>
           <InfoTip text={t('packs.how')} />
         </div>
-        <p className="max-w-[60ch] text-sm text-pretty text-muted-foreground">{t('packs.intro')}</p>
+        <p className="max-w-[70ch] text-sm text-pretty text-muted-foreground">{t('packs.intro')}</p>
       </div>
       {offers.isPending ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:max-w-[58rem]" aria-hidden="true">
+        <div className="grid gap-4 md:grid-cols-2" aria-hidden="true">
           <Skeleton className="h-80 w-full rounded-sheet" />
           <Skeleton className="h-80 w-full rounded-sheet max-md:hidden" />
         </div>
@@ -53,7 +53,7 @@ export function PacksSection() {
           {t('packs.unavailable')}
         </Alert>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4 xl:max-w-[58rem]">
+        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
           {packs.map((item) => (
             <li key={item.offer.id}>
               <PackCard

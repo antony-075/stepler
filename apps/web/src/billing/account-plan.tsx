@@ -118,16 +118,17 @@ export function PlanCard({
         {monoDigits(t('plan.daysLeft', { days }), MONO)}
       </span>
     );
-  const parts: ReactNode[] = [];
+  // Read-only without a plan has no line: the tab's alert says why, the badge says the state.
+  let parts: ReactNode[] = [];
   if (subscription !== null && !trial) {
-    parts.push(...subscriptionLine(t, subscription, now, date, planPrice));
-  } else if (readOnly) {
-    parts.push(reasonText(t, access));
-  } else if (access.endsAt === null) {
-    parts.push(t('plan.open'));
-  } else {
-    parts.push(t('plan.until', { date: date(access.endsAt) }), daysNote);
+    parts = subscriptionLine(t, subscription, now, date, planPrice);
+  } else if (!readOnly) {
+    parts =
+      access.endsAt === null
+        ? [t('plan.open')]
+        : [t('plan.until', { date: date(access.endsAt) }), daysNote];
   }
+  parts = parts.filter((part) => part !== null && part !== '');
 
   const periodStart =
     subscription !== null && (access.reason === 'SUBSCRIPTION' || access.reason === 'COMPLIMENTARY')
@@ -150,15 +151,15 @@ export function PlanCard({
             <h2 className="type-h2">{title}</h2>
             <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
-          <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[0.9375rem] text-foreground-soft">
-            {parts
-              .filter((part) => part !== null && part !== '')
-              .map((part, index) => (
+          {parts.length === 0 ? null : (
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[0.9375rem] text-foreground-soft">
+              {parts.map((part, index) => (
                 <Part key={index} first={index === 0}>
                   {typeof part === 'string' ? monoDigits(part, MONO) : part}
                 </Part>
               ))}
-          </p>
+            </p>
+          )}
         </div>
         {subscription === null ? null : <PendingChange subscription={subscription} />}
         {span === null ? null : <UsageBar {...span} className="h-1.5 w-full bg-border" />}
@@ -235,16 +236,6 @@ function subscriptionLine(
     ];
   }
   return [end === null ? '' : t('subscription.next', { date: date(end) }), price];
-}
-
-function reasonText(t: Translate, access: Access): string {
-  switch (access.reason) {
-    case 'TRIAL_ENDED':
-    case 'SUBSCRIPTION_ENDED':
-      return t(`reasons.${access.reason}`);
-    default:
-      return t('reasons.NONE');
-  }
 }
 
 const AFTER_LINES = [

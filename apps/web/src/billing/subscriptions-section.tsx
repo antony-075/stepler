@@ -83,7 +83,7 @@ export function SubscriptionsSection({
           <h2 id="plans-title" className="type-h2">
             {t('title')}
           </h2>
-          <p className="max-w-[60ch] text-sm text-pretty text-muted-foreground">{t('intro')}</p>
+          <p className="max-w-[70ch] text-sm text-pretty text-muted-foreground">{t('intro')}</p>
         </div>
         {list === undefined ? null : (
           <IntervalSwitch offers={list} value={shown} onChange={setPlanInterval} />
@@ -96,7 +96,7 @@ export function SubscriptionsSection({
         </div>
       ) : (
         <>
-          <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4 xl:max-w-[58rem]">
+          <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
             {plans.map((plan) => {
               const current =
                 paid !== null && paid.offerId === plan.offer.id && paid.interval === plan.interval;
