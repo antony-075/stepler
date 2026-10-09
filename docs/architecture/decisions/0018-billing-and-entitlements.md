@@ -47,6 +47,28 @@ The owner has a ФОП/ТОВ but no LiqPay merchant yet, and the fiscalisation 
 - Legal texts need payment terms, auto-renewal consent, refunds, read-only and retention (a v3 of Terms and Privacy).
 - Production is blocked until: the merchant is registered and its keys are set, the tax regime and the fiscalisation obligation are confirmed by an accountant, and the legal texts are final.
 
+## Subscription lifecycle (M3, implemented)
+
+```mermaid
+stateDiagram-v2
+  [*] --> PENDING: checkout SUBSCRIPTION (auto-renewal consent)
+  PENDING --> ACTIVE: subscribed / success (first charge)
+  PENDING --> EXPIRED: checkout not paid in time
+  ACTIVE --> ACTIVE: regular success (period +1 interval; a scheduled downgrade applies)
+  ACTIVE --> PAST_DUE: regular failure, or no renewal 1 h after the period end (status refresh)
+  ACTIVE --> PAST_DUE: monthly ↔ yearly switch: old order stopped at the period end (B14)
+  PAST_DUE --> ACTIVE: regular success
+  PAST_DUE --> EXPIRED: «Оплатити зараз» / switch confirmed (the new plan continues it)
+  PAST_DUE --> EXPIRED: grace over and LiqPay answered within the last hour (unsubscribed, read-only)
+  ACTIVE --> CANCELED: «Скасувати підписку» after LiqPay confirms unsubscribe
+  PAST_DUE --> CANCELED: «Скасувати підписку»
+  CANCELED --> EXPIRED: period end, or «Відновити» paid (the new plan starts at the old end)
+  EXPIRED --> [*]
+```
+
+- Upgrade (same interval): a prorated `pay` charge (waived under `BILLING_MIN_CHARGE_MINOR`), new limits at once, `subscribe_update` with the new price. Downgrade: only when usage fits (`PLAN_DOWNGRADE_BLOCKED` with `excess` otherwise), scheduled for the next charge. Monthly ↔ yearly: scheduled, nothing charged (B14).
+- «Оплатити зараз» in grace (`POST /billing/subscription/resume` on `PAST_DUE`): the old order is unsubscribed first (`503` and nothing changes if LiqPay does not confirm), then a new recurring checkout of the same plan — or of the pending price for a switch — whose period starts at the payment.
+
 ## Verified by spike S1 (2026-10-07)
 
 Run through the product's own `LiqPayProvider` and the owner's local app with the owner's **sandbox** keys (the keys stayed in the owner's `apps/api/.env`; agents never saw them), callbacks reaching the laptop through `pnpm dev:tunnel` (a Cloudflare quick tunnel). A local test account bought the «Старт» pack three times.
@@ -68,7 +90,7 @@ Run like S1: the product's own subscription checkout (`action: subscribe`, `vers
 
 ## Still unverified
 
-- **The `regular` (renewal) callback** ([S1b] remainder): the daily sandbox subscription's first recurring charge was due a day after the spike. The implementation follows the LiqPay docs: a recurring charge arrives as `action: regular` on the subscription's `order_id`, each with its own `payment_id` (the idempotency key). Whether `status` on the order ever reports a `regular` charge is unknown, so a lost renewal callback may push a paid plan into grace until the callback is reapplied or the operator checks (staging checklist).
+- **The `regular` (renewal) callback** ([S1b] remainder) — **pending the 2026-10-09 check**: the daily sandbox subscription (billing-spike@example.com, order `01a11bed-00a6-…`, subscribed 2026-10-08 14:31 UTC) is left running past its first recurring charge (~14:31 UTC on 2026-10-09). Its callback cannot reach us (its `server_url` is the dead 10-08 tunnel), so the check is whether the reconcile job's `status` refresh finds the charge: a `SUBSCRIPTION_RENEWAL` `Payment` for that subscription after ~15:31 UTC = `status` reports `regular` charges; none = it does not, and a lost renewal callback pushes a paid plan into grace until the operator replays it. Procedure and result: `docs/deployment/billing.md` → «Follow-up: the spike's daily renewal». As of 2026-10-09 05:20 UTC no `regular` charge had happened and the dev database had only the 10-08 `subscribe` callback. The implementation follows the LiqPay docs: a recurring charge arrives as `action: regular` on the subscription's `order_id`, each with its own `payment_id` (the idempotency key). A second spike checkout (billing-spike2, order `01a11bf0-…`) was never paid by our records (its payment expired); not checked against LiqPay.
 - **A `subscribe_date_start` in the future** (whether the checkout still charges at once): LiqPay's anti-bot answered 403 to further automated checkouts, so it was not tried. The product always starts recurring checkouts now (a resumed or switched plan's new period begins when the old one ends, so nothing paid is lost).
 - **`unsubscribe`'s answer** in the sandbox: assumed `status: unsubscribed`; if LiqPay answers otherwise, the product asks `status` and keeps retrying (it never shows «скасовано» before LiqPay confirms).
 - **Refunds** (M4): `refund`'s answer and callbacks.

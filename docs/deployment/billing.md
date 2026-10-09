@@ -1,6 +1,6 @@
 # Billing — operating runbook (M1–M3)
 
-Architecture and reasons: ADR 0018 (Proposed). Plan: `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`. This page covers the trial, read-only, complimentary plans and the retention clock (M1) and **one-time packs paid by card through LiqPay** (M2). Subscriptions arrive with M3; the `/ops` price editor and refunds with M4.
+Architecture and reasons: ADR 0018 (Proposed). Plan: `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`. This page covers the trial, read-only, complimentary plans and the retention clock (M1), **one-time packs paid by card through LiqPay** (M2) and **subscriptions** (M3). The `/ops` price editor and refunds arrive with M4.
 
 ## What happens on release
 
@@ -74,6 +74,7 @@ Until M4's payment list, a payment is diagnosed in the database: `Payment` (stat
 - **What can be bought:** the active `SUBSCRIPTION` offers («Pro», «Business»), monthly or yearly, on «Тариф і оплата» (`/app/billing`, «Підписка для організаторів подій»); `/pricing` lists them and sends a signed-in owner to that page's dialog (`?plan=<priceId>`). The dialog requires the auto-renewal consent; the API records when it was given and the terms version.
 - **How it is charged:** a LiqPay recurring checkout (`action: subscribe`) charges the first period at once (reported as `subscribed`, spike S1b); LiqPay then charges every period itself (`action: regular` callbacks, one `Payment` each). The period runs from our payment; LiqPay's schedule runs from the checkout, a few minutes earlier.
 - **Renewal not seen:** an hour after the period end the reconcile job asks LiqPay's `status`; still nothing → `PAST_DUE` (grace for `BILLING_GRACE_DAYS`, the «не вдалося списати» mail once, banners), checked hourly; after the grace, and only if LiqPay answered within the last hour → `EXPIRED`, LiqPay unsubscribed, the account read-only (retention as for a trial). LiqPay unreachable → nothing expires (log `billing.subscription.expiry_deferred`).
+- **Pay now in grace:** «Оплатити зараз» on the «Підписка» card unsubscribes the old LiqPay order first (LiqPay unreachable → `503`, nothing changes), then a new recurring checkout of the same plan; its period starts at the payment.
 - **Cancel:** LiqPay is unsubscribed first; only then is the plan `CANCELED` (access to the period end). LiqPay unreachable → `503`, nothing changes. «Відновити» is a new checkout whose first period starts when the cancelled one ends.
 - **Upgrade:** a prorated one-time charge (waived under `BILLING_MIN_CHARGE_MINOR`), the new limits at once, the new price sent to LiqPay with `subscribe_update` (retried by the job until it confirms).
 - **Downgrade:** only when the account's usage fits; LiqPay is told the lower price at once and the plan switches with the first charge at that price. «Скасувати зміну» restores the price.
@@ -96,6 +97,15 @@ With the sandbox keys and plan prices in place (above): `/app/billing` → «О�
 ### When a renewal needs review
 
 `Payment.needsReview = true` on a `SUBSCRIPTION_RENEWAL` (or a start) means LiqPay took money that could not be applied as expected: an amount other than the plan's price (`mismatch`), a charge on a plan that had ended or been cancelled, a charge on a plan already stopped for a monthly ↔ yearly switch, or a second paid plan on the same account (the stacked one is ended and unsubscribed by the job). The operator checks the account's `Subscription` rows and the `PaymentEvent` of that charge, then refunds it in the LiqPay cabinet (M4 brings refunds into `/ops`) or leaves it when the charge was right (e.g. a renewal at the old price before `subscribe_update` was confirmed). A renewal callback that never arrived (LiqPay's `status` may not report `regular` charges, ADR 0018) shows as a paying owner in grace: find the charge in the LiqPay cabinet and, until M4, ask a developer to replay it.
+
+### Follow-up: the spike's daily renewal (2026-10-09, owner)
+
+Spike S1b left one daily sandbox subscription running (billing-spike@example.com, order `01a11bed-00a6-…`) so its first `regular` charge (~14:31 UTC on 2026-10-09) can be observed. Its callback goes to the dead 10-08 tunnel, so what is tested is the reconcile job finding the charge through `status` (ADR 0018, «Still unverified»).
+
+1. The dev database holds this plan as monthly (period end 2026-11-08), so the job would not look until November. Before 14:31 UTC, with `pnpm worker:dev` running, move its period end to the daily charge: `UPDATE "Subscription" SET "currentPeriodEnd" = '2026-10-09 14:32:00+00' WHERE id = '01a11bed-00a9-75a5-984a-62413aee3e12';`
+2. After ~15:31 UTC: sign in as billing-spike@example.com → `/app/billing` → «Історія оплат», or `SELECT kind, status, "amountMinor", "paidAt" FROM "Payment" WHERE "subscriptionId" = '01a11bed-00a9-75a5-984a-62413aee3e12' ORDER BY "createdAt";`. A `SUBSCRIPTION_RENEWAL` row = `status` reports `regular` charges; the plan in grace («Очікує оплати») instead = it does not.
+3. Record the result in ADR 0018 (replace «pending the 2026-10-09 check»).
+4. Cancel it: «Скасувати підписку» on the «Підписка» card as billing-spike, so the sandbox stops charging daily.
 
 ## Environment
 
