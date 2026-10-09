@@ -70,8 +70,14 @@ export function failRenewal(email: string): void {
   );
 }
 
-/** The grace after a missed renewal is over (the account is read-only from the period end). */
+/**
+ * The grace after a missed renewal is over (the account is read-only from the period end). The
+ * trial ended before the plan did, so the plan's end is what the account shows.
+ */
 export function endGrace(email: string): void {
+  execute(
+    `UPDATE "User" SET "trialEndsAt" = now() - interval '40 days' WHERE email = '${safeEmail(email)}';`,
+  );
   execute(
     `UPDATE "Subscription" SET "currentPeriodEnd" = now() - interval '5 days', "currentPeriodStart" = now() - interval '35 days', "graceEndsAt" = now() - interval '1 day' WHERE "status" = 'PAST_DUE' AND "userId" IN (SELECT id FROM "User" WHERE email = '${safeEmail(email)}');`,
   );
