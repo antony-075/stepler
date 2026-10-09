@@ -1,14 +1,14 @@
 'use client';
 
-// Design pass (billing page v3, owner 2026-10-09; frontend-design, ui-ux-pro-max,
-// web-design-guidelines, responsive-design). The subscriptions group of «Тарифи»: the group's
-// heading with one caption that says once that a plan renews until cancelled (the cards no longer
-// repeat it), the interval control beside the heading from `md` (under it on phones), the plan
-// cards in the same auto-fit grid as the packs (17rem minimum: one column on phones, side by side
-// from tablets). The button on each card is what that plan means for this account: «Оформити»
-// without a paid plan, «Перейти на цей тариф» for a subscriber (the change dialog with the
-// server's preview), nothing but «Ваш тариф» on the current one; in grace and when cancelled the
-// cards stay readable but their buttons explain why they wait.
+// Design pass (billing page v4, the owner's reference 2026-10-09; frontend-design, ui-ux-pro-max,
+// web-design-guidelines, responsive-design). The subscriptions group of «Тарифи»: the heading with
+// «Щомісяця / Щороку» on the same row (under it when the row is too narrow), one caption that
+// says once that a plan renews until cancelled, the plan cards in the same auto-fit grid as the
+// packs (17rem minimum: one column on phones, side by side from tablets). Every card ends in one
+// full-width filled button, what that plan means for this account: «Оформити» without a paid
+// plan, «Перейти на цей тариф» for a subscriber (the change dialog with the server's preview), a
+// disabled «Ваш тариф» on the current one; in grace and when cancelled the buttons wait, with the
+// reason under the cards.
 import type { BillingSummary, OfferList } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
@@ -78,16 +78,16 @@ export function SubscriptionsSection({
 
   return (
     <section aria-labelledby="plans-title" className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="grid gap-1">
+      <div className="grid gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <h2 id="plans-title" className="type-h2">
             {t('title')}
           </h2>
-          <p className="max-w-[70ch] text-sm text-pretty text-muted-foreground">{t('intro')}</p>
+          {list === undefined ? null : (
+            <IntervalSwitch offers={list} value={shown} onChange={setPlanInterval} />
+          )}
         </div>
-        {list === undefined ? null : (
-          <IntervalSwitch offers={list} value={shown} onChange={setPlanInterval} />
-        )}
+        <p className="max-w-[70ch] text-sm text-pretty text-muted-foreground">{t('intro')}</p>
       </div>
       {list === undefined ? (
         <div className="grid gap-4 md:grid-cols-2" aria-hidden="true">
@@ -102,7 +102,11 @@ export function SubscriptionsSection({
                 paid !== null && paid.offerId === plan.offer.id && paid.interval === plan.interval;
               let action;
               if (current) {
-                action = null;
+                action = (
+                  <Button className="w-full" variant="outline" disabled>
+                    {t('current')}
+                  </Button>
+                );
               } else if (paid === null) {
                 action = (
                   <Button className="w-full" onClick={() => setChosen({ plan, mode: 'subscribe' })}>
@@ -111,24 +115,20 @@ export function SubscriptionsSection({
                 );
               } else if (waitReason !== null) {
                 action = (
-                  <Button className="w-full" variant="outline" disabled aria-describedby={reasonId}>
+                  <Button className="w-full" disabled aria-describedby={reasonId}>
                     {t('change')}
                   </Button>
                 );
               } else {
                 action = (
-                  <Button
-                    className="w-full"
-                    variant="outline"
-                    onClick={() => setChosen({ plan, mode: 'change' })}
-                  >
+                  <Button className="w-full" onClick={() => setChosen({ plan, mode: 'change' })}>
                     {t('change')}
                   </Button>
                 );
               }
               return (
                 <li key={plan.priceId}>
-                  <SubscriptionPlanCard plan={plan} current={current} action={action} />
+                  <SubscriptionPlanCard plan={plan} action={action} />
                 </li>
               );
             })}

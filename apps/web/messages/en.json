@@ -1841,14 +1841,27 @@
       "buyPack": "Buy a pack",
       "accessUntil": "Access until {date}",
       "payBy": "Pay by {date}",
-      "graceOver": "The grace period is over"
+      "graceOver": "The grace period is over",
+      "countdown": {
+        "label": "Time left",
+        "days": "days",
+        "hours": "hours",
+        "minutes": "min",
+        "summary": "{days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}}, {minutes, plural, one {# minute} other {# minutes}} left"
+      }
     },
     "usage": {
       "title": "Account limits",
       "note": "Collections with a pack have their own limits and are not counted here.",
       "collections": "Active collections",
       "storage": "Storage",
-      "of": "{used} of {limit}"
+      "of": "{used} of {limit}",
+      "used": "{percent} used",
+      "overCollections": "You’ve exceeded your collection limit.",
+      "overCollectionsText": "Choose a plan to create new collections.",
+      "overStorage": "You’ve exceeded your storage limit.",
+      "overStorageText": "Choose a plan to add new files.",
+      "nearLimit": "Almost used up"
     },
     "after": {
       "title": "What happens when it ends?",
@@ -1886,7 +1899,8 @@
       "change": "Switch to this plan",
       "waitPastDue": "You can change the plan once the current period is paid.",
       "waitCanceled": "The subscription is cancelled. Resume it on the “Overview” tab, or choose another plan once the paid period ends.",
-      "waitSwitch": "First confirm the payment for your new plan on the “Overview” tab."
+      "waitSwitch": "First confirm the payment for your new plan on the “Overview” tab.",
+      "popular": "Most popular"
     },
     "subscription": {
       "status": {

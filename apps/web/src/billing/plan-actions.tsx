@@ -1,22 +1,24 @@
 'use client';
 
-// Design pass (billing page v3; frontend-design, web-design-guidelines). What the owner can do
-// with the plan, on «Ваш тариф» (DESIGN-SYSTEM.md §0.12): only the actions that apply, the main
-// one first and filled, the rest outline, «Скасувати підписку» quiet at the end:
-// - no paid plan: «Обрати тариф» (filled when the account is read-only or the trial ends within
-//   3 days) and «Купити пакет», both to «Тарифи»;
-// - a paid plan: «Оплатити зараз» in grace, «Змінити тариф» (to «Тарифи»; disabled with its
-//   reason in grace and while a switch waits for payment), «Купити пакет», «Скасувати підписку»
+// Design pass (billing page v4, the owner's reference 2026-10-09; frontend-design,
+// web-design-guidelines). What the owner can do with the plan, on «Ваш тариф»
+// (DESIGN-SYSTEM.md §0.12): the one main action as a full-width filled button with its icon, the
+// rest as a quiet row of ghost buttons under it, «Скасувати підписку» at its end:
+// - no paid plan (trial, read-only, granted by Stepler): «Купити пакет» to «Тарифи»'s packs;
+//   without a subscription also «Обрати тариф» in the quiet row;
+// - a paid plan: «Змінити тариф» (to «Тарифи»), quiet «Купити пакет» and «Скасувати підписку»
 //   (ConfirmDialog that says until when access stays);
-// - cancelled: «Відновити підписку» (the subscribe dialog with the consent again), «Купити пакет»;
-// - granted by Stepler: «Купити пакет».
+// - in grace: «Оплатити зараз»; «Змінити тариф» waits (disabled with its reason), as it does while
+//   a switch waits for payment (the tab's alert carries «Підтвердити оплату» then);
+// - cancelled: «Відновити підписку» (the subscribe dialog with the consent again), quiet
+//   «Купити пакет».
 // `PendingChange` is a scheduled change as a quiet row with «Скасувати зміну».
 import type { BillingSummary, SubscriptionDto } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CreditCard, RefreshCw } from 'lucide-react';
+import { ArrowLeftRight, CreditCard, RefreshCw, RotateCcw, Tags } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useState } from 'react';
@@ -28,7 +30,8 @@ import { usePlanPrice } from './plan-picker';
 import { SubscribeDialog } from './subscribe-dialog';
 
 const KYIV = 'Europe/Kyiv';
-const STRETCH = 'max-sm:w-full';
+const MAIN = 'w-full';
+const QUIET = 'flex flex-wrap items-center gap-x-1 gap-y-1 -mx-3 max-sm:-mt-1';
 
 function useRefreshBilling() {
   const queryClient = useQueryClient();
@@ -41,36 +44,42 @@ function useRefreshBilling() {
 export function PlanActions({
   summary,
   resumePlan,
-  attention,
 }: {
   summary: BillingSummary;
   resumePlan: PricedPlan | null;
-  /** Read-only, or the trial ends soon: the way out is the filled button. */
-  attention: boolean;
 }) {
   const t = useTranslations('billing');
   const subscription = summary.subscription;
+  if (subscription === null || subscription.source !== 'LIQPAY') {
+    return (
+      <div className="grid gap-2">
+        <Button asChild size="lg" className={MAIN}>
+          <Link href={billingHref('plans', PACKS_SECTION_ID)}>
+            <CreditCard aria-hidden="true" />
+            {t('plan.buyPack')}
+          </Link>
+        </Button>
+        {subscription === null ? (
+          <div className={QUIET}>
+            <Button asChild variant="ghost">
+              <Link href={billingHref('plans')}>
+                <Tags aria-hidden="true" />
+                {t('access.choosePlan')}
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
   const buyPack = (
-    <Button asChild variant="outline" className={STRETCH}>
+    <Button asChild variant="ghost">
       <Link href={billingHref('plans', PACKS_SECTION_ID)}>
         <CreditCard aria-hidden="true" />
         {t('plan.buyPack')}
       </Link>
     </Button>
   );
-  if (subscription === null || subscription.source !== 'LIQPAY') {
-    const chooseVariant = attention ? 'default' : 'outline';
-    return (
-      <div className="flex flex-wrap gap-2">
-        {subscription === null ? (
-          <Button asChild variant={chooseVariant} className={STRETCH}>
-            <Link href={billingHref('plans')}>{t('access.choosePlan')}</Link>
-          </Button>
-        ) : null}
-        {buyPack}
-      </div>
-    );
-  }
   return <PaidActions subscription={subscription} resumePlan={resumePlan} buyPack={buyPack} />;
 }
 
@@ -101,40 +110,53 @@ function PaidActions({
   const date = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'long', timeZone: KYIV });
 
+  const change = (
+    <Button
+      asChild={changeable}
+      size={changeable ? 'lg' : 'default'}
+      variant={changeable ? 'default' : 'ghost'}
+      className={changeable ? MAIN : undefined}
+      disabled={!changeable}
+      aria-describedby={changeable ? undefined : reasonId}
+    >
+      {changeable ? (
+        <Link href={billingHref('plans')}>
+          <ArrowLeftRight aria-hidden="true" />
+          {t('change')}
+        </Link>
+      ) : (
+        <>
+          <ArrowLeftRight aria-hidden="true" />
+          {t('change')}
+        </>
+      )}
+    </Button>
+  );
+
   return (
     <>
       {status === 'CANCELED' ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="grid gap-2">
           {resumePlan === null ? null : (
-            <Button className={STRETCH} onClick={() => setResuming(true)}>
+            <Button size="lg" className={MAIN} onClick={() => setResuming(true)}>
+              <RotateCcw aria-hidden="true" />
               {t('resume')}
             </Button>
           )}
-          {buyPack}
+          <div className={QUIET}>{buyPack}</div>
         </div>
       ) : (
         <div className="grid gap-2">
-          <div className="flex flex-wrap gap-2">
-            {payable ? (
-              <Button className={STRETCH} onClick={() => setPaying(true)}>
-                {t('payNow')}
-              </Button>
-            ) : null}
-            <Button
-              asChild={changeable}
-              variant="outline"
-              className={STRETCH}
-              disabled={!changeable}
-              aria-describedby={changeable ? undefined : reasonId}
-            >
-              {changeable ? <Link href={billingHref('plans')}>{t('change')}</Link> : t('change')}
+          {payable ? (
+            <Button size="lg" className={MAIN} onClick={() => setPaying(true)}>
+              <CreditCard aria-hidden="true" />
+              {t('payNow')}
             </Button>
-            {changeable ? buyPack : null}
-            <Button
-              variant="ghost"
-              className={`${STRETCH} sm:ml-auto`}
-              onClick={() => setConfirming(true)}
-            >
+          ) : null}
+          {changeable ? change : null}
+          <div className={QUIET}>
+            {changeable ? buyPack : change}
+            <Button variant="ghost" className="sm:ml-auto" onClick={() => setConfirming(true)}>
               {t('cancel')}
             </Button>
           </div>

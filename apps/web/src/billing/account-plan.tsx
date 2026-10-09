@@ -1,25 +1,27 @@
 'use client';
 
-// Design pass (billing page v3, owner 2026-10-09: «сторінка дуже насичена текстом… все в одній
-// купі»; frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design). «Ваш тариф» on
-// «Огляд»: ONE card for the plan, where v2 had the plan and «Підписка» side by side saying the
-// same things twice (DESIGN-SYSTEM.md §0.12):
-// - «Ваш тариф» small, the plan's name as the heading and one badge: the subscription's own
-//   (Діє / Скасовано / Очікує оплати / Надано Stepler) when there is one, else the access state
+// Design pass (billing page v4, the owner's reference 2026-10-09; frontend-design, ui-ux-pro-max,
+// web-design-guidelines). «Ваш тариф» on «Огляд»: ONE card for the plan (DESIGN-SYSTEM.md §0.12):
+// - «Ваш тариф» small, the plan's name large and one badge: the subscription's own (Діє /
+//   Скасовано / Очікує оплати / Надано Stepler) when there is one, else the access state
 //   (Пробний / Активний / Лише перегляд);
-// - one line for time and money: «Наступне списання 9 листопада · 500,00 ₴/міс», «Доступ до …»
-//   when cancelled, «Оплатіть до …» in grace, «Діє до … · залишилось N днів» for a trial, or the
-//   short reason when it ended. The long explanation is the tab's one alert, never repeated here;
-// - a scheduled change as its own quiet row with «Скасувати зміну»;
-// - the period bar when the period's start is known (a subscription);
-// - the actions that apply (`PlanActions`), then «Що буде після завершення?», open only when the
-//   end is close or has happened.
+// - one line for time and money: «Наступне списання 9 листопада | 500,00 ₴/міс», «Доступ до …»
+//   when cancelled, «Оплатіть до …» in grace, «Діє до … | залишилось N днів» (the days in the
+//   accent, amber in the last 3) for a trial. The long explanation is the tab's one alert;
+// - «Залишилось» on the right: days, hours and minutes in three tiles until the date that matters
+//   (the trial's or a granted plan's end, a cancelled plan's access, the grace's end), never for
+//   a plan that renews by itself. It ticks each minute (`useNow`); screen readers get one
+//   sentence, the tiles are hidden from them;
+// - a scheduled change as its own quiet row with «Скасувати зміну»; the period bar for a plan;
+// - the actions (`PlanActions`: one full-width main action, a quiet row under it), then «Що буде
+//   після завершення?» as an accent-tinted disclosure, open only when the end is close or has
+//   happened.
 import type { BillingSummary, OfferList, SubscriptionDto } from '@stepler/contracts';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
 import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
-import { ChevronDown, Download, Hourglass, MailWarning, UserX } from 'lucide-react';
+import { ChevronDown, Info } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { daysLeft, TRIAL_REMINDER_DAYS } from '@/app/app/access-model';
@@ -30,6 +32,7 @@ import { PendingChange, PlanActions } from './plan-actions';
 import { usePlanPrice } from './plan-picker';
 
 const KYIV = 'Europe/Kyiv';
+const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 3600_000;
 const MONO = 'font-mono text-[0.875rem] tabular-nums';
 
@@ -98,7 +101,7 @@ export function PlanCard({
 }) {
   const t = useTranslations('billing');
   const format = useFormatter();
-  const now = useNow({ updateInterval: 3600_000 });
+  const now = useNow({ updateInterval: MINUTE_MS });
   const planPrice = usePlanPrice();
   const date = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'long', timeZone: KYIV });
@@ -112,10 +115,15 @@ export function PlanCard({
   const title =
     subscription !== null && !trial ? subscription.offerTitle : planName(t, access.reason);
 
+  // Whole days, as the countdown's first tile counts them (5 days 12 hours → «5 днів»).
+  const wholeDays =
+    days === null || access.endsAt === null
+      ? null
+      : Math.max(0, Math.floor((new Date(access.endsAt).getTime() - now.getTime()) / DAY_MS));
   const daysNote =
-    days === null ? null : (
-      <span className={closeToEnd ? 'font-medium text-warning' : 'text-muted-foreground'}>
-        {monoDigits(t('plan.daysLeft', { days }), MONO)}
+    wholeDays === null ? null : (
+      <span className={cn('font-medium', closeToEnd ? 'text-warning' : 'text-link')}>
+        {monoDigits(t('plan.daysLeft', { days: wholeDays }), MONO)}
       </span>
     );
   // Read-only without a plan has no line: the tab's alert says why, the badge says the state.
@@ -130,6 +138,8 @@ export function PlanCard({
   }
   parts = parts.filter((part) => part !== null && part !== '');
 
+  const countdownEnd = readOnly ? null : countdownTarget(access, subscription);
+
   const periodStart =
     subscription !== null && (access.reason === 'SUBSCRIPTION' || access.reason === 'COMPLIMENTARY')
       ? subscription.currentPeriodStart
@@ -143,34 +153,79 @@ export function PlanCard({
         };
 
   return (
-    <Panel data-slot="plan-card" className="h-full">
-      <PanelContent className="flex h-full flex-col gap-4">
-        <div className="grid min-w-0 gap-1.5">
-          <p className="text-sm text-muted-foreground">{t('plan.title')}</p>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 className="type-h2">{title}</h2>
-            <Badge variant={badge.variant}>{badge.label}</Badge>
+    <Panel data-slot="plan-card">
+      <PanelContent className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+          <div className="grid min-w-0 gap-2">
+            <p className="text-sm text-muted-foreground">{t('plan.title')}</p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <h2 className="text-[1.75rem] leading-tight font-semibold tracking-tight">{title}</h2>
+              <Badge variant={badge.variant}>{badge.label}</Badge>
+            </div>
+            {parts.length === 0 ? null : (
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.9375rem] text-foreground-soft">
+                {parts.map((part, index) => (
+                  <Part key={index} first={index === 0}>
+                    {typeof part === 'string' ? monoDigits(part, MONO) : part}
+                  </Part>
+                ))}
+              </p>
+            )}
           </div>
-          {parts.length === 0 ? null : (
-            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[0.9375rem] text-foreground-soft">
-              {parts.map((part, index) => (
-                <Part key={index} first={index === 0}>
-                  {typeof part === 'string' ? monoDigits(part, MONO) : part}
-                </Part>
-              ))}
-            </p>
-          )}
+          {countdownEnd === null ? null : <Countdown end={countdownEnd} now={now} />}
         </div>
         {subscription === null ? null : <PendingChange subscription={subscription} />}
         {span === null ? null : <UsageBar {...span} className="h-1.5 w-full bg-border" />}
-        <PlanActions
-          summary={summary}
-          resumePlan={resumePlanOf(subscription, offers)}
-          attention={attention}
-        />
+        <PlanActions summary={summary} resumePlan={resumePlanOf(subscription, offers)} />
         <AfterEnd readOnly={readOnly} open={attention} />
       </PanelContent>
     </Panel>
+  );
+}
+
+/**
+ * The date the countdown runs to, or null: the trial's (or no plan's) end, a granted plan's end,
+ * a cancelled plan's access, the grace's end. A plan that renews by itself has none.
+ */
+function countdownTarget(access: Access, subscription: SubscriptionDto | null): string | null {
+  if (subscription === null || subscription.source !== 'LIQPAY') return access.endsAt;
+  if (subscription.status === 'CANCELED') return subscription.currentPeriodEnd;
+  if (subscription.status === 'PAST_DUE') return subscription.graceEndsAt;
+  return null;
+}
+
+/** «Залишилось»: days, hours, minutes in three tiles; one sentence for screen readers. */
+function Countdown({ end, now }: { end: string; now: Date }) {
+  const t = useTranslations('billing.plan.countdown');
+  const left = new Date(end).getTime() - now.getTime();
+  if (left <= 0) return null;
+  const minutesTotal = Math.floor(left / MINUTE_MS);
+  const days = Math.floor(minutesTotal / (24 * 60));
+  const hours = Math.floor((minutesTotal % (24 * 60)) / 60);
+  const minutes = minutesTotal % 60;
+  const tiles = [
+    { value: days, label: t('days') },
+    { value: hours, label: t('hours') },
+    { value: minutes, label: t('minutes') },
+  ];
+  return (
+    <div data-slot="plan-countdown" className="grid gap-1.5">
+      <p aria-hidden="true" className="text-sm text-muted-foreground">
+        {t('label')}
+      </p>
+      <p className="sr-only">{t('summary', { days, hours, minutes })}</p>
+      <div aria-hidden="true" className="flex gap-2">
+        {tiles.map((tile) => (
+          <span
+            key={tile.label}
+            className="grid min-w-14 justify-items-center gap-0.5 rounded-control border border-border bg-subtle px-2 py-2"
+          >
+            <span className="text-lg leading-none font-semibold tabular-nums">{tile.value}</span>
+            <span className="text-xs text-muted-foreground">{tile.label}</span>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -238,41 +293,32 @@ function subscriptionLine(
   return [end === null ? '' : t('subscription.next', { date: date(end) }), price];
 }
 
-const AFTER_LINES = [
-  { key: 'guests', icon: UserX },
-  { key: 'you', icon: Download },
-  { key: 'kept', icon: Hourglass },
-  { key: 'warned', icon: MailWarning },
-] as const;
+const AFTER_LINES = ['guests', 'you', 'kept', 'warned'] as const;
 
 /**
- * What read-only means and how long content is kept, in four short lines: a disclosure, open
- * when the end is close or has happened (the tab's alert carries the warning itself).
+ * What read-only means and how long content is kept, as one short paragraph in an accent-tinted
+ * disclosure: open when the end is close or has happened (the tab's alert carries the warning).
  */
 function AfterEnd({ readOnly, open }: { readOnly: boolean; open: boolean }) {
   const t = useTranslations('billing.after');
   return (
-    <details className="group mt-auto border-t pt-3" open={open}>
+    <details className="group rounded-control bg-info-soft" open={open}>
       <summary
         className={cn(
-          '-mx-1 flex min-h-11 cursor-pointer list-none items-center gap-1.5 rounded-control px-1 text-sm font-medium text-foreground-soft md:min-h-8 [&::-webkit-details-marker]:hidden',
+          'flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-control px-4 py-3 font-semibold [&::-webkit-details-marker]:hidden',
           focusRing,
         )}
       >
-        {readOnly ? t('readOnlyTitle') : t('title')}
+        <Info aria-hidden="true" className="size-5 shrink-0 text-link" />
+        <span className="min-w-0 flex-1">{readOnly ? t('readOnlyTitle') : t('title')}</span>
         <ChevronDown
           aria-hidden="true"
-          className="size-4 text-muted-foreground transition-transform duration-(--duration-fast) group-open:rotate-180 motion-reduce:transition-none"
+          className="size-5 shrink-0 text-muted-foreground transition-transform duration-(--duration-fast) group-open:rotate-180 motion-reduce:transition-none"
         />
       </summary>
-      <ul className="grid gap-2 pt-2 pb-1 text-sm text-foreground-soft">
-        {AFTER_LINES.map(({ key, icon: Icon }) => (
-          <li key={key} className="flex items-start gap-2.5">
-            <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-            <span className="text-pretty">{t(key)}</span>
-          </li>
-        ))}
-      </ul>
+      <p className="-mt-1 max-w-[65ch] px-4 pb-4 pl-12 text-sm text-pretty text-foreground-soft">
+        {AFTER_LINES.map((key) => t(key)).join(' ')}
+      </p>
     </details>
   );
 }

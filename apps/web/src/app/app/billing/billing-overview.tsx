@@ -1,18 +1,18 @@
 'use client';
 
-// Design pass v3 (owner 2026-10-09: «Страница очень сильно насыщена текстом… выглядит будто всё в
-// одной куче»; frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design;
-// DESIGN-SYSTEM.md §0.12). «Тариф і оплата» is three tabs under the page title, the collection
-// page's segmented control with the tab in `?tab=` (a history entry each):
+// Design pass v4 (the owner's reference 2026-10-09, after v3's «Страница очень сильно насыщена
+// текстом»; frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design;
+// DESIGN-SYSTEM.md §0.12). «Тариф і оплата» is one 48rem column under the page title with three
+// tabs in `?tab=` (a history entry each): the shared segmented control, here spanning the column
+// with equal segments and the active one on the soft accent with accent ink (scoped to this page;
+// the collection page keeps the white thumb).
 // - «Огляд» (default): the one alert that needs the owner now (`BillingAlert`), then «Ваш тариф»
-//   (`PlanCard`: the plan and the subscription in one card) beside the account's limits from
-//   `lg`, then «Ваші пакети» only with pack collections;
+//   (`PlanCard`), «Ліміти акаунта» and «Ваші пакети» (only with pack collections), stacked;
 // - «Тарифи» (`?tab=plans`, also any `?pack=` / `?plan=` / `?collection=` without a tab): the
 //   subscriptions and the packs as two titled groups with a rule between them, and the payment
 //   note once at the end;
 // - «Історія оплат» (`?tab=history`): the table alone.
-// «Тарифи» is at most 58rem wide from `xl`, so its two cards, rule and controls line up.
-// One spacing scale: 32px between groups, 16px inside one. Choosing a tab drops the purchase
+// One spacing scale: 24px between cards, 32px between groups. Choosing a tab drops the purchase
 // parameters, so a dialog opened by a link does not open again on the way back.
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
@@ -41,7 +41,11 @@ const TABS: { value: BillingTab; icon: LucideIcon }[] = [
   { value: 'history', icon: ReceiptText },
 ];
 
-const PLAN_ROW = 'grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]';
+// The page's tabs: the segmented control across the column, the active segment on the soft
+// accent (its thumb) with accent ink, 44px tall everywhere.
+const TAB_LIST =
+  'md:grid md:w-full md:auto-cols-[minmax(0,1fr)] [&>[data-slot=segment-thumb]]:bg-info-soft [&>[data-slot=segment-thumb]]:shadow-none';
+const TAB = 'md:pointer-fine:min-h-11 text-[0.9375rem] data-[state=active]:text-link';
 
 export function BillingOverview() {
   const t = useTranslations('billing');
@@ -64,19 +68,19 @@ export function BillingOverview() {
     <>
       <PageHeader size="compact" title={t('title')} />
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
-        <TabsList variant="segmented" aria-label={t('tabs.label')}>
+        <TabsList variant="segmented" aria-label={t('tabs.label')} className={TAB_LIST}>
           {TABS.map(({ value, icon: Icon }) => (
-            <TabsTrigger key={value} value={value}>
+            <TabsTrigger key={value} value={value} className={TAB}>
               <Icon aria-hidden="true" className="max-sm:hidden" />
               <span className="min-w-0 truncate">{t(`tabs.${value}`)}</span>
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent value="overview" className="grid gap-8">
+        <TabsContent value="overview" className="grid gap-6">
           {summary.isPending ? (
-            <div className={PLAN_ROW} aria-hidden="true">
-              <Skeleton className="h-60 w-full rounded-sheet" />
-              <Skeleton className="h-60 w-full rounded-sheet" />
+            <div className="grid gap-6" aria-hidden="true">
+              <Skeleton className="h-72 w-full rounded-sheet" />
+              <Skeleton className="h-52 w-full rounded-sheet" />
             </div>
           ) : summary.isError ? (
             <Alert
@@ -92,15 +96,13 @@ export function BillingOverview() {
           ) : (
             <>
               <BillingAlert summary={summary.data} offers={offers.data} />
-              <div className={PLAN_ROW}>
-                <PlanCard summary={summary.data} offers={offers.data} />
-                <AccountUsage usage={summary.data.usage} />
-              </div>
+              <PlanCard summary={summary.data} offers={offers.data} />
+              <AccountUsage usage={summary.data.usage} />
             </>
           )}
           <YourPacks collections={own.items} />
         </TabsContent>
-        <TabsContent value="plans" className="grid gap-8 xl:max-w-[58rem]">
+        <TabsContent value="plans" className="grid gap-8">
           <SubscriptionsSection offers={offers} summary={summary.data} collectionTitles={titles} />
           <hr className="border-border" />
           <PacksSection />

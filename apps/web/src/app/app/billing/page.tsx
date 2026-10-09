@@ -10,13 +10,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * «Тариф і оплата» (ADR 0018): three tabs, «Огляд» (what the account has now), «Тарифи» (the
- * subscriptions and packs on sale) and «Історія оплат», in `?tab=`. `?pack=` / `?plan=` /
- * `?collection=` open «Тарифи» with that purchase dialog.
+ * «Тариф і оплата» (ADR 0018) in one 48rem column: three tabs, «Огляд» (what the account has
+ * now), «Тарифи» (the subscriptions and packs on sale) and «Історія оплат», in `?tab=`.
+ * `?pack=` / `?plan=` / `?collection=` open «Тарифи» with that purchase dialog.
  */
 export default function BillingPage() {
   return (
-    <AdminPage className="*:max-w-[1240px]">
+    <AdminPage className="*:max-w-3xl">
       <Suspense>
         <BillingOverview />
       </Suspense>
