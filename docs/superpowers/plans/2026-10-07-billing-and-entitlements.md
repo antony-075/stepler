@@ -610,15 +610,15 @@ INDEX (processedAt) WHERE processedAt IS NULL AND verified
 - Modify: `apps/web/src/app/app/billing/page.tsx` (current plan, usage meters, renewal or end date, cancel/resume, change plan, pending change, payment history), `apps/web/src/app/pricing/page.tsx` (subscriptions with a monthly/yearly toggle), `apps/web/src/billing/*` (plan picker, change-plan dialog with the prorated amount from a new `GET /billing/subscription/change-preview?priceId=` → `{chargeMinor, waived, effective: 'NOW'|'NEXT_PERIOD', blocked?: excess[]}`), `access-banner.tsx` (grace copy with the date), the account page (link «Тариф і оплата»), `messages/{uk,en}.json`
 - Create: `apps/web/src/billing/auto-renew-consent.tsx`
 
-- [ ] **Step 0: Design pass.**
-- [ ] **Step 1: Write the failing tests:** subscribe without ticking «Я погоджуюся на автоматичне щомісячне списання {amount} до скасування. Скасувати можна будь-коли в «Тариф і оплата».» → the pay button is disabled and the API would refuse anyway; the change dialog shows «Доплата зараз: 350,00 ₴, далі 1 200,00 ₴/міс» for an upgrade and «З {date}: Pro, 500,00 ₴/міс» for a downgrade; a blocked downgrade lists «Архівуйте або видаліть 2 колекції» and «Звільніть 30 ГБ»; cancel confirm text «Доступ збережеться до {date}. Після цього колекції стануть лише для перегляду.»; payment history rows show amount, status badge (Оплачено / Не пройшла / Очікує / Повернено частково / Повернено), date; at 360 px the page has no horizontal scroll.
-- [ ] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; screenshots.
-- [ ] **Step 5: Commit** `feat(web): plan and payment page with plan changes`.
+- [x] **Step 0: Design pass.**
+- [x] **Step 1: Write the failing tests:** subscribe without ticking «Я погоджуюся на автоматичне щомісячне списання {amount} до скасування. Скасувати можна будь-коли в «Тариф і оплата».» → the pay button is disabled and the API would refuse anyway; the change dialog shows «Доплата зараз: 350,00 ₴, далі 1 200,00 ₴/міс» for an upgrade and «З {date}: Pro, 500,00 ₴/міс» for a downgrade; a blocked downgrade lists «Архівуйте або видаліть 2 колекції» and «Звільніть 30 ГБ»; cancel confirm text «Доступ збережеться до {date}. Після цього колекції стануть лише для перегляду.»; payment history rows show amount, status badge (Оплачено / Не пройшла / Очікує / Повернено частково / Повернено), date; at 360 px the page has no horizontal scroll.
+- [x] **Step 2: Run** → FAIL. **Step 3: Implement.** **Step 4: Run** → PASS; screenshots.
+- [x] **Step 5: Commit** `feat(web): plan and payment page with plan changes`.
 
 ### Task 19: Docs, batched minors, verification, PR M3
 
-- [ ] ADR 0018: subscription lifecycle diagram (states and transitions) and `[S1b]` outcomes; `docs/deployment/billing.md`: grace, reconciliation, what the operator does when a renewal is `needsReview`.
-- [ ] Batched minors; `pnpm typecheck lint test build`, API suite, `pnpm e2e`; PR M3.
+- [x] ADR 0018: subscription lifecycle diagram (states and transitions) and `[S1b]` outcomes; `docs/deployment/billing.md`: grace, reconciliation, what the operator does when a renewal is `needsReview`.
+- [x] Batched minors; `pnpm typecheck lint test build`, API suite, `pnpm e2e` (2026-10-09). PR M3 not opened (owner). Added: «Оплатити зараз» in grace (`POST /subscription/resume` on `PAST_DUE` stops the old order first).
 
 ---
 
