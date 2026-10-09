@@ -1832,6 +1832,7 @@
       "trialBadge": "Trial",
       "until": "Valid until {date}",
       "open": "No end date",
+      "switchAwaiting": "Confirm the payment for your new plan by {date}",
       "daysLeft": "{days, plural, =0 {last day} one {# day left} other {# days left}}",
       "buyPack": "Buy a pack"
     },

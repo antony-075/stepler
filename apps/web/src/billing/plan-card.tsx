@@ -62,12 +62,15 @@ export function PlanCard({
   access,
   periodStart = null,
   planTitle = null,
+  awaitingSwitch = false,
 }: {
   access: Access;
   /** The paid period's start, when known (a subscription, M3); draws the period bar. */
   periodStart?: string | null;
   /** The live plan's name («Pro»), in place of the generic «Підписка». */
   planTitle?: string | null;
+  /** A monthly↔yearly switch waits for its first payment: past due, but not a failed charge. */
+  awaitingSwitch?: boolean;
 }) {
   const t = useTranslations('billing');
   const format = useFormatter();
@@ -81,7 +84,9 @@ export function PlanCard({
   const badge = stateBadge(t, access);
 
   let time: ReactNode;
-  if (readOnly || access.reason === 'SUBSCRIPTION_PAST_DUE') {
+  if (awaitingSwitch && access.reason === 'SUBSCRIPTION_PAST_DUE' && access.endsAt !== null) {
+    time = t('plan.switchAwaiting', { date: date(access.endsAt) });
+  } else if (readOnly || access.reason === 'SUBSCRIPTION_PAST_DUE') {
     time = reasonText(t, access, date);
   } else if (access.endsAt === null) {
     time = t('plan.open');

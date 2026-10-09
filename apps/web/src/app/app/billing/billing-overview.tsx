@@ -109,6 +109,7 @@ function PlanRow({ summary, offers }: { summary: BillingSummary; offers: OfferLi
       <PlanCard
         access={summary.access}
         planTitle={subscription?.offerTitle ?? null}
+        awaitingSwitch={subscription?.pendingChange?.awaitingPayment === true}
         periodStart={
           subscription !== null &&
           (summary.access.reason === 'SUBSCRIPTION' || summary.access.reason === 'COMPLIMENTARY')
