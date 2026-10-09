@@ -1893,6 +1893,7 @@
       "next": "Next charge on {date}",
       "canceled": "Cancelled. Access until {date}",
       "pastDue": "We could not charge for the new period. Everything works until {date}; pay to keep access.",
+      "pastDueOver": "The grace period is over: collections are view-only. Pay to restore access.",
       "switchDue": "The previous subscription has stopped. Confirm the payment for your new plan by {date}, or your collections become view-only.",
       "switchEnds": "The current period ends on {date}. Then your new plan starts once you confirm its payment.",
       "grantedOpen": "Granted with no end date",

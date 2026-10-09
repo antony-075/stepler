@@ -210,6 +210,10 @@ test('a renewal never paid: grace with its date, then read-only @desktop', async
   await expect(
     page.getByText('Тариф завершився — колекції доступні лише для перегляду'),
   ).toBeVisible();
+  // Until the job ends the plan, the card says the grace is over and paying still works.
+  await page.goto('/app/billing');
+  await expect(card(page).getByText(/^Пільговий період завершився/)).toBeVisible();
+  await expect(card(page).getByRole('button', { name: 'Оплатити зараз' })).toBeVisible();
 });
 
 test('an upgrade half-way is prorated and paid; the new limits at once @desktop', async ({

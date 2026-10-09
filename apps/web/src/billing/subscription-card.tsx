@@ -21,7 +21,7 @@ import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarClock, RefreshCw } from 'lucide-react';
-import { useFormatter, useTranslations } from 'next-intl';
+import { useFormatter, useNow, useTranslations } from 'next-intl';
 import { useId, useState } from 'react';
 import { BILLING_KEY, cancelPendingChange, cancelSubscription } from '@/api/billing';
 import { USAGE_KEY } from '@/api/collections';
@@ -45,6 +45,7 @@ export function SubscriptionCard({
 }) {
   const t = useTranslations('billing.subscription');
   const format = useFormatter();
+  const now = useNow();
   const planPrice = usePlanPrice();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -81,13 +82,19 @@ export function SubscriptionCard({
   const pending = subscription.pendingChange;
   const awaiting = pending?.awaitingPayment === true;
   const changeable = status === 'ACTIVE' && !awaiting;
+  const graceOver =
+    subscription.graceEndsAt !== null &&
+    new Date(subscription.graceEndsAt).getTime() <= now.getTime();
   // In grace the missed renewal can be paid at once (a switch is confirmed by the page's banner).
   const payable = paid && status === 'PAST_DUE' && !awaiting && resumePlan !== null;
 
   let line: string;
   if (!paid) line = end === null ? t('grantedOpen') : t('grantedUntil', { date: date(end) });
   else if (status === 'CANCELED') line = t('canceled', { date: end === null ? '' : date(end) });
-  else if (status === 'PAST_DUE') {
+  else if (status === 'PAST_DUE' && graceOver) {
+    // The job ends the plan within the hour (later if LiqPay is unreachable); paying still works.
+    line = t('pastDueOver');
+  } else if (status === 'PAST_DUE') {
     line = t(awaiting ? 'switchDue' : 'pastDue', {
       date: subscription.graceEndsAt === null ? '' : date(subscription.graceEndsAt),
     });
