@@ -199,7 +199,10 @@ export class SubscriptionsService {
   /**
    * `POST /billing/subscription/resume`: a cancelled plan before its end, at its price, through
    * a new LiqPay checkout (a cancelled LiqPay subscription cannot be reactivated, [Q6]). Charged
-   * now; the new period starts when the cancelled one ends.
+   * now; the new period starts when the cancelled one ends. Also «Оплатити зараз» in grace
+   * (`PAST_DUE`): LiqPay's old order is stopped first (never two orders that may both charge;
+   * LiqPay unreachable → `503`, nothing changes), then the plan is paid again from now — at the
+   * new price when it is a monthly ↔ yearly switch waiting for payment (B14).
    */
   async resume(
     principal: AccountPrincipal,
@@ -208,12 +211,27 @@ export class SubscriptionsService {
   ): Promise<CheckoutResponse> {
     const live = await this.prisma.subscription.findFirst({
       where: { userId: principal.userId, source: 'LIQPAY', ...LIVE_SUBSCRIPTION },
-      select: { status: true, priceId: true },
+      select: {
+        id: true,
+        status: true,
+        priceId: true,
+        interval: true,
+        providerUnsubscribedAt: true,
+        pendingPriceId: true,
+        pendingPrice: { select: { interval: true } },
+      },
     });
     if (live === null) throw new AppError('NOT_FOUND', 404);
-    if (live.status !== 'CANCELED') throw new AppError('SUBSCRIPTION_EXISTS', 409);
-    if (live.priceId === null) throw new AppError('OFFER_UNAVAILABLE', 409);
-    return this.checkout(principal, { priceId: live.priceId, termsVersion }, requestId);
+    if (live.status !== 'CANCELED' && live.status !== 'PAST_DUE') {
+      throw new AppError('SUBSCRIPTION_EXISTS', 409);
+    }
+    const switching = live.status === 'PAST_DUE' && isSwitchAwaitingPayment(live);
+    const priceId = switching ? live.pendingPriceId : live.priceId;
+    if (priceId === null) throw new AppError('OFFER_UNAVAILABLE', 409);
+    if (live.status === 'PAST_DUE' && !(await this.sync.unsubscribe(live.id))) {
+      throw new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503, { retryable: true });
+    }
+    return this.checkout(principal, { priceId, termsVersion }, requestId);
   }
 
   // ── cancelling ───────────────────────────────────────────────────────────────────────────

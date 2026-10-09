@@ -7,7 +7,8 @@
 // The pay button is disabled until the consent is ticked and says why; the API refuses a
 // checkout without it anyway. Errors stay inside the dialog; on phones the footer stacks.
 // The same dialog resumes a cancelled plan and confirms a monthly ↔ yearly switch at the period
-// end (B14): then one more line says when the new period starts.
+// end (B14): then one more line says when the new period starts. In grace it is «Оплатити
+// зараз» (`payNow`): one line says LiqPay stops retrying the old charge and the period starts now.
 import { currentLegalVersion } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
@@ -36,6 +37,7 @@ export function SubscribeDialog({
   onOpenChange,
   resumeFrom = null,
   switchFrom = null,
+  payNow = false,
 }: {
   plan: PricedPlan;
   open: boolean;
@@ -44,6 +46,8 @@ export function SubscribeDialog({
   resumeFrom?: string | null;
   /** Confirming a switch (B14): the old plan's period end (the new one starts then, or now). */
   switchFrom?: string | null;
+  /** In grace: pays the missed renewal through a new checkout (`POST /subscription/resume`). */
+  payNow?: boolean;
 }) {
   const t = useTranslations('billing.subscribe');
   const format = useFormatter();
@@ -56,8 +60,9 @@ export function SubscribeDialog({
   const termsVersion = currentLegalVersion('TERMS').version;
   const longDate = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'long', timeZone: KYIV });
-  const title =
-    resumeFrom !== null
+  const title = payNow
+    ? t('payNowTitle', { title: plan.offer.title })
+    : resumeFrom !== null
       ? t('resumeTitle', { title: plan.offer.title })
       : switchFrom !== null
         ? t('switchTitle', { title: plan.offer.title })
@@ -68,7 +73,7 @@ export function SubscribeDialog({
     if (!consent || checkout.pending) return;
     void checkout
       .start(
-        resumeFrom === null
+        resumeFrom === null && !payNow
           ? { kind: 'SUBSCRIPTION', priceId: plan.priceId, autoRenewConsent: true, termsVersion }
           : { resumeSubscription: { termsVersion } },
       )
@@ -99,6 +104,7 @@ export function SubscribeDialog({
                 {t('continues', { date: longDate(resumeFrom) })}
               </p>
             )}
+            {payNow ? <p className="text-pretty text-foreground-soft">{t('payNowNote')}</p> : null}
             {switchFrom === null ? null : (
               <p className="text-pretty text-foreground-soft">
                 {startsLater ? t('switchStarts', { date: longDate(switchFrom) }) : t('switchNow')}

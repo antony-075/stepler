@@ -40,7 +40,7 @@ export function SubscriptionCard({
   resumePlan,
 }: {
   subscription: SubscriptionDto;
-  /** The cancelled plan's offer at its price, when still sold (for «Відновити»). */
+  /** A cancelled or unpaid plan's offer at its price, when still sold («Відновити», «Оплатити зараз»). */
   resumePlan: PricedPlan | null;
 }) {
   const t = useTranslations('billing.subscription');
@@ -50,6 +50,7 @@ export function SubscriptionCard({
   const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [resuming, setResuming] = useState(false);
+  const [paying, setPaying] = useState(false);
   const reasonId = useId();
   const date = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'long', timeZone: KYIV });
@@ -80,6 +81,8 @@ export function SubscriptionCard({
   const pending = subscription.pendingChange;
   const awaiting = pending?.awaitingPayment === true;
   const changeable = status === 'ACTIVE' && !awaiting;
+  // In grace the missed renewal can be paid at once (a switch is confirmed by the page's banner).
+  const payable = paid && status === 'PAST_DUE' && !awaiting && resumePlan !== null;
 
   let line: string;
   if (!paid) line = end === null ? t('grantedOpen') : t('grantedUntil', { date: date(end) });
@@ -172,6 +175,11 @@ export function SubscriptionCard({
               )
             ) : (
               <>
+                {payable ? (
+                  <Button className="max-sm:w-full" onClick={() => setPaying(true)}>
+                    {t('payNow')}
+                  </Button>
+                ) : null}
                 <Button
                   asChild={changeable}
                   variant="outline"
@@ -221,6 +229,9 @@ export function SubscriptionCard({
           onOpenChange={setResuming}
           resumeFrom={end}
         />
+      )}
+      {resumePlan === null || !payable ? null : (
+        <SubscribeDialog plan={resumePlan} open={paying} onOpenChange={setPaying} payNow />
       )}
     </Panel>
   );

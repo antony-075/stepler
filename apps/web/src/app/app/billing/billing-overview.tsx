@@ -91,7 +91,9 @@ export function BillingOverview() {
 function PlanRow({ summary, offers }: { summary: BillingSummary; offers: OfferList | undefined }) {
   const subscription = summary.subscription;
   const resumePlan =
-    subscription?.status !== 'CANCELED' || offers === undefined || subscription.interval === null
+    (subscription?.status !== 'CANCELED' && subscription?.status !== 'PAST_DUE') ||
+    offers === undefined ||
+    subscription.interval === null
       ? null
       : (subscriptionPlans(offers, subscription.interval === 'YEAR' ? 'YEAR' : 'MONTH').find(
           (plan) => plan.offer.id === subscription.offerId,

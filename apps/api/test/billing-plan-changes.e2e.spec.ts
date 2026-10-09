@@ -218,6 +218,48 @@ describe('cancel', () => {
     expect((await subOf(s.subscriptionId)).status).toBe('EXPIRED');
   });
 
+  test('in grace «Оплатити зараз»: LiqPay stopped first, then the plan paid again from now', async () => {
+    const s = await subscriber();
+    await prisma.subscription.update({
+      where: { id: s.subscriptionId },
+      data: {
+        status: 'PAST_DUE',
+        currentPeriodEnd: new Date(Date.now() - DAY_MS),
+        graceEndsAt: new Date(Date.now() + 3 * DAY_MS),
+      },
+    });
+    const res = await s
+      .call('post', '/subscription/resume')
+      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .expect(201);
+    expect(calls('unsubscribe')).toEqual([{ action: 'unsubscribe', orderId: s.start.id }]);
+    const body = checkoutResponseSchema.parse(res.body);
+    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.paymentId ?? '' } });
+    expect(payment).toMatchObject({ kind: 'SUBSCRIPTION', amountMinor: 50_000 });
+    await post(subscribeFields(payment));
+    const paid = await subOf(payment.subscriptionId ?? '');
+    expect(paid.status).toBe('ACTIVE');
+    expect(paid.currentPeriodStart?.getTime()).toBeGreaterThan(Date.now() - 60_000);
+    expect((await subOf(s.subscriptionId)).status).toBe('EXPIRED');
+  });
+
+  test('in grace with LiqPay down: 503 and nothing changes', async () => {
+    const s = await subscriber();
+    await prisma.subscription.update({
+      where: { id: s.subscriptionId },
+      data: { status: 'PAST_DUE', graceEndsAt: new Date(Date.now() + DAY_MS) },
+    });
+    stub.answers.set(`unsubscribe:${s.start.id}`, 'down');
+    await s
+      .call('post', '/subscription/resume')
+      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .expect(503);
+    expect(await prisma.payment.count({ where: { userId: s.userId, kind: 'SUBSCRIPTION' } })).toBe(
+      1,
+    );
+    expect((await subOf(s.subscriptionId)).providerUnsubscribedAt).toBeNull();
+  });
+
   test('resume of a plan that is not cancelled → 409', async () => {
     const s = await subscriber();
     const res = await s

@@ -233,7 +233,8 @@ export class BillingController {
 
   /**
    * A cancelled plan again before it ends: a new LiqPay checkout at its price (the card is
-   * confirmed again), charged now; the new period starts when the cancelled one ends.
+   * confirmed again), charged now; the new period starts when the cancelled one ends. In grace
+   * it is «Оплатити зараз»: LiqPay's old order is stopped first, then the plan is paid from now.
    */
   @Post('subscription/resume')
   @RateLimit('billing-checkout')
@@ -243,13 +244,15 @@ export class BillingController {
   @ApiResponse({
     status: 409,
     description:
-      'SUBSCRIPTION_EXISTS: the plan is not cancelled; OFFER_UNAVAILABLE: its price is no ' +
+      'SUBSCRIPTION_EXISTS: the plan is neither cancelled nor in grace; OFFER_UNAVAILABLE: its price is no ' +
       'longer sold (choose a plan); PAYMENT_PENDING: another plan is waiting for payment',
   })
   @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
   @ApiResponse({
     status: 503,
-    description: 'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server',
+    description:
+      'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server, or (in grace) ' +
+      'LiqPay did not confirm stopping the old order; nothing changed',
   })
   resumeSubscription(
     @CurrentPrincipal() principal: AccountPrincipal,
