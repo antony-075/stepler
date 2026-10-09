@@ -6,7 +6,13 @@ import {
   createCollectionViaApi,
   horizontalOverflow,
 } from '../support/collections.js';
-import { endGrace, failRenewal, halfPeriodPassed, stopPlanForSwitch } from '../support/database.js';
+import {
+  endGrace,
+  endTrial,
+  failRenewal,
+  halfPeriodPassed,
+  stopPlanForSwitch,
+} from '../support/database.js';
 
 // Billing M3 (ADR 0018, plan Task 18, owner decision B14): subscriptions through the real
 // `LiqPayProvider`; only LiqPay's checkout page and server API are replaced
@@ -205,6 +211,8 @@ test('a renewal never paid: grace with its date, then read-only @desktop', async
   await page.goto('/app');
   await expect(page.getByText(/^Оплату тарифу не підтверджено — оплатіть до /)).toBeVisible();
 
+  // The plan lapses after the trial has ended too (a trial still running would carry on).
+  endTrial(email);
   endGrace(email);
   await page.reload();
   await expect(
