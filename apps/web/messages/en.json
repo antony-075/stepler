@@ -1714,7 +1714,7 @@
         "NONE": "No plan in force — collections are view-only"
       },
       "readOnlyText": "Guests cannot add anything. You can still view, download and delete.",
-      "grace": "The payment failed — update your card by {date}",
+      "grace": "Your plan payment is not confirmed — pay by {date}, or your collections become view-only",
       "choosePlan": "Choose a plan",
       "trialDaysLeft": "Trial: {days, plural, =0 {ends today} one {# day left} other {# days left}}",
       "readOnlyShort": "View only"
@@ -1741,7 +1741,6 @@
       "extrasText": "A pack can be extended or enlarged from the collection's page.",
       "extraPrice": "{title} — {price}",
       "storageExtra": "Move to a bigger pack — you pay the price difference",
-      "subscriptionsSoon": "A subscription for event businesses with several collections is coming soon.",
       "paymentNote": "Payments go through LiqPay (PrivatBank). Stepler never sees or stores your card details.",
       "unavailable": "Prices are not available right now. Try reloading the page a little later.",
       "nav": "Pricing"
@@ -1854,6 +1853,119 @@
     "yours": {
       "title": "Your packs",
       "intro": "Collections with their own pack."
+    },
+    "plans": {
+      "title": "Subscriptions for event organisers",
+      "intro": "Several collections at once on one account. Renews automatically until you cancel.",
+      "intervalLabel": "Billing period",
+      "intervals": {
+        "MONTH": "Monthly",
+        "YEAR": "Yearly"
+      },
+      "per": {
+        "MONTH": "{price}/mo",
+        "YEAR": "{price}/yr"
+      },
+      "unit": {
+        "MONTH": "/mo",
+        "YEAR": "/yr"
+      },
+      "renews": "Renews automatically until cancelled",
+      "collections": "{count, plural, one {# active collection} other {# active collections}}",
+      "storage": "{size} across all collections",
+      "collectionStorage": "Up to {size} per collection",
+      "current": "Your plan",
+      "subscribe": "Subscribe",
+      "signIn": "Sign in to subscribe",
+      "change": "Switch to this plan",
+      "waitPastDue": "You can change the plan once the current period is paid.",
+      "waitCanceled": "The subscription is cancelled. Resume it in the “Subscription” card, or choose another plan once the paid period ends.",
+      "waitSwitch": "First confirm the payment for your new plan — the button is at the top of the page."
+    },
+    "subscription": {
+      "title": "Subscription",
+      "status": {
+        "active": "Active",
+        "canceled": "Cancelled",
+        "pastDue": "Payment due",
+        "granted": "Granted by Stepler"
+      },
+      "next": "Next charge on {date}",
+      "canceled": "Cancelled. Access until {date}",
+      "pastDue": "We could not charge your card. LiqPay will try again; everything works until {date}.",
+      "switchDue": "The previous subscription has stopped. Confirm the payment for your new plan by {date}, or your collections become view-only.",
+      "switchEnds": "The current period ends on {date}. Then your new plan starts once you confirm its payment.",
+      "grantedOpen": "Granted with no end date",
+      "grantedUntil": "Granted until {date}",
+      "pending": "From {date}: {title}, {price}",
+      "pendingSwitch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "pendingAwaiting": "Awaiting payment: {title}, {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "withdraw": "Cancel the change",
+      "withdrawn": "The plan change is cancelled",
+      "withdrawFailed": "Could not cancel the change. Please try again.",
+      "change": "Change plan",
+      "cancel": "Cancel subscription",
+      "resume": "Resume subscription",
+      "pastDueChange": "You can change the plan once it is paid.",
+      "switchChange": "You can change the plan once the new one is paid.",
+      "cancelTitle": "Cancel the subscription?",
+      "cancelText": "Access stays until {date}. After that your collections become view-only.",
+      "cancelConfirm": "Cancel subscription",
+      "cancelKeep": "Keep it",
+      "cancelPending": "Cancelling…",
+      "cancelFailed": "LiqPay did not answer, so nothing changed. Please try again.",
+      "canceledToast": "Subscription cancelled"
+    },
+    "subscribe": {
+      "title": "Subscribe to “{title}”",
+      "resumeTitle": "Resume “{title}”",
+      "switchTitle": "Confirm “{title}”",
+      "description": "{price}, renews automatically until cancelled",
+      "continues": "The new period starts on {date}, when the paid one ends, so nothing is lost.",
+      "switchStarts": "The new period starts on {date}, when the current one ends.",
+      "switchNow": "The new period starts with the payment.",
+      "total": "Due now",
+      "liqpayNote": "You pay on LiqPay’s page. Stepler never sees or stores your card details.",
+      "consentRequired": "Tick the automatic renewal consent.",
+      "cancel": "Cancel",
+      "pay": "Continue to payment",
+      "paying": "Opening the payment…"
+    },
+    "consent": {
+      "MONTH": "I agree to an automatic monthly charge of {amount} until I cancel. I can cancel any time in “Plan and billing”.",
+      "YEAR": "I agree to an automatic yearly charge of {amount} until I cancel. I can cancel any time in “Plan and billing”."
+    },
+    "change": {
+      "title": "Switch to “{title}”",
+      "cancel": "Cancel",
+      "close": "Close",
+      "pending": "Please wait…",
+      "previewFailed": "Could not work out the change. Please try again.",
+      "upgradeNow": "Pay now: {charge}, then {price}",
+      "upgradeWaived": "Nothing to pay now, then {price}",
+      "upgradeText": "You pay only for the days left in the current period. The new limits apply at once.",
+      "downgrade": "From {date}: {title}, {price}",
+      "downgradeText": "Your current plan and its limits stay until {date}.",
+      "switch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "switchText": "Nothing is charged now. At the end of the period ({date}) the current subscription stops and we ask you to confirm the new one with LiqPay. Until you pay, everything works as during a usual late payment.",
+      "confirmPay": "Continue to payment",
+      "confirmApply": "Switch now",
+      "confirmSchedule": "Schedule the change",
+      "scheduled": "The plan change is scheduled",
+      "applied": "Plan changed",
+      "blockedTitle": "To switch to “{title}”, first:",
+      "blocked": {
+        "activeCollections": "Archive or delete {count, plural, one {# collection} other {# collections}}",
+        "storageBytes": "Free up {size}",
+        "collectionStorageBytes": "Free up {size} in “{title}”",
+        "guestLinks": "Turn off {count, plural, one {# link} other {# links}} in “{title}”"
+      }
+    },
+    "switch": {
+      "title": "Confirm the payment: {title}, {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "text": "The previous subscription has stopped. Everything works until {date}; without the payment your collections become view-only.",
+      "textOpen": "The previous subscription has stopped. Without the payment your collections become view-only.",
+      "confirm": "Confirm payment"
     }
   }
 }

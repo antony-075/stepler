@@ -1,4 +1,6 @@
 import {
+  type BillingSummary,
+  billingSummarySchema,
   type CheckoutRequest,
   type CheckoutResponse,
   checkoutResponseSchema,
@@ -8,6 +10,10 @@ import {
   paymentDtoSchema,
   type PaymentList,
   paymentListSchema,
+  type PlanChangePreview,
+  planChangePreviewSchema,
+  type SubscriptionDto,
+  subscriptionDtoSchema,
 } from '@stepler/contracts';
 import { apiRequest } from './client';
 
@@ -37,3 +43,34 @@ export const fetchPayment = (id: string): Promise<PaymentDto> =>
 
 export const listPayments = (): Promise<PaymentList> =>
   apiRequest('/billing/payments?limit=50', { schema: paymentListSchema });
+
+export const SUMMARY_KEY = ['billing', 'summary'] as const;
+export const changePreviewKey = (priceId: string) =>
+  ['billing', 'change-preview', priceId] as const;
+
+/** «Тариф і оплата»: access, the trial, the live plan and the account's usage. */
+export const fetchSummary = (): Promise<BillingSummary> =>
+  apiRequest('/billing/summary', { schema: billingSummarySchema });
+
+/** What a plan change would cost and when it applies; the server decides, this only shows it. */
+export const fetchChangePreview = (priceId: string): Promise<PlanChangePreview> =>
+  apiRequest(`/billing/subscription/change-preview?priceId=${encodeURIComponent(priceId)}`, {
+    schema: planChangePreviewSchema,
+  });
+
+export const cancelSubscription = (): Promise<SubscriptionDto> =>
+  apiRequest('/billing/subscription/cancel', { method: 'POST', schema: subscriptionDtoSchema });
+
+/** A cancelled plan again: a new LiqPay checkout (the card is confirmed again). */
+export const resumeSubscription = (termsVersion: string): Promise<CheckoutResponse> =>
+  apiRequest('/billing/subscription/resume', {
+    method: 'POST',
+    body: { autoRenewConsent: true, termsVersion },
+    schema: checkoutResponseSchema,
+  });
+
+export const cancelPendingChange = (): Promise<SubscriptionDto> =>
+  apiRequest('/billing/subscription/pending-change', {
+    method: 'DELETE',
+    schema: subscriptionDtoSchema,
+  });

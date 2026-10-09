@@ -61,10 +61,13 @@ function stateBadge(t: Translate, access: Access): { variant: BadgeVariant; labe
 export function PlanCard({
   access,
   periodStart = null,
+  planTitle = null,
 }: {
   access: Access;
   /** The paid period's start, when known (a subscription, M3); draws the period bar. */
   periodStart?: string | null;
+  /** The live plan's name («Pro»), in place of the generic «Підписка». */
+  planTitle?: string | null;
 }) {
   const t = useTranslations('billing');
   const format = useFormatter();
@@ -113,7 +116,11 @@ export function PlanCard({
           <div className="grid min-w-0 gap-1.5">
             <p className="text-sm text-muted-foreground">{t('plan.title')}</p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <h2 className="type-h2">{planName(t, access.reason)}</h2>
+              <h2 className="type-h2">
+                {planTitle !== null && access.reason !== 'TRIAL' && access.reason !== 'TRIAL_ENDED'
+                  ? planTitle
+                  : planName(t, access.reason)}
+              </h2>
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
             <p className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[0.9375rem] text-foreground-soft">

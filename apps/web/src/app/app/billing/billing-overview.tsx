@@ -12,9 +12,11 @@
 //   from tablets and never leave half of it empty), beside a quiet «Як працює пакет» note from
 //   `xl`; «Купити» opens the dialog (`?pack=` / `?collection=` open it with that choice made);
 // - «Історія оплат» like the dashboard's table.
-// M3 adds «Підписка» as a card beside the plan (the plan row takes a third column then) and
-// «Змінити тариф» as the plan's action; nothing of it renders before it works.
-// Loading is a skeleton of the same panels; a failed usage read is an error Alert with retry.
+// M3 (Task 18): the page reads `GET /billing/summary`. A live plan adds «Підписка» as a third
+// panel of the plan row (from `xl`; two columns from `lg` with it wrapping under) and the period
+// bar on the plan; «Підписка» with the plan cards comes before the packs. A monthly ↔ yearly
+// switch waiting for its payment (B14) puts its banner above everything.
+// Loading is a skeleton of the same panels; a failed read is an error Alert with retry.
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
@@ -25,20 +27,25 @@ import { CircleCheck, Layers, ShieldCheck, type LucideIcon } from 'lucide-react'
 import { useSearchParams } from 'next/navigation';
 import { useLocale, useTranslations } from 'next-intl';
 import { useMemo, useState } from 'react';
-import { fetchOffers, offersKey } from '@/api/billing';
-import { fetchUsage, USAGE_KEY } from '@/api/collections';
+import type { BillingSummary, OfferList } from '@stepler/contracts';
+import { fetchOffers, fetchSummary, offersKey, SUMMARY_KEY } from '@/api/billing';
 import { AccountUsage } from '@/billing/account-usage';
 import { BuyPackDialog } from '@/billing/buy-pack-dialog';
 import { PackCard } from '@/billing/offer-card';
-import { packOffers } from '@/billing/offers';
+import { packOffers, subscriptionPlans } from '@/billing/offers';
 import { useOwnCollections } from '@/billing/own-collections';
 import { PaymentHistory } from '@/billing/payment-history';
 import { PACKS_SECTION_ID, PlanCard } from '@/billing/plan-card';
+import { SubscriptionCard } from '@/billing/subscription-card';
+import { SubscriptionsSection } from '@/billing/subscriptions-section';
+import { SwitchConfirmBanner } from '@/billing/switch-confirm-banner';
 import { YourPacks } from '@/billing/your-packs';
 
 export function BillingOverview() {
   const t = useTranslations('billing');
-  const usage = useQuery({ queryKey: USAGE_KEY, queryFn: fetchUsage });
+  const locale = useLocale();
+  const summary = useQuery({ queryKey: SUMMARY_KEY, queryFn: fetchSummary });
+  const offers = useQuery({ queryKey: offersKey(locale), queryFn: () => fetchOffers(locale) });
   const own = useOwnCollections();
   const titles = useMemo(
     () => new Map(own.items.map((item) => [item.id, item.title])),
@@ -48,16 +55,16 @@ export function BillingOverview() {
   return (
     <>
       <PageHeader size="compact" title={t('title')} description={t('intro')} />
-      {usage.isPending ? (
+      {summary.isPending ? (
         <div className="grid gap-4 lg:grid-cols-2" aria-hidden="true">
           <Skeleton className="h-52 w-full rounded-sheet" />
           <Skeleton className="h-52 w-full rounded-sheet" />
         </div>
-      ) : usage.isError ? (
+      ) : summary.isError ? (
         <Alert
           variant="error"
           action={
-            <Button variant="outline" onClick={() => void usage.refetch()}>
+            <Button variant="outline" onClick={() => void summary.refetch()}>
               {t('retry')}
             </Button>
           }
@@ -65,15 +72,55 @@ export function BillingOverview() {
           {t('loadFailed')}
         </Alert>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <PlanCard access={usage.data.access} />
-          <AccountUsage usage={usage.data} />
-        </div>
+        <>
+          {summary.data.subscription === null ? null : (
+            <SwitchConfirmBanner subscription={summary.data.subscription} offers={offers.data} />
+          )}
+          <PlanRow summary={summary.data} offers={offers.data} />
+        </>
       )}
+      <SubscriptionsSection offers={offers} summary={summary.data} collectionTitles={titles} />
       <YourPacks collections={own.items} />
       <PacksSection />
       <PaymentHistory collectionTitles={titles} />
     </>
+  );
+}
+
+/** The plan, the account's limits and, with a live plan, «Підписка». */
+function PlanRow({ summary, offers }: { summary: BillingSummary; offers: OfferList | undefined }) {
+  const subscription = summary.subscription;
+  const resumePlan =
+    subscription?.status !== 'CANCELED' || offers === undefined || subscription.interval === null
+      ? null
+      : (subscriptionPlans(offers, subscription.interval === 'YEAR' ? 'YEAR' : 'MONTH').find(
+          (plan) => plan.offer.id === subscription.offerId,
+        ) ?? null);
+  return (
+    <div
+      className={
+        subscription === null
+          ? 'grid gap-4 lg:grid-cols-2'
+          : 'grid gap-4 lg:grid-cols-2 xl:grid-cols-3'
+      }
+    >
+      <PlanCard
+        access={summary.access}
+        planTitle={subscription?.offerTitle ?? null}
+        periodStart={
+          subscription !== null &&
+          (summary.access.reason === 'SUBSCRIPTION' || summary.access.reason === 'COMPLIMENTARY')
+            ? subscription.currentPeriodStart
+            : null
+        }
+      />
+      <AccountUsage usage={summary.usage} />
+      {subscription === null ? null : (
+        <div className="lg:col-span-2 xl:col-span-1">
+          <SubscriptionCard subscription={subscription} resumePlan={resumePlan} />
+        </div>
+      )}
+    </div>
   );
 }
 

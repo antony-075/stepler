@@ -5,8 +5,9 @@
 //   buttons within the first two screens; from `md` the cards sit side by side at a reading
 //   width (≤ 880px), left-aligned with the header's wordmark like every other public page;
 // - «Якщо потрібно більше» lists the extensions as plain lines with prices (they are bought
-//   from the collection page, so no buttons here), then one muted line that subscriptions come
-//   later (M3) and one about LiqPay and card data — the trust note sits where the money is;
+//   from the collection page, so no buttons here), then the subscriptions for event businesses
+//   (M3, `PricingPlans`: the monthly/yearly control and the plan cards) and one line about
+//   LiqPay and card data — the trust note sits where the money is;
 // - signed out, the button says «Увійти, щоб купити» and goes to /login (magic links carry no
 //   return path, slice 9 [P8]); signed in, «Обрати пакет» opens «Тариф і оплата» with the pack;
 // - the API down or nothing on sale is said in one Alert, no empty cards (rule 18: no pay
@@ -19,6 +20,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { fetchOffersServer, getSessionUser } from '@/api/server';
 import { PackCard } from '@/billing/offer-card';
 import { extensionOffer, formatMoney, packOffers } from '@/billing/offers';
+import { PricingPlans } from '@/billing/pricing-plans';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { LanguageSwitch } from '@/i18n/language-switch';
@@ -118,8 +120,9 @@ export default async function PricingPage() {
             </section>
           )}
 
+          {offers === null ? null : <PricingPlans offers={offers} signedIn={signedIn} />}
+
           <div className="grid gap-2 border-t pt-6 text-sm text-muted-foreground">
-            <p>{t('subscriptionsSoon')}</p>
             <p>{t('paymentNote')}</p>
           </div>
         </div>

@@ -15,7 +15,7 @@ import { useTranslations } from 'next-intl';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { isApiError } from '@/api/client';
-import { createCheckout, resumeCheckout } from '@/api/billing';
+import { createCheckout, resumeCheckout, resumeSubscription } from '@/api/billing';
 import { BrandLoading } from '@/components/brand-loading';
 import { errorMessageKey } from '@/errors/error-message';
 
@@ -44,14 +44,19 @@ export function CheckoutHandoff({ form }: { form: CheckoutForm }) {
   );
 }
 
+/** What a checkout starts from: a request, the same pending order again, or a cancelled plan. */
+export type CheckoutStart =
+  CheckoutRequest | { resume: string } | { resumeSubscription: { termsVersion: string } };
+
 /**
  * Starts a checkout: the API prices it and returns LiqPay's form, which the hand-off posts;
- * `{ resume }` asks for the same pending order again (after a declined card).
- * Nothing to pay (`form: null`) goes straight to the return page. `errorMessage` is the
- * translated reason of the last failure.
+ * `{ resume }` asks for the same pending order again (after a declined card), and
+ * `{ resumeSubscription }` a cancelled plan again. Nothing to pay (`form: null`) goes to the
+ * return page, or, for a plan change that needed no payment (applied or scheduled, no payment
+ * id), to `onSettled`. `errorMessage` is the translated reason of the last failure.
  */
-export function useCheckout(): {
-  start: (request: CheckoutRequest | { resume: string }) => Promise<void>;
+export function useCheckout(onSettled?: (response: CheckoutResponse) => void): {
+  start: (request: CheckoutStart) => Promise<void>;
   pending: boolean;
   errorMessage: string | null;
   reset: () => void;
@@ -61,11 +66,16 @@ export function useCheckout(): {
   const router = useRouter();
   const [form, setForm] = useState<CheckoutForm | null>(null);
   const mutation = useMutation({
-    mutationFn: (request: CheckoutRequest | { resume: string }) =>
-      'resume' in request ? resumeCheckout(request.resume) : createCheckout(request),
+    mutationFn: (request: CheckoutStart) =>
+      'resume' in request
+        ? resumeCheckout(request.resume)
+        : 'resumeSubscription' in request
+          ? resumeSubscription(request.resumeSubscription.termsVersion)
+          : createCheckout(request),
     onSuccess: (res) => {
-      if (res.form === null) router.push(`/app/billing/return?payment=${res.paymentId}`);
-      else setForm(res.form);
+      if (res.form !== null) setForm(res.form);
+      else if (res.paymentId !== null) router.push(`/app/billing/return?payment=${res.paymentId}`);
+      else onSettled?.(res);
     },
   });
   const error = mutation.error;

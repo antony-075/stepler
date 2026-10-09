@@ -26,6 +26,43 @@ export function packOffers(list: OfferList): PricedOffer[] {
     .filter((offer): offer is PricedOffer => offer !== null);
 }
 
+export type PlanInterval = 'MONTH' | 'YEAR';
+
+/** A subscription plan with its price for one interval. */
+export interface PricedPlan extends PricedOffer {
+  interval: PlanInterval;
+}
+
+/** The subscription plans on sale for `interval`, smallest first (B5). */
+export function subscriptionPlans(list: OfferList, interval: PlanInterval): PricedPlan[] {
+  return list.items
+    .filter((offer) => offer.kind === 'SUBSCRIPTION')
+    .sort((a, b) => a.rank - b.rank)
+    .flatMap((offer) => {
+      const price = offer.prices.find((p) => p.interval === interval);
+      return price === undefined
+        ? []
+        : [
+            {
+              offer,
+              priceId: price.id,
+              price: { amountMinor: price.amountMinor, currency: price.currency },
+              interval,
+            },
+          ];
+    });
+}
+
+/** The intervals any plan is sold in, monthly first. */
+export function planIntervals(list: OfferList): PlanInterval[] {
+  const sold = new Set(
+    list.items
+      .filter((offer) => offer.kind === 'SUBSCRIPTION')
+      .flatMap((offer) => offer.prices.map((p) => p.interval)),
+  );
+  return (['MONTH', 'YEAR'] as const).filter((interval) => sold.has(interval));
+}
+
 /** «Продовжити збір» or «Продовжити зберігання», when on sale. */
 export function extensionOffer(
   list: OfferList,
