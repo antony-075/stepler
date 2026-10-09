@@ -1,8 +1,9 @@
 'use client';
 
-// Design pass (billing M3, Task 18; frontend-design, ui-ux-pro-max, web-design-guidelines,
-// responsive-design). «Підписка» on «Тариф і оплата», between the plan row and the packs: the
-// heading and one sentence (for whom, renews until cancelled), the interval control, the plan
+// Design pass (billing page v3, owner 2026-10-09; frontend-design, ui-ux-pro-max,
+// web-design-guidelines, responsive-design). The subscriptions group of «Тарифи»: the group's
+// heading with one caption that says once that a plan renews until cancelled (the cards no longer
+// repeat it), the interval control beside the heading from `md` (under it on phones), the plan
 // cards in the same auto-fit grid as the packs (17rem minimum: one column on phones, side by side
 // from tablets). The button on each card is what that plan means for this account: «Оформити»
 // without a paid plan, «Перейти на цей тариф» for a subscriber (the change dialog with the
@@ -19,7 +20,6 @@ import { ChangePlanDialog } from './change-plan-dialog';
 import { type PlanInterval, planIntervals, type PricedPlan, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
 import { SubscribeDialog } from './subscribe-dialog';
-import { PLANS_SECTION_ID } from './subscription-card';
 
 export function SubscriptionsSection({
   offers,
@@ -77,16 +77,17 @@ export function SubscriptionsSection({
           : null;
 
   return (
-    <section
-      id={PLANS_SECTION_ID}
-      aria-labelledby="plans-title"
-      className="grid scroll-mt-20 gap-3"
-    >
-      <div className="grid gap-1">
-        <h2 id="plans-title" className="type-h2">
-          {t('title')}
-        </h2>
-        <p className="max-w-[70ch] text-pretty text-muted-foreground">{t('intro')}</p>
+    <section aria-labelledby="plans-title" className="grid gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="grid gap-1">
+          <h2 id="plans-title" className="type-h2">
+            {t('title')}
+          </h2>
+          <p className="max-w-[60ch] text-sm text-pretty text-muted-foreground">{t('intro')}</p>
+        </div>
+        {list === undefined ? null : (
+          <IntervalSwitch offers={list} value={shown} onChange={setPlanInterval} />
+        )}
       </div>
       {list === undefined ? (
         <div className="grid gap-4 md:grid-cols-2" aria-hidden="true">
@@ -95,7 +96,6 @@ export function SubscriptionsSection({
         </div>
       ) : (
         <>
-          <IntervalSwitch offers={list} value={shown} onChange={setPlanInterval} />
           <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4 xl:max-w-[58rem]">
             {plans.map((plan) => {
               const current =

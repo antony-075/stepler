@@ -41,12 +41,14 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await expect(create).toHaveAccessibleDescription(/Гості не можуть нічого додавати/);
   expect(await horizontalOverflow(page)).toBe(0);
 
-  // «Тариф і оплата» says the same and offers the packs (M2).
+  // «Обрати тариф» opens «Тарифи» with the packs (M2); «Огляд» says the account is read-only.
   await page.getByRole('link', { name: 'Обрати тариф' }).click();
-  await expect(page).toHaveURL(/\/app\/billing$/);
+  await expect(page).toHaveURL(/\/app\/billing\?tab=plans$/);
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
-  await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
+  expect(await horizontalOverflow(page)).toBe(0);
+  await page.getByRole('tab', { name: 'Огляд' }).click();
+  await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
 
   // Guests can still open the link, but there is nothing to add.
@@ -119,11 +121,13 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
   await expect(page.getByRole('button', { name: 'Продовжити збір на 30 днів' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Купити пакет для цієї колекції' })).toHaveCount(0);
 
+  // The pack's collection under «Ваші пакети» on «Огляд», its payment on «Історія оплат».
   await page.goto('/app/billing');
-  await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
-  // The pack's collection under «Ваші пакети» and its name in the payment history.
   const yours = page.getByRole('region', { name: 'Ваші пакети' });
   await expect(yours.getByRole('link', { name: 'Весілля Олени' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Історія оплат' }).click();
+  await expect(page).toHaveURL(/\/app\/billing\?tab=history$/);
+  await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Весілля Олени/ })).toBeVisible();
 });
 

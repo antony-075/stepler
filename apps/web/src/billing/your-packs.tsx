@@ -28,12 +28,9 @@ export function YourPacks({ collections }: { collections: Collection[] }) {
   if (packed.length === 0) return null;
   return (
     <section aria-labelledby="your-packs-title" className="grid gap-3">
-      <div className="grid gap-1">
-        <h2 id="your-packs-title" className="type-h2">
-          {t('title')}
-        </h2>
-        <p className="text-muted-foreground">{t('intro')}</p>
-      </div>
+      <h2 id="your-packs-title" className="type-h2">
+        {t('title')}
+      </h2>
       <Panel>
         <ul className="divide-y">
           {packed.map((collection) => (

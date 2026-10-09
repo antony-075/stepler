@@ -17,10 +17,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { fetchUsage, USAGE_KEY } from '@/api/collections';
+import { billingHref } from '@/billing/billing-tab';
 import { ACCOUNT_ACCESS_REASON_ID, accountBanner } from './access-model';
 
 const KYIV = 'Europe/Kyiv';
-const BILLING_HREF = '/app/billing';
 
 export function AccessBanner({ hideAction = false }: { hideAction?: boolean }) {
   const t = useTranslations('billing.access');
@@ -33,7 +33,7 @@ export function AccessBanner({ hideAction = false }: { hideAction?: boolean }) {
 
   const action = hideAction ? undefined : (
     <Button asChild variant="outline">
-      <Link href={BILLING_HREF}>{t('choosePlan')}</Link>
+      <Link href={billingHref('plans')}>{t('choosePlan')}</Link>
     </Button>
   );
   if (banner.kind === 'trial') {

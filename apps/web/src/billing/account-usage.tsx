@@ -3,15 +3,11 @@
 // Design pass (billing page v2; ui-ux-pro-max, responsive-design). The account's two limits as
 // two meters beside the plan: the label, «2 з 3» in mono and a 6px bar (the dashboard's
 // `UsageBar`, with its minimum visible fill), side by side from `sm`, stacked on phones. The
-// words carry the numbers; the bars are decorative. Pack collections are not counted here.
+// words carry the numbers; the bars are decorative. Pack collections are not counted here: that
+// note is an InfoTip beside the title since v3, not a line of its own.
 import type { UsageResponse } from '@stepler/contracts';
-import {
-  Panel,
-  PanelContent,
-  PanelDescription,
-  PanelHeader,
-  PanelTitle,
-} from '@stepler/ui/components/panel';
+import { InfoTip } from '@stepler/ui/components/info-tip';
+import { Panel, PanelContent, PanelHeader, PanelTitle } from '@stepler/ui/components/panel';
 import { FolderOpen, HardDrive, type LucideIcon } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { UsageBar } from '@/app/app/usage-bar';
@@ -25,8 +21,10 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
   return (
     <Panel data-slot="account-usage" className="h-full">
       <PanelHeader>
-        <PanelTitle>{t('title')}</PanelTitle>
-        <PanelDescription>{t('note')}</PanelDescription>
+        <div className="flex items-center gap-1.5">
+          <PanelTitle>{t('title')}</PanelTitle>
+          <InfoTip text={t('note')} />
+        </div>
       </PanelHeader>
       <PanelContent className="grid gap-5 sm:grid-cols-2 sm:gap-6">
         <Meter

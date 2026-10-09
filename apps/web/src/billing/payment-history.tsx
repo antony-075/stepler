@@ -6,7 +6,8 @@
 // in mono. Columns: date and time (Kyiv, tabular figures), what was bought with the collection's
 // name under it when known, the amount (mono) and the state as a badge in words. From `md` a real
 // table with headers; below it each payment is a stacked block (what and amount, then date and
-// state), so nothing scrolls sideways at 320px. Empty, loading and error states.
+// state), so nothing scrolls sideways at 320px. Empty, loading and error states. Since v3 it is
+// the «Історія оплат» tab alone.
 import type { PaymentStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
@@ -46,7 +47,8 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
 
   return (
     <section aria-labelledby="history-title" className="grid gap-3">
-      <h2 id="history-title" className="type-h2">
+      {/* The tab «Історія оплат» names it on screen; the heading stays for the outline. */}
+      <h2 id="history-title" className="sr-only">
         {t('title')}
       </h2>
       {payments.isPending ? (

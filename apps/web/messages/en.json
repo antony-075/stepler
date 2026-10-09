@@ -1685,7 +1685,12 @@
   "billing": {
     "pageTitle": "Plan and billing",
     "title": "Plan and billing",
-    "intro": "What your account can do now, and until when.",
+    "tabs": {
+      "label": "“Plan and billing” sections",
+      "overview": "Overview",
+      "plans": "Plans",
+      "history": "Payment history"
+    },
     "states": {
       "ACTIVE": "Active",
       "GRACE": "Grace period",
@@ -1805,10 +1810,9 @@
     },
     "packs": {
       "title": "Buy a pack",
-      "intro": "A pack is a one-time payment for one collection, with no automatic charges.",
+      "intro": "A one-time payment for one collection, with no automatic charges.",
       "unavailable": "Packs can't be bought right now.",
-      "howTitle": "How a pack works",
-      "howOne": "It covers one collection, separately from the account plan: its own storage, collecting and keeping."
+      "how": "A pack covers one collection, separately from the account plan: its own storage, collecting and keeping. You can extend or enlarge it from the collection’s page."
     },
     "extend": {
       "storageUse": "{used} of {limit}",
@@ -1834,7 +1838,10 @@
       "open": "No end date",
       "switchAwaiting": "Confirm the payment for your new plan by {date}",
       "daysLeft": "{days, plural, =0 {last day} one {# day left} other {# days left}}",
-      "buyPack": "Buy a pack"
+      "buyPack": "Buy a pack",
+      "accessUntil": "Access until {date}",
+      "payBy": "Pay by {date}",
+      "graceOver": "The grace period is over"
     },
     "usage": {
       "title": "Account limits",
@@ -1852,12 +1859,11 @@
       "warned": "We e-mail you 30 and 7 days before deletion."
     },
     "yours": {
-      "title": "Your packs",
-      "intro": "Collections with their own pack."
+      "title": "Your packs"
     },
     "plans": {
       "title": "Subscriptions for event organisers",
-      "intro": "Several collections at once on one account. Renews automatically until you cancel.",
+      "intro": "Several collections at once on one account. Renews automatically until cancelled.",
       "intervalLabel": "Billing period",
       "intervals": {
         "MONTH": "Monthly",
@@ -1871,7 +1877,6 @@
         "MONTH": "/mo",
         "YEAR": "/yr"
       },
-      "renews": "Renews automatically until cancelled",
       "collections": "{count, plural, one {# active collection} other {# active collections}}",
       "storage": "{size} across all collections",
       "collectionStorage": "Up to {size} per collection",
@@ -1880,11 +1885,10 @@
       "signIn": "Sign in to subscribe",
       "change": "Switch to this plan",
       "waitPastDue": "You can change the plan once the current period is paid.",
-      "waitCanceled": "The subscription is cancelled. Resume it in the “Subscription” card, or choose another plan once the paid period ends.",
-      "waitSwitch": "First confirm the payment for your new plan — the button is at the top of the page."
+      "waitCanceled": "The subscription is cancelled. Resume it on the “Overview” tab, or choose another plan once the paid period ends.",
+      "waitSwitch": "First confirm the payment for your new plan on the “Overview” tab."
     },
     "subscription": {
-      "title": "Subscription",
       "status": {
         "active": "Active",
         "canceled": "Cancelled",
@@ -1892,16 +1896,12 @@
         "granted": "Granted by Stepler"
       },
       "next": "Next charge on {date}",
-      "canceled": "Cancelled. Access until {date}",
       "pastDue": "We could not charge for the new period. Everything works until {date}; pay to keep access.",
       "pastDueOver": "The grace period is over: collections are view-only. Pay to restore access.",
-      "switchDue": "The previous subscription has stopped. Confirm the payment for your new plan by {date}, or your collections become view-only.",
-      "switchEnds": "The current period ends on {date}. Then your new plan starts once you confirm its payment.",
       "grantedOpen": "Granted with no end date",
       "grantedUntil": "Granted until {date}",
       "pending": "From {date}: {title}, {price}",
       "pendingSwitch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",
-      "pendingAwaiting": "Awaiting payment: {title}, {interval, select, YEAR {yearly} other {monthly}}, {amount}",
       "withdraw": "Cancel the change",
       "withdrawn": "The plan change is cancelled",
       "withdrawFailed": "Could not cancel the change. Please try again.",

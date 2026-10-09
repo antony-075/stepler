@@ -10,8 +10,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * «Тариф і оплата» (ADR 0018): what the account has now, the packs on sale (M2) and the
- * payment history. `?pack=` / `?collection=` open the purchase dialog with that choice.
+ * «Тариф і оплата» (ADR 0018): three tabs, «Огляд» (what the account has now), «Тарифи» (the
+ * subscriptions and packs on sale) and «Історія оплат», in `?tab=`. `?pack=` / `?plan=` /
+ * `?collection=` open «Тарифи» with that purchase dialog.
  */
 export default function BillingPage() {
   return (

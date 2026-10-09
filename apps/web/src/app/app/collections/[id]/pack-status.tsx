@@ -29,6 +29,7 @@ import { useFormatter, useLocale, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useState } from 'react';
 import { fetchOffers, offersKey } from '@/api/billing';
+import { billingHref } from '@/billing/billing-tab';
 import { useCheckout } from '@/billing/checkout-redirect';
 import { extensionOffer, formatMoney, type PricedOffer, storageUpgrade } from '@/billing/offers';
 import { formatStorage } from '@/format/bytes';
@@ -50,7 +51,7 @@ export function PackStatus({ collection }: { collection: Collection | Collection
   const live = collection.status === 'ACTIVE' && collection.blocked === null;
   const choose = (
     <Button asChild variant="outline">
-      <Link href="/app/billing">{t('choosePlan')}</Link>
+      <Link href={billingHref('plans')}>{t('choosePlan')}</Link>
     </Button>
   );
   const deletion =

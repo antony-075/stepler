@@ -3,8 +3,8 @@
 // Design pass (billing M3, Task 18; frontend-design, ui-ux-pro-max, web-design-guidelines,
 // responsive-design). Subscriptions are for event businesses (B5), so they read like the pack
 // cards (same panel, same type) and differ only where the deal differs:
-// - the price carries its interval right beside it («/міс», «/рік») and one quiet line says it
-//   renews until cancelled: the recurring charge is never small print;
+// - the price carries its interval right beside it («/міс», «/рік»); that a plan renews until
+//   cancelled is said once, in the group's caption (billing page v3), not on every card;
 // - the facts are the account's limits: active collections first (what a business counts),
 //   then storage for all collections, per-collection storage only when it is smaller, links;
 // - «Щомісяця / Щороку» is the existing segmented control above the cards, not a toggle inside
@@ -107,7 +107,6 @@ export function SubscriptionPlanCard({
             </span>
             <span className="text-sm text-muted-foreground">{t(`unit.${plan.interval}`)}</span>
           </p>
-          <p className="text-sm text-pretty text-muted-foreground">{t('renews')}</p>
         </div>
         <ul className="grid gap-2.5 text-foreground-soft">
           {facts.map((fact) => (
