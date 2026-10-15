@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { AccessResult } from '../../billing/domain/access.js';
-import { addDays, addInterval } from '../../billing/domain/periods.js';
+import { addDays } from '../../billing/domain/periods.js';
 import { EntitlementResolver, WITH_PACK } from '../../billing/entitlement-resolver.js';
 import { CollectionDeletion } from '../../collections/collection-deletion.js';
 import { PrismaService } from '../../database/prisma.service.js';
@@ -23,7 +23,7 @@ export interface RetentionRun {
  *    (a grant, a plan or a pack covers them again), and an account's `readOnlyNotifiedAt` once its
  *    access returned, so a later episode mails again;
  * 2. schedules read-only collections: an account's (trial or plan ended) at `endedAt +
- *    READ_ONLY_RETENTION_MONTHS`, a pack's at its `retentionEndsAt`; the account's owner gets
+ *    READ_ONLY_RETENTION_DAYS`, a pack's at its `retentionEndsAt`; the account's owner gets
  *    the «лише перегляд» mail once per episode;
  * 3. sends the 30- and 7-day warnings once each (a late start sends only the 7-day one);
  * 4. with `BILLING_RETENTION_DELETE_ENABLED`, deletes what is due through the admin's deletion
@@ -45,7 +45,7 @@ export class BillingRetentionHandler implements JobHandler<'billing.retention'> 
     @Inject(WORKER_ENV)
     private readonly env: Pick<
       WorkerEnv,
-      'WORKER_PURGE_BATCH_SIZE' | 'READ_ONLY_RETENTION_MONTHS' | 'BILLING_RETENTION_DELETE_ENABLED'
+      'WORKER_PURGE_BATCH_SIZE' | 'READ_ONLY_RETENTION_DAYS' | 'BILLING_RETENTION_DELETE_ENABLED'
     >,
   ) {}
 
@@ -173,11 +173,7 @@ export class BillingRetentionHandler implements JobHandler<'billing.retention'> 
       for (const user of users) {
         const access = await this.entitlements.forAccount(user.id, this.prisma, now);
         if (access.state !== 'READ_ONLY') continue;
-        const deleteAfter = addInterval(
-          access.endedAt ?? now,
-          'MONTH',
-          this.env.READ_ONLY_RETENTION_MONTHS,
-        );
+        const deleteAfter = addDays(access.endedAt ?? now, this.env.READ_ONLY_RETENTION_DAYS);
         scheduled += await this.prisma.$transaction(async (tx) => {
           const { count } = await tx.collection.updateMany({
             where: {

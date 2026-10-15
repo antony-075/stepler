@@ -56,6 +56,8 @@ contribution      = price × (1 − deductions) − cost         (what covers fi
 
 Costs assume a **fully used** limit; real use is usually 20–40%, so the real margin is higher.
 
+A pack has no read-only tail in the product: its collection is deleted at the end of its paid keeping (after the 30- and 7-day warnings). The pack formula still counts 3 extra months, as a margin for the warning period and late extensions.
+
 ### Result
 
 | Offer | Cost at the full limit | Break-even | Price | Margin at the full limit | Contribution |

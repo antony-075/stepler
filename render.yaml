@@ -135,10 +135,10 @@ services:
         sync: false
       - key: LEGAL_CONTACT_EMAIL
         sync: false
-      # Billing (ADR 0018): read-only content is kept 12 months; the deletion stays off until
+      # Billing (ADR 0018): read-only content is kept 90 days; the deletion stays off until
       # the legal texts with retention are published (warnings are sent either way).
-      - key: READ_ONLY_RETENTION_MONTHS
-        value: '12'
+      - key: READ_ONLY_RETENTION_DAYS
+        value: '90'
       # Deletion after retention (ADR 0018 [P6]): the v3 Terms/Privacy describe it (M4); turn it
       # on here only after the owner confirms the published texts. Warnings go out either way.
       - key: BILLING_RETENTION_DELETE_ENABLED

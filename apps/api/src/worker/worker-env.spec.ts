@@ -25,7 +25,7 @@ describe('loadWorkerEnv', () => {
       GUEST_SESSION_IDLE_DAYS: 400,
       OPERATOR_EMAILS: [],
       REPORT_EMAIL_RETENTION_DAYS: 90,
-      READ_ONLY_RETENTION_MONTHS: 12,
+      READ_ONLY_RETENTION_DAYS: 90,
       BILLING_RETENTION_DELETE_ENABLED: false,
     });
     expect(env.LEGAL_CONTACT_EMAIL).toBeUndefined();
@@ -39,7 +39,7 @@ describe('loadWorkerEnv', () => {
     expect(() => loadWorkerEnv({ ...valid, BILLING_RETENTION_DELETE_ENABLED: 'yes' })).toThrow(
       EnvValidationError,
     );
-    expect(() => loadWorkerEnv({ ...valid, READ_ONLY_RETENTION_MONTHS: '0' })).toThrow(
+    expect(() => loadWorkerEnv({ ...valid, READ_ONLY_RETENTION_DAYS: '0' })).toThrow(
       EnvValidationError,
     );
   });

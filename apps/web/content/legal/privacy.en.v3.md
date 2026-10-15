@@ -161,7 +161,7 @@ The exact list of countries, providers and transfer mechanisms must be confirmed
 
 ## 9. Retention
 
-Collections of an account whose trial or subscription ended unpaid are kept view-only for 12 months from that end, and collections with a pack until the end of the pack's paid keeping period; after that they and all their content are deleted, with e-mail warnings to the administrator 30 and 7 days before (Terms of Use, sections 14 and 15). Other data is retained for as long as reasonably necessary to operate the Service, comply with legal obligations, maintain security and protect legal rights.
+Collections of an account whose trial or subscription ended unpaid are kept view-only for 90 days from that end, and collections with a pack until the end of the pack's paid keeping period; after that they and all their content are deleted, with e-mail warnings to the administrator 30 and 7 days before (Terms of Use, sections 14 and 15). Other data is retained for as long as reasonably necessary to operate the Service, comply with legal obligations, maintain security and protect legal rights.
 
 Deleted content becomes unavailable immediately. Physical files and derived objects are deleted asynchronously after the relevant record is deleted or a cleanup task is queued.
 
@@ -184,7 +184,7 @@ Security and audit records may be retained longer where reasonably necessary for
 - reports (without the reporter's address) and administrators' appeals: [RETENTION PERIOD];
 - content deleted by moderation: 90 days in quarantine (hidden from guests and not counted in the owner's storage), then deleted for good unless an appeal is upheld;
 - the reporter's e-mail address: until the decision is sent, at most 90 days after the report;
-- view-only collections: 12 months from the end of the trial or subscription; collections with a pack: until the end of the paid keeping period; then deletion with warnings 30 and 7 days before;
+- view-only collections: 90 days from the end of the trial or subscription; collections with a pack: until the end of the paid keeping period; then deletion with warnings 30 and 7 days before;
 - payments, subscriptions and refunds: while the account exists and at least [PLACEHOLDER: accounting retention period, e.g. 3 years], even after a collection is deleted;
 - LiqPay's messages about payments (no card data): 3 years.
 

@@ -146,7 +146,7 @@ When a trial, a pack or a subscription ends unpaid, the account or collection be
 
 How long view-only content is kept:
 
-- an account's content after a trial or a subscription is kept for 12 months from its end;
+- an account's content after a trial or a subscription is kept for 90 days from its end;
 - a collection with a pack is kept until the end of the pack's paid keeping period (now one year from payment; it can be extended).
 
 Any new payment that covers a collection cancels its scheduled deletion.

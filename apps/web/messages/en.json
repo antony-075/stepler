@@ -2202,7 +2202,7 @@
       "readOnlyTitle": "What does “view only” mean?",
       "guests": "Guests cannot add anything.",
       "you": "You can view, download and delete content.",
-      "kept": "Content is kept for 12 months after the plan ends, then deleted.",
+      "kept": "Content is kept for 90 days after the plan ends, then deleted.",
       "warned": "We e-mail you 30 and 7 days before deletion."
     },
     "yours": {

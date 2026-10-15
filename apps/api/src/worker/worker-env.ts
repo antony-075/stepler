@@ -28,8 +28,11 @@ const workerEnvSchema = z
     GUEST_SESSION_IDLE_DAYS: positiveInt(400),
     /** A reporter's address is deleted this long after the report at the latest ([Q6]). */
     REPORT_EMAIL_RETENTION_DAYS: positiveInt(90),
-    /** Billing (ADR 0018 [B8]): read-only content of an account is kept this long, then deleted. */
-    READ_ONLY_RETENTION_MONTHS: positiveInt(12),
+    /**
+     * Billing (ADR 0018 [B8]): read-only content of an account is kept this many days after its
+     * trial or plan ended, then deleted (owner 2026-10-15: 90 days, was 12 months).
+     */
+    READ_ONLY_RETENTION_DAYS: positiveInt(90),
     /**
      * The retention clock deletes due collections only when `true` (plan [P6]): off until the
      * legal texts that describe retention are published. Warnings go out either way.

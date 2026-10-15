@@ -198,7 +198,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
 | `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
-| `READ_ONLY_RETENTION_MONTHS` | worker | no | Billing (ADR 0018): read-only content of an account is kept this many months after its trial or plan ended, then deleted after warnings 30 and 7 days before; default `12` |
+| `READ_ONLY_RETENTION_DAYS` | worker | no | Billing (ADR 0018): read-only content of an account is kept this many days after its trial or plan ended, then deleted after warnings 30 and 7 days before; default `90` |
 | `BILLING_RETENTION_DELETE_ENABLED` | worker | no | `true` lets the daily `billing.retention` job delete due collections; default `false` until the legal texts describe retention (warnings go out either way) |
 | `BILLING_PROVIDER` | api, worker | no | Payments (ADR 0018): `liqpay` or `disabled` (default; checkout then answers 503). With `liqpay` both keys are required |
 | `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` | api, worker | with `liqpay` | The LiqPay key pair: the **sandbox** pair locally and on staging, live keys only on production; secrets, never committed or logged |

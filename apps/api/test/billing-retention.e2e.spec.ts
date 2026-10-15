@@ -84,12 +84,12 @@ beforeEach(async () => {
 });
 
 describe('scheduling', () => {
-  test('an ended trial: kept 12 months from its end, one mail per episode across runs', async () => {
+  test('an ended trial: kept 90 days from its end, one mail per episode across runs', async () => {
     const olena = await owner();
     const c = await collection(olena.id);
     const first = await clock().run(now);
     expect(first.scheduled).toBe(1);
-    expect((await reload(c.id)).deleteAfter).toEqual(at('2028-06-01T10:00:00Z'));
+    expect((await reload(c.id)).deleteAfter).toEqual(at('2027-08-30T10:00:00Z'));
     expect(await queuedJobs(prisma, 'mail.billing-read-only')).toHaveLength(1);
     const second = await clock().run(now);
     expect(second.scheduled).toBe(0);
@@ -221,24 +221,24 @@ describe('the whole path with deletion switched on', () => {
     return totals;
   }
 
-  test('an ended trial: 12 months, warnings at 30 and 7 days, then the purge', async () => {
+  test('an ended trial: 90 days, warnings at 30 and 7 days, then the purge', async () => {
     const olena = await owner();
     const c = await collection(olena.id);
-    const deleteAfter = at('2028-06-01T10:00:00Z');
-    expect(await daily(now, at('2028-04-01T09:00:00Z'))).toEqual({
+    const deleteAfter = at('2027-08-30T10:00:00Z');
+    expect(await daily(now, at('2027-07-30T09:00:00Z'))).toEqual({
       scheduled: 1,
       warned30: 0,
       warned7: 0,
       deleted: 0,
     });
     expect((await reload(c.id)).deleteAfter).toEqual(deleteAfter);
-    const totals = await daily(at('2028-04-02T09:00:00Z'), at('2028-06-03T09:00:00Z'));
+    const totals = await daily(at('2027-07-31T09:00:00Z'), at('2027-09-01T09:00:00Z'));
     expect(totals).toEqual({ scheduled: 0, warned30: 1, warned7: 1, deleted: 1 });
     const reloaded = await reload(c.id);
     expect(reloaded.status).toBe('DELETING');
     // Each warning went out on its day, and deletion came no sooner than 7 days after the last.
-    expect(reloaded.deletionWarnedAt30?.toISOString()).toBe('2028-05-03T09:00:00.000Z');
-    expect(reloaded.deletionWarnedAt7?.toISOString()).toBe('2028-05-26T09:00:00.000Z');
+    expect(reloaded.deletionWarnedAt30?.toISOString()).toBe('2027-08-01T09:00:00.000Z');
+    expect(reloaded.deletionWarnedAt7?.toISOString()).toBe('2027-08-24T09:00:00.000Z');
     const warnings = await queuedJobs(prisma, 'mail.billing-deletion-warning');
     expect(warnings.map((job) => (job.data as { days: number }).days).sort()).toEqual([30, 7]);
     expect(await queuedJobs(prisma, 'collection.purge')).toHaveLength(1);

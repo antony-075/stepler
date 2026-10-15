@@ -30,7 +30,7 @@ Reload `/app`: the banner, the disabled buttons and the guest «Колекція
 
 ## Retention clock
 
-- The worker's `billing.retention` job runs daily at 03:17 UTC. It schedules read-only collections for deletion (`deleteAfter` = the end of the trial or plan + `READ_ONLY_RETENTION_MONTHS`, 12; a pack's at its own retention end), e-mails the owner once per read-only episode, sends warnings 30 and 7 days before `deleteAfter`, and lifts all of it when access returns.
+- The worker's `billing.retention` job runs daily at 03:17 UTC. It schedules read-only collections for deletion (`deleteAfter` = the end of the trial or plan + `READ_ONLY_RETENTION_DAYS`, 90; a pack's at its own retention end), e-mails the owner once per read-only episode, sends warnings 30 and 7 days before `deleteAfter`, and lifts all of it when access returns.
 - **Deletion is off** (`BILLING_RETENTION_DELETE_ENABLED=false`). The v3 Terms and Privacy (drafts, M4) describe retention; turn deletion on (Render, worker) only once the owner has confirmed the published texts. With it on, a due collection goes the same way as the admin's own delete (`collection.purge`, audit actor `SYSTEM`, `{reason: 'retention'}`), and never sooner than 7 days after its 7-day warning.
 
 ## Packs and payments (M2)
@@ -100,7 +100,7 @@ Everything in the plan's M1–M4 is built: trial, read-only and retention; packs
 
 1. **O5 — accountant:** the tax regime (group 4 is normally the agricultural single tax; confirm the group for КВЕД 63.11) and whether ПРРО receipts are required. If yes: register the cash register and the items in the LiqPay cabinet (РРО → Каса → Товари), put each item id into the offer's «Код товару для фіскальних чеків» in `/ops`, and set `BILLING_FISCAL_MODE=liqpay_rro` on the API **and** the worker. If not: set `BILLING_FISCAL_WAIVED=true` on both, deliberately. Production refuses to start with live keys and neither.
 2. **O6 — live merchant:** activate it; set the **live** key pair only on the production services (`stepler-api` and the worker, `sync: false`); staging keeps the sandbox pair. Never live keys on staging.
-3. **Render env, production API:** `BILLING_PROVIDER=liqpay`, `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY`, `BILLING_CALLBACK_URL=https://<production-api-host>/api/v1/billing/liqpay/callback`, the fiscal choice above; optional tuning keeps its defaults (`BILLING_GRACE_DAYS` 4, `BILLING_PENDING_TTL_MINUTES` 30, `BILLING_MIN_CHARGE_MINOR` 100, the two rate limits). **Production worker:** `BILLING_PROVIDER=liqpay`, the same key pair, the fiscal choice, `READ_ONLY_RETENTION_MONTHS=12`, `BILLING_RETENTION_DELETE_ENABLED` (true only once the final texts with retention are published). Remove the old `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_*`, `LIMIT_GUEST_LINKS_PER_COLLECTION`.
+3. **Render env, production API:** `BILLING_PROVIDER=liqpay`, `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY`, `BILLING_CALLBACK_URL=https://<production-api-host>/api/v1/billing/liqpay/callback`, the fiscal choice above; optional tuning keeps its defaults (`BILLING_GRACE_DAYS` 4, `BILLING_PENDING_TTL_MINUTES` 30, `BILLING_MIN_CHARGE_MINOR` 100, the two rate limits). **Production worker:** `BILLING_PROVIDER=liqpay`, the same key pair, the fiscal choice, `READ_ONLY_RETENTION_DAYS=90`, `BILLING_RETENTION_DELETE_ENABLED` (true only once the final texts with retention are published). Remove the old `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_*`, `LIMIT_GUEST_LINKS_PER_COLLECTION`.
 4. **O7 — lawyer:** fill every `[ПЛЕЙСХОЛДЕР: …]` / `[PLACEHOLDER: …]` and `[ПЕРЕВІРИТИ ЮРИСТОМ]` in Terms/Privacy v3 (prices and tax status, the seller ФОП/ТОВ with ЄДРПОУ/РНОКПП and address, fiscal receipts, the refund window and grounds, the price-change notice, the grace length, the accounting retention); then publish them as non-drafts (`docs/legal/README.md`: `draft: false`, the effective date). Production refuses to start on a draft.
 5. **Prices:** the agreed prices from `docs/product/pricing.md` in `/ops` → **Тарифи і ціни**, then «Почати продаж» for each offer to sell.
 6. **A live 1 ₴ check:** pay a cheap pack with a real card on production, see it in `/ops` → **Платежі**, refund it there, and see the refund in the LiqPay cabinet.
@@ -121,7 +121,7 @@ Everything in the plan's M1–M4 is built: trial, read-only and retention; packs
 
 | Variable | Service | Default | Meaning |
 |---|---|---|---|
-| `READ_ONLY_RETENTION_MONTHS` | worker | `12` | How long read-only content of an account is kept after its trial or plan ended |
+| `READ_ONLY_RETENTION_DAYS` | worker | `90` | How long read-only content of an account is kept after its trial or plan ended |
 | `BILLING_RETENTION_DELETE_ENABLED` | worker | `false` | Lets the retention clock delete due collections; warnings go out either way |
 | `BILLING_PROVIDER` | api, worker | `disabled` | `liqpay` turns payments on; needs both keys |
 | `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` | api, worker | — | The merchant's key pair (sandbox on staging and locally); secrets, `sync: false` |
