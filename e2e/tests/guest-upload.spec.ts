@@ -74,6 +74,56 @@ test.describe('guest uploads', () => {
     await guest.context().close();
   });
 
+  test('ten large photos get small local previews, never the decoded originals', async ({
+    page,
+    browser,
+  }) => {
+    // Owner remark (billing M4 round): picking ~10 photos on an iPhone hung the page; full-size
+    // previews of phone photos took iOS Safari past its memory limit.
+    const { path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    const jpeg = await guest.evaluate(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2400;
+      canvas.height = 1800;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('no 2d context');
+      const gradient = context.createLinearGradient(0, 0, 2400, 1800);
+      gradient.addColorStop(0, '#e2a76f');
+      gradient.addColorStop(1, '#4f46e5');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 2400, 1800);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.6),
+      );
+      if (blob === null) throw new Error('no jpeg');
+      return [...new Uint8Array(await blob.arrayBuffer())];
+    });
+    const buffer = Buffer.from(jpeg);
+    // The previews come before any transfer: hold every initiation, so nothing reaches storage
+    // and the worker (ten large images per project slowed the other journeys' processing).
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, () => undefined);
+    await pickFiles(
+      guest,
+      Array.from({ length: 10 }, (_, i) => ({
+        name: `IMG_${1000 + i}.jpg`,
+        mimeType: 'image/jpeg',
+        buffer,
+      })),
+    );
+
+    const previews = uploading(guest).locator('img[src^="blob:"]');
+    await expect(previews).toHaveCount(10, { timeout: 30_000 });
+    const sides = await previews.evaluateAll((images) =>
+      images.map((img) => {
+        const image = img as HTMLImageElement;
+        return Math.max(image.naturalWidth, image.naturalHeight);
+      }),
+    );
+    expect(sides.every((side) => side > 0 && side <= 320)).toBe(true);
+    await guest.context().close();
+  });
+
   test('a failing storage connection is retried without the guest doing anything', async ({
     page,
     browser,

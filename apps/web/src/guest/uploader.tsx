@@ -7,8 +7,8 @@
 //   where the saved ones will be. The pick action stays in the dock / side panel.
 // - While files move: `UploadSummary` (words, mono bytes, the 2px pencil line, partial and
 //   offline follow-ups, one polite live region) above a grid of `UploadFrame` tiles with
-//   local previews (`URL.createObjectURL`, revoked when the frame goes; HEIC, video and documents
-//   get a type tile: never a decoded original in the grid).
+//   small local previews (`localThumbnail`, one file decoded at a time; video, documents and
+//   undecodable photos get a type tile: never a decoded original in the grid).
 // - When the batch settles with everything added: the B success moment, `PrintStack` of the last
 //   three prints + «Готово, ваші кадри» and the count; with failures, the summary stays with
 //   «Повторити невдалі»; all failed: «Не вдалося додати кадри» + «Повторити всі».
@@ -29,41 +29,65 @@ import {
 import { UploadSummary, type UploadSummaryLabels } from '@stepler/ui/components/upload-summary';
 import { FileText, Film, ImageIcon, type LucideIcon } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatBytes } from '@/format/bytes';
 import { allowedKinds } from './upload/file-rules';
+import { localThumbnail } from './upload/local-thumbnail';
 import type { UploadItem } from './upload/queue';
 import type { UploadQueue } from './upload/use-upload-queue';
 
-/** Types a browser can show from the file itself (HEIC cannot, outside Safari). */
-const PREVIEWABLE = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+/**
+ * Photos a browser may decode for a local preview; HEIC decodes in Safari only, elsewhere the
+ * thumbnail fails and the frame keeps its type tile.
+ */
+const PREVIEWABLE = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+]);
 
 const isPreviewable = (item: UploadItem): boolean =>
   item.kind === 'PHOTO' && PREVIEWABLE.has(item.file.type.toLowerCase());
 
 /**
- * Object URLs for previewable photos, one per file, created on first use and revoked when the
- * batch goes (the page closes or the guest leaves). A batch is at most 100 files, so keeping a
- * cancelled file's URL until then costs little.
+ * Small local previews (`localThumbnail`: one file decoded at a time, a THUMB_PX JPEG kept),
+ * never the original: full-size phone photos in the grid took iOS Safari past its memory limit.
+ * Each URL is revoked when the batch goes (the page closes or the guest leaves); a batch is at
+ * most 100 files, so keeping a cancelled file's thumbnail until then costs little.
  */
-function useLocalPreviews(): (item: UploadItem) => string | undefined {
-  const [cache] = useState(() => new Map<File, string>());
-  useEffect(
-    () => () => {
-      for (const url of cache.values()) URL.revokeObjectURL(url);
-      cache.clear();
-    },
-    [cache],
-  );
-  return (item) => {
-    if (!isPreviewable(item)) return undefined;
-    let url = cache.get(item.file);
-    if (url === undefined) {
-      url = URL.createObjectURL(item.file);
-      cache.set(item.file, url);
+function useLocalPreviews(items: readonly UploadItem[]): (item: UploadItem) => string | undefined {
+  const [urls, setUrls] = useState<ReadonlyMap<File, string>>(() => new Map());
+  const started = useRef(new Set<File>());
+  const created = useRef<string[]>([]);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    const owned = created.current;
+    return () => {
+      mounted.current = false;
+      for (const url of owned) URL.revokeObjectURL(url);
+      owned.length = 0;
+    };
+  }, []);
+  useEffect(() => {
+    for (const item of items) {
+      if (!isPreviewable(item) || started.current.has(item.file)) continue;
+      started.current.add(item.file);
+      void localThumbnail(item.file).then((url) => {
+        if (url === null) return;
+        if (!mounted.current) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        created.current.push(url);
+        setUrls((previous) => new Map(previous).set(item.file, url));
+      });
     }
-    return url;
-  };
+  }, [items]);
+  return (item) => urls.get(item.file);
 }
 
 /** Decorative: the frame's accessible name says what the picture is. */
@@ -101,7 +125,7 @@ export function UploadBatch({ uploads, context }: { uploads: UploadQueue; contex
     () => state.items.filter((item) => item.state !== 'cancelled'),
     [state.items],
   );
-  const preview = useLocalPreviews();
+  const preview = useLocalPreviews(shown);
   const bytes = (value: number) => formatBytes(format.number, value);
 
   const rejectedLine = useRejectedLine(state.rejected);
