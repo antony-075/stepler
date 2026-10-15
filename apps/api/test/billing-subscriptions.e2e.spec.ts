@@ -1,6 +1,10 @@
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import { checkoutResponseSchema, usageResponseSchema } from '@stepler/contracts';
+import {
+  checkoutResponseSchema,
+  usageResponseSchema,
+  currentLegalVersion,
+} from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { addInterval } from '../src/billing/domain/periods.js';
@@ -22,6 +26,9 @@ import { createTestPrisma, queuedJobs, resetDatabase } from './support/database.
 import { testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
+
+/** The Terms the auto-renewal consent is given to: the current version (plan Task 22). */
+const TERMS = currentLegalVersion('TERMS').version;
 
 // Subscriptions through LiqPay's recurring payments (ADR 0018, plan Task 15, Review Focus 1, 4):
 // the `subscribe` checkout, its first payment and the `regular` renewal callbacks. Replays,
@@ -70,7 +77,7 @@ async function owner(email = 'olena@example.com') {
       kind: 'SUBSCRIPTION',
       priceId,
       autoRenewConsent: true,
-      termsVersion: 'v2',
+      termsVersion: TERMS,
     }).expect(201);
     const { paymentId } = checkoutResponseSchema.parse(res.body);
     return prisma.payment.findUniqueOrThrow({ where: { id: paymentId ?? '' } });
@@ -100,14 +107,14 @@ describe('checkout', () => {
   test('consent and terms are required; amounts are never accepted', async () => {
     const a = await owner();
     await a
-      .checkout({ kind: 'SUBSCRIPTION', priceId: prices['sub-pro'].MONTH, termsVersion: 'v2' })
+      .checkout({ kind: 'SUBSCRIPTION', priceId: prices['sub-pro'].MONTH, termsVersion: TERMS })
       .expect(400);
     await a
       .checkout({
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].MONTH,
         autoRenewConsent: false,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(400);
     await a
@@ -115,10 +122,24 @@ describe('checkout', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].MONTH,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
         amountMinor: 1,
       })
       .expect(400);
+  });
+
+  test('the consent must be given to the Terms in force (v2 after v3 is out)', async () => {
+    const a = await owner();
+    const res = await a
+      .checkout({
+        kind: 'SUBSCRIPTION',
+        priceId: prices['sub-pro'].MONTH,
+        autoRenewConsent: true,
+        termsVersion: 'v2',
+      })
+      .expect(400);
+    expect(res.body).toMatchObject({ code: 'LEGAL_VERSION_OUTDATED' });
+    expect(await prisma.payment.count()).toBe(0);
   });
 
   test('a recurring LiqPay form, a pending plan with the consent, one per account', async () => {
@@ -128,7 +149,7 @@ describe('checkout', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].YEAR,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(201);
     const body = checkoutResponseSchema.parse(res.body);
@@ -153,7 +174,7 @@ describe('checkout', () => {
       source: 'LIQPAY',
       interval: 'YEAR',
       providerOrderId: payment.id,
-      consentTermsVersion: 'v2',
+      consentTermsVersion: TERMS,
       activeCollections: 5,
     });
     expect((await subOf(payment)).autoRenewConsentAt).not.toBeNull();
@@ -166,7 +187,7 @@ describe('checkout', () => {
             kind: 'SUBSCRIPTION',
             priceId: prices['sub-pro'].YEAR,
             autoRenewConsent: true,
-            termsVersion: 'v2',
+            termsVersion: TERMS,
           })
           .expect(201)
       ).body,
@@ -177,7 +198,7 @@ describe('checkout', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-business'].MONTH,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(409);
     expect(other.body).toMatchObject({ code: 'PAYMENT_PENDING' });
@@ -194,7 +215,7 @@ describe('checkout', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-business'].MONTH,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(409);
     expect(inactive.body).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
@@ -204,7 +225,7 @@ describe('checkout', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].YEAR,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(409);
     expect(exists.body).toMatchObject({ code: 'SUBSCRIPTION_EXISTS' });

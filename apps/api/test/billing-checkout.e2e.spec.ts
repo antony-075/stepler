@@ -5,6 +5,7 @@ import {
   offerListSchema,
   paymentDtoSchema,
   paymentListSchema,
+  currentLegalVersion,
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
@@ -24,6 +25,9 @@ import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
+
+/** The Terms the auto-renewal consent is given to: the current version (plan Task 22). */
+const TERMS = currentLegalVersion('TERMS').version;
 
 // Pack checkouts (ADR 0018, plan Task 11): server-side pricing, ownership, one pending checkout
 // per target, and the honest `disabled` mode.
@@ -179,7 +183,7 @@ describe('POST /billing/checkouts', () => {
         kind: 'SUBSCRIPTION',
         priceId: catalogue['pack-start'].priceId,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(409);
     expect(sub.body).toMatchObject({ code: 'OFFER_UNAVAILABLE' });

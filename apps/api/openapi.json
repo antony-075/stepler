@@ -699,7 +699,7 @@
             "description": "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated charge was waived, applied now) or SCHEDULED (a downgrade, or a monthly ↔ yearly switch that is confirmed by its own checkout at the period end), no form"
           },
           "400": {
-            "description": "VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule"
+            "description": "VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule; LEGAL_VERSION_OUTDATED: a subscription consent given to an older Terms version"
           },
           "404": {
             "description": "NOT_FOUND: the collection is not yours, unknown, or being deleted; a plan change without a paid plan"
@@ -2241,7 +2241,7 @@
             "description": ""
           },
           "400": {
-            "description": "VALIDATION_FAILED: no auto-renewal consent"
+            "description": "VALIDATION_FAILED: no auto-renewal consent; LEGAL_VERSION_OUTDATED: an older Terms version"
           },
           "404": {
             "description": "NOT_FOUND: the account has no paid plan"

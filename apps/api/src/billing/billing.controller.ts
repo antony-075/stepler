@@ -91,7 +91,8 @@ export class BillingController {
   })
   @ApiResponse({
     status: 400,
-    description: 'VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule',
+    description:
+      'VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule; LEGAL_VERSION_OUTDATED: a subscription consent given to an older Terms version',
   })
   @ApiResponse({
     status: 404,
@@ -239,7 +240,11 @@ export class BillingController {
   @Post('subscription/resume')
   @RateLimit('billing-checkout')
   @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
-  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: no auto-renewal consent' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED: no auto-renewal consent; LEGAL_VERSION_OUTDATED: an older Terms version',
+  })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
   @ApiResponse({
     status: 409,

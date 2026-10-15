@@ -6,6 +6,7 @@ import type {
   PlanExcess,
   SubscriptionDto,
 } from '@stepler/contracts';
+import { currentLegalVersion } from '@stepler/contracts';
 import { AuditService } from '../audit/audit.service.js';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { API_ENV } from '../config/config.module.js';
@@ -169,6 +170,7 @@ export class SubscriptionsService {
     requestId?: string,
   ): Promise<CheckoutResponse> {
     this.assertEnabled();
+    assertCurrentTerms(request.termsVersion);
     const now = new Date();
     const { paymentId, form } = await this.prisma.$transaction(async (tx) => {
       const user = await lockUser(tx, principal.userId);
@@ -209,6 +211,7 @@ export class SubscriptionsService {
     termsVersion: string,
     requestId?: string,
   ): Promise<CheckoutResponse> {
+    assertCurrentTerms(termsVersion);
     const live = await this.prisma.subscription.findFirst({
       where: { userId: principal.userId, source: 'LIQPAY', ...LIVE_SUBSCRIPTION },
       select: {
@@ -796,4 +799,14 @@ export async function lockUser(tx: Db, userId: string): Promise<FormUser> {
     FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
   if (user === undefined) throw new AppError('NOT_FOUND', 404);
   return user;
+}
+
+/**
+ * The auto-renewal consent is given to the Terms in force (plan Task 22): a form opened before
+ * a new version was published → `400 LEGAL_VERSION_OUTDATED` (the page reloads the version).
+ */
+function assertCurrentTerms(termsVersion: string): void {
+  if (termsVersion !== currentLegalVersion('TERMS').version) {
+    throw new AppError('LEGAL_VERSION_OUTDATED', 400);
+  }
 }

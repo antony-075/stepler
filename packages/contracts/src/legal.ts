@@ -30,19 +30,22 @@ export interface LegalDocumentVersion {
 
 /** Exactly one entry per document: its current version. */
 export const LEGAL_DOCUMENTS: readonly LegalDocumentVersion[] = [
-  // v2 (slice 9): in-app reports, the reporter's optional e-mail, the operator's moderation.
-  // Everyone accepts again (R8).
+  // v3 (billing M4, plan Task 22): payments, the trial, auto-renewal, cancellation, refunds by
+  // the operator, view-only mode, retention and deletion after the paid period. Material
+  // changes, so everyone accepts again ([Q7]). The effective date is a placeholder until the
+  // texts are final (they are drafts; production refuses to start on a draft).
+  // History: v1 (slice 7), v2 (slice 9: reports, moderation; 9b: appeals, quarantine).
   {
     document: 'TERMS',
-    version: 'v2',
-    effectiveDate: '2026-10-06',
+    version: 'v3',
+    effectiveDate: '2026-10-15',
     draft: true,
     requireReacceptance: true,
   },
   {
     document: 'PRIVACY',
-    version: 'v2',
-    effectiveDate: '2026-10-06',
+    version: 'v3',
+    effectiveDate: '2026-10-15',
     draft: true,
     requireReacceptance: true,
   },

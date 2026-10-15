@@ -139,6 +139,8 @@ services:
       # the legal texts with retention are published (warnings are sent either way).
       - key: READ_ONLY_RETENTION_MONTHS
         value: '12'
+      # Deletion after retention (ADR 0018 [P6]): the v3 Terms/Privacy describe it (M4); turn it
+      # on here only after the owner confirms the published texts. Warnings go out either way.
       - key: BILLING_RETENTION_DELETE_ENABLED
         value: 'false'
       # Payments (ADR 0018): reconciliation through LiqPay's status API; the same sandbox keys as

@@ -6,6 +6,7 @@ import {
   planChangePreviewSchema,
   subscriptionDtoSchema,
   usageResponseSchema,
+  currentLegalVersion,
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
@@ -32,6 +33,9 @@ import { testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { LiqPayStub } from './support/liqpay-stub.js';
 import { signInAs } from './support/sessions.js';
+
+/** The Terms the auto-renewal consent is given to: the current version (plan Task 22). */
+const TERMS = currentLegalVersion('TERMS').version;
 
 // Cancel, resume, upgrade with proration, scheduled downgrade and the monthly ↔ yearly switch
 // (ADR 0018 [P10], [P11], [Q6], plan Task 17, Review Focus 3). The real `LiqPayProvider`
@@ -91,7 +95,7 @@ async function subscriber(
       kind: 'SUBSCRIPTION',
       priceId: prices[code].MONTH,
       autoRenewConsent: true,
-      termsVersion: 'v2',
+      termsVersion: TERMS,
     })
     .expect(201);
   const start = await prisma.payment.findUniqueOrThrow({
@@ -203,10 +207,10 @@ describe('cancel', () => {
   test('resume: a new checkout at the same price; the new period starts at the old end', async () => {
     const s = await subscriber();
     await s.call('post', '/subscription/cancel').expect(200);
-    await s.call('post', '/subscription/resume').send({ termsVersion: 'v2' }).expect(400);
+    await s.call('post', '/subscription/resume').send({ termsVersion: TERMS }).expect(400);
     const res = await s
       .call('post', '/subscription/resume')
-      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .send({ autoRenewConsent: true, termsVersion: TERMS })
       .expect(201);
     const body = checkoutResponseSchema.parse(res.body);
     const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.paymentId ?? '' } });
@@ -230,7 +234,7 @@ describe('cancel', () => {
     });
     const res = await s
       .call('post', '/subscription/resume')
-      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .send({ autoRenewConsent: true, termsVersion: TERMS })
       .expect(201);
     expect(calls('unsubscribe')).toEqual([{ action: 'unsubscribe', orderId: s.start.id }]);
     const body = checkoutResponseSchema.parse(res.body);
@@ -252,7 +256,7 @@ describe('cancel', () => {
     stub.answers.set(`unsubscribe:${s.start.id}`, 'down');
     await s
       .call('post', '/subscription/resume')
-      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .send({ autoRenewConsent: true, termsVersion: TERMS })
       .expect(503);
     expect(await prisma.payment.count({ where: { userId: s.userId, kind: 'SUBSCRIPTION' } })).toBe(
       1,
@@ -264,7 +268,7 @@ describe('cancel', () => {
     const s = await subscriber();
     const res = await s
       .call('post', '/subscription/resume')
-      .send({ autoRenewConsent: true, termsVersion: 'v2' })
+      .send({ autoRenewConsent: true, termsVersion: TERMS })
       .expect(409);
     expect(res.body).toMatchObject({ code: 'SUBSCRIPTION_EXISTS' });
   });
@@ -505,7 +509,7 @@ describe('monthly ↔ yearly (owner decision B14)', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].YEAR,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(201);
     const body = checkoutResponseSchema.parse(res.body);

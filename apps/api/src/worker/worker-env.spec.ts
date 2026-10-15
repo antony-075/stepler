@@ -89,4 +89,21 @@ describe('loadWorkerEnv', () => {
       /LIQPAY_PUBLIC_KEY/,
     );
   });
+
+  test('live keys in production need a fiscal mode or the deliberate waiver, as the API [P14]', () => {
+    const live = {
+      ...valid,
+      BILLING_PROVIDER: 'liqpay',
+      LIQPAY_PUBLIC_KEY: 'i12345678',
+      LIQPAY_PRIVATE_KEY: 'live-private-key',
+    };
+    expect(() => loadWorkerEnv(live)).toThrow(/BILLING_FISCAL_MODE/);
+    expect(loadWorkerEnv({ ...live, BILLING_FISCAL_WAIVED: 'true' }).BILLING_FISCAL_WAIVED).toBe(
+      true,
+    );
+    expect(
+      loadWorkerEnv({ ...live, LIQPAY_PUBLIC_KEY: 'sandbox_i1', BILLING_FISCAL_MODE: 'none' })
+        .BILLING_PROVIDER,
+    ).toBe('liqpay');
+  });
 });

@@ -1,6 +1,11 @@
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import { checkoutResponseSchema, paymentDtoSchema, usageResponseSchema } from '@stepler/contracts';
+import {
+  checkoutResponseSchema,
+  paymentDtoSchema,
+  usageResponseSchema,
+  currentLegalVersion,
+} from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { addInterval } from '../src/billing/domain/periods.js';
@@ -28,6 +33,9 @@ import { testEnv } from './support/env.js';
 import { ORIGIN } from './support/guests.js';
 import { LiqPayStub } from './support/liqpay-stub.js';
 import { signInAs } from './support/sessions.js';
+
+/** The Terms the auto-renewal consent is given to: the current version (plan Task 22). */
+const TERMS = currentLegalVersion('TERMS').version;
 
 // The subscription clocks of the reconcile job (ADR 0018 [P12], plan Task 16, Review Focus 5):
 // a missed renewal callback, grace, expiry, a provider outage and a paused worker. The real
@@ -87,7 +95,7 @@ async function lapsed(endedAgoMs: number) {
       kind: 'SUBSCRIPTION',
       priceId: prices['sub-pro'].MONTH,
       autoRenewConsent: true,
-      termsVersion: 'v2',
+      termsVersion: TERMS,
     })
     .expect(201);
   const start = await prisma.payment.findUniqueOrThrow({
@@ -338,7 +346,7 @@ describe('a lost `subscribe` callback', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-business'].YEAR,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(201);
     const { paymentId } = checkoutResponseSchema.parse(res.body);

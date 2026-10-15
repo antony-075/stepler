@@ -204,6 +204,65 @@ describe('warnings and deletion', () => {
   });
 });
 
+// Plan Task 22: with the switch on (after the v3 texts describe retention), one clock run per
+// day takes a read-only collection the whole way: scheduled, both warnings once, deleted.
+describe('the whole path with deletion switched on', () => {
+  const on = { BILLING_RETENTION_DELETE_ENABLED: 'true' };
+
+  async function daily(from: Date, to: Date) {
+    const totals = { scheduled: 0, warned30: 0, warned7: 0, deleted: 0 };
+    for (let t = from.getTime(); t <= to.getTime(); t += DAY_MS) {
+      const run = await clock(on).run(new Date(t));
+      totals.scheduled += run.scheduled;
+      totals.warned30 += run.warned30;
+      totals.warned7 += run.warned7;
+      totals.deleted += run.deleted;
+    }
+    return totals;
+  }
+
+  test('an ended trial: 12 months, warnings at 30 and 7 days, then the purge', async () => {
+    const olena = await owner();
+    const c = await collection(olena.id);
+    const deleteAfter = at('2028-06-01T10:00:00Z');
+    expect(await daily(now, at('2028-04-01T09:00:00Z'))).toEqual({
+      scheduled: 1,
+      warned30: 0,
+      warned7: 0,
+      deleted: 0,
+    });
+    expect((await reload(c.id)).deleteAfter).toEqual(deleteAfter);
+    const totals = await daily(at('2028-04-02T09:00:00Z'), at('2028-06-03T09:00:00Z'));
+    expect(totals).toEqual({ scheduled: 0, warned30: 1, warned7: 1, deleted: 1 });
+    const reloaded = await reload(c.id);
+    expect(reloaded.status).toBe('DELETING');
+    // Each warning went out on its day, and deletion came no sooner than 7 days after the last.
+    expect(reloaded.deletionWarnedAt30?.toISOString()).toBe('2028-05-03T09:00:00.000Z');
+    expect(reloaded.deletionWarnedAt7?.toISOString()).toBe('2028-05-26T09:00:00.000Z');
+    const warnings = await queuedJobs(prisma, 'mail.billing-deletion-warning');
+    expect(warnings.map((job) => (job.data as { days: number }).days).sort()).toEqual([30, 7]);
+    expect(await queuedJobs(prisma, 'collection.purge')).toHaveLength(1);
+  });
+
+  test('access bought before the date lifts the deletion and its warnings', async () => {
+    const olena = await owner();
+    const c = await collection(olena.id);
+    await daily(now, now);
+    await daily(at('2028-05-03T09:00:00Z'), at('2028-05-03T09:00:00Z'));
+    expect((await reload(c.id)).deletionWarnedAt30).not.toBeNull();
+    await grantTestPlan(prisma, olena.id);
+    expect(await daily(at('2028-05-04T09:00:00Z'), at('2028-06-10T09:00:00Z'))).toMatchObject({
+      deleted: 0,
+    });
+    expect(await reload(c.id)).toMatchObject({
+      status: 'ACTIVE',
+      deleteAfter: null,
+      deletionWarnedAt30: null,
+      deletionWarnedAt7: null,
+    });
+  });
+});
+
 describe('mails', () => {
   function mailer() {
     const m = new SmtpMailer(env);

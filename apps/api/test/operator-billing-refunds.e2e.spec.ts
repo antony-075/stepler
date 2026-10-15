@@ -9,6 +9,7 @@ import {
   operatorSubscriptionRefreshSchema,
   operatorSubscriptionSchema,
   refundDtoSchema,
+  currentLegalVersion,
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
@@ -31,6 +32,9 @@ import { testEnv } from './support/env.js';
 import { ORIGIN, seedCollection } from './support/guests.js';
 import { LiqPayStub } from './support/liqpay-stub.js';
 import { signInAs } from './support/sessions.js';
+
+/** The Terms the auto-renewal consent is given to: the current version (plan Task 22). */
+const TERMS = currentLegalVersion('TERMS').version;
 
 // Payments, subscriptions and manual refunds in the operator console (ADR 0018, plan Task 21,
 // owner decision B11): money never leaves twice, a refund never ends what was bought by itself,
@@ -328,7 +332,7 @@ describe('subscriptions in the console', () => {
         kind: 'SUBSCRIPTION',
         priceId: prices['sub-pro'].MONTH,
         autoRenewConsent: true,
-        termsVersion: 'v2',
+        termsVersion: TERMS,
       })
       .expect(201);
     const start = await prisma.payment.findUniqueOrThrow({
