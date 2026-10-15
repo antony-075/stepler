@@ -17,7 +17,9 @@ export class OpsApiError extends Error {
 }
 
 interface OpsRequestInit<T> {
-  method?: 'GET' | 'POST' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
+  /** Extra request headers (e.g. `Idempotency-Key` on a refund). */
+  headers?: Record<string, string>;
   /** Serialized as JSON. */
   body?: unknown;
   /** Validates the success body; omit for 204 responses. */
@@ -30,7 +32,7 @@ export async function opsRequest<T = undefined>(
   path: `/operator/${string}`,
   init: OpsRequestInit<T> = {},
 ): Promise<T> {
-  const { body, schema, method = 'GET', signal } = init;
+  const { body, schema, method = 'GET', signal, headers = {} } = init;
   let res: Response;
   try {
     res = await fetch(`/api/v1${path}`, {
@@ -38,8 +40,11 @@ export async function opsRequest<T = undefined>(
       credentials: 'same-origin',
       ...(signal === undefined ? {} : { signal }),
       ...(body === undefined
-        ? {}
-        : { body: JSON.stringify(body), headers: { 'content-type': 'application/json' } }),
+        ? { headers }
+        : {
+            body: JSON.stringify(body),
+            headers: { ...headers, 'content-type': 'application/json' },
+          }),
     });
   } catch (error) {
     if (signal?.aborted) throw error;

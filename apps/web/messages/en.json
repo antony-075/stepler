@@ -1542,13 +1542,55 @@
         "description": "The plan ends now. If the trial is over, the account's collections become view-only.",
         "confirm": "Revoke",
         "done": "Plan revoked"
+      },
+      "offerSave": {
+        "title": "Save the offer",
+        "description": "Changes apply to new purchases. What was bought does not change.",
+        "confirm": "Save",
+        "done": "Changes saved"
+      },
+      "offerCreate": {
+        "title": "Create the offer",
+        "description": "The offer starts without a price and off sale.",
+        "confirm": "Create",
+        "done": "Offer created"
+      },
+      "offerActivate": {
+        "title": "Start selling",
+        "description": "The offer appears on the pricing page if it has a price.",
+        "confirm": "Start selling",
+        "done": "On sale"
+      },
+      "offerDeactivate": {
+        "title": "Take off sale",
+        "description": "The offer leaves the pricing page and cannot be paid for. Earlier purchases keep working.",
+        "confirm": "Take off sale",
+        "done": "Taken off sale"
+      },
+      "priceSet": {
+        "title": "Change the price",
+        "description": "The new price applies to new purchases. Running subscriptions pay the price they started with.",
+        "confirm": "Change the price",
+        "done": "Price changed"
+      },
+      "subscriptionEnd": {
+        "title": "End the subscription now",
+        "description": "LiqPay stops charging and the account becomes view-only at once. Nothing is refunded automatically.",
+        "confirm": "End",
+        "done": "Subscription ended"
+      },
+      "packEnd": {
+        "title": "End the pack now",
+        "description": "Collecting and keeping end now: the collection becomes view-only and its content is deleted after warnings to the owner.",
+        "confirm": "End the pack",
+        "done": "Pack ended"
       }
     },
     "nav": {
       "label": "Console sections",
       "reports": "Guest reports",
       "appeals": "Admin appeals",
-      "billing": "Account plans"
+      "billing": "Billing"
     },
     "appeals": {
       "title": "Admin appeals",
@@ -1642,6 +1684,286 @@
       "grant": "Grant plan",
       "replace": "Replace plan",
       "planLine": "{what} {when}"
+    },
+    "billingNav": {
+      "label": "Billing sections",
+      "payments": "Payments",
+      "subscriptions": "Subscriptions",
+      "offers": "Plans and prices",
+      "grants": "Free plans"
+    },
+    "payments": {
+      "title": "Payments",
+      "intro": "Every card payment through LiqPay, newest first. See what needs attention and refund from here.",
+      "filters": {
+        "label": "Payment filters",
+        "status": "Status",
+        "all": "All",
+        "email": "Account e-mail",
+        "needsReview": "Needs review",
+        "mismatch": "LiqPay reported another amount",
+        "apply": "Show",
+        "reset": "Reset"
+      },
+      "columns": {
+        "date": "Date",
+        "account": "Account",
+        "what": "Bought",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "kinds": {
+        "PACK": "Pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "Subscription",
+        "SUBSCRIPTION_RENEWAL": "Subscription renewal",
+        "SUBSCRIPTION_CHANGE": "Plan change charge"
+      },
+      "statuses": {
+        "PENDING": "Awaiting payment",
+        "SUCCEEDED": "Paid",
+        "FAILED": "Failed",
+        "EXPIRED": "Not paid in time",
+        "REVERSED": "Reversed by the bank",
+        "REFUNDED": "Refunded",
+        "PARTIALLY_REFUNDED": "Partly refunded"
+      },
+      "flags": {
+        "needsReview": "Review",
+        "mismatch": "Other amount"
+      },
+      "refunded": "{amount} refunded",
+      "empty": "No payments yet.",
+      "emptyFiltered": "No payments match these filters.",
+      "failed": "Could not load payments. Try again.",
+      "more": "Show more",
+      "loadingMore": "Loading…",
+      "what": "{kind} «{title}»"
+    },
+    "payment": {
+      "back": "Back to payments",
+      "title": "Payment of {amount}",
+      "account": "Account",
+      "what": "Bought",
+      "status": "Status",
+      "createdAt": "Created",
+      "paidAt": "Paid",
+      "orderId": "LiqPay order number",
+      "collection": "Collection",
+      "errCode": "Decline code",
+      "notPaid": "not paid",
+      "needsReview": "Money was taken but the purchase could not be applied as usual (for example, a second pack for the same collection). Check it and refund if needed.",
+      "mismatch": "LiqPay reported another amount or currency, so nothing was granted. Compare the payment in the LiqPay cabinet.",
+      "refundsTitle": "Refunds",
+      "noRefunds": "No refunds yet.",
+      "refundStatuses": {
+        "PENDING": "Waiting for LiqPay",
+        "SUCCEEDED": "Refunded",
+        "FAILED": "Failed"
+      },
+      "refundable": "{amount} can still be refunded.",
+      "nothingRefundable": "Nothing to refund: the payment was not paid or is fully refunded.",
+      "refundButton": "Refund",
+      "afterRefund": "A refund does not cancel the purchase. If access should stop, end it separately.",
+      "endPackButton": "End the pack",
+      "subscriptionLink": "This account’s subscriptions",
+      "eventsTitle": "Messages from LiqPay",
+      "noEvents": "LiqPay sent no messages about this payment; its state was checked through a status request.",
+      "eventOutcomes": {
+        "applied": "applied",
+        "noop": "no change",
+        "mismatch": "other amount",
+        "review": "for review",
+        "unknown_order": "unknown order"
+      },
+      "eventPending": "not processed yet",
+      "notFound": "There is no such payment.",
+      "failed": "Could not load the payment. Try again."
+    },
+    "refund": {
+      "title": "Refund",
+      "description": "LiqPay returns the money to the card that paid. The purchase stays in force until you end it separately.",
+      "amount": "Amount, UAH",
+      "amountHelp": "At most {max}",
+      "amountError": "Enter an amount from 0.01 to {max}",
+      "willReturn": "{amount} will be returned to the buyer’s card.",
+      "confirm": "Refund",
+      "pending": "Refunding…",
+      "done": "Refunded",
+      "sent": "Request sent; LiqPay has not answered yet. The status updates by itself.",
+      "refused": "LiqPay refused the refund. Try later or refund in the LiqPay cabinet.",
+      "exceeds": "That is more than can still be refunded. Reload the page.",
+      "unavailable": "LiqPay is unavailable right now. Try again in a few minutes.",
+      "confirmAmount": "Refund {amount}"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "intro": "Paid subscriptions and free plans, newest first. «Check with LiqPay» picks up charges LiqPay did not report.",
+      "filters": {
+        "label": "Subscription filters",
+        "status": "Status",
+        "all": "All",
+        "source": "Type",
+        "email": "Account e-mail",
+        "needsCheck": "Only those that need a check",
+        "apply": "Show",
+        "reset": "Reset"
+      },
+      "sources": {
+        "LIQPAY": "Paid",
+        "COMPLIMENTARY": "Free"
+      },
+      "statuses": {
+        "PENDING": "Awaiting payment",
+        "ACTIVE": "Active",
+        "PAST_DUE": "Grace period",
+        "CANCELED": "Cancelled",
+        "EXPIRED": "Ended"
+      },
+      "columns": {
+        "account": "Account",
+        "plan": "Plan",
+        "status": "Status",
+        "period": "Paid until",
+        "checked": "Checked with LiqPay"
+      },
+      "intervals": {
+        "MONTH": "monthly",
+        "YEAR": "yearly",
+        "ONE_TIME": "once"
+      },
+      "planLine": "{title}, {price} {interval}",
+      "planFree": "{title}, free",
+      "noEnd": "no end",
+      "never": "not checked yet",
+      "checkedOk": "{date}",
+      "checkedFailed": "{date}, no answer",
+      "needsCheck": "Needs a check",
+      "needsCheckSince": "LiqPay has not confirmed the renewal since {date}. Access is kept.",
+      "stopped": "LiqPay no longer charges",
+      "refresh": "Check with LiqPay",
+      "refreshing": "Checking…",
+      "end": "End now",
+      "refreshResult": {
+        "RENEWED": "A charge for the new period was found; the subscription was renewed.",
+        "FAILED": "The charge failed; the subscription is in its grace period.",
+        "NONE": "LiqPay shows no charge for the period.",
+        "UNAVAILABLE": "LiqPay did not return its payment archive. Access is kept; try later.",
+        "NOT_EXPECTED": "LiqPay: «{status}». No new charges are expected now."
+      },
+      "unknownOrder": "LiqPay does not know this order: it was never paid.",
+      "refreshFailed": "LiqPay did not answer. Try again in a few minutes.",
+      "empty": "No subscriptions yet.",
+      "emptyFiltered": "No subscriptions match these filters.",
+      "failed": "Could not load subscriptions. Try again.",
+      "more": "Show more",
+      "periodLine": "Paid until: {date}",
+      "checkedLine": "Checked with LiqPay: {value}"
+    },
+    "offers": {
+      "title": "Plans and prices",
+      "intro": "Limits and prices for new purchases. What was bought never changes: each purchase keeps the terms it was paid at.",
+      "create": "New offer",
+      "back": "Back to plans and prices",
+      "kinds": {
+        "TRIAL": "Trial",
+        "PACK": "Packs",
+        "PACK_EXTENSION": "Pack extensions",
+        "SUBSCRIPTION": "Subscriptions"
+      },
+      "kindOne": {
+        "PACK": "Pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "Subscription"
+      },
+      "extensions": {
+        "WINDOW": "Longer collecting",
+        "RETENTION": "Longer keeping",
+        "STORAGE": "More storage"
+      },
+      "onSale": "On sale",
+      "offSale": "Not on sale",
+      "highlighted": "Most popular",
+      "noPrice": "no price",
+      "storageDifference": "difference between pack prices",
+      "trialFree": "free",
+      "intervals": {
+        "ONE_TIME": "once",
+        "MONTH": "per month",
+        "YEAR": "per year"
+      },
+      "priceLine": "{amount} {interval}",
+      "columns": {
+        "offer": "Offer",
+        "limits": "Limits",
+        "prices": "Prices",
+        "status": "Sale"
+      },
+      "limits": {
+        "collections": "{count, plural, one {# collection} other {# collections}}",
+        "storage": "{size} per account",
+        "collectionStorage": "{size} per collection",
+        "links": "{count, plural, one {# link} other {# links}}",
+        "window": "collecting {count, plural, one {# day} other {# days}}",
+        "retention": "keeping {count, plural, one {# day} other {# days}}",
+        "duration": "{count, plural, one {# day} other {# days}}"
+      },
+      "failed": "Could not load plans. Try again.",
+      "notFound": "There is no such offer.",
+      "editTitle": "«{title}»",
+      "newTitle": "New offer",
+      "form": {
+        "code": "Code",
+        "codeHelp": "Latin letters, digits and hyphens. It never changes after creation.",
+        "codeError": "2 to 40 characters: a–z, 0–9 and hyphens, starting with a letter or digit",
+        "kind": "Type",
+        "extension": "What it extends",
+        "titleUk": "Title in Ukrainian",
+        "titleEn": "Title in English",
+        "titleError": "1 to 80 characters",
+        "descriptionUk": "Description in Ukrainian",
+        "descriptionEn": "Description in English",
+        "descriptionHelp": "Optional, up to 500 characters",
+        "rank": "Order in the list",
+        "rankHelp": "A smaller number comes first",
+        "highlight": "Mark as «Most popular» on the pricing page",
+        "limitsTitle": "Limits",
+        "limitsHelp": "An empty field means this type of offer has no such limit.",
+        "activeCollections": "Active collections",
+        "storage": "Account storage, GB",
+        "collectionStorage": "Storage per collection, GB",
+        "guestLinks": "Guest links per collection",
+        "windowDays": "Collecting, days",
+        "retentionDays": "Keeping, days",
+        "durationDays": "Length, days",
+        "rroItemId": "Item code for fiscal receipts",
+        "rroHelp": "From the LiqPay cabinet (РРО → Каса → Товари). Needed only when receipts are on.",
+        "numberError": "A whole number or empty",
+        "gbError": "GB, at most one decimal, or empty",
+        "save": "Save changes",
+        "createButton": "Create",
+        "shapeError": "This type of offer needs other limits. Check the empty fields.",
+        "codeTaken": "An offer with this code exists.",
+        "trialNote": "Trial limits apply at once to everyone on a trial now.",
+        "createdNote": "A new offer is created without a price and off sale. Add a price and start the sale on its page.",
+        "title": "Description and limits"
+      },
+      "pricesTitle": "Prices",
+      "pricesHelp": "A new price applies to new purchases. The previous one stays in the payment history.",
+      "priceField": "Price {interval}, UAH",
+      "priceCurrent": "Now {amount}",
+      "priceNone": "No price yet",
+      "priceError": "An amount from 0.01, at most two decimals",
+      "setPrice": "Save price",
+      "noPricesForTrial": "The trial is free.",
+      "noPricesForStorage": "More storage costs the difference between pack prices.",
+      "saleTitle": "Sale",
+      "saleOn": "The offer is on sale.",
+      "saleOff": "The offer is not on sale: it is not on the pricing page and cannot be paid for.",
+      "saleNoPrice": "Without a price buyers do not see the offer even when it is on sale.",
+      "trialAlwaysOn": "The trial cannot be taken off sale: every new account gets it.",
+      "activate": "Start selling",
+      "deactivate": "Take off sale"
     }
   },
   "notFound": {

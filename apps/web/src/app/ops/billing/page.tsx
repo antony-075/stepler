@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-/** The billing section opens on its one screen in M1: complimentary plans. */
+/** The billing section opens on its payments. */
 export default function OpsBillingPage() {
-  redirect('/ops/billing/grants');
+  redirect('/ops/billing/payments');
 }

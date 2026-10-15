@@ -6,7 +6,9 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
+  Put,
   Query,
   Res,
   UseGuards,
@@ -24,8 +26,16 @@ import {
   type OperatorBillingAccountQuery,
   operatorBillingIdParamsSchema,
   operatorCollectionIdParamsSchema,
+  type OfferCreate,
+  offerCreateSchema,
+  type OfferUpsert,
+  offerUpsertSchema,
+  type OperatorOffer,
   type OperatorOfferList,
   operatorOfferListSchema,
+  operatorOfferSchema,
+  type PriceSet,
+  priceSetSchema,
   type OperatorPaymentDetail,
   operatorPaymentDetailSchema,
   type OperatorPaymentList,
@@ -49,6 +59,7 @@ import {
 } from '@stepler/contracts';
 import type { OperatorPrincipal } from '../auth/principal.js';
 import { GrantsService } from '../billing/grants.service.js';
+import { OffersService } from '../billing/offers.service.js';
 import { OperatorBillingService } from '../billing/operator-billing.service.js';
 import { RefundsService } from '../billing/refunds.service.js';
 import { parseIdempotencyKey } from '../common/idempotency-key.js';
@@ -77,6 +88,7 @@ export class OperatorBillingController {
     private readonly grants: GrantsService,
     private readonly billing: OperatorBillingService,
     private readonly refunds: RefundsService,
+    private readonly offerEditor: OffersService,
   ) {}
 
   @Get('accounts')
@@ -97,6 +109,96 @@ export class OperatorBillingController {
   @ApiResponse(NOT_OPERATOR)
   offers(): Promise<OperatorOfferList> {
     return this.grants.offers();
+  }
+
+  // ── offers and prices (plan Task 20) ─────────────────────────────────────────────────────
+
+  @Post('offers')
+  @ApiResponse({
+    status: 201,
+    standardSchema: operatorOfferSchema,
+    description: 'Created off sale',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED: a bad field, a code in use, or limits the kind does not allow (BillingOffer_kind_shape)',
+  })
+  @ApiResponse(NOT_OPERATOR)
+  createOffer(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Body({ schema: offerCreateSchema }) body: OfferCreate,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.create(op, body, requestId);
+  }
+
+  @Patch('offers/:id')
+  @ApiResponse({ status: 200, standardSchema: operatorOfferSchema })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_FAILED: a bad field, or limits the kind does not allow',
+  })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no such offer, or not an operator' })
+  updateOffer(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: operatorBillingIdParamsSchema }) params: { id: string },
+    @Body({ schema: offerUpsertSchema }) body: OfferUpsert,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.update(op, params.id, body, requestId);
+  }
+
+  @Post('offers/:id/activate')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: operatorOfferSchema })
+  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: a 1–500 reason is required' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no such offer, or not an operator' })
+  activateOffer(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: operatorBillingIdParamsSchema }) params: { id: string },
+    @Body({ schema: operatorActionRequestSchema }) body: OperatorActionRequest,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.setActive(op, params.id, true, body.reason, requestId);
+  }
+
+  @Post('offers/:id/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: operatorOfferSchema })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_FAILED: no reason, or the trial offer (it cannot be switched off)',
+  })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no such offer, or not an operator' })
+  deactivateOffer(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: operatorBillingIdParamsSchema }) params: { id: string },
+    @Body({ schema: operatorActionRequestSchema }) body: OperatorActionRequest,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.setActive(op, params.id, false, body.reason, requestId);
+  }
+
+  @Put('offers/:id/prices')
+  @ApiResponse({
+    status: 200,
+    standardSchema: operatorOfferSchema,
+    description: 'The slot’s new live price; the old row stays (inactive) for history',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED: an amount out of range, no reason, or a period the offer is not sold in',
+  })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no such offer, or not an operator' })
+  setPrice(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: operatorBillingIdParamsSchema }) params: { id: string },
+    @Body({ schema: priceSetSchema }) body: PriceSet,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.setPrice(op, params.id, body, requestId);
   }
 
   @Post('grants')

@@ -3,6 +3,7 @@ import { EntitlementGate } from './entitlement-gate.js';
 import { EntitlementResolver } from './entitlement-resolver.js';
 import { FISCAL_RECEIPTS } from './fiscal/fiscal-receipts.js';
 import { GrantsService } from './grants.service.js';
+import { OffersService } from './offers.service.js';
 import { PAYMENT_PROVIDER } from './provider/payment-provider.js';
 import { PAYMENT_PROVIDERS } from './provider/provider-factory.js';
 
@@ -14,7 +15,20 @@ import { PAYMENT_PROVIDERS } from './provider/provider-factory.js';
  */
 @Global()
 @Module({
-  providers: [EntitlementResolver, EntitlementGate, GrantsService, ...PAYMENT_PROVIDERS],
-  exports: [EntitlementResolver, EntitlementGate, GrantsService, PAYMENT_PROVIDER, FISCAL_RECEIPTS],
+  providers: [
+    EntitlementResolver,
+    EntitlementGate,
+    GrantsService,
+    OffersService,
+    ...PAYMENT_PROVIDERS,
+  ],
+  exports: [
+    EntitlementResolver,
+    EntitlementGate,
+    GrantsService,
+    OffersService,
+    PAYMENT_PROVIDER,
+    FISCAL_RECEIPTS,
+  ],
 })
 export class BillingModule {}

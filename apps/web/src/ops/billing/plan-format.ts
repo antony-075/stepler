@@ -41,3 +41,13 @@ export function endOfKyivDay(day: string): Date | null {
       : (parsed[1] === '-' ? -1 : 1) * (Number(parsed[2]) * 60 + Number(parsed[3]));
   return new Date(nextMidnightUtc - minutes * 60_000);
 }
+
+type CurrencyFormatter = (
+  value: number,
+  options: { style: 'currency'; currency: string },
+) => string;
+
+/** Integer minor units as money («1 200,00 ₴»); `format` is `useFormatter().number`. */
+export function formatMinor(format: CurrencyFormatter, minor: number, currency: string): string {
+  return format(minor / 100, { style: 'currency', currency });
+}
