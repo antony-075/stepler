@@ -3,7 +3,9 @@
 // replaced, the product's `LiqPayProvider` runs unchanged (rule 18). It checks the request's
 // signature like LiqPay does and answers `status` from what a journey set through
 // `POST /__control/status`; `unsubscribe` and `subscribe_update` answer as the sandbox did in
-// spike S1b (`unsubscribed`; `subscribed` with the new amount, nothing charged). Run by Playwright as a web server: `node support/liqpay-stub.ts`
+// spike S1b (`unsubscribed`; `subscribed` with the new amount, nothing charged); `refund` answers
+// `reversed` as the sandbox did on 2026-10-15; `reports` (the payments archive) lists nothing.
+// Run by Playwright as a web server: `node support/liqpay-stub.ts`
 // (Node strips the types), so it imports nothing but Node built-ins.
 import { createHash } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -57,6 +59,14 @@ const server = createServer((req, res) => {
         const fields = { action: 'unsubscribe', status: 'unsubscribed', version: 7 };
         answers.set(params.order_id, { ...answers.get(params.order_id), ...fields });
         return json(res, 200, { result: 'ok', order_id: params.order_id, ...fields });
+      }
+      if (params.action === 'refund') {
+        // As the sandbox answered on 2026-10-15: `reversed` at once, full or partial.
+        return json(res, 200, { result: 'ok', status: 'reversed', wait_amount: false });
+      }
+      if (params.action === 'reports') {
+        // The payments archive (M4): no charges unless a journey's callbacks said otherwise.
+        return json(res, 200, { result: 'success', data: [] });
       }
       if (params.action === 'subscribe_update') {
         const fields = {

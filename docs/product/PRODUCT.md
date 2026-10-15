@@ -562,47 +562,15 @@ Payment is not required to validate the basic collection workflow unless the lau
 
 # 22. Monetization
 
-The product is intended to be monetizable.
+*History:* this section used to hold the monetization hypothesis (a paid collection with a content allowance, plan-based limits, future subscriptions; Stripe, LiqPay, mono and wallets as candidates). The owner decided the model on 2026-10-07 (B1–B12) and 2026-10-08 (B14).
 
-Possible model:
-
-- paid collection;
-- storage/content quota;
-- plan-based limits;
-- future subscriptions.
-
-Earlier concept:
-
-Charge for a collection/content capacity rather than simply selling generic storage.
-
-Example concept:
-
-> User pays a fixed amount for a collection with a defined content allowance.
-
-This is a product hypothesis, not an MVP pricing decision.
-
-Payment providers discussed as candidates:
-- Stripe;
-- LiqPay;
-- mono/MonoPay;
-- Apple Pay / Google Pay through supported payment flows.
-
-Provider selection, fees and integration architecture must be verified before implementation.
+**Implemented model** (billing M1–M4): a 7-day trial without a card; one-time **collection packs** (storage, a collecting window and a keeping period, with extensions) and account-level **subscriptions** (monthly or yearly, auto-renewal) paid by card through LiqPay; read-only after an unpaid end, content kept 12 months (a pack: its own keeping period), then deleted after e-mail warnings; plans and prices edited by the operator in `/ops`; manual refunds by the operator. Decision, alternatives and verified provider behaviour: ADR 0018. Operations: `docs/deployment/billing.md`.
 
 ---
 
 # 23. MVP monetization decision
 
-Do not let payment complexity block the technical MVP unless monetization is explicitly part of the first launch.
-
-The architecture must leave room for:
-- entitlements;
-- quotas;
-- payments;
-- refunds;
-- provider webhooks.
-
-But avoid building a full billing platform prematurely.
+Superseded on 2026-10-07: payments are part of the first paid launch (owner decisions B1–B12, [Q5]); see §22 and ADR 0018.
 
 ---
 

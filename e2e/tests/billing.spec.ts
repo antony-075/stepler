@@ -60,7 +60,10 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   // The operator grants a free plan in /ops.
   const operator = await browser.newPage({ locale: 'de-DE' });
   await signInAsOperator(operator, testInfo);
-  await operator.getByRole('link', { name: 'Тарифи акаунтів' }).click();
+  await operator.getByRole('link', { name: 'Оплати' }).click();
+  await expect(operator).toHaveURL(/\/ops\/billing\/payments$/);
+  await operator.getByRole('link', { name: 'Безкоштовні тарифи' }).click();
+  await expect(operator).toHaveURL(/\/ops\/billing\/grants$/);
   await operator.getByLabel('Електронна пошта акаунта').fill(email);
   await operator.getByRole('button', { name: 'Знайти' }).click();
   await expect(operator.getByRole('heading', { name: email })).toBeVisible();

@@ -634,9 +634,9 @@ INDEX (processedAt) WHERE processedAt IS NULL AND verified
 - No `DELETE` route exists.
 - TODO (billing page v4): `highlighted` (the «Найпопулярніший» tag on «Тарифи» and /pricing; seeded true for Business) becomes editable here — a checkbox on the offer form.
 
-- [ ] **Step 1: Write the failing tests:** changing «Старт» storage from 10 to 20 GiB leaves an existing `CollectionPack.storageBytes` at 10 GiB and a pending payment's `offerSnapshot` unchanged; a new checkout snapshots 20; setting a price creates a new row and keeps the old one inactive; a `TRIAL` offer edit changes the trial limits of live trials (documented: the trial is not a purchase); deactivated offers vanish from `GET /billing/offers` and their checkout → `409 OFFER_UNAVAILABLE`; a PACK without `windowDays` → `400` (DB CHECK mapped to `VALIDATION_FAILED`); non-operator → `404`.
-- [ ] **Step 2–4:** FAIL → implement (editor: a table of offers; a detail form with limits in GB shown/entered as GB and stored as bytes; prices as «грн» with two decimals converted to minor units by one helper; reason dialog) → PASS; design pass + screenshots (desktop-first, usable at 360).
-- [ ] **Step 5: Commit** `feat(ops): billing offers and prices editor`.
+- [x] **Step 1: Write the failing tests:** changing «Старт» storage from 10 to 20 GiB leaves an existing `CollectionPack.storageBytes` at 10 GiB and a pending payment's `offerSnapshot` unchanged; a new checkout snapshots 20; setting a price creates a new row and keeps the old one inactive; a `TRIAL` offer edit changes the trial limits of live trials (documented: the trial is not a purchase); deactivated offers vanish from `GET /billing/offers` and their checkout → `409 OFFER_UNAVAILABLE`; a PACK without `windowDays` → `400` (DB CHECK mapped to `VALIDATION_FAILED`); non-operator → `404`.
+- [x] **Step 2–4:** FAIL → implement (editor: a table of offers; a detail form with limits in GB shown/entered as GB and stored as bytes; prices as «грн» with two decimals converted to minor units by one helper; reason dialog) → PASS; design pass + screenshots (desktop-first, usable at 360).
+- [x] **Step 5: Commit** `feat(ops): billing offers and prices editor`.
 
 ### Task 21: Payments, subscriptions and refunds in `/ops`
 
@@ -656,9 +656,9 @@ UNIQUE (paymentId, idempotencyKey)
 - **A refund does not revoke the entitlement by itself** ([Q4] default); the operator revokes a pack or cancels a subscription separately (`POST /operator/billing/subscriptions/:id/cancel-now` → `unsubscribe` + `EXPIRED` now; `POST /operator/billing/packs/:collectionId/end` → `retentionEndsAt = windowEndsAt = now`), each with a reason and audit.
 - `GET /operator/billing/payments?status=&email=&needsReview=&mismatch=&cursor=`, `GET /operator/billing/payments/:id` (payment, events' safe payloads, refunds, the account e-mail), `GET /operator/billing/subscriptions?status=&cursor=`.
 
-- [ ] **Step 1: Write the failing tests:** partial refund 30000 of 120000 → `PARTIALLY_REFUNDED`, `refundedMinor = 30000`; a second refund of 100000 → `409 REFUND_EXCEEDS_PAID`; two concurrent refunds of 70000 each → one succeeds, one `409`; provider timeout → `PENDING`, then the job with `status` showing the refund → `SUCCEEDED`; replay with the same key → no second provider call; refund of a `FAILED` payment → `409`; a `reversed` callback after a full refund → no state regression; list filters `needsReview=true` and `mismatch=true` work; non-operator → `404`; no card data in any operator DTO.
-- [ ] **Step 2–4:** FAIL → implement (lists with cursor pagination, a detail page with a refund dialog that shows «Буде повернено {amount} на картку покупця» and requires a reason) → PASS; design pass + screenshots.
-- [ ] **Step 5: Commit** `feat(ops): payments, subscriptions and manual refunds`.
+- [x] **Step 1: Write the failing tests:** partial refund 30000 of 120000 → `PARTIALLY_REFUNDED`, `refundedMinor = 30000`; a second refund of 100000 → `409 REFUND_EXCEEDS_PAID`; two concurrent refunds of 70000 each → one succeeds, one `409`; provider timeout → `PENDING`, then the job with `status` showing the refund → `SUCCEEDED`; replay with the same key → no second provider call; refund of a `FAILED` payment → `409`; a `reversed` callback after a full refund → no state regression; list filters `needsReview=true` and `mismatch=true` work; non-operator → `404`; no card data in any operator DTO.
+- [x] **Step 2–4:** FAIL → implement (lists with cursor pagination, a detail page with a refund dialog that shows «Буде повернено {amount} на картку покупця» and requires a reason) → PASS; design pass + screenshots.
+- [x] **Step 5: Commit** `feat(ops): payments, subscriptions and manual refunds`.
 - **Deviation (2026-10-15, coordinator):** the owner-app check showed LiqPay's `status` never reports recurring charges, so the reconcile job now also reads the payments archive (`reports`) after a period end, grace starts only on LiqPay's word (explicit failure, or the archive shows no charge), and a plan LiqPay cannot be asked about keeps its access and is flagged `renewalUnverifiedSince` («потребує перевірки» in `/ops`). New: `PaymentProvider.charges`, migration `subscription_renewal_check`, `POST /operator/billing/subscriptions/:id/refresh` («Звірити з LiqPay»), `…/end` (the plan's `cancel-now`). ADR 0018 «Owner-app checks of 2026-10-15».
 
 ### Task 22: Legal v3, checkout consent wiring, fiscal mode, retention deletion on
@@ -667,9 +667,9 @@ UNIQUE (paymentId, idempotencyKey)
 - Create: `apps/web/content/legal/terms.{uk,en}.v3.md`, `privacy.{uk,en}.v3.md`
 - Modify: `packages/contracts/src/legal.ts` (v3, `draft: true`, `requireReacceptance: true`, `effectiveDate` placeholder), `docs/legal/README.md` (history), `render.yaml` (`BILLING_RETENTION_DELETE_ENABLED=true` on staging only after the owner confirms), `checkout.service.ts` (`consentTermsVersion` must equal the current Terms version, else `400 LEGAL_VERSION_OUTDATED`), `env.ts` fiscal guard test
 
-- [ ] **Step 1: Write the failing tests:** the legal registry test expects v3 for both; a subscription checkout with `termsVersion: 'v2'` → `400 LEGAL_VERSION_OUTDATED`; the Terms v3 (uk and en) contain the section headings «Оплата і тарифи», «Автоматичне продовження підписки», «Скасування», «Повернення коштів», «Пробний період», «Режим лише для перегляду і зберігання даних», «Видалення даних після закінчення оплаченого періоду»; Privacy v3 contains «Платіжні дані» (LiqPay as processor; Stepler stores no card data; what it stores: amounts, dates, payment ids) and the 12-month retention; every unknown is a `[ПЛЕЙСХОЛДЕР: …]` marker (prices, refund window, seller details ФОП/ТОВ, ЄДРПОУ/РНОКПП, address, fiscal receipts).
-- [ ] **Step 2–4:** FAIL → write the drafts (uk first, en parity) → PASS.
-- [ ] **Step 5: Commit** `feat(legal): v3 drafts with payments, auto-renewal, refunds and retention`.
+- [x] **Step 1: Write the failing tests:** the legal registry test expects v3 for both; a subscription checkout with `termsVersion: 'v2'` → `400 LEGAL_VERSION_OUTDATED`; the Terms v3 (uk and en) contain the section headings «Оплата і тарифи», «Автоматичне продовження підписки», «Скасування», «Повернення коштів», «Пробний період», «Режим лише для перегляду і зберігання даних», «Видалення даних після закінчення оплаченого періоду»; Privacy v3 contains «Платіжні дані» (LiqPay as processor; Stepler stores no card data; what it stores: amounts, dates, payment ids) and the 12-month retention; every unknown is a `[ПЛЕЙСХОЛДЕР: …]` marker (prices, refund window, seller details ФОП/ТОВ, ЄДРПОУ/РНОКПП, address, fiscal receipts).
+- [x] **Step 2–4:** FAIL → write the drafts (uk first, en parity) → PASS.
+- [x] **Step 5: Commit** `feat(legal): v3 drafts with payments, auto-renewal, refunds and retention`.
 
 ### Task 23: Full journeys, sandbox checklist, docs, PR M4
 
@@ -677,17 +677,18 @@ UNIQUE (paymentId, idempotencyKey)
 - Create: `e2e/support/liqpay-stub.ts` (local HTTP server: stub checkout page, `/api/request` for `status`/`refund`/`unsubscribe`/`subscribe_update`, posts callbacks signed with the e2e test key), `e2e/tests/billing.spec.ts`, `docs/deployment/billing-sandbox-checklist.md`
 - Modify: `e2e/playwright.config.ts` (`BILLING_PROVIDER=liqpay`, `LIQPAY_API_BASE=http://127.0.0.1:<stub port>`, test keys generated per run, `BILLING_CALLBACK_URL` → the e2e API)
 
-- [ ] **Step 1: Write the journeys** (desktop on PRs; mobile in the nightly/stage run):
+- [x] **Step 1: Write the journeys** (desktop on PRs; mobile in the nightly/stage run):
   1. sign up → trial banner → create 1 collection → a second → `COLLECTION_LIMIT_REACHED` message with «Обрати тариф»;
   2. time-travel the trial end (SQL) → read-only banner; the guest sees «Колекція доступна лише для перегляду» and the gallery; admin «Створити посилання» disabled;
   3. buy «Старт» for that collection → stub pays → return page «Оплату отримано» → guest can upload again; the pack card shows 30 days;
   4. window end (SQL) → guest «Збір завершено» → «Продовжити збір» → paid → open again;
   5. subscribe Pro monthly with the consent tick → `ACTIVE`; stub renewal failure → grace banner; stub success → banner gone; cancel → «Доступ до {date}»;
   6. operator: partial refund of the pack payment → history shows «Повернено частково»; grant comp «Business» to another account.
-- [ ] **Step 2: Run** `pnpm e2e -- billing` three times in a row → PASS.
-- [ ] **Step 3: Sandbox checklist** (manual, staging, owner O4): real sandbox keys; pay with `4242…4242`, `4000000000003063` (3DS), `4000000000000002` (fail); check callbacks arrived (ops payment detail shows the event) or reconciliation healed them; subscribe with `subscribe_periodicity` per the spike; cancel; refund partial and full; phone + laptop; no secrets in Render logs (search for `sandbox_` and `signature`).
-- [ ] **Step 4:** Docs: ADR 0018 → "Accepted" only after the owner says so; `docs/product/PRODUCT.md` §22–23 replaced by a short "Implemented model" pointer to ADR 0018 (keeping §22's history line); `discovery-questions.md` D13 note "superseded 2026-10-07 by B1–B12"; mvp-architecture-spec billing section; README env table.
-- [ ] **Step 5:** Batched minors, full verification, PR M4.
+- [x] **Step 2: Run** `pnpm e2e -- billing` three times in a row → PASS.
+- [x] **Step 3: Sandbox checklist** (manual, staging, owner O4): real sandbox keys; pay with `4242…4242`, `4000000000003063` (3DS), `4000000000000002` (fail); check callbacks arrived (ops payment detail shows the event) or reconciliation healed them; subscribe with `subscribe_periodicity` per the spike; cancel; refund partial and full; phone + laptop; no secrets in Render logs (search for `sandbox_` and `signature`).
+- [x] **Step 4:** Docs: ADR 0018 → "Accepted" only after the owner says so; `docs/product/PRODUCT.md` §22–23 replaced by a short "Implemented model" pointer to ADR 0018 (keeping §22's history line); `discovery-questions.md` D13 note "superseded 2026-10-07 by B1–B12"; mvp-architecture-spec billing section; README env table.
+- [x] **Step 5:** Batched minors, full verification (2026-10-15). PR M4 not opened (owner).
+- **Done notes (2026-10-15):** the staging smoke checklist and the owner's production checklist live in `docs/deployment/billing.md` («Billing complete»), not a separate `billing-sandbox-checklist.md`. Journeys: the existing `billing.spec.ts` / `billing-subscriptions.spec.ts` (M1–M3) cover 1–5; `billing-ops.spec.ts` adds the operator's partial refund and the offers editor; the comp grant is in `billing.spec.ts`. Not built: editing an offer's `features` map (unused by the UI, B9). Fiscal mode and its production guard were already in M2; M4 added the worker test. The `/ops` billing section has its own navigation (payments, subscriptions, plans and prices, free plans).
 
 ## Open questions for the owner (recommended default first; tasks follow the default)
 
