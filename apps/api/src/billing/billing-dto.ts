@@ -91,7 +91,7 @@ export function offerLimits(row: BillingOffer): EntitlementLimits {
   };
 }
 
-export function toOperatorOffer(row: BillingOffer): OperatorOffer {
+export function toOperatorOffer(row: BillingOffer & { prices?: BillingPrice[] }): OperatorOffer {
   return {
     id: row.id,
     code: row.code,
@@ -99,8 +99,23 @@ export function toOperatorOffer(row: BillingOffer): OperatorOffer {
     extension: row.extension,
     titleUk: row.titleUk,
     titleEn: row.titleEn,
+    descriptionUk: row.descriptionUk,
+    descriptionEn: row.descriptionEn,
     rank: row.rank,
+    highlighted: row.highlighted,
     active: row.active,
     limits: offerLimits(row),
+    durationDays: row.durationDays,
+    rroItemId: row.rroItemId,
+    prices: (row.prices ?? [])
+      .filter((price) => price.active)
+      .map((price) => ({
+        id: price.id,
+        interval: price.interval,
+        currency: price.currency,
+        amountMinor: price.amountMinor,
+        createdAt: price.createdAt.toISOString(),
+      })),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }

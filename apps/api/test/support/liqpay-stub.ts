@@ -8,12 +8,17 @@ export type StubAnswer = Record<string, unknown> | 'down';
 
 /**
  * A local stand-in for LiqPay's server API (`/api/request`), reached through `LIQPAY_API_BASE`:
- * it checks our signature like LiqPay does and answers `status`, `unsubscribe` and
- * `subscribe_update` from what a test set. It replaces
+ * it checks our signature like LiqPay does and answers `status`, `unsubscribe`,
+ * `subscribe_update`, `refund` and `reports` from what a test set. It replaces
  * only LiqPay's endpoint; the product's `LiqPayProvider` runs unchanged (rule 18).
  */
 export class LiqPayStub {
   readonly answers = new Map<string, StubAnswer>();
+  /**
+   * The payments archive (`reports`): every row LiqPay would list for the asked dates (the
+   * adapter keeps one order's), or `'down'`. Empty by default: LiqPay shows no charges.
+   */
+  reports: Record<string, unknown>[] | 'down' = [];
   readonly calls: { action: string; orderId: string; amount?: string }[] = [];
   private server: Server | undefined;
   base = '';
@@ -36,6 +41,12 @@ export class LiqPayStub {
         }
         const orderId = String(params.order_id);
         const action = String(params.action);
+        if (action === 'reports') {
+          this.calls.push({ action, orderId: '' });
+          if (this.reports === 'down') send(500, {});
+          else send(200, { result: 'success', data: this.reports });
+          return;
+        }
         this.calls.push({
           action,
           orderId,
@@ -55,6 +66,7 @@ export class LiqPayStub {
 
   reset(): void {
     this.answers.clear();
+    this.reports = [];
     this.calls.length = 0;
   }
 

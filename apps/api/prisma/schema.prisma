@@ -231,6 +231,14 @@ enum PaymentStatus {
   PARTIALLY_REFUNDED
 }
 
+/// A manual refund from /ops (plan Task 21): PENDING until LiqPay answers (a crash or timeout is
+/// resolved by the reconcile job through `status`).
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
 /// ACCOUNT = the account's plan or trial governs it; PACK = its own pack does (plan [P1]).
 enum CollectionEntitlement {
   ACCOUNT
@@ -262,6 +270,7 @@ model User {
   updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
   subscriptions      Subscription[]
   payments           Payment[]
+  refundsMade        Refund[]
   accounts           AuthAccount[]
   sessions           AuthSession[]
   collections        Collection[]
@@ -850,6 +859,10 @@ model Subscription {
   pendingProviderAmountMinor Int?
   /// The period end whose failed renewal was mailed (one mail per period).
   renewalFailureNotifiedFor  DateTime?          @db.Timestamptz(3)
+  /// The renewal check could not get an answer from LiqPay since then (archive or `status`
+  /// down, or an ambiguous answer): the plan keeps its access and /ops shows «потребує
+  /// перевірки». Cleared by the next answered check.
+  renewalUnverifiedSince     DateTime?          @db.Timestamptz(3)
   createdAt                  DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt                  DateTime           @updatedAt @db.Timestamptz(3)
   user                       User               @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -926,6 +939,7 @@ model Payment {
   collection         Collection?    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   subscription       Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
   events             PaymentEvent[]
+  refunds            Refund[]
 
   @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([collectionId])
@@ -955,4 +969,28 @@ model PaymentEvent {
   payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@index([paymentId])
+}
+
+/// A refund the operator made from /ops (owner decision B11, plan Task 21): full or partial,
+/// with a reason, audited. `Idempotency-Key` per form: one refund per (payment, key). Rules as
+/// named CHECKs: "Refund_amount_positive", "Refund_reason_length", "Refund_completed_consistent";
+/// pending refunds are found through "Refund_pending_idx".
+model Refund {
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  paymentId      String       @db.Uuid
+  amountMinor    Int
+  currency       Currency
+  status         RefundStatus @default(PENDING)
+  reason         String
+  operatorUserId String       @db.Uuid
+  idempotencyKey String       @db.Uuid
+  /// LiqPay's answer (`reversed`, `error`, …); never a card detail.
+  providerStatus String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  completedAt    DateTime?    @db.Timestamptz(3)
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  operator       User         @relation(fields: [operatorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, idempotencyKey])
+  @@index([operatorUserId])
 }

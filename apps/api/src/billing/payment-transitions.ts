@@ -37,6 +37,12 @@ export class PaymentTransitions {
     source: 'callback' | 'status',
     now = new Date(),
   ): Promise<TransitionOutcome> {
+    // LiqPay reports our own /ops refund as `reversed` too (on the callback and in `status`):
+    // that is not a chargeback and must not end what was bought ([Q4]); `RefundsService` owns it.
+    if (ev.outcome === 'REVERSED' && (await refundExplains(tx, payment, ev))) {
+      this.logger.log({ msg: 'billing.payment.refund_reported', paymentId: payment.id, source });
+      return 'noop';
+    }
     // Subscription payments (the first one, renewals on its order, upgrades) have their own
     // machine; it writes their `Payment.status` the same way.
     if (payment.kind !== 'PACK' && payment.kind !== 'PACK_EXTENSION') {
@@ -159,4 +165,22 @@ export class PaymentTransitions {
       metadata: { kind: payment.kind, ...metadata },
     });
   }
+}
+
+/**
+ * A `reversed` report caused by our refund: LiqPay names the action `refund`, or a refund is in
+ * flight or done on this payment (or, for a subscription's order, on any charge of it).
+ */
+async function refundExplains(tx: Db, payment: Payment, ev: ProviderEvent): Promise<boolean> {
+  if (ev.action === 'refund') return true;
+  const count = await tx.refund.count({
+    where: {
+      status: { in: ['PENDING', 'SUCCEEDED'] },
+      payment:
+        payment.subscriptionId === null
+          ? { id: payment.id }
+          : { subscriptionId: payment.subscriptionId },
+    },
+  });
+  return count > 0;
 }

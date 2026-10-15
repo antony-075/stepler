@@ -5,6 +5,7 @@ import {
   type SubscriptionClockRun,
 } from '../../billing/subscription-clocks.js';
 import { EXPIRE_GRACE_MS, ReconciliationService } from '../../billing/reconciliation.service.js';
+import { RefundsService } from '../../billing/refunds.service.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import type { JobHandler } from '../job-handler.js';
 
@@ -16,15 +17,16 @@ export interface ReconcileRun {
   refreshed: number;
   stale: number;
   events: number;
+  refunds: number;
   subscriptions: SubscriptionClockRun;
 }
 
 /**
  * Every 10 minutes (ADR 0018 [P7], plan Task 13): pending payments older than 2 minutes are
  * asked through LiqPay's `status` API; those past their TTL by 15 minutes with nothing final at
- * LiqPay expire; verified callbacks whose transition never committed are applied again. Every
- * step is idempotent (the transitions are), so overlapping runs and the return page's poll
- * converge. Then the subscription clocks (renewal, grace, expiry; `SubscriptionClocks`).
+ * LiqPay expire; verified callbacks whose transition never committed are applied again; refunds
+ * LiqPay never answered are settled from `status` (plan Task 21). Every step is idempotent (the
+ * transitions are), so overlapping runs and the return page's poll converge. Then the subscription clocks (renewal, grace, expiry; `SubscriptionClocks`).
  */
 @Injectable()
 export class BillingReconcileHandler implements JobHandler<'billing.reconcile'> {
@@ -36,6 +38,7 @@ export class BillingReconcileHandler implements JobHandler<'billing.reconcile'> 
     private readonly reconciliation: ReconciliationService,
     private readonly events: PaymentEvents,
     private readonly clocks: SubscriptionClocks,
+    private readonly refunds: RefundsService,
   ) {}
 
   async handle(): Promise<void> {
@@ -43,7 +46,12 @@ export class BillingReconcileHandler implements JobHandler<'billing.reconcile'> 
   }
 
   async run(now: Date): Promise<ReconcileRun> {
-    const result: Omit<ReconcileRun, 'subscriptions'> = { refreshed: 0, stale: 0, events: 0 };
+    const result: Omit<ReconcileRun, 'subscriptions'> = {
+      refreshed: 0,
+      stale: 0,
+      events: 0,
+      refunds: 0,
+    };
     const pending = await this.prisma.payment.findMany({
       where: { status: 'PENDING', createdAt: { lt: new Date(now.getTime() - PENDING_AGE_MS) } },
       orderBy: { createdAt: 'asc' },
@@ -63,6 +71,7 @@ export class BillingReconcileHandler implements JobHandler<'billing.reconcile'> 
       new Date(now.getTime() - EVENT_AGE_MS),
       BATCH,
     );
+    result.refunds = await this.refunds.resolvePending(now);
     const subscriptions = await this.clocks.run(now);
     this.logger.log({ msg: 'billing.reconcile', ...result, ...subscriptions });
     return { ...result, subscriptions };

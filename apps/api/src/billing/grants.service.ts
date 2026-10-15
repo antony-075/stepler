@@ -57,6 +57,7 @@ export class GrantsService {
   /** Every offer, active or not, best first per kind: a grant may use a draft offer. */
   async offers(): Promise<OperatorOfferList> {
     const rows = await this.prisma.billingOffer.findMany({
+      include: { prices: { where: { active: true }, orderBy: [{ interval: 'asc' }] } },
       orderBy: [{ kind: 'asc' }, { rank: 'asc' }, { code: 'asc' }],
     });
     return { items: rows.map(toOperatorOffer) };

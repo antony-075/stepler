@@ -19,6 +19,8 @@ export const SWITCH_STOP_LEAD_MS = 24 * 60 * 60_000;
 export interface SubscriptionClockRun {
   switchesStopped: number;
   renewalsDue: number;
+  /** Due plans LiqPay could not be asked about: still active, flagged for the operator. */
+  unverified: number;
   graced: number;
   expired: number;
   ended: number;
@@ -33,8 +35,11 @@ export interface SubscriptionClockRun {
  * 0. `ACTIVE` with a monthly ↔ yearly switch due within `SWITCH_STOP_LEAD_MS` → the old LiqPay
  *    subscription is stopped (B14); the plan runs to its end, then step 1 puts it into grace
  *    with the «підтвердіть оплату» mail until the new plan's checkout is paid;
- * 1. `ACTIVE` an hour past its period end: LiqPay is asked (a lost renewal callback is applied);
- *    still not renewed → `PAST_DUE` with grace and the mail;
+ * 1. `ACTIVE` an hour past its period end: LiqPay is asked — `status`, then its payments
+ *    archive, since `status` does not report recurring charges (2026-10-15) — and a lost renewal
+ *    callback is applied. `PAST_DUE` with grace and the mail only on LiqPay's word: an explicit
+ *    failed charge, or an archive that shows no charge for the period. LiqPay unreachable → the
+ *    plan stays `ACTIVE`, flagged `renewalUnverifiedSince` for the operator, and is asked hourly;
  * 2. `PAST_DUE`: asked hourly; past `graceEndsAt` and LiqPay answered within the hour with no
  *    renewal → `EXPIRED` (`endedAt = currentPeriodEnd`) and LiqPay's charges are stopped. While
  *    LiqPay cannot be asked, nothing expires;
@@ -59,6 +64,7 @@ export class SubscriptionClocks {
     const result: SubscriptionClockRun = {
       switchesStopped: 0,
       renewalsDue: 0,
+      unverified: 0,
       graced: 0,
       expired: 0,
       ended: 0,
@@ -98,8 +104,16 @@ export class SubscriptionClocks {
     });
     for (const { id } of due) {
       result.renewalsDue += 1;
-      await this.reconciliation.refreshSubscription(id, now);
-      if (await this.graceIfUnrenewed(id, now)) result.graced += 1;
+      const { renewal, unverifiedSince } = await this.reconciliation.refreshSubscription(id, now);
+      // Grace only on LiqPay's word: an explicit failure, an archive that shows no charge, or a
+      // plan LiqPay no longer charges. Unanswered or not due → access stays; retried hourly.
+      if (renewal !== 'NONE' && renewal !== 'FAILED' && renewal !== 'NOT_EXPECTED') {
+        if (renewal === 'UNAVAILABLE') result.unverified += 1;
+        continue;
+      }
+      if (await this.graceIfUnrenewed(id, now, unverifiedSince ? now : undefined)) {
+        result.graced += 1;
+      }
     }
 
     const pastDue = await this.prisma.subscription.findMany({
@@ -163,7 +177,7 @@ export class SubscriptionClocks {
   }
 
   /** Still `ACTIVE` an hour past the period end after asking LiqPay → grace. */
-  private async graceIfUnrenewed(id: string, now: Date): Promise<boolean> {
+  private async graceIfUnrenewed(id: string, now: Date, graceFrom?: Date): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const owner = await tx.subscription.findUniqueOrThrow({
         where: { id },
@@ -174,7 +188,7 @@ export class SubscriptionClocks {
       const end = sub.currentPeriodEnd;
       if (sub.status !== 'ACTIVE' || end === null) return false;
       if (end.getTime() + RENEWAL_DUE_MS >= now.getTime()) return false;
-      await this.transitions.enterGrace(tx, sub);
+      await this.transitions.enterGrace(tx, sub, graceFrom);
       this.logger.log({ msg: 'billing.subscription.grace', subscriptionId: id });
       return true;
     });

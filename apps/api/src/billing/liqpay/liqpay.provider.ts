@@ -161,6 +161,27 @@ export class LiqPayProvider implements PaymentProvider {
     return { outcome: 'PENDING', rawStatus };
   }
 
+  async charges(orderId: string, from: Date, to: Date): Promise<ProviderEvent[]> {
+    const answer = await this.request({
+      action: 'reports',
+      date_from: String(from.getTime()),
+      date_to: String(to.getTime()),
+    });
+    if (!Array.isArray(answer.data)) {
+      this.logger.warn({ msg: 'billing.provider.reports_error', errCode: text(answer.err_code) });
+      throw new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503, { retryable: true });
+    }
+    return (answer.data as unknown[])
+      .filter(
+        (row): row is Record<string, unknown> =>
+          typeof row === 'object' &&
+          row !== null &&
+          text((row as Record<string, unknown>).order_id) === orderId,
+      )
+      .map((row) => this.toEvent(row, orderId))
+      .sort((a, b) => (a.occurredAt?.getTime() ?? 0) - (b.occurredAt?.getTime() ?? 0));
+  }
+
   async unsubscribe(orderId: string): Promise<ProviderEvent> {
     return this.toEvent(await this.request({ action: 'unsubscribe', order_id: orderId }), orderId);
   }

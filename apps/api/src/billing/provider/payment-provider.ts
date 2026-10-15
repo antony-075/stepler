@@ -68,6 +68,13 @@ export interface PaymentProvider {
   /** `null` = the provider has no such order. Provider trouble → `503 PAYMENT_PROVIDER_UNAVAILABLE`. */
   status(orderId: string): Promise<ProviderEvent | null>;
   refund(orderId: string, amountMinor: number): Promise<ProviderRefundResult>;
+  /**
+   * The charges LiqPay made on `orderId` between `from` and `to` (its payments archive,
+   * `reports`), oldest first. `status` answers only a subscription's first transaction (owner
+   * check 2026-10-15), so this is how a renewal whose callback was lost is found. Provider
+   * trouble → `503 PAYMENT_PROVIDER_UNAVAILABLE` (the caller keeps access and retries).
+   */
+  charges(orderId: string, from: Date, to: Date): Promise<ProviderEvent[]>;
   unsubscribe(orderId: string): Promise<ProviderEvent>;
   updateSubscription(
     orderId: string,

@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'vitest';
 import {
   grantCreateSchema,
+  offerCreateSchema,
+  offerUpsertSchema,
   operatorBillingAccountQuerySchema,
+  paymentListQuerySchema,
   priceSetSchema,
   refundCreateSchema,
 } from './index.js';
@@ -41,10 +44,59 @@ describe('refundCreateSchema', () => {
   });
 });
 
-test('priceSetSchema takes money for one slot', () => {
-  const body = { interval: 'MONTH', amountMinor: 49900, currency: 'UAH' };
+test('priceSetSchema takes money for one slot and a reason', () => {
+  const body = { interval: 'MONTH', amountMinor: 49900, currency: 'UAH', reason: 'Нова ціна' };
   expect(priceSetSchema.parse(body)).toEqual(body);
   expect(priceSetSchema.safeParse({ ...body, amountMinor: 0 }).success).toBe(false);
+  expect(priceSetSchema.safeParse({ ...body, amountMinor: 1_000_000_001 }).success).toBe(false);
+  const { reason: _reason, ...noReason } = body;
+  expect(priceSetSchema.safeParse(noReason).success).toBe(false);
+});
+
+describe('offerCreateSchema', () => {
+  const offer = {
+    code: 'pack-wedding',
+    kind: 'PACK',
+    extension: null,
+    titleUk: 'Весілля',
+    titleEn: 'Wedding',
+    descriptionUk: null,
+    descriptionEn: null,
+    rank: 3,
+    highlighted: true,
+    activeCollections: null,
+    storageBytes: '107374182400',
+    collectionStorageBytes: null,
+    guestLinks: 20,
+    windowDays: 30,
+    retentionDays: 365,
+    durationDays: null,
+    rroItemId: null,
+    reason: 'Новий пакет',
+  };
+
+  test('accepts a pack with its limits', () => {
+    expect(offerCreateSchema.parse(offer)).toEqual(offer);
+  });
+
+  test('never creates a trial and takes a code of lowercase letters, digits and hyphens', () => {
+    expect(offerCreateSchema.safeParse({ ...offer, kind: 'TRIAL' }).success).toBe(false);
+    expect(offerCreateSchema.safeParse({ ...offer, code: 'Pack Wedding' }).success).toBe(false);
+  });
+
+  test('the update body takes no code or kind', () => {
+    const { code: _c, kind: _k, extension: _e, ...update } = offer;
+    expect(offerUpsertSchema.parse(update)).toEqual(update);
+    expect(offerUpsertSchema.safeParse({ ...update, code: 'x1' }).success).toBe(false);
+  });
+});
+
+test('payment list flags are the strings true and false', () => {
+  expect(paymentListQuerySchema.parse({ needsReview: 'true' })).toEqual({
+    needsReview: 'true',
+    limit: 50,
+  });
+  expect(paymentListQuerySchema.safeParse({ mismatch: '1' }).success).toBe(false);
 });
 
 test('the account lookup takes one e-mail', () => {

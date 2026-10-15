@@ -40,7 +40,15 @@ export type AuditAction =
   | 'billing.payment_failed'
   | 'billing.payment_reversed'
   | 'billing.subscription_cancel'
-  | 'billing.subscription_change';
+  | 'billing.subscription_change'
+  | 'billing.subscription_end'
+  | 'billing.pack_end'
+  | 'billing.refund'
+  | 'billing.offer_create'
+  | 'billing.offer_update'
+  | 'billing.offer_activate'
+  | 'billing.offer_deactivate'
+  | 'billing.price_set';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -58,7 +66,8 @@ export interface AuditEventInput {
     | 'appeal'
     | 'subscription'
     | 'payment'
-    | 'offer';
+    | 'offer'
+    | 'refund';
   targetId: string;
   /**
    * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other

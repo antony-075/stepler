@@ -7,6 +7,7 @@ import { addInterval } from '../src/billing/domain/periods.js';
 import { EntitlementResolver } from '../src/billing/entitlement-resolver.js';
 import { PaymentEvents } from '../src/billing/payment-events.service.js';
 import { ReconciliationService } from '../src/billing/reconciliation.service.js';
+import { RefundsService } from '../src/billing/refunds.service.js';
 import { SubscriptionClocks } from '../src/billing/subscription-clocks.js';
 import { createApp } from '../src/create-app.js';
 import { PrismaService } from '../src/database/prisma.service.js';
@@ -52,6 +53,7 @@ beforeAll(async () => {
     app.get(ReconciliationService),
     app.get(PaymentEvents),
     app.get(SubscriptionClocks),
+    app.get(RefundsService),
   );
 });
 
@@ -170,21 +172,27 @@ describe('a renewal without its callback', () => {
   });
 
   test('LiqPay unreachable at the end of grace: the plan stays in grace', async () => {
-    const s = await lapsed(5 * DAY_MS);
-    stub.answers.set(s.start.id, 'down');
+    const s = await lapsed(2 * HOUR_MS);
     await handler.run(new Date());
-    const sub = await subOf(s.subscriptionId);
-    expect(sub).toMatchObject({ status: 'PAST_DUE', lastRefreshOk: false });
-    expect((await s.usage()).access.state).toBe('READ_ONLY');
-    // (Read-only by the clock alone: grace ended a day ago; the plan is not EXPIRED, so the
-    // retention clock does not start until LiqPay answers.)
+    expect((await subOf(s.subscriptionId)).status).toBe('PAST_DUE');
+    const afterGrace = new Date(s.end.getTime() + 4 * DAY_MS + HOUR_MS);
+    stub.answers.set(s.start.id, 'down');
+    await handler.run(afterGrace);
+    expect(await subOf(s.subscriptionId)).toMatchObject({
+      status: 'PAST_DUE',
+      lastRefreshOk: false,
+    });
+    expect((await subOf(s.subscriptionId)).renewalUnverifiedSince).not.toBeNull();
     stub.answers.set(s.start.id, { ...subscribeFields(s.start), status: 'subscribed' });
     stub.answers.set(`unsubscribe:${s.start.id}`, {
       action: 'unsubscribe',
       status: 'unsubscribed',
     });
-    await handler.run(new Date(Date.now() + HOUR_MS + 1_000));
-    expect((await subOf(s.subscriptionId)).status).toBe('EXPIRED');
+    await handler.run(new Date(afterGrace.getTime() + HOUR_MS + 1_000));
+    expect(await subOf(s.subscriptionId)).toMatchObject({
+      status: 'EXPIRED',
+      renewalUnverifiedSince: null,
+    });
   });
 
   test('a worker paused for days reaches the same end state in one run', async () => {
@@ -196,6 +204,89 @@ describe('a renewal without its callback', () => {
     await handler.run(new Date());
     expect(await subOf(s.subscriptionId)).toMatchObject({ status: 'EXPIRED', endedAt: s.end });
     expect(calls('unsubscribe')).toHaveLength(1);
+  });
+});
+
+describe("a renewal found in LiqPay's payments archive (status does not report it)", () => {
+  test('a missed callback but a charge in the archive: stays active, the renewal is recorded', async () => {
+    const s = await lapsed(2 * HOUR_MS);
+    stub.reports = [
+      {
+        ...subscribeFields(s.start),
+        status: 'subscribed',
+        end_date: s.end.getTime() - 30 * DAY_MS,
+      },
+      regularFields(s.start.id, 'success', 50_000, { end_date: s.end.getTime() - 5 * 60_000 }),
+      // Another merchant order on the same day is not ours to apply.
+      regularFields('another-order', 'success', 50_000, { end_date: s.end.getTime() }),
+    ];
+    await handler.run(new Date());
+    const sub = await subOf(s.subscriptionId);
+    expect(sub).toMatchObject({ status: 'ACTIVE', renewalUnverifiedSince: null });
+    expect(sub.currentPeriodEnd?.getTime()).toBeGreaterThan(s.end.getTime());
+    expect(
+      await prisma.payment.count({
+        where: { subscriptionId: sub.id, kind: 'SUBSCRIPTION_RENEWAL', status: 'SUCCEEDED' },
+      }),
+    ).toBe(1);
+    expect(await queuedJobs(prisma, 'mail.billing-renewal-failed')).toHaveLength(0);
+    // The next run finds the same charge again and records nothing twice.
+    await handler.run(new Date(Date.now() + 2 * HOUR_MS));
+    expect(
+      await prisma.payment.count({
+        where: { subscriptionId: sub.id, kind: 'SUBSCRIPTION_RENEWAL' },
+      }),
+    ).toBe(1);
+  });
+
+  test('the archive unavailable: the plan keeps its access and is flagged for the operator', async () => {
+    const s = await lapsed(2 * HOUR_MS);
+    stub.reports = 'down';
+    await handler.run(new Date());
+    const flagged = await subOf(s.subscriptionId);
+    expect(flagged).toMatchObject({ status: 'ACTIVE', lastRefreshOk: false });
+    expect(flagged.renewalUnverifiedSince).not.toBeNull();
+    expect((await s.usage()).access.state).toBe('ACTIVE');
+    expect(await queuedJobs(prisma, 'mail.billing-renewal-failed')).toHaveLength(0);
+
+    // Days later, still down: still active (never read-only on a missing answer).
+    await handler.run(new Date(Date.now() + 5 * DAY_MS));
+    expect((await subOf(s.subscriptionId)).status).toBe('ACTIVE');
+
+    // LiqPay answers with no charge for the period: the full grace from now (the owner had no
+    // warning while LiqPay was silent), and the flag is cleared.
+    stub.reports = [];
+    const answered = new Date(Date.now() + 5 * DAY_MS + 2 * HOUR_MS);
+    await handler.run(answered);
+    expect(await subOf(s.subscriptionId)).toMatchObject({
+      status: 'PAST_DUE',
+      renewalUnverifiedSince: null,
+      graceEndsAt: new Date(answered.getTime() + 4 * DAY_MS),
+    });
+    expect(await queuedJobs(prisma, 'mail.billing-renewal-failed')).toHaveLength(1);
+  });
+
+  test('an explicit failed charge in the archive starts grace', async () => {
+    const s = await lapsed(2 * HOUR_MS);
+    stub.reports = [regularFields(s.start.id, 'failure', 50_000, { end_date: s.end.getTime() })];
+    await handler.run(new Date());
+    expect((await subOf(s.subscriptionId)).status).toBe('PAST_DUE');
+    expect(
+      await prisma.payment.count({
+        where: { subscriptionId: s.subscriptionId, kind: 'SUBSCRIPTION_RENEWAL', status: 'FAILED' },
+      }),
+    ).toBe(1);
+    expect(await queuedJobs(prisma, 'mail.billing-renewal-failed')).toHaveLength(1);
+  });
+
+  test('a failed charge made good by a retry in the archive renews', async () => {
+    const s = await lapsed(2 * HOUR_MS);
+    stub.reports = [
+      regularFields(s.start.id, 'failure', 50_000, { end_date: s.end.getTime() }),
+      regularFields(s.start.id, 'success', 50_000, { end_date: s.end.getTime() + 30 * 60_000 }),
+    ];
+    await handler.run(new Date());
+    expect((await subOf(s.subscriptionId)).status).toBe('ACTIVE');
   });
 });
 

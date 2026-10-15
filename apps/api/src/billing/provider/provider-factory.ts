@@ -34,6 +34,9 @@ export class DisabledPaymentProvider implements PaymentProvider {
   refund(): Promise<never> {
     return this.status();
   }
+  charges(): Promise<never> {
+    return this.status();
+  }
   unsubscribe(): Promise<never> {
     return this.status();
   }

@@ -271,4 +271,45 @@ describe('LiqPayProvider server calls', () => {
       amount: '300.00',
     });
   });
+
+  test('charges reads the payments archive: one order only, oldest first, no card data', async () => {
+    const regular = (paymentId: number, status: string, endDate: number) => ({
+      ...SUCCESS,
+      action: 'regular',
+      status,
+      payment_id: paymentId,
+      end_date: endDate,
+    });
+    handler = (_params, res) =>
+      json(res, 200, {
+        result: 'success',
+        data: [
+          regular(3, 'success', 1_791_000_300_000),
+          regular(2, 'failure', 1_791_000_200_000),
+          { ...regular(4, 'success', 1_791_000_100_000), order_id: 'someone-else' },
+        ],
+      });
+    const from = new Date(1_790_900_000_000);
+    const to = new Date(1_791_100_000_000);
+    const events = await provider().charges(ORDER, from, to);
+    expect(events.map((ev) => [ev.providerPaymentId, ev.outcome, ev.action])).toEqual([
+      ['2', 'FAILED', 'regular'],
+      ['3', 'SUCCEEDED', 'regular'],
+    ]);
+    expect(JSON.stringify(events)).not.toMatch(/Олена|424242|tok_secret|203\.0\.113/);
+    expect(decodeData(received[0]?.data ?? '')).toEqual({
+      public_key: PUBLIC_KEY,
+      version: 7,
+      action: 'reports',
+      date_from: String(from.getTime()),
+      date_to: String(to.getTime()),
+    });
+  });
+
+  test('an archive error is PAYMENT_PROVIDER_UNAVAILABLE, never "no charges"', async () => {
+    handler = (_params, res) => json(res, 200, { result: 'error', err_code: 'err_access' });
+    await expect(provider().charges(ORDER, new Date(0), new Date())).rejects.toMatchObject({
+      code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+    });
+  });
 });

@@ -343,12 +343,17 @@ export class SubscriptionTransitions {
   /**
    * `PAST_DUE` until `currentPeriodEnd + BILLING_GRACE_DAYS` (kept if already set) and the
    * renewal-failed mail once per period (worded as «підтвердіть оплату» for a switch whose old
-   * plan was stopped, B14). Also the reconcile job's step when no renewal came.
+   * plan was stopped, B14). Also the reconcile job's step when no renewal came; `from` (later than
+   * the period end) starts the grace then instead: a plan kept active while LiqPay could not be
+   * asked gets its full grace from the moment LiqPay answered.
    */
-  async enterGrace(tx: Db, sub: Subscription): Promise<void> {
+  async enterGrace(tx: Db, sub: Subscription, from?: Date): Promise<void> {
     if (sub.currentPeriodEnd === null) return;
-    const graceEndsAt =
-      sub.graceEndsAt ?? addDays(sub.currentPeriodEnd, this.env.BILLING_GRACE_DAYS);
+    const start =
+      from !== undefined && from.getTime() > sub.currentPeriodEnd.getTime()
+        ? from
+        : sub.currentPeriodEnd;
+    const graceEndsAt = sub.graceEndsAt ?? addDays(start, this.env.BILLING_GRACE_DAYS);
     const notify = sub.renewalFailureNotifiedFor?.getTime() !== sub.currentPeriodEnd.getTime();
     await tx.subscription.update({
       where: { id: sub.id },

@@ -48,6 +48,7 @@ import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
 import { MediaSlots } from './media/media-slots.js';
 import { OriginalSanitizer } from './media/original-sanitizer.js';
+import { RefundsService } from '../billing/refunds.service.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -118,6 +119,7 @@ export class WorkerModule {
         PaymentTransitions,
         PaymentEvents,
         ReconciliationService,
+        RefundsService,
         SubscriptionClocks,
         BillingReconcileHandler,
         BillingReadOnlyMailHandler,
