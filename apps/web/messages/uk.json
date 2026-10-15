@@ -2209,6 +2209,9 @@
         "MONTH": "{price}/міс",
         "YEAR": "{price}/рік"
       },
+      "yearlyBadgeLabel": "знижка {percent}% при оплаті за рік",
+      "yearlyPercent": "−{percent}%",
+      "yearlySaving": "Економія {saving} на рік · {perMonth}/міс",
       "unit": {
         "MONTH": "/міс",
         "YEAR": "/рік"

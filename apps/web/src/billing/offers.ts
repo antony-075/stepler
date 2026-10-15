@@ -63,6 +63,40 @@ export function planIntervals(list: OfferList): PlanInterval[] {
   return (['MONTH', 'YEAR'] as const).filter((interval) => sold.has(interval));
 }
 
+/** What paying yearly saves against twelve monthly payments of the same plan. */
+export interface YearlySaving {
+  /** Whole percent, rounded to the nearest: 10 months' price for 12 → 17. */
+  percent: number;
+  saving: Money;
+  /** The yearly price spread over 12 months, rounded down to whole minor units. */
+  perMonth: Money;
+}
+
+/** `null` when the plan has no monthly and yearly price in one currency, or yearly saves nothing. */
+export function yearlySaving(offer: OfferDto): YearlySaving | null {
+  const month = offer.prices.find((p) => p.interval === 'MONTH');
+  const year = offer.prices.find((p) => p.interval === 'YEAR' && p.currency === month?.currency);
+  if (month === undefined || year === undefined) return null;
+  const full = month.amountMinor * 12;
+  if (year.amountMinor >= full) return null;
+  return {
+    percent: Math.round(((full - year.amountMinor) / full) * 100),
+    saving: { amountMinor: full - year.amountMinor, currency: year.currency },
+    perMonth: { amountMinor: Math.floor(year.amountMinor / 12), currency: year.currency },
+  };
+}
+
+/** The best yearly discount among the plans on sale, for the «Щороку» badge; `null` if none. */
+export function bestYearlyPercent(list: OfferList): number | null {
+  const percents = list.items
+    .filter((offer) => offer.kind === 'SUBSCRIPTION')
+    .flatMap((offer) => {
+      const saving = yearlySaving(offer);
+      return saving === null ? [] : [saving.percent];
+    });
+  return percents.length === 0 ? null : Math.max(...percents);
+}
+
 /** «Продовжити збір» or «Продовжити зберігання», when on sale. */
 export function extensionOffer(
   list: OfferList,

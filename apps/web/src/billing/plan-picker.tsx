@@ -17,7 +17,14 @@ import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { formatStorage } from '@/format/bytes';
 import { OfferCard } from './offer-card';
-import { formatMoney, type PlanInterval, planIntervals, type PricedPlan } from './offers';
+import {
+  bestYearlyPercent,
+  formatMoney,
+  type PlanInterval,
+  planIntervals,
+  type PricedPlan,
+  yearlySaving,
+} from './offers';
 
 export function IntervalSwitch({
   offers,
@@ -30,6 +37,7 @@ export function IntervalSwitch({
 }) {
   const t = useTranslations('billing.plans');
   const intervals = planIntervals(offers);
+  const percent = bestYearlyPercent(offers);
   if (intervals.length < 2) return null;
   return (
     <ToggleGroup
@@ -42,9 +50,32 @@ export function IntervalSwitch({
       {intervals.map((interval) => (
         <ToggleGroupItem key={interval} value={interval}>
           {t(`intervals.${interval}`)}
+          {interval === 'YEAR' && percent !== null ? (
+            <DiscountTag
+              text={t('yearlyPercent', { percent })}
+              label={t('yearlyBadgeLabel', { percent })}
+            />
+          ) : null}
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
+  );
+}
+
+/**
+ * «−17%» on the «Щороку» segment: always visible, so the monthly view already invites the switch.
+ * Success-tinted like a saving (DESIGN-SYSTEM.md §0.5 soft fills, 4.5:1 in both themes); the
+ * spoken label says the words.
+ */
+function DiscountTag({ text, label }: { text: string; label: string }) {
+  return (
+    <span
+      data-testid="yearly-discount"
+      className="ml-1.5 inline-flex h-5 items-center rounded-[5px] bg-success-soft px-1.5 text-xs font-semibold text-success tabular-nums"
+    >
+      <span aria-hidden="true">{text}</span>
+      <span className="sr-only">{label}</span>
+    </span>
   );
 }
 
@@ -74,12 +105,28 @@ export function SubscriptionPlanCard({ plan, action }: { plan: PricedPlan; actio
     facts.push(t('collectionStorage', { size: size(limits.collectionStorageBytes) }));
   }
   if (limits.guestLinks !== null) facts.push(tPack('links', { count: limits.guestLinks }));
+  const yearly = plan.interval === 'YEAR' ? yearlySaving(plan.offer) : null;
   return (
     <OfferCard
       testId={`plan-${plan.offer.code}`}
       title={plan.offer.title}
       price={formatMoney(format.number, plan.price)}
       unit={t(`unit.${plan.interval}`)}
+      saving={
+        yearly === null ? null : (
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="inline-flex h-5 items-center rounded-[5px] bg-success-soft px-1.5 text-xs font-semibold text-success tabular-nums">
+              {t('yearlyPercent', { percent: yearly.percent })}
+            </span>
+            <span className="text-foreground-soft">
+              {t('yearlySaving', {
+                saving: formatMoney(format.number, yearly.saving),
+                perMonth: formatMoney(format.number, yearly.perMonth),
+              })}
+            </span>
+          </p>
+        )
+      }
       facts={facts}
       action={action}
       highlighted={plan.offer.highlighted}

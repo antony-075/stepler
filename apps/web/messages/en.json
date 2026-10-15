@@ -2209,6 +2209,9 @@
         "MONTH": "{price}/mo",
         "YEAR": "{price}/yr"
       },
+      "yearlyBadgeLabel": "{percent}% off when paid yearly",
+      "yearlyPercent": "−{percent}%",
+      "yearlySaving": "Save {saving} a year · {perMonth}/mo",
       "unit": {
         "MONTH": "/mo",
         "YEAR": "/yr"

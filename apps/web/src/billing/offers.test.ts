@@ -1,6 +1,7 @@
 import type { OfferDto, OfferList } from '@stepler/contracts';
 import { describe, expect, test } from 'vitest';
 import {
+  bestYearlyPercent,
   extensionOffer,
   formatMoney,
   packOffers,
@@ -8,6 +9,7 @@ import {
   retentionYears,
   returnView,
   storageUpgrade,
+  yearlySaving,
 } from './offers';
 
 const limits = {
@@ -59,6 +61,30 @@ describe('offers', () => {
     });
     expect(storageUpgrade(list, event.id)).toBeNull();
     expect(storageUpgrade(list, 'unknown')).toBeNull();
+  });
+
+  test('yearly pricing: ten months for twelve is 17% off, the best plan names the badge', () => {
+    const plan = (month: number, year: number) =>
+      offer(
+        {
+          kind: 'SUBSCRIPTION',
+          prices: [
+            { id: `m${month}`, interval: 'MONTH', amountMinor: month, currency: 'UAH' },
+            { id: `y${year}`, interval: 'YEAR', amountMinor: year, currency: 'UAH' },
+          ],
+        },
+        null,
+      );
+    const pro = plan(100_000, 1_000_000);
+    expect(yearlySaving(pro)).toEqual({
+      percent: 17,
+      saving: { amountMinor: 200_000, currency: 'UAH' },
+      perMonth: { amountMinor: 83_333, currency: 'UAH' },
+    });
+    expect(yearlySaving(plan(100_000, 1_200_000))).toBeNull();
+    expect(yearlySaving(offer({ kind: 'SUBSCRIPTION' }, null))).toBeNull();
+    expect(bestYearlyPercent({ items: [plan(100_000, 1_080_000), pro, start] })).toBe(17);
+    expect(bestYearlyPercent(list)).toBeNull();
   });
 
   test('money from minor units in the reader’s locale', () => {

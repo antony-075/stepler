@@ -23,6 +23,7 @@ export function OfferCard({
   price,
   unit,
   description,
+  saving,
   facts,
   action,
   highlighted = false,
@@ -32,6 +33,8 @@ export function OfferCard({
   price: string;
   unit: string;
   description?: string | null;
+  /** A plan's yearly discount under the price, in words («−17%: економія 2 000 ₴ на рік»). */
+  saving?: ReactNode;
   facts: string[];
   action: ReactNode;
   highlighted?: boolean;
@@ -57,6 +60,7 @@ export function OfferCard({
             </span>
             <span className="text-sm text-muted-foreground">{unit}</span>
           </p>
+          {saving == null ? null : <div className="text-sm text-pretty">{saving}</div>}
           {description == null ? null : (
             <p className="text-sm text-pretty text-muted-foreground">{description}</p>
           )}
