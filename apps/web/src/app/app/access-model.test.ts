@@ -5,16 +5,18 @@ const now = new Date('2027-06-15T12:00:00Z');
 const inDays = (days: number) => new Date(now.getTime() + days * 24 * 3600_000).toISOString();
 
 describe('accountBanner', () => {
-  test('the trial reminder: only in the last three whole days', () => {
-    expect(accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(3.9) }, now)).toEqual({
+  test('the trial reminder: only in the last three days, rounded up', () => {
+    expect(accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(3) }, now)).toEqual({
       kind: 'trial',
       days: 3,
     });
     expect(accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(2.1) }, now)).toEqual({
       kind: 'trial',
-      days: 2,
+      days: 3,
     });
-    expect(accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(4) }, now)).toBeNull();
+    expect(
+      accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(3.1) }, now),
+    ).toBeNull();
     expect(accountBanner({ state: 'ACTIVE', reason: 'TRIAL', endsAt: inDays(6) }, now)).toBeNull();
   });
 
@@ -31,12 +33,13 @@ describe('accountBanner', () => {
   });
 });
 
-test('daysLeft counts whole days, as the plan card’s countdown does', () => {
-  // A new trial (7 days from sign-up), a minute later: «ще 6 днів», like «6 дн 23 год 59 хв».
-  expect(daysLeft(inDays(7 - 1 / (24 * 60)), now)).toBe(6);
+test('daysLeft rounds up: a fresh trial says 7, the last partial day 1, 0 only after the end', () => {
+  // A new trial (7 days from sign-up), a minute later: still «ще 7 днів».
+  expect(daysLeft(inDays(7 - 1 / (24 * 60)), now)).toBe(7);
   expect(daysLeft(inDays(7), now)).toBe(7);
-  expect(daysLeft(inDays(5.5), now)).toBe(5);
-  expect(daysLeft(inDays(0.4), now)).toBe(0);
+  expect(daysLeft(inDays(5.5), now)).toBe(6);
+  expect(daysLeft(inDays(0.4), now)).toBe(1);
+  expect(daysLeft(inDays(0), now)).toBe(0);
   expect(daysLeft(inDays(-1), now)).toBe(0);
 });
 

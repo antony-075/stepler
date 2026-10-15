@@ -115,7 +115,7 @@ export function PlanCard({
   const title =
     subscription !== null && !trial ? subscription.offerTitle : planName(t, access.reason);
 
-  // Whole days, as the countdown's first tile counts them (`daysLeft`, the app-wide rule).
+  // The headline: days rounded up (`daysLeft`, the app-wide rule); the tiles below stay exact.
   const daysNote =
     days === null ? null : (
       <span className={cn('font-medium', closeToEnd ? 'text-warning' : 'text-link')}>

@@ -5,12 +5,13 @@ const DAY_MS = 24 * 3600_000;
 export const TRIAL_REMINDER_DAYS = 3;
 
 /**
- * Whole days left, rounded down, as «Тариф і оплата»'s countdown counts them (5 days 12 hours →
- * «5 днів»; under a day → 0, «останній день» / «сьогодні»); never below 0. The one rule for every
- * «залишилось N днів» in the app (the dashboard link, the banner, the plan card).
+ * Days left, rounded up (owner decision 2026-10-15: a fresh 7-day trial says «ще 7 днів», the last
+ * partial day «1 день»); 0 only once the end has passed. The one rule for every «залишилось N
+ * днів» in the app (the dashboard link, the banner, the plan card); the plan card's countdown
+ * tiles stay exact (days, hours, minutes), so they may show one day less than the sentence.
  */
 export function daysLeft(endsAt: string, now: Date): number {
-  return Math.max(0, Math.floor((new Date(endsAt).getTime() - now.getTime()) / DAY_MS));
+  return Math.max(0, Math.ceil((new Date(endsAt).getTime() - now.getTime()) / DAY_MS));
 }
 
 /** What the account banner above every admin page says, if anything. */
