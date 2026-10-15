@@ -1858,7 +1858,8 @@
       "failed": "Could not load subscriptions. Try again.",
       "more": "Show more",
       "periodLine": "Paid until: {date}",
-      "checkedLine": "Checked with LiqPay: {value}"
+      "checkedLine": "Checked with LiqPay: {value}",
+      "endedLine": "Ended: {date}"
     },
     "offers": {
       "title": "Plans and prices",

@@ -80,7 +80,7 @@ function OfferRow({ offer }: { offer: OperatorOffer }) {
   const prices = usePriceText(offer);
   const limits = useLimitText(offer);
   return (
-    <li className="relative grid gap-2 p-4 transition-colors hover:bg-hover-ghost has-[a:focus-visible]:bg-hover-ghost md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(0,1fr)_auto] md:items-center md:gap-4">
+    <li className="relative grid gap-2 p-4 transition-colors hover:bg-hover-ghost has-[a:focus-visible]:bg-hover-ghost md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1fr)_14rem] md:items-center md:gap-4">
       <div className="grid min-w-0 gap-0.5">
         <Link
           href={`/ops/billing/offers/${offer.id}`}
@@ -91,7 +91,11 @@ function OfferRow({ offer }: { offer: OperatorOffer }) {
         <span className="font-mono text-[0.8125rem] text-muted-foreground">{offer.code}</span>
       </div>
       <span className="text-[0.9375rem] text-foreground-soft">{limits}</span>
-      <span className="text-[0.9375rem] tabular-nums">{prices}</span>
+      <span className="grid text-[0.9375rem] tabular-nums">
+        {prices.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </span>
       <span className="flex flex-wrap gap-1.5 md:justify-end">
         {offer.highlighted ? <Badge variant="neutral">{t('highlighted')}</Badge> : null}
         <Badge variant={offer.active ? 'success' : 'neutral'}>
@@ -108,7 +112,6 @@ export function useLimitText(offer: OperatorOffer): string {
   const format = useFormatter();
   const { limits } = offer;
   const parts: string[] = [];
-  if (offer.extension !== null) parts.push(t(`extensions.${offer.extension}`));
   if (limits.activeCollections !== null) {
     parts.push(t('limits.collections', { count: limits.activeCollections }));
   }
@@ -131,18 +134,16 @@ export function useLimitText(offer: OperatorOffer): string {
   return parts.join(', ');
 }
 
-function usePriceText(offer: OperatorOffer): string {
+function usePriceText(offer: OperatorOffer): string[] {
   const t = useTranslations('ops.offers');
   const format = useFormatter();
-  if (offer.kind === 'TRIAL') return t('trialFree');
-  if (offer.extension === 'STORAGE') return t('storageDifference');
-  if (offer.prices.length === 0) return t('noPrice');
-  return offer.prices
-    .map((price) =>
-      t('priceLine', {
-        amount: formatMinor(format.number, price.amountMinor, price.currency),
-        interval: t(`intervals.${price.interval}`),
-      }),
-    )
-    .join(', ');
+  if (offer.kind === 'TRIAL') return [t('trialFree')];
+  if (offer.extension === 'STORAGE') return [t('storageDifference')];
+  if (offer.prices.length === 0) return [t('noPrice')];
+  return offer.prices.map((price) =>
+    t('priceLine', {
+      amount: formatMinor(format.number, price.amountMinor, price.currency),
+      interval: t(`intervals.${price.interval}`),
+    }),
+  );
 }

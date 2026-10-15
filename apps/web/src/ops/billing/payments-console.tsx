@@ -210,7 +210,14 @@ function usePaymentText() {
         ? null
         : t('refunded', { amount: formatMinor(format.number, row.refundedMinor, row.currency) }),
     date: (iso: string) =>
-      format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short', timeZone: KYIV }),
+      format.dateTime(new Date(iso), {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: KYIV,
+      }),
     what: (row: OperatorPayment) =>
       t('what', { kind: t(`kinds.${row.kind}`), title: row.offerTitle }),
   };
@@ -245,7 +252,7 @@ function PaymentTable({ rows }: { rows: OperatorPayment[] }) {
             <th scope="col" className="px-4 py-2.5 font-medium">
               {t('columns.what')}
             </th>
-            <th scope="col" className="w-[9rem] px-4 py-2.5 text-right font-medium">
+            <th scope="col" className="w-[11rem] px-4 py-2.5 text-right font-medium">
               {t('columns.amount')}
             </th>
             <th scope="col" className="w-[13rem] px-4 py-2.5 font-medium">

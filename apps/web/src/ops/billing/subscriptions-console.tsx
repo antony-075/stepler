@@ -276,9 +276,11 @@ function SubscriptionRow({ row, onEnd }: { row: OperatorSubscription; onEnd: () 
           )}
         </span>
         <span className="text-foreground-soft tabular-nums">
-          {t('periodLine', {
-            date: row.currentPeriodEnd === null ? t('noEnd') : day(row.currentPeriodEnd),
-          })}
+          {ended && row.endedAt !== null
+            ? t('endedLine', { date: day(row.endedAt) })
+            : t('periodLine', {
+                date: row.currentPeriodEnd === null ? t('noEnd') : day(row.currentPeriodEnd),
+              })}
         </span>
         {paid ? (
           <span className="text-muted-foreground tabular-nums">
@@ -312,7 +314,7 @@ function SubscriptionRow({ row, onEnd }: { row: OperatorSubscription; onEnd: () 
           >
             {refresh.isPending ? t('refreshing') : t('refresh')}
           </Button>
-          {ended && row.providerUnsubscribedAt !== null ? null : (
+          {ended ? null : (
             <Button variant="destructive" onClick={onEnd}>
               {t('end')}
             </Button>

@@ -1858,7 +1858,8 @@
       "failed": "Не вдалося завантажити підписки. Спробуйте ще.",
       "more": "Показати ще",
       "periodLine": "Оплачено до: {date}",
-      "checkedLine": "Звірено з LiqPay: {value}"
+      "checkedLine": "Звірено з LiqPay: {value}",
+      "endedLine": "Завершено: {date}"
     },
     "offers": {
       "title": "Тарифи і ціни",
