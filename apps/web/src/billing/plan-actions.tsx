@@ -24,7 +24,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useState } from 'react';
 import { BILLING_KEY, cancelPendingChange, cancelSubscription } from '@/api/billing';
 import { USAGE_KEY } from '@/api/collections';
-import { billingHref, PACKS_SECTION_ID } from './billing-tab';
+import { billingHref, PACKS_SECTION_ID, SUBSCRIPTIONS_SECTION_ID } from './billing-tab';
 import { formatMoney, type PlanInterval, type PricedPlan } from './offers';
 import { usePlanPrice } from './plan-picker';
 import { SubscribeDialog } from './subscribe-dialog';
@@ -62,7 +62,7 @@ export function PlanActions({
         {subscription === null ? (
           <div className={QUIET}>
             <Button asChild variant="ghost">
-              <Link href={billingHref('plans')}>
+              <Link href={billingHref('plans', SUBSCRIPTIONS_SECTION_ID)}>
                 <Tags aria-hidden="true" />
                 {t('access.choosePlan')}
               </Link>

@@ -2014,6 +2014,17 @@
       "plans": "Plans",
       "history": "Payment history"
     },
+    "offerKind": {
+      "title": "What fits you?",
+      "packs": {
+        "title": "A pack for one event",
+        "description": "Paid once for one collection. No automatic charges."
+      },
+      "subscriptions": {
+        "title": "A subscription for organisers",
+        "description": "Several collections on one account, monthly or yearly at a discount."
+      }
+    },
     "states": {
       "ACTIVE": "Active",
       "GRACE": "Grace period",

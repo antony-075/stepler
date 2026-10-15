@@ -53,7 +53,7 @@ export function PacksSection() {
           {t('packs.unavailable')}
         </Alert>
       ) : (
-        <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
+        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {packs.map((item) => (
             <li key={item.offer.id}>
               <PackCard

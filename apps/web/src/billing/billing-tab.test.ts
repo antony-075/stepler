@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { billingHref, billingTab } from './billing-tab';
+import { billingHref, billingTab, defaultOfferKind } from './billing-tab';
 
 const tabOf = (search: string) => billingTab(new URLSearchParams(search));
 
@@ -34,5 +34,23 @@ describe('billingHref', () => {
     expect(billingHref('plans')).toBe('/app/billing?tab=plans');
     expect(billingHref('plans', 'packs')).toBe('/app/billing?tab=plans#packs');
     expect(billingHref('history')).toBe('/app/billing?tab=history');
+  });
+});
+
+describe('defaultOfferKind', () => {
+  const kind = (search: string, hash = '', pays = false) =>
+    defaultOfferKind(new URLSearchParams(search), hash, pays);
+
+  test('a link decides: a plan shows subscriptions, a pack or a collection shows packs', () => {
+    expect(kind('plan=0190', '', false)).toBe('subscriptions');
+    expect(kind('pack=pack-start', '', true)).toBe('packs');
+    expect(kind('collection=0190', '', true)).toBe('packs');
+    expect(kind('tab=plans', '#packs', true)).toBe('packs');
+    expect(kind('tab=plans', '#subscriptions', false)).toBe('subscriptions');
+  });
+
+  test('otherwise a subscriber sees subscriptions, everyone else packs', () => {
+    expect(kind('tab=plans', '', true)).toBe('subscriptions');
+    expect(kind('tab=plans', '', false)).toBe('packs');
   });
 });

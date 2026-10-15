@@ -12,6 +12,9 @@ export const BILLING_PATH = '/app/billing';
 /** The id of the packs group on «Тарифи», for «Купити пакет». */
 export const PACKS_SECTION_ID = 'packs';
 
+/** The id of the subscriptions group on «Тарифи», for «Обрати тариф» beside «Купити пакет». */
+export const SUBSCRIPTIONS_SECTION_ID = 'subscriptions';
+
 /**
  * The tab a URL opens. Without `?tab=`, the purchase parameters (`?pack=`, `?plan=`,
  * `?collection=`, from /pricing, a collection page or a failed payment) open «Тарифи», where
@@ -29,4 +32,26 @@ export function billingTab(params: { get(name: string): string | null }): Billin
 export function billingHref(tab: BillingTab, hash?: string): string {
   const query = tab === 'overview' ? '' : `?tab=${tab}`;
   return `${BILLING_PATH}${query}${hash === undefined ? '' : `#${hash}`}`;
+}
+
+/** The two kinds of offer on «Тарифи», shown one at a time (owner remark, billing M4 round). */
+export type OfferKind = 'packs' | 'subscriptions';
+
+/**
+ * Which kind «Тарифи» shows until the owner picks one: what a link asked for (`?plan=` a
+ * subscription, as does `#subscriptions`; `?pack=`, `?collection=` or `#packs` a pack), else
+ * subscriptions for an account
+ * that pays for one, else packs (most owners buy for one event).
+ */
+export function defaultOfferKind(
+  params: { get(name: string): string | null },
+  hash: string,
+  paysSubscription: boolean,
+): OfferKind {
+  if (params.get('plan') !== null || hash === `#${SUBSCRIPTIONS_SECTION_ID}`) {
+    return 'subscriptions';
+  }
+  if (params.get('pack') !== null || params.get('collection') !== null) return 'packs';
+  if (hash === `#${PACKS_SECTION_ID}`) return 'packs';
+  return paysSubscription ? 'subscriptions' : 'packs';
 }

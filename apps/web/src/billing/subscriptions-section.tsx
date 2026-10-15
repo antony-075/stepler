@@ -16,6 +16,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { useTranslations } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import { useId, useState } from 'react';
+import { SUBSCRIPTIONS_SECTION_ID } from './billing-tab';
 import { ChangePlanDialog } from './change-plan-dialog';
 import { type PlanInterval, planIntervals, type PricedPlan, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
@@ -77,7 +78,11 @@ export function SubscriptionsSection({
           : null;
 
   return (
-    <section aria-labelledby="plans-title" className="grid gap-4">
+    <section
+      id={SUBSCRIPTIONS_SECTION_ID}
+      aria-labelledby="plans-title"
+      className="grid scroll-mt-20 gap-4"
+    >
       <div className="grid gap-1">
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
           <h2 id="plans-title" className="type-h2">
@@ -96,7 +101,7 @@ export function SubscriptionsSection({
         </div>
       ) : (
         <>
-          <ul className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))] gap-4">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {plans.map((plan) => {
               const current =
                 paid !== null && paid.offerId === plan.offer.id && paid.interval === plan.interval;

@@ -36,7 +36,8 @@ const PLANS = {
  */
 async function subscribe(page: Page, code: keyof typeof PLANS = 'sub-pro'): Promise<string> {
   const { title, consent } = PLANS[code];
-  await page.goto('/app/billing?tab=plans');
+  // «Тарифи» shows one kind at a time; `#subscriptions` is «Обрати тариф» beside «Купити пакет».
+  await page.goto('/app/billing?tab=plans#subscriptions');
   await plans(page).getByTestId(`plan-${code}`).getByRole('button', { name: 'Оформити' }).click();
   const dialog = page.getByRole('dialog', { name: `Оформити «${title}»` });
   const pay = dialog.getByRole('button', { name: 'Перейти до оплати' });
@@ -72,6 +73,13 @@ test('pricing shows the plans monthly and yearly, signing in to subscribe', asyn
 test('the subscribe dialog needs the auto-renewal consent; nothing overflows', async ({ page }) => {
   await signIn(page, newEmail());
   await page.goto('/app/billing?tab=plans');
+  // «Тарифи» asks which kind fits; without a subscription it starts on the packs.
+  const kind = page.getByRole('radiogroup', { name: 'Що вам підходить?' });
+  await expect(kind.getByRole('radio', { name: 'Пакет на одну подію' })).toBeChecked();
+  await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
+  await expect(plans(page)).toHaveCount(0);
+  await kind.getByRole('radio', { name: 'Підписка для організаторів' }).click();
+  await expect(page.getByRole('heading', { name: 'Купити пакет' })).toHaveCount(0);
   await plans(page).getByTestId('plan-sub-pro').getByRole('button', { name: 'Оформити' }).click();
   const dialog = page.getByRole('dialog', { name: 'Оформити «Pro»' });
   await expect(dialog.getByRole('button', { name: 'Перейти до оплати' })).toBeDisabled();

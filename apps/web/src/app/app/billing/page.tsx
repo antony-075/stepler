@@ -10,13 +10,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * «Тариф і оплата» (ADR 0018) in one 48rem column: three tabs, «Огляд» (what the account has
+ * «Тариф і оплата» (ADR 0018) in the full admin column like every admin page (owner remark,
+ * billing M4 round): three tabs, «Огляд» (what the account has
  * now), «Тарифи» (the subscriptions and packs on sale) and «Історія оплат», in `?tab=`.
  * `?pack=` / `?plan=` / `?collection=` open «Тарифи» with that purchase dialog.
  */
 export default function BillingPage() {
   return (
-    <AdminPage className="*:max-w-3xl">
+    <AdminPage>
       <Suspense>
         <BillingOverview />
       </Suspense>
