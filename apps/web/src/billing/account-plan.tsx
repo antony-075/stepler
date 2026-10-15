@@ -115,15 +115,11 @@ export function PlanCard({
   const title =
     subscription !== null && !trial ? subscription.offerTitle : planName(t, access.reason);
 
-  // Whole days, as the countdown's first tile counts them (5 days 12 hours → «5 днів»).
-  const wholeDays =
-    days === null || access.endsAt === null
-      ? null
-      : Math.max(0, Math.floor((new Date(access.endsAt).getTime() - now.getTime()) / DAY_MS));
+  // Whole days, as the countdown's first tile counts them (`daysLeft`, the app-wide rule).
   const daysNote =
-    wholeDays === null ? null : (
+    days === null ? null : (
       <span className={cn('font-medium', closeToEnd ? 'text-warning' : 'text-link')}>
-        {monoDigits(t('plan.daysLeft', { days: wholeDays }), MONO)}
+        {monoDigits(t('plan.daysLeft', { days }), MONO)}
       </span>
     );
   // Read-only without a plan has no line: the tab's alert says why, the badge says the state.

@@ -4,9 +4,13 @@ const DAY_MS = 24 * 3600_000;
 /** The trial reminder shows in the last days only, so a new account is not nagged (ADR 0018). */
 export const TRIAL_REMINDER_DAYS = 3;
 
-/** Whole days left, rounded up («залишилось 3 дні» until the last 72 hours); never below 0. */
+/**
+ * Whole days left, rounded down, as «Тариф і оплата»'s countdown counts them (5 days 12 hours →
+ * «5 днів»; under a day → 0, «останній день» / «сьогодні»); never below 0. The one rule for every
+ * «залишилось N днів» in the app (the dashboard link, the banner, the plan card).
+ */
 export function daysLeft(endsAt: string, now: Date): number {
-  return Math.max(0, Math.ceil((new Date(endsAt).getTime() - now.getTime()) / DAY_MS));
+  return Math.max(0, Math.floor((new Date(endsAt).getTime() - now.getTime()) / DAY_MS));
 }
 
 /** What the account banner above every admin page says, if anything. */
