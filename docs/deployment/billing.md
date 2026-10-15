@@ -98,14 +98,9 @@ With the sandbox keys and plan prices in place (above): `/app/billing` → «О�
 
 `Payment.needsReview = true` on a `SUBSCRIPTION_RENEWAL` (or a start) means LiqPay took money that could not be applied as expected: an amount other than the plan's price (`mismatch`), a charge on a plan that had ended or been cancelled, a charge on a plan already stopped for a monthly ↔ yearly switch, or a second paid plan on the same account (the stacked one is ended and unsubscribed by the job). The operator checks the account's `Subscription` rows and the `PaymentEvent` of that charge, then refunds it in the LiqPay cabinet (M4 brings refunds into `/ops`) or leaves it when the charge was right (e.g. a renewal at the old price before `subscribe_update` was confirmed). A renewal callback that never arrived (LiqPay's `status` may not report `regular` charges, ADR 0018) shows as a paying owner in grace: find the charge in the LiqPay cabinet and, until M4, ask a developer to replay it.
 
-### Follow-up: the spike's daily renewal (2026-10-09, owner)
+### The spike's daily renewal (closed 2026-10-15)
 
-Spike S1b left one daily sandbox subscription running (billing-spike@example.com, order `01a11bed-00a6-…`) so its first `regular` charge (~14:31 UTC on 2026-10-09) can be observed. Its callback goes to the dead 10-08 tunnel, so what is tested is the reconcile job finding the charge through `status` (ADR 0018, «Still unverified»).
-
-1. The dev database holds this plan as monthly (period end 2026-11-08), so the job would not look until November. Before 14:31 UTC, with `pnpm worker:dev` running, move its period end to the daily charge: `UPDATE "Subscription" SET "currentPeriodEnd" = '2026-10-09 14:32:00+00' WHERE id = '01a11bed-00a9-75a5-984a-62413aee3e12';`
-2. After ~15:31 UTC: sign in as billing-spike@example.com → `/app/billing` → «Історія оплат», or `SELECT kind, status, "amountMinor", "paidAt" FROM "Payment" WHERE "subscriptionId" = '01a11bed-00a9-75a5-984a-62413aee3e12' ORDER BY "createdAt";`. A `SUBSCRIPTION_RENEWAL` row = `status` reports `regular` charges; the plan in grace («Очікує оплати») instead = it does not.
-3. Record the result in ADR 0018 (replace «pending the 2026-10-09 check»).
-4. Cancel it: «Скасувати підписку» on the «Підписка» card as billing-spike, so the sandbox stops charging daily.
+The S1b daily sandbox subscription was checked through `/ops` («Звірити з LiqPay») and then ended («Завершити зараз»): LiqPay confirmed `unsubscribed`. `status` still answered its first `subscribe` transaction a week later, so it does not report renewals; the reconcile job now reads LiqPay's payments archive instead (ADR 0018, «Owner-app checks of 2026-10-15»). Whether the sandbox charged it daily can be seen in the LiqPay sandbox cabinet (order `01a11bed-00a6-…`).
 
 ## Environment
 
