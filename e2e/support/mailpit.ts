@@ -11,28 +11,28 @@ async function search(to: string): Promise<MailpitSummary[]> {
 }
 
 /**
- * Polls Mailpit for the newest sign-in link sent to `to` and returns its URL. Other mail to the
- * same address (the operator's «нова скарга», slice 9) is skipped: only sign-in mail counts.
+ * Polls Mailpit for the newest account link sent to `to` (ADR 0019: «Підтвердіть пошту» or
+ * «Новий пароль») and returns its URL. Other mail to the same address (the operator's «нова
+ * скарга», slice 9) has no such link and is skipped.
  */
-export async function latestMagicLink(
+export async function latestAuthLink(
   to: string,
+  kind: 'verify' | 'reset' = 'verify',
   timeoutMs = 15_000,
   /** Messages already there before the request (a reused address): never one of them. */
   seen: ReadonlySet<string> = new Set(),
 ): Promise<string> {
+  const path = kind === 'verify' ? '/auth/verify' : '/reset-password';
+  const pattern = new RegExp(`(https?://\\S+${path}\\?token=[A-Za-z0-9_-]+)`);
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    const signIns = (await search(to)).filter(
-      (m) => !m.Subject.includes('скарг') && !seen.has(m.ID),
-    );
-    const newest = signIns[0];
-    if (newest !== undefined) {
-      const res = await fetch(`${MAILPIT}/api/v1/message/${newest.ID}`);
+    for (const message of (await search(to)).filter((m) => !seen.has(m.ID))) {
+      const res = await fetch(`${MAILPIT}/api/v1/message/${message.ID}`);
       const text = ((await res.json()) as { Text: string }).Text;
-      const link = /(https?:\/\/\S+\/auth\/verify\?token=[A-Za-z0-9_-]+)/.exec(text)?.[1];
+      const link = pattern.exec(text)?.[1];
       if (link !== undefined) return link;
     }
-    if (Date.now() > deadline) throw new Error(`no sign-in email for ${to}`);
+    if (Date.now() > deadline) throw new Error(`no ${kind} email for ${to}`);
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 }

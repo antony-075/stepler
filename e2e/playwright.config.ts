@@ -65,10 +65,11 @@ export default defineConfig({
         S3_SECRET_ACCESS_KEY: compose.S3_SECRET_ACCESS_KEY ?? '',
         S3_FORCE_PATH_STYLE: 'true',
         // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
-        LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR: '10000',
         // The operator's few service addresses sign in many times per run (slice 9).
-        LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '10000',
-        LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
+        LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: '10000',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '10000',
         LIMIT_TEXTS_PER_IP_PER_MINUTE: '10000',

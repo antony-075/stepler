@@ -61,6 +61,6 @@ export default function globalSetup(): void {
   prisma(['migrate', 'deploy']);
   prisma(
     ['db', 'execute', '--stdin'],
-    `TRUNCATE "User", "AuthAccount", "AuthSession", "MagicLinkToken" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}\n${E2E_CATALOGUE}`,
+    `TRUNCATE "User", "AuthAccount", "AuthSession", "AuthEmailToken", "PasswordCredential" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}\n${E2E_CATALOGUE}`,
   );
 }
