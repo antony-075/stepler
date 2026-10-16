@@ -44,7 +44,7 @@ export function LandingHeader({
         {t('skip')}
       </a>
       <div className="stepler-container flex h-14 items-center gap-3">
-        <SiteWordmark mark />
+        <SiteWordmark />
         <SectionNav onLanding={onLanding} />
         <div className="ml-auto flex items-center gap-2">
           <div className="hidden lg:block">

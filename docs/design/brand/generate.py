@@ -12,6 +12,9 @@
 #   b  Stapler: a monogram tile. The S in white on a Stepler-blue rounded square, a red staple
 #      across the top-left corner (stepler ~ stapler).
 #   c  Pin: the geometric S alone, the red pin dot on its upper terminal. The most legible at 16px.
+#   w  Wordmark only (owner 2026-10-16, applied): no mark at all, the logo is the word «stepler»
+#      in Golos Text 700; where a square is needed (favicon, home-screen icon) the wordmark's own
+#      lowercase «s» in ink on white stands for it.
 import os
 
 from fontTools.pens.boundsPen import BoundsPen
@@ -137,6 +140,27 @@ def main():
             f.write(svg('0 0 64 64', mark(False)))
         with open(os.path.join(folder, 'app-icon.svg'), 'w') as f:
             f.write(svg('0 0 64 64', app_icon(option)))
+    # w: the wordmark alone. The square marks are its own «s», ink on white (a rounded tile for the
+    # favicon so it reads in a dark tab bar; a full square for home-screen icons).
+    folder = os.path.join(OUT, 'w')
+    os.makedirs(folder, exist_ok=True)
+    s_small = letter('s')
+    for theme, ink in (('light', INK), ('dark', INK_D)):
+        wm = svg(f'0 {-0.74 * upm:.0f} {width:.0f} {0.98 * upm:.0f}',
+                 f'<path d="{glyphs}" fill="{ink}"/>', 'stepler')
+        for name in ('wordmark', 'logo'):
+            with open(os.path.join(folder, f'{name}-{theme}.svg'), 'w') as f:
+                f.write(wm)
+        with open(os.path.join(folder, f'mark-{theme}.svg'), 'w') as f:
+            f.write(svg('0 0 64 64', f'<path d="{s_small}" fill="{ink}"/>'))
+        with open(os.path.join(folder, f'letter-s-{theme}.svg'), 'w') as f:
+            f.write(svg('0 0 64 64', f'<path d="{s_small}" fill="{ink}"/>'))
+    tile = f'<g transform="translate(32 33) scale(.8) translate(-32 -32)"><path d="{s_small}" fill="{INK}"/></g>'
+    with open(os.path.join(folder, 'favicon.svg'), 'w') as f:
+        f.write(svg('0 0 64 64', f'<rect x="2" y="2" width="60" height="60" rx="15" fill="{PAPER}" stroke="#E4E4E7" stroke-width="1.5"/>{tile}'))
+    big = f'<g transform="translate(32 33) scale(.68) translate(-32 -32)"><path d="{s_small}" fill="{INK}"/></g>'
+    with open(os.path.join(folder, 'app-icon.svg'), 'w') as f:
+        f.write(svg('0 0 64 64', f'<rect width="64" height="64" fill="{PAPER}"/>{big}'))
     print('ok')
 
 

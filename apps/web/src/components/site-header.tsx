@@ -3,7 +3,6 @@ import { cn } from '@stepler/ui/lib/utils';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { BrandMark } from './brand-mark';
 
 type SiteHeaderProps = {
   /**
@@ -20,22 +19,20 @@ type SiteHeaderProps = {
 };
 
 /**
- * The wordmark «stepler» (Golos Text 700, as in the logo), linking to `href`; 44px tall. With
- * `mark`, the brand mark before it: the logo (sign-in, auth and legal pages, DESIGN-SYSTEM.md §0.7). Also the guest
- * page template's brand, without the mark (templates keep their look).
+ * The logo: the wordmark «stepler» alone (Golos Text 700, -0.035em; owner 2026-10-16: no mark),
+ * linking to `href`; 44px tall. Also the guest page templates' brand.
  */
-export function SiteWordmark({ href = '/', mark = false }: { href?: string; mark?: boolean }) {
+export function SiteWordmark({ href = '/' }: { href?: string }) {
   const t = useTranslations('brand');
   return (
     <Link
       href={href}
       translate="no"
       className={cn(
-        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-control px-1 text-xl text-foreground no-underline',
+        '-ml-1 inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-control px-1 text-[1.375rem] text-foreground no-underline',
         focusRing,
       )}
     >
-      {mark ? <BrandMark className="h-8" /> : null}
       <span className="font-wordmark lowercase">{t('name')}</span>
     </Link>
   );
@@ -55,7 +52,7 @@ export function SiteHeader({
   return (
     <header className={app ? 'border-b border-border bg-background' : undefined}>
       <div className={cn(container, 'flex h-14 items-center justify-between gap-3')}>
-        <SiteWordmark href={brandHref} mark />
+        <SiteWordmark href={brandHref} />
         {children}
       </div>
     </header>

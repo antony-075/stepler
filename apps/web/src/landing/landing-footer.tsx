@@ -34,7 +34,7 @@ export async function LandingFooter({
     <footer className="border-t border-border bg-background">
       <div className="stepler-container grid gap-10 py-14 md:grid-cols-[minmax(0,5fr)_repeat(2,minmax(0,2fr))] lg:gap-16">
         <div className="grid content-start gap-3">
-          <SiteWordmark mark />
+          <SiteWordmark />
           <p className="max-w-[36ch] text-pretty text-foreground-soft">{t('description')}</p>
           {contactEmail === null ? null : (
             <div className="grid pt-2 text-sm">
