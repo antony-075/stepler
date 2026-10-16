@@ -7,8 +7,8 @@
 //   where the saved ones will be. The pick action stays in the dock / side panel.
 // - While files move: `UploadSummary` (words, mono bytes, the 2px pencil line, partial and
 //   offline follow-ups, one polite live region) above a grid of `UploadFrame` tiles with
-//   small local previews (`localThumbnail`, one file decoded at a time; video, documents and
-//   undecodable photos get a type tile: never a decoded original in the grid).
+//   small local previews (`localThumbnail`, one file decoded at a time; a video shows one frame;
+//   documents and files the browser cannot decode get a type tile: never an original in the grid).
 // - When the batch settles with everything added: the B success moment, `PrintStack` of the last
 //   three prints + «Готово, ваші кадри» and the count; with failures, the summary stays with
 //   «Повторити невдалі»; all failed: «Не вдалося додати кадри» + «Повторити всі».
@@ -37,20 +37,17 @@ import type { UploadItem } from './upload/queue';
 import type { UploadQueue } from './upload/use-upload-queue';
 
 /**
- * Photos a browser may decode for a local preview; HEIC decodes in Safari only, elsewhere the
- * thumbnail fails and the frame keeps its type tile.
+ * Photos and videos a browser may decode for a local preview; HEIC (and HEVC video) decodes in
+ * Safari only, elsewhere the thumbnail fails and the frame keeps its type tile.
  */
-const PREVIEWABLE = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/heic',
-  'image/heif',
-]);
+const PREVIEWABLE: Record<FileKind, ReadonlySet<string>> = {
+  PHOTO: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']),
+  VIDEO: new Set(['video/mp4', 'video/quicktime', 'video/webm']),
+  DOCUMENT: new Set(),
+};
 
 const isPreviewable = (item: UploadItem): boolean =>
-  item.kind === 'PHOTO' && PREVIEWABLE.has(item.file.type.toLowerCase());
+  PREVIEWABLE[item.kind].has(item.file.type.toLowerCase());
 
 /**
  * Small local previews (`localThumbnail`: one file decoded at a time, a THUMB_PX JPEG kept),
@@ -172,7 +169,7 @@ export function UploadBatch({ uploads, context }: { uploads: UploadQueue; contex
     why: t('why'),
   };
 
-  // The last three added, photos first: a print of a picture says more than a type tile.
+  // The last three added, pictures first: a print of a picture says more than a type tile.
   const done = shown.filter((item) => item.state === 'done');
   const prints = [
     ...done.filter((item) => !isPreviewable(item)),

@@ -124,6 +124,30 @@ test.describe('guest uploads', () => {
     await guest.context().close();
   });
 
+  test('a video gets a small local frame, so ten clips do not look alike', async ({
+    page,
+    browser,
+  }) => {
+    // Owner remark 2026-10-16: videos showed a «MOV» tile until the page was reloaded.
+    const { path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, () => undefined);
+    await pickFiles(guest, [pickedFile('clip.webm'), pickedFile('clip.mp4'), pickedFile('clip.mov')]);
+
+    // Each browser plays some of these (Chromium builds may lack H.264): every clip it can play
+    // shows one frame; the others keep their type tile.
+    const previews = uploading(guest).locator('img[src^="blob:"]');
+    await expect(previews.first()).toBeVisible({ timeout: 30_000 });
+    const sides = await previews.evaluateAll((images) =>
+      images.map((img) => {
+        const image = img as HTMLImageElement;
+        return Math.max(image.naturalWidth, image.naturalHeight);
+      }),
+    );
+    expect(sides.every((side) => side > 0 && side <= 320)).toBe(true);
+    await guest.context().close();
+  });
+
   test('a failing storage connection is retried without the guest doing anything', async ({
     page,
     browser,

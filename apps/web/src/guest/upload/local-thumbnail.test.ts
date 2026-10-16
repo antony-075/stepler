@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { fitWithin, THUMB_PX } from './local-thumbnail';
+import { fitWithin, THUMB_PX, videoFrameTime } from './local-thumbnail';
 
 describe('fitWithin', () => {
   test('a 48 MP portrait photo shrinks to the thumbnail on its longer side', () => {
@@ -13,5 +13,21 @@ describe('fitWithin', () => {
 
   test('an extreme panorama keeps at least one pixel', () => {
     expect(fitWithin(100_000, 10, THUMB_PX)).toEqual({ width: 320, height: 1 });
+  });
+});
+
+describe('videoFrameTime', () => {
+  test('a second in, past a black first frame', () => {
+    expect(videoFrameTime(42.5)).toBe(1);
+  });
+
+  test('a clip shorter than two seconds shows its middle', () => {
+    expect(videoFrameTime(0.8)).toBe(0.4);
+  });
+
+  test('an unknown or endless duration stays on the first frame', () => {
+    expect(videoFrameTime(Number.NaN)).toBe(0);
+    expect(videoFrameTime(Number.POSITIVE_INFINITY)).toBe(0);
+    expect(videoFrameTime(0)).toBe(0);
   });
 });
