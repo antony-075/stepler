@@ -1,34 +1,39 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { type LegalVersions, magicLinkRequestSchema } from '@stepler/contracts';
+import { loginRequestSchema, signedInResponseSchema } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { Input } from '@stepler/ui/components/input';
 import { Label } from '@stepler/ui/components/label';
-import { useMutation } from '@tanstack/react-query';
-import { CircleAlert, Mail, MailCheck } from 'lucide-react';
+import { PasswordInput } from '@stepler/ui/components/password-input';
+import { focusRing } from '@stepler/ui/lib/focus';
+import { cn } from '@stepler/ui/lib/utils';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Mail, MailCheck } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
-import { useCallback, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { apiRequest, isApiError } from '@/api/client';
+import { ME_QUERY_KEY } from '@/api/me';
+import { FieldError } from '@/auth/field-error';
+import { ResendVerification } from '@/auth/resend-verification';
 import { signInErrorMessage } from '@/errors/error-message';
-import { isLocale } from '@/i18n/locales';
-import { LegalConsent } from '@/legal/legal-consent';
 import { GoogleMark } from './google-mark';
-import { Turnstile, type TurnstileHandle } from './turnstile';
 
-const emailFormSchema = magicLinkRequestSchema.pick({ email: true });
+const formSchema = z.object({
+  email: loginRequestSchema.shape.email,
+  password: z.string().min(1),
+});
+type LoginValues = z.infer<typeof formSchema>;
 
-// The Ukrainian labels are wider than a 320–360px panel: tighter padding below `sm`, and the
-// label wraps (the button grows) instead of pushing the form out of the panel.
+// The Ukrainian labels are wider than a 320–360px panel: the label wraps (the button grows).
 const WRAPPING_BUTTON = 'h-auto min-h-12 py-2 whitespace-normal text-balance max-sm:px-4';
-type EmailForm = z.infer<typeof emailFormSchema>;
-
-/** The reason the disabled sign-in buttons give (ADR 0016), shown while the box is unticked. */
-const LEGAL_HINT_ID = 'legal-hint';
+/** A full navigation to an API route: it redirects to Google and back. */
+const GOOGLE_START = '/api/v1/auth/google/start';
+const LINK = cn('rounded-sm text-link underline-offset-4 hover:underline', focusRing);
 
 export type CallbackError =
   'OAUTH_FAILED' | 'ACCOUNT_BLOCKED' | 'LEGAL_ACCEPTANCE_REQUIRED' | 'LEGAL_VERSION_OUTDATED';
@@ -36,8 +41,6 @@ export type CallbackError =
 interface LoginFormProps {
   turnstileSiteKey: string;
   googleEnabled: boolean;
-  /** The current document versions (`GET /auth/methods`), sent back once the box is ticked. */
-  legal: LegalVersions;
   /** An error code carried back from the Google callback or start (`/login?error=…`). */
   initialError: CallbackError | null;
   /** `LEGAL_CONTACT_EMAIL`, for a blocked account's message (slice 9); `null` when unset. */
@@ -45,88 +48,59 @@ interface LoginFormProps {
 }
 
 /**
- * The sign-in card. Owner decision L1 (ADR 0016): a required checkbox accepts the Terms and the
- * Privacy Policy for everyone (the card cannot know whether the address is new without telling);
- * it sits between Turnstile and the submit, and both «Отримати посилання для входу» and
- * «Продовжити з Google» stay disabled until it is ticked — the owner's explicit exception to
- * DESIGN-SYSTEM §9 for this one form. The disabled buttons point at the visible hint with
- * `aria-describedby`, so the reason is announced. The API enforces the same rule; the buttons are
- * UX. The versions travel in the request body and in the Google start link. The box is not
- * remembered: a new visit asks again.
+ * The sign-in card (ADR 0019): e-mail and password with show/hide, «Забули пароль?» beside the
+ * password label, «Увійти», then «Увійти через Google» and the way to register. No legal
+ * checkbox here: the registration form carries it, and an account without an acceptance meets
+ * the fallback page after signing in (ADR 0016). A right password for an unconfirmed address
+ * turns the card into «Підтвердіть пошту» with «Надіслати лист ще раз».
  */
 export function LoginForm({
   turnstileSiteKey,
   googleEnabled,
-  legal,
   initialError,
   contactEmail,
 }: LoginFormProps) {
   const t = useTranslations();
-  const locale = useLocale();
   const router = useRouter();
-  const [legalAccepted, setLegalAccepted] = useState(false);
-  const turnstile = useRef<TurnstileHandle>(null);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [sentTo, setSentTo] = useState<string | null>(null);
-  const [turnstileFailed, setTurnstileFailed] = useState(false);
-  const onToken = useCallback((token: string | null) => {
-    setTurnstileToken(token);
-    if (token !== null) setTurnstileFailed(false);
-  }, []);
-  const onTurnstileError = useCallback(() => setTurnstileFailed(true), []);
-
-  const form = useForm<EmailForm>({ resolver: zodResolver(emailFormSchema), mode: 'onSubmit' });
-  const request = useMutation({
-    mutationFn: (email: string) =>
-      apiRequest('/auth/magic-link', {
-        method: 'POST',
-        body: {
-          email,
-          turnstileToken: turnstileToken ?? '',
-          ...(isLocale(locale) ? { locale } : {}),
-          legal,
-        },
-      }),
-    onSuccess: (_data, email) => setSentTo(email),
-    onError: (error) => {
-      // The documents changed while the card was open: fetch the new versions, ask again.
-      if (!isApiError(error, 'LEGAL_VERSION_OUTDATED')) return;
-      setLegalAccepted(false);
-      router.refresh();
+  const queryClient = useQueryClient();
+  const form = useForm<LoginValues>({ resolver: zodResolver(formSchema), mode: 'onSubmit' });
+  const login = useMutation({
+    mutationFn: (values: LoginValues) =>
+      apiRequest('/auth/login', { method: 'POST', body: values, schema: signedInResponseSchema }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
+      router.replace('/app');
     },
-    onSettled: () => turnstile.current?.reset(),
   });
 
-  if (sentTo !== null) {
+  const code = isApiError(login.error) ? login.error.code : login.isError ? 'INTERNAL' : null;
+  const unverifiedEmail = code === 'EMAIL_NOT_VERIFIED' ? form.getValues('email') : null;
+
+  if (unverifiedEmail !== null) {
     return (
-      <div role="status" className="grid gap-3">
+      <div className="grid gap-3">
         <h2 className="flex items-center gap-2.5 type-h2">
-          <MailCheck
-            aria-hidden="true"
-            className="size-6 shrink-0 text-success"
-            strokeWidth={1.75}
-          />
-          {t('login.sentTitle')}
+          <MailCheck aria-hidden="true" className="size-6 shrink-0 text-link" strokeWidth={1.75} />
+          {t('login.unverifiedTitle')}
         </h2>
-        <p className="text-muted-foreground">{t('login.sentText', { email: sentTo })}</p>
-        <p className="text-muted-foreground">{t('login.sentHint')}</p>
+        <p className="text-muted-foreground">
+          {t('login.unverifiedText', { email: unverifiedEmail })}
+        </p>
+        <ResendVerification email={unverifiedEmail} turnstileSiteKey={turnstileSiteKey} />
         <Button
           variant="ghost"
           className="-ml-3 justify-self-start text-link underline underline-offset-4"
-          onClick={() => {
-            setSentTo(null);
-            request.reset();
-          }}
+          onClick={() => login.reset()}
         >
-          {t('login.useAnother')}
+          {t('register.useAnother')}
         </Button>
       </div>
     );
   }
 
+  const shownError = code ?? (login.isIdle ? initialError : null);
   const emailError = form.formState.errors.email;
-  const requestError = isApiError(request.error) ? request.error.code : null;
-  const shownError = requestError ?? (request.isIdle ? initialError : null);
+  const passwordError = form.formState.errors.password;
 
   return (
     <div className="grid gap-4">
@@ -142,7 +116,7 @@ export function LoginForm({
       <form
         noValidate
         className="grid gap-3"
-        onSubmit={(event) => void form.handleSubmit(({ email }) => request.mutate(email))(event)}
+        onSubmit={(event) => void form.handleSubmit((values) => login.mutate(values))(event)}
       >
         <div className="grid gap-2">
           <Label htmlFor="email">{t('login.emailLabel')}</Label>
@@ -155,81 +129,45 @@ export function LoginForm({
               id="email"
               type="email"
               inputMode="email"
-              autoComplete="email"
+              autoComplete="username"
               spellCheck={false}
               placeholder={t('login.emailPlaceholder')}
               aria-invalid={emailError !== undefined}
               aria-describedby={emailError === undefined ? undefined : 'email-error'}
-              disabled={request.isPending}
+              disabled={login.isPending}
               className="pl-11"
               {...form.register('email')}
             />
           </div>
           {emailError !== undefined && (
-            <p
-              id="email-error"
-              className="flex items-start gap-1.5 text-sm leading-[1.45] text-destructive"
-            >
-              <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              <span className="min-w-0">{t('login.emailInvalid')}</span>
-            </p>
+            <FieldError id="email-error" message={t('login.emailInvalid')} />
           )}
         </div>
 
-        <Turnstile
-          ref={turnstile}
-          siteKey={turnstileSiteKey}
-          locale={locale}
-          onToken={onToken}
-          onError={onTurnstileError}
-        />
-        {turnstileFailed && (
-          <Alert
-            variant="error"
-            action={
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setTurnstileFailed(false);
-                  turnstile.current?.reset();
-                }}
-              >
-                {t('login.turnstileRetry')}
-              </Button>
-            }
-          >
-            {t('login.turnstileFailed')}
-          </Alert>
-        )}
-
-        <div className="grid gap-1">
-          <LegalConsent
-            id="legal-accept"
-            messageKey="login.legalCheckbox"
-            checked={legalAccepted}
-            onCheckedChange={setLegalAccepted}
-            disabled={request.isPending}
+        <div className="grid gap-2">
+          <div className="flex items-baseline justify-between gap-3">
+            <Label htmlFor="password">{t('login.passwordLabel')}</Label>
+            <Link href="/forgot-password" className={cn('text-sm', LINK)}>
+              {t('login.forgot')}
+            </Link>
+          </div>
+          <PasswordInput
+            id="password"
+            autoComplete="current-password"
+            showLabel={t('login.showPassword')}
+            hideLabel={t('login.hidePassword')}
+            aria-invalid={passwordError !== undefined}
+            aria-describedby={passwordError === undefined ? undefined : 'password-error'}
+            disabled={login.isPending}
+            {...form.register('password')}
           />
-          {!legalAccepted && (
-            <p id={LEGAL_HINT_ID} className="pl-8 type-small text-muted-foreground">
-              {t('login.legalHint')}
-            </p>
+          {passwordError !== undefined && (
+            <FieldError id="password-error" message={t('login.passwordRequired')} />
           )}
         </div>
 
-        <Button
-          type="submit"
-          size="lg"
-          className={WRAPPING_BUTTON}
-          disabled={request.isPending || turnstileToken === null || !legalAccepted}
-          aria-describedby={legalAccepted ? undefined : LEGAL_HINT_ID}
-        >
-          {request.isPending
-            ? t('login.sending')
-            : turnstileToken === null
-              ? t('login.turnstilePending')
-              : t('login.submit')}
+        <Button type="submit" size="lg" className={WRAPPING_BUTTON} disabled={login.isPending}>
+          {login.isPending ? t('login.signingIn') : t('login.submit')}
         </Button>
       </form>
 
@@ -240,36 +178,20 @@ export function LoginForm({
             {t('login.or')}
             <span aria-hidden="true" className="h-px flex-1 bg-border" />
           </div>
-          {legalAccepted ? (
-            <Button asChild variant="outline" size="lg" className={WRAPPING_BUTTON}>
-              {/* A full navigation to an API route (not a page): it redirects to Google and back.
-                  The versions ride along; the API refuses a start without them. */}
-              <a href={googleStartHref(legal)}>
-                <GoogleMark className="size-[18px]" />
-                {t('login.google')}
-              </a>
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className={WRAPPING_BUTTON}
-              disabled
-              aria-describedby={LEGAL_HINT_ID}
-            >
-              <GoogleMark className="size-[18px] opacity-60" />
+          <Button asChild variant="outline" size="lg" className={WRAPPING_BUTTON}>
+            <a href={GOOGLE_START}>
+              <GoogleMark className="size-[18px]" />
               {t('login.google')}
-            </Button>
-          )}
+            </a>
+          </Button>
         </>
       )}
-      <p className="type-small text-muted-foreground">{t('login.hint')}</p>
+      <p className="text-center text-sm text-muted-foreground">
+        {t('login.noAccount')}{' '}
+        <Link href="/register" className={cn('font-medium', LINK)}>
+          {t('login.registerLink')}
+        </Link>
+      </p>
     </div>
   );
-}
-
-function googleStartHref(legal: LegalVersions): string {
-  const query = new URLSearchParams({ terms: legal.terms, privacy: legal.privacy });
-  return `/api/v1/auth/google/start?${query.toString()}`;
 }

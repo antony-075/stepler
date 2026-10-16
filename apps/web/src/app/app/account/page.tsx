@@ -1,5 +1,5 @@
 import { Panel } from '@stepler/ui/components/panel';
-import { Globe, Scale, Sun, UserRound, type LucideIcon } from 'lucide-react';
+import { Globe, KeyRound, Scale, Sun, UserRound, type LucideIcon } from 'lucide-react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
@@ -7,6 +7,7 @@ import { AdminPage } from '@/components/admin-page';
 import { LanguageSwitch } from '@/i18n/language-switch';
 import { ThemeSwitch } from '@/theme/theme-switch';
 import { LegalStatusBlock } from './legal-status';
+import { PasswordForm } from './password-form';
 import { ProfileForm } from './profile-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,6 +40,14 @@ export default async function AccountPage() {
           hint={t('account.profile.hint')}
         >
           <ProfileForm />
+        </SettingBlock>
+        <SettingBlock
+          id="account-password"
+          icon={KeyRound}
+          title={t('accountPassword.title')}
+          hint={t('accountPassword.hint')}
+        >
+          <PasswordForm />
         </SettingBlock>
         <SettingBlock
           id="account-appearance"

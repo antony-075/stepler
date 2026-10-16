@@ -77,7 +77,6 @@ export async function SignInLanding({ error }: { error?: unknown }) {
                   <LoginForm
                     turnstileSiteKey={methods.turnstileSiteKey}
                     googleEnabled={methods.google}
-                    legal={methods.legal}
                     initialError={callbackError(error)}
                     contactEmail={getWebEnv().LEGAL_CONTACT_EMAIL ?? null}
                   />

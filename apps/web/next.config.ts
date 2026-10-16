@@ -16,8 +16,13 @@ const config: NextConfig = {
   headers() {
     return Promise.resolve([
       {
-        // The magic-link token is in this page's URL; never leak it as a Referer.
+        // The e-mailed confirmation token is in this page's URL; never leak it as a Referer.
         source: '/auth/verify',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        // So is the password reset token (ADR 0019).
+        source: '/reset-password',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {

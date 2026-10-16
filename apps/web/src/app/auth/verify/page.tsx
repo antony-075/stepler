@@ -6,7 +6,7 @@ import { VerifyPanel } from './verify-panel';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('verify');
-  // The URL carries the magic-link token: never send it as a Referer.
+  // The URL carries the confirmation token: never send it as a Referer.
   return { title: t('pageTitle'), referrer: 'no-referrer', robots: { index: false } };
 }
 
