@@ -53,6 +53,8 @@ Replacing a text **without** a new version (a typo) is an edit of the current fi
   - Terms §9–15 (new; later sections renumbered 16–25): «Пробний період», «Оплата і тарифи» (packs, subscriptions, LiqPay, no card data at Stepler, snapshots, plan changes), «Автоматичне продовження підписки» (separate consent, grace), «Скасування» (any time, access to the period end), «Повернення коштів» (manual, by the operator, full or partial; a refund does not end access by itself; a bank reversal does), «Режим лише для перегляду і зберігання даних» (90 days for account content, owner 2026-10-15; a pack's own keeping period), «Видалення даних після закінчення оплаченого періоду» (30- and 7-day e-mails, then permanent deletion).
   - Privacy: «Платіжні дані» / «Payment data» (LiqPay as an independent payment provider; what Stepler keeps and what it drops), the purpose and legal basis for payments, LiqPay among the providers, §9 retention for view-only collections, payment records (`[ПЛЕЙСХОЛДЕР: строк зберігання бухгалтерських документів]`) and LiqPay messages (3 years).
 
+  - Password sign-in (2026-10-16, still unreleased, so edited in place; ADR 0019): Terms §3 — sign-in by e-mail and password (the address confirmed) or Google, the user keeps the password secret, acceptance on the registration form; Privacy — the Argon2id hash instead of a password, the confirmation and reset mails (address, time, IP hash) instead of sign-in link requests, Brevo sends those mails.
+
   Everyone who accepted v2 accepts v3 once at the next sign-in or page load. A subscription checkout records the Terms version its auto-renewal consent was given to and refuses an older one (`400 LEGAL_VERSION_OUTDATED`).
 
 ## What the app does with it

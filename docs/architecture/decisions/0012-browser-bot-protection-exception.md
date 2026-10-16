@@ -22,3 +22,7 @@ ADR 0002 keeps third-party integrations on the backend. Bot protection for open 
 
 - A third-party script on the login page (not on guest pages by default).
 - Documented exception to ADR 0002.
+
+## Addendum 2026-10-16 — e-mail + password (ADR 0019)
+
+The magic link is gone. Turnstile is now required on every request that sends mail: `POST /auth/register`, `POST /auth/verification` (resend) and `POST /auth/password/forgot`. `POST /auth/login` has no challenge; it is bounded by the per-IP and per-address failure windows of ADR 0019 instead. The widget is therefore on `/register`, `/forgot-password` and the «Надіслати лист ще раз» form on `/login`.

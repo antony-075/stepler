@@ -4,7 +4,8 @@ This file is a concise implementation checklist.
 
 ## Must have
 
-- [ ] Admin authentication
+- [ ] Admin authentication — e-mail + password with a confirmed address, and Google (ADR 0019, 2026-10-16; the magic link of Phase 2 is removed)
+- [ ] Billing (owner decision 2026-10-07, ADR 0018) — built in M1–M4: a 7-day trial, packs, subscriptions through LiqPay in UAH, read-only after an unpaid end with content kept 90 days, the `/ops` billing console
 - [ ] Admin dashboard
 - [ ] Collection CRUD
 - [ ] Default guest link
@@ -45,7 +46,7 @@ This file is a concise implementation checklist.
 - Native mobile admin
 - Physical product ordering
 - Advanced analytics
-- Full subscription platform
+- Full subscription platform (beyond ADR 0018: one provider, one charged currency, manual refunds)
 - Complex moderation suite
 - Full DAM features
 - Social features

@@ -5,12 +5,7 @@ Priority is intentionally not fixed here.
 ## Candidate areas
 
 ### Monetization
-- paid collections;
-- quotas;
-- plans;
-- payments;
-- refunds;
-- entitlements.
+Moved into MVP by owner decision 2026-10-07 (ADR 0018, billing M1–M4): ~~paid collections~~ (packs), ~~quotas~~ and ~~entitlements~~ (trial and plan limits), ~~plans~~ (subscriptions), ~~payments~~ (LiqPay, UAH; USD/EUR shown for reference only), ~~refunds~~ (manual, by the operator). Anything beyond ADR 0018 stays a candidate here.
 
 ### Physical
 - QR posters;
@@ -37,10 +32,9 @@ Priority is intentionally not fixed here.
 - moderation.
 
 ### Media
-- thumbnails;
+- ~~thumbnails~~ and ~~previews~~ (built in MVP slice 6: photo renditions and video posters);
 - transcoding;
 - compression;
-- previews;
 - duplicate detection.
 
 ### Product

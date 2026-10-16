@@ -22,7 +22,7 @@ Guest endpoints must be reviewed specifically for capability leakage and IDOR/BO
 
 ## Conventions and resource map
 
-See ADR 0004 and `docs/architecture/mvp-architecture-spec.md` §8–§9 (status: accepted).
+See ADR 0004 and `docs/architecture/mvp-architecture-spec.md` §8–§9 (status: accepted); the endpoint list there covers every area, billing and the operator included.
 
 ## Implemented in Phase 2
 
@@ -57,6 +57,8 @@ Every error is RFC 9457 `application/problem+json`:
 | `UPSTREAM_UNAVAILABLE` | — | Web client only: the API could not be reached or answered outside the contract |
 | `DEPENDENCY_UNAVAILABLE` | 503 | A provider (e.g. Turnstile) did not answer; retryable |
 | `INTERNAL` | 500 | Unexpected error |
+
+The table lists the cross-cutting codes from Phase 2 and auth. Domain codes (collections, links, uploads, legal, moderation, billing) are the full list in `packages/contracts/src/errors.ts`; each endpoint's OpenAPI description names the ones it returns.
 
 ### Auth and profile
 

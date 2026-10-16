@@ -44,7 +44,7 @@ Implement:
 - request IDs, structured logging with redaction;
 - provider ports: ObjectStorage (spike S4, adds the S3-compatible emulator to Docker Compose), Mailer, Jobs, Turnstile verifier, error monitoring;
 - config-driven limits (`LimitsService`);
-- auth boundary: admin sessions, magic link, Google OAuth (spike S1), principal resolution, operator resolution.
+- auth boundary: admin sessions, magic link (replaced by e-mail + password in ADR 0019), Google OAuth (spike S1), principal resolution, operator resolution.
 
 ## Phase 3 — Design system
 
@@ -95,11 +95,13 @@ Build Storybook primitives and responsive foundations (mobile-first guest, respo
 
 **Slice 9b status (appeals, the moderation quarantine and the ops split, 2026-10-07): implemented on `fix/polish-batch-2`, PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-06-appeals-and-quarantine.md`, ADR 0013 addendum. S1/S2: one collection display status everywhere and a multi-select dashboard «Стан» filter. The operator's deletion is a 90-day quarantine (restorable, outside the owner's quota, purged by the hourly sweep); the collection admin appeals operator hides, quarantines and collection blocks in the app (the frame's moderation panel, the blocked banner) and sees the outcome there; the console splits «Скарги гостей» and «Апеляції адміністраторів» (`/ops/appeals`, uphold reverses the measure, reject needs a note). Legal v2 drafts mention both (still unreleased). Journeys in `e2e/tests/appeals.spec.ts`.
 
+**Billing status (M1–M4, branch `feat/billing`, 2026-10-07 → 2026-10-16): implemented, PR to `dev` pending.** Plan: `docs/superpowers/plans/2026-10-07-billing-and-entitlements.md`, ADR 0018, runbook `docs/deployment/billing.md`. Trial, packs and extensions, subscriptions through LiqPay (renewals, grace, cancel, resume, plan changes), read-only with 90-day retention, the `/ops` billing console, Terms/Privacy v3 drafts. The same branch carries the owner's 2026-10-15/16 rounds: USD/EUR reference prices (UAH charged), «Тариф і оплата» to the chosen artboards, server-paged payment history, e-mail + password sign-in replacing the magic link (ADR 0019), two guest views on phones with uploads in a sheet, the admin selection without «Вибрати», the darker ops console, the template audit fixes and the iPhone MOV sanitizer fix (ADR 0008).
+
 **Production gate [C20]:** guest contribution must not reach production before the guest Terms/Privacy notice (F8, slice 10) with the **real texts published** (`draft: false` in the registry) and `LEGAL_CONTACT_EMAIL` set; the web server refuses to start otherwise, and `LEGAL_ALLOW_DRAFT` is never set in production. Staging only until then.
 
 Each slice should be fully tested before moving on.
 
-Not in MVP (post-MVP per `PRODUCT.md`): folders, billing, retention policies, analytics, downloads/ZIP, custom form builder.
+Not in MVP (post-MVP per `PRODUCT.md`): folders, retention policies beyond billing's read-only period, analytics, downloads/ZIP, custom form builder. Billing moved into the MVP (ADR 0018).
 
 ## Important
 

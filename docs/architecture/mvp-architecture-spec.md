@@ -21,7 +21,9 @@ MVP validates the loop: **create collection → share link/QR → guests contrib
 
 In scope: admin auth (e-mail + password + Google, ADR 0019), collections, default + additional guest links, guest sessions, photo/video/document upload, text submission, gallery visibility, own-content deletion, admin deletion, QR, thumbnails/posters, content reports + operator flow, limits/rate limits, uk/en i18n, legal pages, staging/production-ready images, CI.
 
-Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, analytics, ZIP/export, transcoding, moderation queue, link expiration, admin uploads via UI (one exception since slice 8a, 2026-10-04: the owner uploads the collection cover, never content), operator admin panel, form builder, resumable upload after browser close.
+Billing was brought into the MVP later (ADR 0018, §13.4): trial, packs, subscriptions through LiqPay and the 90-day read-only retention.
+
+Out of scope for MVP (post-MVP): folders, other retention policies, analytics, ZIP/export, transcoding, moderation queue, link expiration, admin uploads via UI (one exception since slice 8a, 2026-10-04: the owner uploads the collection cover, never content), operator admin panel, form builder, resumable upload after browser close.
 
 ---
 
@@ -449,6 +451,20 @@ Operator
   POST                /operator/collections/{id}/block | /unblock
   POST                /operator/users/{id}/block | /unblock
 
+Billing (ADR 0018, §13.4; owner session; UAH is the only currency charged)
+  GET    /billing/offers                       (also public) offers on sale with their UAH, USD and EUR prices
+  GET    /billing/summary                      access state, trial, plan, packs, limits
+  POST   /billing/checkouts                    Idempotency-Key; a pack, an extension or a subscription → LiqPay's signed form; a USD/EUR price → 409 OFFER_UNAVAILABLE
+  POST   /billing/payments/{id}/checkout       pay the same order again (declined card; «Оплатити зараз» in grace)
+  GET    /billing/payments?group=SUBSCRIPTION|PACK&cursor=&limit=   the history, filtered on the server
+  GET    /billing/payments/totals              per-group counts and this calendar year's paid sum
+  GET    /billing/payments/{id}                one payment (the return page polls it)
+  GET    /billing/subscription/change-preview  prorated price of a plan change
+  POST   /billing/subscription/cancel | /resume
+  DELETE /billing/subscription/pending-change
+  POST   /billing/liqpay/callback              public, trusted by its signature alone
+  /operator/billing/*                          offers and prices, grants, payments and refunds, subscriptions, packs (M4)
+
 Guest (cookie scoped per collection, see §9.1)
   POST   /guest/links/resolve                    {linkToken} → {collectionId, collection, permissions}
   POST   /guest/collections/{cid}/session        {linkToken} → GuestContext + Set-Cookie   (slice 3)
@@ -665,6 +681,7 @@ Summary; the decision, alternatives and open points are in ADR 0018 and the plan
 - **Implemented in M2 (2026-10-07):** one-time packs and their extensions paid by card through LiqPay (`BillingModule` + `BillingPaymentsModule`; `PaymentProvider` port, `LiqPayProvider` adapter signing version 7 with SHA3-256 on `node:crypto`, no SDK). The browser only posts LiqPay's signed form (the one direct browser → provider step, §4 rule); `POST /billing/liqpay/callback` is public and trusted by its signature alone, stores each verified callback once (`PaymentEvent`, whitelisted fields) and applies the payment state machine under the owner → collection → payment locks; the return page's poll and the worker's `billing.reconcile` job settle payments through LiqPay's `status` API, so a lost callback heals. Public `/pricing`, «Тариф і оплата» with packs and payment history, the return page, the pack panel on a collection. `BILLING_PROVIDER=disabled` (default) answers checkouts `503`. Sandbox behaviour verified in spike S1 (ADR 0018).
 - **Implemented in M3 (2026-10-09):** subscriptions through LiqPay recurring payments (renewals, grace, read-only, cancel, resume, prorated upgrades, scheduled downgrades and monthly ↔ yearly switches, B14).
 - **Implemented in M4 (2026-10-15):** `/ops` «Оплати»: payments with filters and detail, manual full or partial refunds through LiqPay `refund` (`Refund` rows, `Idempotency-Key`, settled by the reconcile job when LiqPay does not answer), subscriptions with «Звірити з LiqPay» and «Завершити зараз», ending a pack, and the offers and prices editor. Renewals whose callback was lost are found in LiqPay's payments archive (`reports`), since `status` does not report them; grace starts only on LiqPay's word and an unanswered check keeps access and flags the plan (`renewalUnverifiedSince`). Terms/Privacy v3 (drafts) describe payments, auto-renewal, refunds and retention; a subscription consent must name the current Terms. The fiscal port (`BILLING_FISCAL_MODE`) with its production start-up guard. Retention deletion exists behind `BILLING_RETENTION_DELETE_ENABLED` (off until the owner confirms the texts).
+- **After M4 (2026-10-16):** USD and EUR are reference prices only (ADR 0018 addendum): shown by a ₴/$/€ switch whose default follows the interface language, while checkout and receipts stay in UAH. The payment history pages and filters through the API (`group`, `totals`). «Тариф і оплата» follows the owner's chosen artboards (DESIGN-SYSTEM §0.12); «Тарифи» opens on subscriptions.
 - **Not yet:** live keys, the accountant's fiscal answer, final legal texts and prices (owner actions O5–O7).
 - Read-only keeps everything viewable and downloadable; guests cannot add; the admin can still archive, delete, revoke and appeal. Content of an account whose trial or plan ended is kept `READ_ONLY_RETENTION_DAYS` (90); a pack's bought retention is its whole keeping period.
 
