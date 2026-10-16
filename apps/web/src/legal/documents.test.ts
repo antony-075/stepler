@@ -178,9 +178,9 @@ describe('v3 payment sections', () => {
   });
 
   test.each([
-    ['privacy.uk.v3.md', 'Платіжні дані', '12 місяців'],
-    ['privacy.en.v3.md', 'Payment data', '12 months'],
-  ])('%s describes payment data and the 12-month retention', (file, heading, retention) => {
+    ['privacy.uk.v3.md', 'Платіжні дані', 'лише для перегляду 90 днів'],
+    ['privacy.en.v3.md', 'Payment data', 'view-only for 90 days'],
+  ])('%s describes payment data and the 90-day view-only retention', (file, heading, retention) => {
     const text = read(file);
     expect(text).toContain(`### ${heading}`);
     expect(text).toContain('LiqPay');
