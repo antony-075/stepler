@@ -8,9 +8,11 @@ export const CANVAS = { width: 1920, height: 1080 };
 const BACKGROUND = '#F4F4F5';
 const INK = '#171A21';
 const BLUE = '#3657FF';
-const FADE = 0.3;
+/** A cut between two scenes; longer when the device changes (a slide, not a dissolve). */
+const FADE = 0.35;
+const SLIDE = 0.55;
 /** The longest film, in seconds. */
-const MAX_LENGTH = 31;
+const MAX_LENGTH = 45;
 
 export type Device = 'desktop' | 'phone';
 
@@ -36,7 +38,13 @@ const logo = () =>
   );
 
 /** The frame around a screen: everything but a transparent hole where the recording plays. */
-function frameHtml(device: Device, label: string, step: number, steps: number): string {
+function frameHtml(
+  device: Device,
+  label: string,
+  step: number,
+  steps: number,
+  layer: 'chrome' | 'words',
+): string {
   const p = PLACEMENT[device];
   const hole = (x: number, y: number, w: number, h: number, r: number) =>
     `M${x + r} ${y}H${x + w - r}A${r} ${r} 0 0 1 ${x + w} ${y + r}V${y + h - r}A${r} ${r} 0 0 1 ${x + w - r} ${y + h}H${x + r}A${r} ${r} 0 0 1 ${x} ${y + h - r}V${y + r}A${r} ${r} 0 0 1 ${x + r} ${y}Z`;
@@ -57,18 +65,21 @@ function frameHtml(device: Device, label: string, step: number, steps: number): 
     .bar { height: 36px; border-radius: 14px 14px 0 0; background: #FFFFFF; border-bottom: 1px solid #E4E4E7; display: flex; gap: 8px; align-items: center; padding-left: 16px; box-sizing: border-box; }
     .bar i { width: 12px; height: 12px; border-radius: 50%; background: #D4D4D8; }
     .phone { position: absolute; border-radius: 58px; border: 14px solid ${INK}; background: transparent; box-shadow: 0 34px 70px -26px rgb(23 26 33 / 0.45); }
-    .label { position: absolute; left: 0; right: 0; top: ${device === 'desktop' ? 62 : 54}px; text-align: center; font: 600 46px/1.15 Golos, sans-serif; color: ${INK}; letter-spacing: -0.01em; }
+    .label { position: absolute; left: 50%; transform: translateX(-50%); top: ${device === 'desktop' ? 58 : 50}px; white-space: nowrap; padding: 12px 30px 14px; border-radius: 999px; background: rgb(255 255 255 / 0.92); box-shadow: 0 10px 30px -12px rgb(23 26 33 / 0.35), 0 0 0 1px rgb(23 26 33 / 0.06); font: 650 42px/1.15 Golos, sans-serif; color: ${INK}; letter-spacing: -0.015em; }
     .step { position: absolute; left: 0; right: 0; top: ${device === 'desktop' ? 30 : 22}px; display: flex; justify-content: center; gap: 8px; }
     .step i { width: 28px; height: 4px; border-radius: 2px; background: #D4D4D8; }
     .step i.on { background: ${BLUE}; }
     .logo { position: absolute; right: 48px; bottom: 34px; height: 30px; }
     .logo svg { height: 30px; width: auto; }
   </style></head><body>
-    <div class="paper"></div>
-    ${chrome}
+    ${
+      layer === 'chrome'
+        ? `<div class="paper"></div>${chrome}`
+        : `
     <div class="step">${Array.from({ length: steps }, (_, i) => `<i class="${i < step ? 'on' : ''}"></i>`).join('')}</div>
     <div class="label">${label}</div>
-    <div class="logo">${logo()}</div>
+    <div class="logo">${logo()}</div>`
+    }
   </body></html>`;
 }
 
@@ -80,26 +91,69 @@ export async function renderFrame(
   step: number,
   steps: number,
   target: string,
-): Promise<void> {
+): Promise<{ chrome: string; words: string }> {
   const page = await browser.newPage({ viewport: CANVAS, deviceScaleFactor: 1 });
-  await page.setContent(frameHtml(device, label, step, steps));
-  await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: target, omitBackground: true });
+  const out = {
+    chrome: target.replace('.png', '-chrome.png'),
+    words: target.replace('.png', '-words.png'),
+  };
+  for (const layer of ['chrome', 'words'] as const) {
+    await page.setContent(frameHtml(device, label, step, steps, layer));
+    await page.evaluate(() => document.fonts.ready);
+    await page.screenshot({ path: out[layer], omitBackground: true });
+  }
   await page.close();
+  return out;
 }
+
+/**
+ * A slow push-in during a scene: from 1 to `to`, centred on `focus` (canvas px), between the
+ * scene's `from` and `until` (shares of its length), eased in and out.
+ */
+export type Zoom = { to: number; focus: { x: number; y: number }; from: number; until: number };
 
 export type Scene = {
   clip: string;
   device: Device;
   label: string;
-  frame: string;
+  frame: { chrome: string; words: string };
   duration: number;
+  zoom?: Zoom;
 };
 
-/** One scene: the paper, the recording in its place (sped up by `speed`), the frame on top. */
+/** Where a point of the recording (its own CSS px) lands on the canvas. */
+export function onCanvas(
+  device: Device,
+  x: number,
+  y: number,
+  screen: { width: number },
+): {
+  x: number;
+  y: number;
+} {
+  const p = PLACEMENT[device];
+  const k = p.width / screen.width;
+  return { x: p.x + x * k, y: p.y + y * k };
+}
+
+/**
+ * One scene: the paper, the recording in its place (sped up by `speed`) and the window or phone
+ * around it, slowly pushed in when the scene has a `zoom` (rendered at 2× first, so the moving
+ * crop never steps a whole pixel), then the caption, the steps and the logo on top, still.
+ */
 function composeScene(scene: Scene, speed: number, target: string): void {
   const length = scene.duration / speed;
   const p = PLACEMENT[scene.device];
+  const W = CANVAS.width;
+  const H = CANVAS.height;
+  const zoom = scene.zoom ?? { to: 1.035, focus: { x: W / 2, y: H / 2 + 60 }, from: 0, until: 1 };
+  const frames = Math.round(length * 30);
+  const a = Math.round(zoom.from * frames);
+  const b = Math.max(a + 1, Math.round(zoom.until * frames));
+  const ease = `(st(0,clip((on-${a})/${b - a},0,1));ld(0)*ld(0)*(3-2*ld(0)))`;
+  const z = `1+${(zoom.to - 1).toFixed(4)}*${ease}`;
+  const fx = (zoom.focus.x * 2).toFixed(1);
+  const fy = (zoom.focus.y * 2).toFixed(1);
   execFileSync('ffmpeg', [
     '-loglevel',
     'error',
@@ -107,7 +161,7 @@ function composeScene(scene: Scene, speed: number, target: string): void {
     '-f',
     'lavfi',
     '-i',
-    `color=c=${BACKGROUND}:s=${CANVAS.width}x${CANVAS.height}:r=30:d=${length.toFixed(3)}`,
+    `color=c=${BACKGROUND}:s=${W}x${H}:r=30:d=${length.toFixed(3)}`,
     '-i',
     scene.clip,
     '-loop',
@@ -115,10 +169,19 @@ function composeScene(scene: Scene, speed: number, target: string): void {
     '-framerate',
     '30',
     '-i',
-    scene.frame,
+    scene.frame.chrome,
+    '-loop',
+    '1',
+    '-framerate',
+    '30',
+    '-i',
+    scene.frame.words,
     '-filter_complex',
     `[1:v]scale=${p.width}:${p.height}:flags=lanczos,setpts=(PTS-STARTPTS)/${speed.toFixed(4)}[screen];` +
-      `[0:v][screen]overlay=${p.x}:${p.y}:eof_action=repeat[a];[a][2:v]overlay=0:0:shortest=1,format=yuv420p[out]`,
+      `[0:v][screen]overlay=${p.x}:${p.y}:eof_action=repeat[a];[a][2:v]overlay=0:0:shortest=1,` +
+      `scale=${W * 2}:${H * 2}:flags=lanczos,` +
+      `zoompan=z='${z}':x='max(0,min(iw-iw/zoom,${fx}-iw/zoom/2))':y='max(0,min(ih-ih/zoom,${fy}-ih/zoom/2))':d=1:s=${W}x${H}:fps=30[z];` +
+      `[z][3:v]overlay=0:0:shortest=1,format=yuv420p[out]`,
     '-map',
     '[out]',
     '-t',
@@ -142,8 +205,10 @@ export function composeFilm(
   outputs: { mp4: string; webm: string; vtt: string },
 ): { start: number; end: number }[] {
   // The film stays within MAX_LENGTH: a longer recording plays a little faster, all of it alike.
+  const cut = (i: number) => (scenes[i]!.device === scenes[i - 1]!.device ? FADE : SLIDE);
   const recorded =
-    scenes.reduce((sum, scene) => sum + scene.duration, 0) - FADE * (scenes.length - 1);
+    scenes.reduce((sum, scene) => sum + scene.duration, 0) -
+    scenes.slice(1).reduce((sum, _, n) => sum + cut(n + 1), 0);
   const speed = Math.max(1, recorded / MAX_LENGTH);
   const parts = scenes.map((scene, i) => {
     const target = `${work}/scene-${i}.mp4`;
@@ -157,12 +222,14 @@ export function composeFilm(
   scenes.forEach((scene, i) => {
     const start = i === 0 ? 0 : offset;
     if (i > 0) {
+      const kind =
+        cut(i) === FADE ? 'fade' : scene.device === 'phone' ? 'smoothleft' : 'smoothright';
       filters.push(
-        `${last}[${i}:v]xfade=transition=fade:duration=${FADE}:offset=${offset.toFixed(3)}[x${i}]`,
+        `${last}[${i}:v]xfade=transition=${kind}:duration=${cut(i)}:offset=${offset.toFixed(3)}[x${i}]`,
       );
       last = `[x${i}]`;
     }
-    offset = start + scene.duration / speed - FADE;
+    offset = start + scene.duration / speed - (i + 1 < scenes.length ? cut(i + 1) : 0);
     cues.push({ start, end: start + scene.duration / speed });
   });
   const joined = `${work}/joined.mp4`;

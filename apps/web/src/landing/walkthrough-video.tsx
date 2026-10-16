@@ -11,7 +11,7 @@ import type { ScreenLocale } from './screens';
 /** The rendered walkthrough (`pnpm landing:media`): 1920×1080, about half a minute, no sound. */
 const VIDEO = { width: 1920, height: 1080 } as const;
 /** Its length as the poster shows it («0:31»). */
-const DURATION = '0:31';
+const DURATION = '0:45';
 /** The poster is decorative: the button's name says what it plays. */
 const DECORATIVE = '';
 

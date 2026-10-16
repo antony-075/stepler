@@ -14,22 +14,32 @@ the worker makes the thumbnails. Then Playwright photographs and films the scree
 
 ## What it does
 
-1. **seed.** Registers `olia.<time>@stepler.test`. Gives it a 30-day complimentary Business
+1. **seed.** For each language, registers its own `olia.<time>@stepler.test`, so the English
+   screens carry English content too (`collectionsFor` in `seed.ts`). Gives it a 30-day complimentary Business
    plan, written to the local database the way the operator's grant writes it (`seed.ts`,
    `grantBusinessPlan`). Then creates six collections, one per template, with a shared
    gallery, named guests, photos, a short Ken Burns video made with ffmpeg, wishes, a cover
    and a welcome message.
 2. **admin.** Takes 1440×900 desktop stills: dashboard, the wedding's content, the share
-   dialog, a new collection, the guest page editor. Each one is saved at 1× and, when it is
+   dialog, a new collection, the guest page editor. All of them are one story: the new
+   collection dialog types the wedding's title, and the share dialog, guest page, upload
+   and content grid all show that same wedding. Each one is saved at 1× and, when it is
    ≤ 350 KB, at 2×.
 3. **guest.** Takes 390×844 @2× phone stills: each template's guest page, «Кадри», and writing
    a wish.
 4. **upload.** Takes the upload sheet mid-upload, with the network throttled through CDP.
    These photos really join the wedding, so this step runs after the others.
-5. **video.** Films the walkthrough with a fresh account per language: create a collection,
-   pick «Листівка», share the QR code, a guest uploads photos and a video and then writes a
-   wish, and the admin's grid. The film is recorded through the DevTools screencast, framed
-   (`compose.ts`), cross-faded and capped at 31 s.
+5. **video.** Films the walkthrough with a fresh account per language, one story («Весілля Олі
+   та Тараса» / «Olia & Taras’s wedding») in six continuous takes: create the collection (the
+   name typed key by key), share the QR code, the guest opens the page, taps «Додати», picks
+   photos and a video in a phone-style gallery sheet (`picker.ts`: the browser's own picker
+   cannot be filmed, so a system-looking sheet is drawn and exactly the picked files then go to
+   the real file input) and watches the real upload, writes a wish, and the admin's «Вміст»
+   brings the new frames in. A visible pointer glides between targets with a click ripple on
+   desktops, a finger dot and ripple on the phone (`screencast.ts`). The edit (`compose.ts`):
+   a caption pill and step dots per scene, slow push-ins on the key moment (the QR, the
+   upload), fades between scenes on one device and a slide between laptop and phone, at most
+   45 s.
 
 Every capture hides the Next.js dev badge and toasts (`ui.ts`, `hideCaptureNoise`).
 
@@ -45,13 +55,13 @@ Intermediate files (the screencast frames, clips, the demo state) go to
 
 ## Options
 
-| Variable                 | Default                            | Meaning                                                                    |
-| ------------------------ | ---------------------------------- | -------------------------------------------------------------------------- |
-| `LANDING_MEDIA_BASE_URL` | `http://localhost:3000`            | The running web app                                                        |
-| `LANDING_MEDIA_STEPS`    | `seed,admin,guest,upload,video`    | Which steps to run. Without `seed`, the last run's demo account is reused. |
-| `LANDING_MEDIA_LOCALES`  | `uk,en`                            | Languages                                                                  |
-| `LANDING_MEDIA_DATABASE_URL` | `DATABASE_URL` from `apps/api/.env` | The database for the plan grant                                        |
-| `LANDING_MEDIA_SCRATCH`  | `e2e/test-results/landing-media/`  | Intermediate files                                                         |
+| Variable                     | Default                             | Meaning                                                                    |
+| ---------------------------- | ----------------------------------- | -------------------------------------------------------------------------- |
+| `LANDING_MEDIA_BASE_URL`     | `http://localhost:3000`             | The running web app                                                        |
+| `LANDING_MEDIA_STEPS`        | `seed,admin,guest,upload,video`     | Which steps to run. Without `seed`, the last run's demo account is reused. |
+| `LANDING_MEDIA_LOCALES`      | `uk,en`                             | Languages                                                                  |
+| `LANDING_MEDIA_DATABASE_URL` | `DATABASE_URL` from `apps/api/.env` | The database for the plan grant                                            |
+| `LANDING_MEDIA_SCRATCH`      | `e2e/test-results/landing-media/`   | Intermediate files                                                         |
 
 Example: `LANDING_MEDIA_STEPS=video LANDING_MEDIA_LOCALES=en pnpm landing:media`.
 

@@ -140,7 +140,7 @@ export async function guestWishStill(
     .fill(
       locale === 'uk'
         ? 'Олю, Тарасе, дякуємо за цей вечір! Нехай кожен ваш день буде таким же світлим.'
-        : 'Olya, Taras, thank you for this evening! May every day be as bright as today.',
+        : 'Olia, Taras, thank you for this evening! May every day be as bright as today.',
     );
   await page.waitForTimeout(600);
   await writeWebp(await page.screenshot(), `screens/${locale}/guest-wish.webp`);
@@ -193,7 +193,7 @@ export async function adminStills(
   const dialog = page.getByRole('dialog', { name: ui(locale, 'collections.create.title') });
   await dialog
     .getByLabel(ui(locale, 'collections.form.title'))
-    .pressSequentially('Випускний 11-Б', { delay: 30 });
+    .pressSequentially(weddingTitle, { delay: 30 });
   await page.waitForTimeout(500);
   await desktopShot(page, 'admin-new', locale);
   await page.keyboard.press('Escape');

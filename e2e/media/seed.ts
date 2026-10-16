@@ -158,6 +158,95 @@ export const COLLECTIONS: DemoCollection[] = [
   },
 ];
 
+type Words = Pick<DemoCollection, 'title' | 'description' | 'welcome'> & {
+  /** Each guest's name and wishes, in the order of `COLLECTIONS[n].guests`. */
+  guests: { name: string; wishes: string[] }[];
+};
+
+/** The English demo set: the same collections, photos and templates, in English. */
+const ENGLISH: Record<TemplateId, Words> = {
+  postcard: {
+    title: 'Olia & Taras’s wedding',
+    description: 'Saturday, 14 June',
+    welcome: 'Thank you for being with us! Add your photos and videos from our day.',
+    guests: [
+      {
+        name: 'Iryna',
+        wishes: ['Olia, Taras, love each other the way you do today! The best day of the summer.'],
+      },
+      { name: 'Andriy', wishes: ['Cheers to you both! Thank you for an unforgettable evening.'] },
+    ],
+  },
+  classic: {
+    title: 'Nina’s 70th birthday',
+    description: 'A family celebration',
+    welcome: 'Share your photos from the party — Grandma can’t wait to see them!',
+    guests: [
+      {
+        name: 'Oksana',
+        wishes: [
+          'Happy birthday, Mum! Health, warmth and many more evenings like this one together.',
+        ],
+      },
+      { name: 'Dmytro', wishes: ['Grandma, we love you so much!'] },
+    ],
+  },
+  party: {
+    title: 'Mark’s birthday',
+    description: 'Mark turns 30!',
+    welcome: 'Drop every shot from the party here, even the silly ones.',
+    guests: [
+      { name: 'Sofia', wishes: ['Happy birthday, Mark! May the next thirty be even brighter.'] },
+      { name: 'Oleh', wishes: ['To the birthday boy!'] },
+    ],
+  },
+  journal: {
+    title: 'Carpathian hike',
+    description: 'Hoverla, August',
+    welcome: 'All the photos from the hike in one place. Add yours!',
+    guests: [
+      { name: 'Marta', wishes: ['The best three days of the year. Shall we go again in autumn?'] },
+      {
+        name: 'Ihor',
+        wishes: ['Thanks, everyone, for the company and the patience on the climb :)'],
+      },
+    ],
+  },
+  minimal: {
+    title: 'Studio K party',
+    description: 'The year in review',
+    welcome: 'Photos from the evening go here. Thank you for a great year together!',
+    guests: [
+      { name: 'Natalia', wishes: ['Team, you are the best. See you next year!'] },
+      { name: 'Maksym', wishes: ['Thanks for a wonderful evening!'] },
+    ],
+  },
+  fullscreen: {
+    title: 'A night with friends',
+    description: 'Friday on the terrace',
+    welcome: 'Add your photos from tonight — let’s put them all together.',
+    guests: [
+      { name: 'Vika', wishes: ['Same time next Friday!'] },
+      { name: 'Taras', wishes: ['Thanks for tonight, friends!'] },
+    ],
+  },
+};
+
+/** The demo set in a language: Ukrainian as written above, English from `ENGLISH`. */
+export function collectionsFor(locale: 'uk' | 'en'): DemoCollection[] {
+  if (locale === 'uk') return COLLECTIONS;
+  return COLLECTIONS.map((demo) => {
+    const words = ENGLISH[demo.key];
+    return {
+      ...demo,
+      title: words.title,
+      description: words.description,
+      welcome: words.welcome,
+      guests: demo.guests.map((guest, i) => ({ ...guest, ...words.guests[i]! })),
+    };
+  });
+}
+
 export const PHOTOS_DIR = fileURLToPath(
   new URL('../../apps/web/src/landing/photos/', import.meta.url),
 );

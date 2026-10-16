@@ -1,15 +1,34 @@
 import { mkdirSync, readFileSync } from 'node:fs';
 import { type Browser, expect, type Page } from '@playwright/test';
-import {
-  saveGuestPageDraftViaApi,
-  setDraftCoverFromFrameViaApi,
-  waitForContentProcessed,
-  waitForImageReady,
-} from '../support/collections.js';
+import { waitForContentProcessed } from '../support/collections.js';
 import { mainLinkPath, submitTextViaApi } from '../support/guest.js';
-import { composeFilm, duration, grabFrame, renderFrame, type Scene } from './compose.js';
-import { humanClick, humanTap, showPointer, startScreencast } from './screencast.js';
-import { demoAdmin, guestJoin, PHOTOS_DIR, SCRATCH, shareGallery, uploadFile } from './seed.js';
+import {
+  composeFilm,
+  duration,
+  grabFrame,
+  onCanvas,
+  renderFrame,
+  type Scene,
+  type Zoom,
+} from './compose.js';
+import { type PickerTile, pickInGallery, prepareGallery } from './picker.js';
+import {
+  glide,
+  humanClick,
+  humanTap,
+  humanType,
+  showPointer,
+  startScreencast,
+} from './screencast.js';
+import {
+  demoAdmin,
+  guestJoin,
+  PHOTOS_DIR,
+  publishLook,
+  SCRATCH,
+  shareGallery,
+  uploadFile,
+} from './seed.js';
 import {
   DESKTOP,
   desktopContext,
@@ -28,17 +47,17 @@ import {
 export const LABELS: Record<Locale, string[]> = {
   uk: [
     'Створіть колекцію',
-    'Оберіть вигляд сторінки для гостей',
     'Поділіться QR-кодом',
-    'Гості додають фото — без застосунку',
+    'Гості відкривають сторінку свята',
+    'Вибирають фото й відео — без застосунку',
     'І пишуть побажання',
     'Усе — в одній колекції',
   ],
   en: [
     'Create a collection',
-    'Pick how the guest page looks',
     'Share the QR code',
-    'Guests add photos — no app needed',
+    'Guests open your event page',
+    'They pick photos and videos — no app',
     'And write their wishes',
     'Everything in one collection',
   ],
@@ -64,9 +83,9 @@ const COPY: Record<
     others: ['Ірина', 'Андрій'],
   },
   en: {
-    title: 'Olya & Taras’s wedding',
+    title: 'Olia & Taras’s wedding',
     welcome: 'Thank you for being with us! Add your photos and videos from our day.',
-    wish: 'Olya, Taras, all the happiness to you!',
+    wish: 'Olia, Taras, all the happiness to you!',
     earlierWish: 'Thank you for an unforgettable evening!',
     guest: 'Maria',
     others: ['Iryna', 'Andriy'],
@@ -89,7 +108,26 @@ const PICKED = [
   'wedding-bouquet.jpg',
   'wedding-evening.mp4',
 ];
-const DEVICES = ['desktop', 'desktop', 'desktop', 'phone', 'phone', 'desktop'] as const;
+const DEVICES = ['desktop', 'desktop', 'phone', 'phone', 'phone', 'desktop'] as const;
+/** The phone's gallery in the picker: the picked files first among others on the phone. */
+const GALLERY_EXTRA = [
+  'party-dinner.jpg',
+  'trip-lake.jpg',
+  'family-park.jpg',
+  'birthday-cake.jpg',
+  'trip-selfie.jpg',
+  'party-friends.jpg',
+  'corporate-team.jpg',
+  'family-hug.jpg',
+  'trip-hill.jpg',
+  'family-kitchen.jpg',
+  'birthday-balloons.jpg',
+  'corporate-cheer.jpg',
+  'family-picnic.jpg',
+  'trip-hikers.jpg',
+];
+/** Where the picked files sit in the gallery (not simply the first four). */
+const PICKED_AT = [1, 5, 8, 12];
 
 const origin = (page: Page) => ({ origin: new URL(page.url()).origin });
 const PHONE_PIXELS = { width: PHONE.width * 2, height: PHONE.height * 2 };
@@ -108,8 +146,10 @@ export async function recordWalkthrough(
   mkdirSync(work, { recursive: true });
   const copy = COPY[locale];
   const clips: string[] = [];
-  const clip = (n: number) => {
+  const zooms: (Zoom | undefined)[] = [];
+  const clip = (n: number, zoom?: Zoom) => {
     clips.push(`${work}/s${n}.mp4`);
+    zooms.push(zoom);
     return clips.at(-1)!;
   };
 
@@ -124,12 +164,12 @@ export async function recordWalkthrough(
   await setProfileLocale(admin, baseURL, locale);
   await showPointer(admin, 'mouse');
 
-  // 1. Create a collection.
+  // 1. Create a collection: one continuous take, from the empty dashboard to the new page.
   await admin.goto('/app');
   await settle(admin, 800);
-  await admin.mouse.move(980, 640);
+  await glide(admin, 980, 640, 1);
   let cast = await startScreencast(admin, `${work}/s1`, DESKTOP);
-  await admin.waitForTimeout(350);
+  await admin.waitForTimeout(500);
   await humanClick(
     admin,
     admin.getByRole('button', { name: ui(locale, 'collections.new') }).first(),
@@ -137,19 +177,25 @@ export async function recordWalkthrough(
   const dialog = admin.getByRole('dialog', { name: ui(locale, 'collections.create.title') });
   const titleField = dialog.getByLabel(ui(locale, 'collections.form.title'));
   await expect(titleField).toBeFocused();
-  await admin.waitForTimeout(200);
-  await titleField.pressSequentially(copy.title, { delay: 42 });
-  await admin.waitForTimeout(250);
-  await humanClick(
-    admin,
-    dialog.getByRole('button', { name: ui(locale, 'collections.create.submit') }),
-  );
+  await admin.waitForTimeout(450);
+  await humanType(admin, titleField, copy.title);
+  await admin.waitForTimeout(400);
+  const submit = dialog.getByRole('button', { name: ui(locale, 'collections.create.submit') });
+  const submitBox = (await submit.boundingBox())!;
+  await humanClick(admin, submit);
   await admin.waitForURL(/\/app\/collections\/[0-9a-f-]{36}$/);
-  await settle(admin, 500);
-  await cast.stop(clip(1));
+  await settle(admin, 900);
+  await cast.stop(
+    clip(1, {
+      to: 1.07,
+      focus: onCanvas('desktop', submitBox.x - 170, submitBox.y - 60, DESKTOP),
+      from: 0.15,
+      until: 0.55,
+    }),
+  );
   const id = /\/app\/collections\/([0-9a-f-]{36})$/.exec(admin.url())![1]!;
 
-  // Off camera: earlier guests' frames, a cover from one of them, the welcome in the draft.
+  // Off camera: earlier guests' frames, the «Листівка» look with a cover and the welcome.
   await shareGallery(admin, id);
   const path = await mainLinkPath(admin, id);
   let frames = 0;
@@ -177,47 +223,34 @@ export async function recordWalkthrough(
     await context.close();
   }
   await waitForContentProcessed(admin, id, frames, 120_000);
-  await setDraftCoverFromFrameViaApi(admin, id, coverId);
-  await saveGuestPageDraftViaApi(admin, id, { welcomeMessage: copy.welcome });
-  await waitForImageReady(admin, id, 'draft', 60_000);
+  await publishLook(admin, id, 'postcard', coverId, copy.welcome);
 
-  // 2. Pick the guest page's look («Листівка»), then «Зберегти».
-  await admin.goto(`/app/collections/${id}?tab=appearance`);
-  await expect(admin.frameLocator('iframe').first().locator('[data-template]')).toBeVisible({
-    timeout: 30_000,
-  });
-  await settle(admin, 2000);
-  await admin.mouse.move(900, 520);
-  cast = await startScreencast(admin, `${work}/s2`, DESKTOP);
-  await admin.waitForTimeout(350);
-  await humanClick(admin, admin.locator('[data-template-option="postcard"]'));
-  await expect(
-    admin.frameLocator('iframe').first().locator('[data-template="postcard"]'),
-  ).toBeVisible({ timeout: 15_000 });
-  await settle(admin, 600);
-  await humanClick(
-    admin,
-    admin.getByRole('button', { name: new RegExp(`^${ui(locale, 'guestPage.actions.save')}`) }),
-  );
-  await admin.waitForTimeout(800);
-  await cast.stop(clip(2));
-  await waitForImageReady(admin, id, 'published', 60_000);
-
-  // 3. Share the QR code.
+  // 2. Share the QR code: the pointer finds the row's «Поділитися», the dialog opens, the camera
+  // leans in on the code.
   await admin.goto('/app');
   await settle(admin, 900);
-  await admin.mouse.move(760, 620);
-  cast = await startScreencast(admin, `${work}/s3`, DESKTOP);
-  await admin.waitForTimeout(300);
+  cast = await startScreencast(admin, `${work}/s2`, DESKTOP);
+  await admin.waitForTimeout(450);
   await humanClick(admin, shareButton(admin, locale, copy.title));
   const share = admin.getByRole('dialog', { name: ui(locale, 'share.title') });
   await expect(share).toBeVisible();
-  await settle(admin, 200);
+  await settle(admin, 300);
   const qr = (await share.getByRole('img').first().boundingBox())!;
-  await admin.mouse.move(qr.x + qr.width * 0.75, qr.y + qr.height * 0.85, { steps: 22 });
-  await admin.waitForTimeout(1100);
-  await cast.stop(clip(3));
+  await glide(admin, qr.x + qr.width * 0.8, qr.y + qr.height * 0.9);
+  await admin.waitForTimeout(1900);
+  await cast.stop(
+    clip(2, {
+      to: 1.22,
+      focus: onCanvas('desktop', qr.x + qr.width / 2, qr.y + qr.height / 2 + 40, DESKTOP),
+      from: 0.35,
+      until: 0.85,
+    }),
+  );
   await admin.keyboard.press('Escape');
+
+  // The admin's «Вміст» stays open (off camera) while the guest adds; it is filmed at the end.
+  await admin.goto(`/app/collections/${id}`);
+  await settle(admin, 800);
 
   // A guest's phone: joined once and named, so no prompt interrupts the film.
   const guestContext = await phoneContext(browser, baseURL, locale);
@@ -232,38 +265,53 @@ export async function recordWalkthrough(
     data: { name: copy.guest },
     headers: origin(guest),
   });
-  await guest.reload();
-  await guest.locator('[data-template="postcard"]').first().waitFor();
-  await settle(guest, 1200);
+  await guest.goto('about:blank');
 
-  // 4. Add photos and a video, no app. A slower uplink, so the progress can be seen.
+  // 3. The guest opens the page (as from the QR code) and looks it over.
+  cast = await startScreencast(guest, `${work}/s3`, PHONE_PIXELS);
+  await guest.goto(path);
+  await guest.locator('[data-template="postcard"]').first().waitFor();
+  await settle(guest, 900);
+  await guest.mouse.wheel(0, 0);
+  await guest.evaluate(() => window.scrollTo({ top: 260, behavior: 'smooth' }));
+  await guest.waitForTimeout(1300);
+  await guest.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  await guest.waitForTimeout(1000);
+  await cast.stop(clip(3));
+
+  // 4. Add photos and a video, no app: the phone's picker, then the real upload. A slower
+  // uplink, so the progress can be seen.
   const cdp = await guestContext.newCDPSession(guest);
   await cdp.send('Network.enable');
   await cdp.send('Network.emulateNetworkConditions', {
     offline: false,
     latency: 80,
     downloadThroughput: 4_000_000,
-    uploadThroughput: 650_000,
+    uploadThroughput: 900_000,
   });
+  const picks: PickerTile[] = PICKED.map((name) =>
+    name.endsWith('.mp4')
+      ? { file: `${SCRATCH}${name}`, video: { length: '0:06' } }
+      : { file: `${PHOTOS_DIR}${name}` },
+  );
+  const gallery: PickerTile[] = GALLERY_EXTRA.map((name) => ({ file: `${PHOTOS_DIR}${name}` }));
+  PICKED_AT.forEach((at, i) => gallery.splice(at, 0, picks[i]!));
+  const prepared = await prepareGallery(gallery);
   cast = await startScreencast(guest, `${work}/s4`, PHONE_PIXELS);
-  await guest.waitForTimeout(350);
+  await guest.waitForTimeout(400);
   const chooser = guest.waitForEvent('filechooser');
   await humanTap(
     guest,
     guest.getByRole('button', { name: ui(locale, 'guest.addPhotosVideos') }).first(),
   );
-  await (
-    await chooser
-  ).setFiles(
-    PICKED.map((name) => (name.endsWith('.mp4') ? `${SCRATCH}${name}` : `${PHOTOS_DIR}${name}`)),
-  );
+  await pickInGallery(guest, await chooser, locale, prepared, PICKED_AT);
   const sheet = guest.getByRole('dialog', { name: ui(locale, 'guest.upload.sheet.title') });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByText(ui(locale, 'guest.upload.doneTitle'))).toBeVisible({
     timeout: 90_000,
   });
-  await guest.waitForTimeout(900);
-  await cast.stop(clip(4));
+  await guest.waitForTimeout(1200);
+  await cast.stop(clip(4, { to: 1.06, focus: { x: 960, y: 820 }, from: 0.5, until: 0.9 }));
   await cdp.send('Network.emulateNetworkConditions', {
     offline: false,
     latency: 0,
@@ -276,45 +324,66 @@ export async function recordWalkthrough(
 
   // 5. Write a wish.
   cast = await startScreencast(guest, `${work}/s5`, PHONE_PIXELS);
-  await guest.waitForTimeout(300);
+  await guest.waitForTimeout(400);
   await humanTap(guest, guest.getByRole('button', { name: ui(locale, 'guest.writeWish') }).first());
   const composer = guest.getByRole('dialog', { name: ui(locale, 'guest.composer.title') });
   await expect(composer).toBeVisible();
-  await guest.waitForTimeout(200);
-  await composer
-    .getByRole('textbox', { name: ui(locale, 'guest.composer.label') })
-    .pressSequentially(copy.wish, { delay: 38 });
-  await guest.waitForTimeout(250);
+  await guest.waitForTimeout(450);
+  await humanType(
+    guest,
+    composer.getByRole('textbox', { name: ui(locale, 'guest.composer.label') }),
+    copy.wish,
+  );
+  await guest.waitForTimeout(450);
   await humanTap(guest, composer.getByRole('button', { name: ui(locale, 'guest.composer.send') }));
   await expect(composer).toBeHidden();
-  await guest.waitForTimeout(600);
+  await guest.waitForTimeout(900);
   await cast.stop(clip(5));
   await guestContext.close();
 
-  // 6. Everything in one collection: the admin's content, the newest first.
+  // 6. Everything in one collection: the admin, still on «Вміст», refreshes and the new frames
+  // arrive at the top.
   await waitForContentProcessed(admin, id, frames + PICKED.length + 1, 120_000);
-  await admin.goto(`/app/collections/${id}`);
-  await settle(admin, 1000);
-  await admin.mouse.move(1300, 760);
+  await admin.bringToFront();
+  await glide(admin, 1100, 700, 1);
   cast = await startScreencast(admin, `${work}/s6`, DESKTOP);
-  await admin.waitForTimeout(300);
+  await admin.waitForTimeout(500);
+  await humanClick(
+    admin,
+    admin.getByRole('button', { name: ui(locale, 'content.refresh') }).first(),
+  );
+  await settle(admin, 700);
   const newest = (await admin.locator('[data-slot="frame"]').first().boundingBox())!;
-  await admin.mouse.move(newest.x + newest.width / 2, newest.y + newest.height / 2, { steps: 24 });
-  await admin.waitForTimeout(1500);
-  await cast.stop(clip(6));
+  await glide(admin, newest.x + newest.width / 2, newest.y + newest.height / 2);
+  await admin.waitForTimeout(1800);
+  await cast.stop(
+    clip(6, {
+      to: 1.1,
+      focus: onCanvas('desktop', newest.x + 260, newest.y + 160, DESKTOP),
+      from: 0.3,
+      until: 0.8,
+    }),
+  );
   await adminContext.close();
 
   // The film.
   const scenes: Scene[] = [];
   for (const [i, file] of clips.entries()) {
-    const frame = `${work}/frame-${i}.png`;
-    await renderFrame(browser, DEVICES[i]!, LABELS[locale][i]!, i + 1, clips.length, frame);
+    const frame = await renderFrame(
+      browser,
+      DEVICES[i]!,
+      LABELS[locale][i]!,
+      i + 1,
+      clips.length,
+      `${work}/frame-${i}.png`,
+    );
     scenes.push({
       clip: file,
       device: DEVICES[i]!,
       label: LABELS[locale][i]!,
       frame,
       duration: duration(file),
+      zoom: zooms[i],
     });
   }
   mkdirSync(`${OUT}video`, { recursive: true });
@@ -324,9 +393,13 @@ export async function recordWalkthrough(
     webm: `${base}.webm`,
     vtt: `${base}.vtt`,
   });
-  // The poster: the guest's upload sheet, the film's core moment.
+  // The poster: the guest's phone mid-upload, the film's core moment.
   const upload = cues[3]!;
-  grabFrame(`${work}/joined.mp4`, upload.end - 1.2, `${work}/poster.png`);
+  grabFrame(
+    `${work}/joined.mp4`,
+    upload.start + (upload.end - upload.start) * 0.62,
+    `${work}/poster.png`,
+  );
   await writeWebp(readFileSync(`${work}/poster.png`), `video/walkthrough-${locale}-poster.webp`, {
     quality: 80,
   });

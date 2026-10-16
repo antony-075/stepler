@@ -75,67 +75,131 @@ export async function startScreencast(
 }
 
 /**
- * A visible pointer for the recording (headless pages draw none): an arrow that follows the
- * mouse on desktops, a fading touch ring where a phone is tapped. Added by an init script, so
- * every navigation keeps it.
+ * A visible pointer for the recording (headless pages draw none). On desktops a 30px arrow that
+ * follows the mouse, with a soft blue ripple where it presses; on phones a translucent finger
+ * dot that shows while a tap is held and a ripple as it lands. Added by an init script, so every
+ * navigation keeps it.
  */
 export async function showPointer(page: Page, kind: 'mouse' | 'touch'): Promise<void> {
   await page.context().addInitScript((mode: string) => {
     const install = () => {
       if (document.getElementById('__media-pointer')) return;
-      const pointer = document.createElement('div');
-      pointer.id = '__media-pointer';
-      pointer.setAttribute('aria-hidden', 'true');
+      const layer = document.createElement('div');
+      layer.id = '__media-pointer';
+      layer.setAttribute('aria-hidden', 'true');
       const base = 'position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;';
+      layer.style.cssText = `${base}width:0;height:0;`;
+      const ripple = (x: number, y: number, size: number, colour: string) => {
+        const ring = document.createElement('div');
+        ring.style.cssText = `${base}width:${size}px;height:${size}px;margin:${-size / 2}px 0 0 ${-size / 2}px;border-radius:50%;border:2px solid ${colour};background:${colour.replace('0.7', '0.18')};transform:translate(${x}px, ${y}px) scale(0.35);opacity:1;transition:transform 520ms cubic-bezier(.2,.7,.3,1), opacity 520ms ease-out;`;
+        layer.append(ring);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            ring.style.transform = `translate(${x}px, ${y}px) scale(1)`;
+            ring.style.opacity = '0';
+          }),
+        );
+        setTimeout(() => ring.remove(), 600);
+      };
       if (mode === 'mouse') {
-        pointer.style.cssText = `${base}width:22px;height:28px;opacity:0;transition:opacity 120ms;will-change:transform;`;
-        pointer.innerHTML =
-          '<svg width="22" height="28" viewBox="0 0 22 28"><path d="M2 2 L2 22 L7.5 17 L11 25.5 L14.6 24 L11.2 15.8 L18.5 15.8 Z" fill="#171A21" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+        const arrow = document.createElement('div');
+        arrow.style.cssText = `${base}width:30px;height:38px;opacity:0;transition:opacity 150ms;will-change:transform;filter:drop-shadow(0 3px 5px rgb(0 0 0 / 0.28));`;
+        arrow.innerHTML =
+          '<svg width="30" height="38" viewBox="0 0 22 28"><path d="M2 2 L2 22 L7.5 17 L11 25.5 L14.6 24 L11.2 15.8 L18.5 15.8 Z" fill="#171A21" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+        layer.append(arrow);
         addEventListener(
           'mousemove',
           (event) => {
-            pointer.style.opacity = '1';
-            pointer.style.transform = `translate(${event.clientX - 2}px, ${event.clientY - 2}px)`;
+            arrow.style.opacity = '1';
+            arrow.style.transform = `translate(${event.clientX - 3}px, ${event.clientY - 3}px)`;
+          },
+          true,
+        );
+        addEventListener(
+          'mousedown',
+          (event) => {
+            arrow.style.transform += ' scale(0.88)';
+            ripple(event.clientX, event.clientY, 64, 'rgb(54 87 255 / 0.7)');
+          },
+          true,
+        );
+        addEventListener(
+          'mouseup',
+          (event) => {
+            arrow.style.transform = `translate(${event.clientX - 3}px, ${event.clientY - 3}px)`;
           },
           true,
         );
       } else {
-        pointer.style.cssText = `${base}width:0;height:0;`;
+        const finger = document.createElement('div');
+        finger.style.cssText = `${base}width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgb(23 26 33 / 0.28);border:2px solid rgb(255 255 255 / 0.9);box-shadow:0 4px 12px rgb(0 0 0 / 0.25);opacity:0;transition:opacity 140ms;`;
+        layer.append(finger);
+        const down = (x: number, y: number) => {
+          finger.style.transform = `translate(${x}px, ${y}px)`;
+          finger.style.opacity = '1';
+          ripple(x, y, 90, 'rgb(54 87 255 / 0.7)');
+        };
+        const up = () => setTimeout(() => (finger.style.opacity = '0'), 160);
         addEventListener(
-          'pointerdown',
-          (event) => {
-            const ring = document.createElement('div');
-            ring.style.cssText = `${base}width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;background:rgb(54 87 255 / 0.28);border:2px solid rgb(54 87 255 / 0.65);transform:translate(${event.clientX}px, ${event.clientY}px) scale(0.6);transition:transform 380ms ease-out, opacity 380ms ease-out;`;
-            pointer.append(ring);
-            requestAnimationFrame(() => {
-              ring.style.transform = `translate(${event.clientX}px, ${event.clientY}px) scale(1.1)`;
-              ring.style.opacity = '0';
-            });
-            setTimeout(() => ring.remove(), 450);
-          },
+          'touchstart',
+          (e) => down(e.touches[0]!.clientX, e.touches[0]!.clientY),
           true,
         );
+        addEventListener('touchend', up, true);
+        addEventListener('mousedown', (e) => down(e.clientX, e.clientY), true);
+        addEventListener('mouseup', up, true);
       }
-      document.documentElement.append(pointer);
+      document.documentElement.append(layer);
     };
     if (document.documentElement) install();
     document.addEventListener('DOMContentLoaded', install, { once: true });
   }, kind);
 }
 
-/** A person's pace: the pointer travels to the element, rests, then clicks. */
-export async function humanClick(page: Page, target: Locator, pause = 250): Promise<void> {
+/** Where each page's filmed mouse is, so the next move starts there. */
+const position = new WeakMap<Page, { x: number; y: number }>();
+
+/** Moves the filmed mouse to (x, y) along an eased path at a person's speed (one step a frame). */
+export async function glide(page: Page, x: number, y: number, ms?: number): Promise<void> {
+  const from = position.get(page) ?? { x: x - 260, y: y + 180 };
+  const distance = Math.hypot(x - from.x, y - from.y);
+  const time = ms ?? Math.min(1100, Math.max(420, distance * 1.1));
+  const steps = Math.max(8, Math.round(time / 16));
+  // A gentle bow, as a hand moves: the path bends a little off the straight line.
+  const bend = Math.min(60, distance * 0.12);
+  for (let i = 1; i <= steps; i += 1) {
+    const t = i / steps;
+    const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    const arc = Math.sin(Math.PI * e) * bend;
+    await page.mouse.move(from.x + (x - from.x) * e + arc * 0.3, from.y + (y - from.y) * e - arc);
+    await page.waitForTimeout(16);
+  }
+  position.set(page, { x, y });
+}
+
+/** A person's pace: the pointer glides to the element, rests, then presses and releases. */
+export async function humanClick(page: Page, target: Locator, pause = 450): Promise<void> {
   await target.scrollIntoViewIfNeeded();
   const box = await target.boundingBox();
   if (box === null) throw new Error('target not visible');
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 24 });
+  await glide(page, box.x + box.width / 2, box.y + box.height / 2);
   await page.waitForTimeout(pause);
-  await target.click();
+  await page.mouse.down();
+  await page.waitForTimeout(110);
+  await page.mouse.up();
 }
 
-/** A tap on a phone, at the same pace. */
-export async function humanTap(page: Page, target: Locator, pause = 350): Promise<void> {
+/** A tap on a phone, at the same pace: a beat before, the finger shown while it presses. */
+export async function humanTap(page: Page, target: Locator, pause = 500): Promise<void> {
   await target.scrollIntoViewIfNeeded();
   await page.waitForTimeout(pause);
   await target.tap();
+}
+
+/** Typing at a person's pace: a little uneven, a short rest after a space. */
+export async function humanType(page: Page, target: Locator, text: string): Promise<void> {
+  for (const char of text) {
+    await target.pressSequentially(char);
+    await page.waitForTimeout(char === ' ' ? 110 : 45 + Math.round(Math.random() * 45));
+  }
 }
