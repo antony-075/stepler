@@ -10,8 +10,9 @@
 //   ticket), its facts as check rows: «10 ГБ сховища», «30 днів збору», «1 рік зберігання»;
 // - shown in $ or € (a reference price, owner 2026-10-16) the price reads «≈ $25» and one line
 //   under it says what is paid in hryvnias («Оплата в гривнях: 1 000 ₴/міс»). That line's place
-//   and the yearly line's are kept empty when they have nothing to say, so switching the currency
-//   or the period never moves the button or the list (the owner's «скачет»);
+//   in hryvnias says how it is charged instead («Без автоматичних списань»; a plan «Продовжується
+//   автоматично…»), so it is never an empty gap; the yearly line's place is kept, so switching the
+//   currency or the period never moves the button or the list (the owner's «скачет»);
 // - `highlighted` (the offer's flag, set in /ops): the page's one dark surface (`FEATURED`), an
 //   accent outline with an accent glow and the «Найпопулярніший» ribbon on its top edge, in words,
 //   not colour alone; its button is white.
@@ -110,6 +111,7 @@ export function PlanCard({
   price,
   unit,
   charged = null,
+  chargeNote,
   yearly = null,
   yearlySlot = false,
   facts,
@@ -123,6 +125,8 @@ export function PlanCard({
   unit: string;
   /** Shown in $ or €: what is really paid, in hryvnias («1 000 ₴/міс»); `null` in hryvnias. */
   charged?: string | null;
+  /** In hryvnias, the line under the price says how it is charged («Без автоматичних списань»). */
+  chargeNote: string;
   yearly?: YearlyLine | null;
   /** Keep the yearly line's place while it is empty (a list with the period switch). */
   yearlySlot?: boolean;
@@ -175,7 +179,7 @@ export function PlanCard({
           data-slot="charged-uah"
           className={cn('min-h-5 text-sm leading-5 tabular-nums', tone.muted)}
         >
-          {charged === null ? null : t('charged', { price: charged })}
+          {charged === null ? chargeNote : t('charged', { price: charged })}
         </p>
       </div>
       <div className="mt-auto grid">{action}</div>
@@ -228,6 +232,7 @@ export function PackCard({ pack, action }: { pack: PricedOffer; action: ReactNod
       description={pack.offer.description}
       price={formatMoney(format.number, pack.display)}
       unit={t('oneTime')}
+      chargeNote={t('chargeNote')}
       charged={
         pack.display.currency === pack.price.currency
           ? null

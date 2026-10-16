@@ -2125,7 +2125,8 @@
         "window": "<b>{days, plural, one {# day} other {# days}}</b> of collecting",
         "retentionYears": "Kept for <b>{years, plural, one {# year} other {# years}}</b>",
         "retentionDays": "Kept for <b>{days, plural, one {# day} other {# days}}</b>"
-      }
+      },
+      "chargeNote": "No automatic charges"
     },
     "pricing": {
       "metaTitle": "Pricing",
@@ -2347,7 +2348,8 @@
       "everyPlan": {
         "guests": "Unlimited guests, originals uncompressed",
         "pages": "Guest page templates and QR codes"
-      }
+      },
+      "chargeNote": "Renews automatically; cancel any time"
     },
     "subscription": {
       "status": {

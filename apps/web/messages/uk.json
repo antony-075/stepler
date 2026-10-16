@@ -2125,7 +2125,8 @@
         "window": "<b>{days, plural, one {# день} few {# дні} other {# днів}}</b> збору",
         "retentionYears": "<b>{years, plural, one {# рік} few {# роки} other {# років}}</b> зберігання",
         "retentionDays": "<b>{days, plural, one {# день} few {# дні} other {# днів}}</b> зберігання"
-      }
+      },
+      "chargeNote": "Без автоматичних списань"
     },
     "pricing": {
       "metaTitle": "Тарифи",
@@ -2347,7 +2348,8 @@
       "everyPlan": {
         "guests": "Гості без обмежень, оригінали без стиснення",
         "pages": "Шаблони сторінки гостя й QR-коди"
-      }
+      },
+      "chargeNote": "Продовжується автоматично, скасувати можна будь-коли"
     },
     "subscription": {
       "status": {

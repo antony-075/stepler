@@ -139,6 +139,7 @@ export function SubscriptionPlanCard({ plan, action }: { plan: PricedPlan; actio
       description={plan.offer.description}
       price={money(perMonth ? wholeUnits(saving.perMonth) : plan.display)}
       unit={t(`unit.${perMonth ? 'MONTH' : plan.interval}`)}
+      chargeNote={t('chargeNote')}
       charged={
         plan.display.currency === plan.price.currency
           ? null
