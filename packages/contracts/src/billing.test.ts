@@ -87,7 +87,8 @@ describe('access in the existing responses', () => {
 });
 
 test('the billing error codes are appended', () => {
-  expect(ERROR_CODES.slice(-10)).toEqual([
+  const start = ERROR_CODES.indexOf('ACCOUNT_READ_ONLY');
+  expect(ERROR_CODES.slice(start, start + 10)).toEqual([
     'ACCOUNT_READ_ONLY',
     'COLLECTION_READ_ONLY',
     'COLLECTING_CLOSED',

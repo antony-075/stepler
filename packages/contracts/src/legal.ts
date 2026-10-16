@@ -59,8 +59,8 @@ export function currentLegalVersion(document: LegalDocumentKey): LegalDocumentVe
 }
 
 /**
- * The versions a person accepted on the sign-in card (owner decision L1): sent with the
- * magic-link request and with the Google start, recorded when the sign-in completes. The API
+ * The versions a person accepted on the registration card (owner decision L1): sent with the
+ * registration (ADR 0019) and with the Google start, recorded with the account. The API
  * only ever stores the registry's current versions; the pattern keeps arbitrary strings out.
  */
 export const legalVersionsSchema = z

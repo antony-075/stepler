@@ -58,6 +58,11 @@ export const ERROR_CODES = [
   'REFUND_EXCEEDS_PAID',
   'PAYMENT_PROVIDER_UNAVAILABLE',
   'BILLING_SIGNATURE_INVALID',
+  // E-mail + password sign-in (ADR 0019). `MAGIC_LINK_INVALID` above is no longer returned.
+  'INVALID_CREDENTIALS',
+  'EMAIL_NOT_VERIFIED',
+  'AUTH_TOKEN_INVALID',
+  'CURRENT_PASSWORD_INVALID',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
