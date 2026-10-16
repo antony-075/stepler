@@ -178,6 +178,51 @@ describe('editing an offer never changes what was bought', () => {
   });
 });
 
+describe('prices per currency (ADR 0018, B2)', () => {
+  test('each currency is its own slot; one is switched off without touching the others', async () => {
+    const s = await scene();
+    const start = await s.offer('pack-start');
+    const set = (currency: string, amountMinor: number) =>
+      s
+        .call('put', `/offers/${start.id}/prices`)
+        .send({ interval: 'ONE_TIME', currency, amountMinor, reason: 'Ціна у валюті' })
+        .expect(200);
+    await set('USD', 1_200);
+    const both = operatorOfferSchema.parse((await set('EUR', 1_100)).body);
+    expect(both.prices.map((p) => `${p.currency} ${p.amountMinor}`).sort()).toEqual([
+      'EUR 1100',
+      'UAH 50000',
+      'USD 1200',
+    ]);
+
+    const deactivate = (currency: string) =>
+      s
+        .call('post', `/offers/${start.id}/prices/deactivate`)
+        .send({ interval: 'ONE_TIME', currency, reason: 'Не продаємо в євро' });
+    const after = operatorOfferSchema.parse((await deactivate('EUR').expect(200)).body);
+    expect(after.prices.map((p) => p.currency).sort()).toEqual(['UAH', 'USD']);
+    expect(
+      await prisma.billingPrice.count({
+        where: { offerId: start.id, currency: 'EUR', active: false },
+      }),
+    ).toBe(1);
+    const audit = await prisma.auditEvent.findFirstOrThrow({
+      where: { action: 'billing.price_deactivate' },
+    });
+    expect(audit.metadata).toMatchObject({ currency: 'EUR', oldAmountMinor: 1_100 });
+    // Nothing live there any more; no reason is 400; a stranger gets 404.
+    await deactivate('EUR').expect(404);
+    await s
+      .call('post', `/offers/${start.id}/prices/deactivate`)
+      .send({ interval: 'ONE_TIME', currency: 'USD' })
+      .expect(400);
+    await s
+      .call('post', `/offers/${start.id}/prices/deactivate`, s.owner.cookie)
+      .send({ interval: 'ONE_TIME', currency: 'USD', reason: 'x' })
+      .expect(404);
+  });
+});
+
 describe('the catalogue and the trial', () => {
   test('a deactivated offer leaves the catalogue and cannot be bought; activating brings it back', async () => {
     const s = await scene();

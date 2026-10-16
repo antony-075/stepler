@@ -9,7 +9,7 @@ describe('fiscal receipts', () => {
 
   test('liqpay_rro lists the offer’s registered item at the paid price', () => {
     expect(
-      new LiqPayRroReceipts().rroInfo({ rroItemId: '1001' }, 49900, 'olena@example.com'),
+      new LiqPayRroReceipts().rroInfo({ rroItemId: '1001' }, 49900, 'UAH', 'olena@example.com'),
     ).toEqual({
       items: [{ id: '1001', amount: 1, price: '499.00', cost: '499.00' }],
       delivery_emails: ['olena@example.com'],
@@ -18,7 +18,15 @@ describe('fiscal receipts', () => {
 
   test('an offer without a registered item cannot be sold', () => {
     expect(() =>
-      new LiqPayRroReceipts().rroInfo({ rroItemId: null }, 49900, 'olena@example.com'),
+      new LiqPayRroReceipts().rroInfo({ rroItemId: null }, 49900, 'UAH', 'olena@example.com'),
     ).toThrow(AppError);
+  });
+
+  test('with receipts on, USD and EUR are not sold: a fiscal receipt is in hryvnias', () => {
+    for (const currency of ['USD', 'EUR'] as const) {
+      expect(() =>
+        new LiqPayRroReceipts().rroInfo({ rroItemId: '1001' }, 2500, currency, 'olena@example.com'),
+      ).toThrow(AppError);
+    }
   });
 });

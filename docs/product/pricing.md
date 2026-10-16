@@ -25,6 +25,26 @@ The UI computes the discount from the two live prices of a plan (`yearlySaving` 
 
 A pack already includes a year of keeping, so it has no yearly variant; the next year is the retention extension.
 
+### USD and EUR (owner decision 2026-10-16)
+
+Each offer has its **own round price in each currency**, set in `/ops` → **Тарифи і ціни** (a group per currency); the customer picks the currency and pays in it through LiqPay. Not a conversion at checkout: a USD price stays $25 whatever the day's rate. A subscription renews and changes plan only in the currency it was bought in (another currency is a new subscription after the current one ends); a pack's storage upgrade costs the difference of the two packs' prices in the currency paid.
+
+| Offer | UAH | USD | EUR |
+|---|---|---|---|
+| Pro, month / year | 1 000 ₴ / 10 000 ₴ | $25 / $250 | €22 / €220 |
+| Business, month / year | 3 000 ₴ / 30 000 ₴ | $75 / $750 | €65 / €650 |
+| Старт | 500 ₴ | $12 | €11 |
+| Подія | 1 500 ₴ | $36 | €32 |
+| Збір ще на 30 днів | 150 ₴ | $4 | €4 |
+| Зберігання ще на рік | 500 ₴ | $12 | €11 |
+| Старт → Подія | 1 000 ₴ | $24 | €21 |
+
+**Rule:** the UAH price at the day's rate (2026-10-16: ≈ 42 ₴/$, ≈ 48.5 ₴/€), rounded **up** to a whole dollar or euro; yearly = 10 × monthly, as in UAH. Review the foreign prices when the rate moves by more than ~10%; a change is a new price for new purchases only.
+
+**Costs differ:** LiqPay takes 2% on foreign cards (1.3% on Ukrainian ones); the 6% tax applies to the hryvnia value of the revenue. `BILLING_MIN_CHARGE_MINOR` (100) is 100 minor units in any currency: 1 ₴, $1 or €1.
+
+**Before selling in USD/EUR (launch checklist):** the ФОП needs a currency account at the bank, and USD/EUR enabled in the LiqPay merchant settings; the accountant confirms the foreign-currency revenue rules. With fiscal receipts on (`BILLING_FISCAL_MODE=liqpay_rro`) only UAH is sold until it is confirmed how LiqPay's ПРРО books a currency payment (the API refuses USD/EUR checkouts then with `409 OFFER_UNAVAILABLE`). A USD/EUR payment and renewal are **not yet verified** against the LiqPay sandbox.
+
 ## How the prices were derived
 
 All amounts in UAH; 1 USD ≈ 42 UAH (2026-10-15). Recalculate with the current rate.

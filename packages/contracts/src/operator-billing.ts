@@ -137,6 +137,20 @@ export const priceSetSchema = z
 export type PriceSet = z.infer<typeof priceSetSchema>;
 
 /**
+ * `POST /api/v1/operator/billing/offers/:id/prices/deactivate`: stop selling one slot (a period
+ * in a currency, e.g. EUR yearly). The row stays for history; live subscriptions bought at it
+ * keep renewing at their own amount.
+ */
+export const priceDeactivateSchema = z
+  .object({
+    interval: billingIntervalSchema,
+    currency: currencySchema,
+    reason: moderationTextSchema,
+  })
+  .strict();
+export type PriceDeactivate = z.infer<typeof priceDeactivateSchema>;
+
+/**
  * `POST /api/v1/operator/billing/grants`: a complimentary plan with an offer's limits [P13].
  * `endsAt: null` = until revoked.
  */

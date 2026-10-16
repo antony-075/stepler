@@ -49,7 +49,7 @@ export class CheckoutForms {
     user: FormUser,
     recurring?: RecurringTerms,
   ): CheckoutForm {
-    const fiscal = this.fiscal.rroInfo(offer, row.amountMinor, user.email);
+    const fiscal = this.fiscal.rroInfo(offer, row.amountMinor, row.currency, user.email);
     return this.provider.checkoutForm({
       orderId: row.providerOrderId,
       action: recurring === undefined ? 'pay' : 'subscribe',

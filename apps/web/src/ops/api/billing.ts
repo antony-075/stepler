@@ -15,6 +15,7 @@ import {
   operatorSubscriptionRefreshSchema,
   operatorSubscriptionSchema,
   type PaymentListQuery,
+  type PriceDeactivate,
   type PriceSet,
   type RefundDto,
   refundDtoSchema,
@@ -105,6 +106,14 @@ export const setOfferActive = (
 export const setOfferPrice = (id: string, body: PriceSet): Promise<OperatorOffer> =>
   opsRequest(`/operator/billing/offers/${id}/prices`, {
     method: 'PUT',
+    body,
+    schema: operatorOfferSchema,
+  });
+
+/** Stops selling one slot (a period in a currency); its row stays for history. */
+export const deactivateOfferPrice = (id: string, body: PriceDeactivate): Promise<OperatorOffer> =>
+  opsRequest(`/operator/billing/offers/${id}/prices/deactivate`, {
+    method: 'POST',
     body,
     schema: operatorOfferSchema,
   });

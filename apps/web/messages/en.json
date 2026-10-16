@@ -50,7 +50,8 @@
     "SUBSCRIPTION_EXISTS": "You already have an active subscription.",
     "REFUND_EXCEEDS_PAID": "The refund is more than was paid.",
     "PAYMENT_PROVIDER_UNAVAILABLE": "Payments are temporarily unavailable. Please try again later.",
-    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified."
+    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified.",
+    "CURRENCY_MISMATCH": "A plan can only be changed in the currency the subscription was bought in."
   },
   "login": {
     "pageTitle": "Sign in",
@@ -1611,6 +1612,12 @@
         "description": "Collecting and keeping end now: the collection becomes view-only and its content is deleted after warnings to the owner.",
         "confirm": "End the pack",
         "done": "Pack ended"
+      },
+      "priceDeactivate": {
+        "title": "Stop selling this price",
+        "description": "The offer can no longer be bought in this currency and period. Running subscriptions keep renewing at their own price.",
+        "confirm": "Stop selling",
+        "done": "Price taken off sale"
       }
     },
     "nav": {
@@ -1979,8 +1986,8 @@
         "title": "Description and limits"
       },
       "pricesTitle": "Prices",
-      "pricesHelp": "A new price applies to new purchases. The previous one stays in the payment history.",
-      "priceField": "Price {interval}, UAH",
+      "pricesHelp": "A round price of its own in each currency. A new price applies to new purchases; the previous one stays in the payment history.",
+      "priceField": "Price {interval}, {currency}",
       "priceCurrent": "Now {amount}",
       "priceNone": "No price yet",
       "priceError": "An amount from 0.01, at most two decimals",
@@ -1993,7 +2000,18 @@
       "saleNoPrice": "Without a price buyers do not see the offer even when it is on sale.",
       "trialAlwaysOn": "The trial cannot be taken off sale: every new account gets it.",
       "activate": "Start selling",
-      "deactivate": "Take off sale"
+      "deactivate": "Take off sale",
+      "deactivatePrice": "Stop selling",
+      "currencies": {
+        "UAH": "Hryvnias",
+        "USD": "US dollars",
+        "EUR": "Euros"
+      },
+      "currencyUnit": {
+        "UAH": "UAH",
+        "USD": "USD",
+        "EUR": "EUR"
+      }
     }
   },
   "notFound": {

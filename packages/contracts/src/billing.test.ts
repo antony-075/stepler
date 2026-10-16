@@ -87,7 +87,7 @@ describe('access in the existing responses', () => {
 });
 
 test('the billing error codes are appended', () => {
-  expect(ERROR_CODES.slice(-10)).toEqual([
+  expect(ERROR_CODES.slice(-11)).toEqual([
     'ACCOUNT_READ_ONLY',
     'COLLECTION_READ_ONLY',
     'COLLECTING_CLOSED',
@@ -98,6 +98,8 @@ test('the billing error codes are appended', () => {
     'REFUND_EXCEEDS_PAID',
     'PAYMENT_PROVIDER_UNAVAILABLE',
     'BILLING_SIGNATURE_INVALID',
+    // USD and EUR (ADR 0018 addendum 2026-10-16): a plan change stays in its currency.
+    'CURRENCY_MISMATCH',
   ]);
 });
 

@@ -36,6 +36,8 @@ import {
   operatorOfferSchema,
   type PriceSet,
   priceSetSchema,
+  type PriceDeactivate,
+  priceDeactivateSchema,
   type OperatorPaymentDetail,
   operatorPaymentDetailSchema,
   type OperatorPaymentList,
@@ -199,6 +201,27 @@ export class OperatorBillingController {
     @RequestId() requestId: string | undefined,
   ): Promise<OperatorOffer> {
     return this.offerEditor.setPrice(op, params.id, body, requestId);
+  }
+
+  @Post('offers/:id/prices/deactivate')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({
+    status: 200,
+    standardSchema: operatorOfferSchema,
+    description: 'The slot is no longer sold; its row stays (inactive) for history',
+  })
+  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: no reason' })
+  @ApiResponse({
+    status: 404,
+    description: 'NOT_FOUND: no such offer, no live price in that slot, or not an operator',
+  })
+  deactivatePrice(
+    @CurrentOperator() op: OperatorPrincipal,
+    @Param({ schema: operatorBillingIdParamsSchema }) params: { id: string },
+    @Body({ schema: priceDeactivateSchema }) body: PriceDeactivate,
+    @RequestId() requestId: string | undefined,
+  ): Promise<OperatorOffer> {
+    return this.offerEditor.deactivatePrice(op, params.id, body, requestId);
   }
 
   @Post('grants')

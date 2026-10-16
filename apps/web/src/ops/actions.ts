@@ -22,6 +22,7 @@ export type OpsAction =
   | 'offerActivate'
   | 'offerDeactivate'
   | 'priceSet'
+  | 'priceDeactivate'
   | 'subscriptionEnd'
   | 'packEnd';
 
@@ -44,6 +45,7 @@ export const DESTRUCTIVE: ReadonlySet<OpsAction> = new Set([
   'blockAccount',
   'revokeGrant',
   'offerDeactivate',
+  'priceDeactivate',
   'subscriptionEnd',
   'packEnd',
 ]);

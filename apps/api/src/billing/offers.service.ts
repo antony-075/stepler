@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { OfferCreate, OfferUpsert, OperatorOffer, PriceSet } from '@stepler/contracts';
+import type {
+  OfferCreate,
+  OfferUpsert,
+  OperatorOffer,
+  PriceDeactivate,
+  PriceSet,
+} from '@stepler/contracts';
 import { AuditService } from '../audit/audit.service.js';
 import type { OperatorPrincipal } from '../auth/principal.js';
 import { constraintViolation } from '../database/constraint-violation.js';
@@ -168,6 +174,39 @@ export class OffersService {
     return this.view(id);
   }
 
+  /** Stops selling one slot (a period in a currency); none live there → `404`. */
+  async deactivatePrice(
+    op: OperatorPrincipal,
+    id: string,
+    body: PriceDeactivate,
+    requestId?: string,
+  ): Promise<OperatorOffer> {
+    await this.prisma.$transaction(async (tx) => {
+      const offer = await this.lockOffer(tx, id);
+      const current = await tx.billingPrice.findFirst({
+        where: { offerId: id, interval: body.interval, currency: body.currency, active: true },
+      });
+      if (current === null) throw new AppError('NOT_FOUND', 404);
+      await tx.billingPrice.update({ where: { id: current.id }, data: { active: false } });
+      await this.record(
+        tx,
+        op,
+        'billing.price_deactivate',
+        id,
+        {
+          code: offer.code,
+          interval: body.interval,
+          currency: body.currency,
+          oldAmountMinor: current.amountMinor,
+          reason: body.reason,
+        },
+        requestId,
+      );
+    });
+    this.logger.log({ msg: 'billing.price_deactivate', offerId: id, interval: body.interval });
+    return this.view(id);
+  }
+
   /** The live price of one slot; the same amount again changes nothing. */
   async setPrice(
     op: OperatorPrincipal,
@@ -251,7 +290,8 @@ export class OffersService {
       | 'billing.offer_update'
       | 'billing.offer_activate'
       | 'billing.offer_deactivate'
-      | 'billing.price_set',
+      | 'billing.price_set'
+      | 'billing.price_deactivate',
     offerId: string,
     metadata: Record<string, string | number | null>,
     requestId?: string,

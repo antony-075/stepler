@@ -9,7 +9,7 @@
 // neutral badge, not a colour. Desktop: a three-column grid row; phones: the same stacked.
 // «Нова пропозиція» is the page's one filled button.
 import { useQuery } from '@tanstack/react-query';
-import type { OfferKind, OperatorOffer } from '@stepler/contracts';
+import { currencySchema, type OfferKind, type OperatorOffer } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
@@ -140,7 +140,12 @@ function usePriceText(offer: OperatorOffer): string[] {
   if (offer.kind === 'TRIAL') return [t('trialFree')];
   if (offer.extension === 'STORAGE') return [t('storageDifference')];
   if (offer.prices.length === 0) return [t('noPrice')];
-  return offer.prices.map((price) =>
+  // The home currency first, then USD and EUR (ADR 0018, B2); periods as the server orders them.
+  const order = currencySchema.options;
+  const sorted = [...offer.prices].sort(
+    (a, b) => order.indexOf(a.currency) - order.indexOf(b.currency),
+  );
+  return sorted.map((price) =>
     t('priceLine', {
       amount: formatMinor(format.number, price.amountMinor, price.currency),
       interval: t(`intervals.${price.interval}`),

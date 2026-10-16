@@ -48,7 +48,8 @@ export type AuditAction =
   | 'billing.offer_update'
   | 'billing.offer_activate'
   | 'billing.offer_deactivate'
-  | 'billing.price_set';
+  | 'billing.price_set'
+  | 'billing.price_deactivate';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';

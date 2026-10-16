@@ -3,15 +3,17 @@
 // Design pass (billing M4, Task 20; frontend-design, ui-ux-pro-max, web-design-guidelines,
 // responsive-design). One offer on one page, desktop-first and usable at 360:
 // - the heading is the offer's title with its code in mono and the sale badge;
-// - three panels in the order of risk: «Ціни» (one row per period the kind is sold in: the live
-//   price in words, a ₴ field with two decimals, «Зберегти ціну»), «Продаж» (start / take off
+// - three panels in the order of risk: «Ціни» (a group per currency, UAH, USD, EUR — ADR 0018
+//   B2, owner 2026-10-16: an own round price in each; in each group one row per period the kind
+//   is sold in: the live price in words, a field with two decimals, «Зберегти ціну» and, for a
+//   live price, «Зняти з продажу»), «Продаж» (start / take off
 //   sale, the latter destructive; the trial explains why it cannot be switched off), and the
 //   form with titles and limits (GB for storage, binary as sold);
 // - every change asks for a reason in the shared dialog and ends in a toast; a rule the database
 //   enforces (which limits a kind needs) comes back as a sentence above the save button;
 // - the trial carries a note that its limits apply to running trials at once (by design).
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { OperatorOffer } from '@stepler/contracts';
+import { type Currency, currencySchema, type OperatorOffer } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
@@ -36,6 +38,7 @@ import type { OpsAction } from '../actions';
 import {
   billingKeys,
   createOffer,
+  deactivateOfferPrice,
   fetchOffers,
   setOfferActive,
   setOfferPrice,
@@ -54,6 +57,8 @@ import { OfferForm } from './offer-form';
 import { formatMinor } from './plan-format';
 
 const NEW = 'new';
+/** The order the currencies are shown in: the home one first. */
+const CURRENCIES: readonly Currency[] = currencySchema.options;
 const ON_SALE = 'success';
 const OFF_SALE = 'neutral';
 
@@ -238,14 +243,27 @@ function PricesPanel({
         </PanelDescription>
       </PanelHeader>
       {intervals.length === 0 ? null : (
-        <PanelContent className="grid gap-4">
-          {intervals.map((interval) => (
-            <PriceRow
-              key={`${interval}-${offer.updatedAt}-${offer.prices.map((p) => p.id).join()}`}
-              offer={offer}
-              interval={interval}
-              onSet={onSet}
-            />
+        <PanelContent className="grid gap-6">
+          {CURRENCIES.map((currency) => (
+            <fieldset
+              key={currency}
+              className="grid gap-4 border-t pt-4 first:border-t-0 first:pt-0"
+            >
+              <legend className="float-left mb-1 text-[0.875rem] font-semibold">
+                {t(`currencies.${currency}`)}
+              </legend>
+              <div className="clear-both grid gap-4">
+                {intervals.map((interval) => (
+                  <PriceRow
+                    key={`${currency}-${interval}-${offer.updatedAt}-${offer.prices.map((p) => p.id).join()}`}
+                    offer={offer}
+                    currency={currency}
+                    interval={interval}
+                    onSet={onSet}
+                  />
+                ))}
+              </div>
+            </fieldset>
           ))}
         </PanelContent>
       )}
@@ -255,24 +273,26 @@ function PricesPanel({
 
 function PriceRow({
   offer,
+  currency,
   interval,
   onSet,
 }: {
   offer: OperatorOffer;
+  currency: Currency;
   interval: 'ONE_TIME' | 'MONTH' | 'YEAR';
   onSet: (pending: Pending) => void;
 }) {
   const t = useTranslations('ops.offers');
   const format = useFormatter();
   const current = offer.prices.find(
-    (price) => price.interval === interval && price.currency === 'UAH',
+    (price) => price.interval === interval && price.currency === currency,
   );
   const [text, setText] = useState(
     current === undefined ? '' : formatMoneyInput(current.amountMinor),
   );
   const [touched, setTouched] = useState(false);
   const amount = parseMoneyInput(text);
-  const id = `offer-price-${interval}`;
+  const id = `offer-price-${currency}-${interval}`;
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -280,16 +300,18 @@ function PriceRow({
     if (amount === null || amount === current?.amountMinor) return;
     onSet({
       action: 'priceSet',
-      run: (reason) =>
-        setOfferPrice(offer.id, { interval, currency: 'UAH', amountMinor: amount, reason }),
+      run: (reason) => setOfferPrice(offer.id, { interval, currency, amountMinor: amount, reason }),
     });
   };
 
   return (
-    <form noValidate onSubmit={submit} className="grid gap-3 sm:flex sm:items-end">
+    <form noValidate onSubmit={submit} className="grid gap-3 sm:flex sm:flex-wrap sm:items-end">
       <Field
         id={id}
-        label={t('priceField', { interval: t(`intervals.${interval}`) })}
+        label={t('priceField', {
+          interval: t(`intervals.${interval}`),
+          currency: t(`currencyUnit.${currency}`),
+        })}
         description={
           current === undefined
             ? t('priceNone')
@@ -314,6 +336,21 @@ function PriceRow({
       <Button type="submit" variant="outline">
         {t('setPrice')}
       </Button>
+      {current === undefined ? null : (
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-destructive"
+          onClick={() =>
+            onSet({
+              action: 'priceDeactivate',
+              run: (reason) => deactivateOfferPrice(offer.id, { interval, currency, reason }),
+            })
+          }
+        >
+          {t('deactivatePrice')}
+        </Button>
+      )}
     </form>
   );
 }

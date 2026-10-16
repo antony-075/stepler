@@ -56,7 +56,8 @@
               "SUBSCRIPTION_EXISTS",
               "REFUND_EXCEEDS_PAID",
               "PAYMENT_PROVIDER_UNAVAILABLE",
-              "BILLING_SIGNATURE_INVALID"
+              "BILLING_SIGNATURE_INVALID",
+              "CURRENCY_MISMATCH"
             ],
             "type": "string"
           },
@@ -21755,6 +21756,283 @@
           },
           "404": {
             "description": "NOT_FOUND: no such offer, or not an operator"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Operator"
+        ]
+      }
+    },
+    "/api/v1/operator/billing/offers/{id}/prices/deactivate": {
+      "post": {
+        "operationId": "OperatorBillingController_deactivatePrice_v1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "currency": {
+                    "enum": [
+                      "UAH",
+                      "EUR",
+                      "USD"
+                    ],
+                    "type": "string"
+                  },
+                  "interval": {
+                    "enum": [
+                      "ONE_TIME",
+                      "MONTH",
+                      "YEAR"
+                    ],
+                    "type": "string"
+                  },
+                  "reason": {
+                    "pattern": "^[^\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "interval",
+                  "currency",
+                  "reason"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "descriptionEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "descriptionUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "durationDays": {
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "extension": {
+                      "enum": [
+                        "WINDOW",
+                        "RETENTION",
+                        "STORAGE"
+                      ],
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "highlighted": {
+                      "type": "boolean"
+                    },
+                    "id": {
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "TRIAL",
+                        "PACK",
+                        "PACK_EXTENSION",
+                        "SUBSCRIPTION"
+                      ],
+                      "type": "string"
+                    },
+                    "limits": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "activeCollections": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "collectionStorageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "guestLinks": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "retentionDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "storageBytes": {
+                          "nullable": true,
+                          "pattern": "^\\d{1,20}$",
+                          "type": "string"
+                        },
+                        "windowDays": {
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "nullable": true,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "activeCollections",
+                        "storageBytes",
+                        "collectionStorageBytes",
+                        "guestLinks",
+                        "windowDays",
+                        "retentionDays"
+                      ],
+                      "type": "object"
+                    },
+                    "prices": {
+                      "items": {
+                        "additionalProperties": false,
+                        "properties": {
+                          "amountMinor": {
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0,
+                            "type": "integer"
+                          },
+                          "createdAt": {
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                            "type": "string"
+                          },
+                          "currency": {
+                            "enum": [
+                              "UAH",
+                              "EUR",
+                              "USD"
+                            ],
+                            "type": "string"
+                          },
+                          "id": {
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                            "type": "string"
+                          },
+                          "interval": {
+                            "enum": [
+                              "ONE_TIME",
+                              "MONTH",
+                              "YEAR"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "interval",
+                          "currency",
+                          "amountMinor",
+                          "createdAt"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "rank": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    },
+                    "rroItemId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "titleEn": {
+                      "type": "string"
+                    },
+                    "titleUk": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "kind",
+                    "extension",
+                    "titleUk",
+                    "titleEn",
+                    "descriptionUk",
+                    "descriptionEn",
+                    "rank",
+                    "highlighted",
+                    "active",
+                    "limits",
+                    "durationDays",
+                    "rroItemId",
+                    "prices",
+                    "updatedAt"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The slot is no longer sold; its row stays (inactive) for history"
+          },
+          "400": {
+            "description": "VALIDATION_FAILED: no reason"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such offer, no live price in that slot, or not an operator"
           },
           "default": {
             "content": {
