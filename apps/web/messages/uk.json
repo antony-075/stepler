@@ -1412,7 +1412,8 @@
         "ACTIONED": "Розглянутих скарг ще немає",
         "DISMISSED": "Відхилених скарг ще немає"
       },
-      "openReportsCount": "Скарг на кадр: {count}"
+      "openReportsCount": "Скарг на кадр: {count}",
+      "intro": "Скарги гостей на кадри: нові спершу, рішення — у картці скарги."
     },
     "collectionStatuses": {
       "ACTIVE": "Активна",
@@ -1659,7 +1660,8 @@
       "previous": "Попередні апеляції ({count})",
       "previousNote": "Рішення: {note}",
       "reports": "Скарги на цей кадр ({count})",
-      "resolvedElsewhere": "Апеляцію вже вирішено інакше."
+      "resolvedElsewhere": "Апеляцію вже вирішено інакше.",
+      "intro": "Апеляції адміністраторів на приховані кадри й заблоковані колекції."
     },
     "billing": {
       "title": "Тарифи акаунтів",
@@ -1709,7 +1711,8 @@
       "endDateError": "Оберіть день у майбутньому.",
       "grant": "Надати тариф",
       "replace": "Замінити тариф",
-      "planLine": "{what} {when}"
+      "planLine": "{what} {when}",
+      "searchLabel": "Пошук акаунта"
     },
     "billingNav": {
       "label": "Розділи оплат",

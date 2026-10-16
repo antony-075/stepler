@@ -42,6 +42,7 @@ import type { OpsAction } from '../actions';
 import { ReasonDialog } from '../reason-dialog';
 import { type GrantChoice, GrantForm } from './grant-form';
 import { formatPlanBytes } from './plan-format';
+import { OpsFilterBar, OpsPageHeader } from '../ops-page';
 
 const KYIV = 'Europe/Kyiv';
 const NOT_FOUND_ALERT = 'info';
@@ -75,13 +76,8 @@ export function GrantsConsole({ email }: { email: string | null }) {
 
   return (
     <section aria-labelledby="ops-billing-title" className="grid max-w-3xl gap-5">
-      <div className="grid gap-1">
-        <h1 id="ops-billing-title" className="type-h1">
-          {t('title')}
-        </h1>
-        <p className="text-muted-foreground">{t('intro')}</p>
-      </div>
-      <form role="search" noValidate onSubmit={search} className="grid gap-3 sm:flex sm:items-end">
+      <OpsPageHeader id="ops-billing-title" title={t('title')} description={t('intro')} />
+      <OpsFilterBar label={t('searchLabel')} onSubmit={search} className="sm:flex sm:items-end">
         <Field id="ops-billing-email" label={t('email')} className="sm:flex-1">
           {(control) => (
             <Input
@@ -94,10 +90,8 @@ export function GrantsConsole({ email }: { email: string | null }) {
             />
           )}
         </Field>
-        <Button type="submit" variant="outline">
-          {t('find')}
-        </Button>
-      </form>
+        <Button type="submit">{t('find')}</Button>
+      </OpsFilterBar>
 
       {email === null ? null : account.isPending ? (
         <AccountSkeleton />

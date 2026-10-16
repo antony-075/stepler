@@ -1412,7 +1412,8 @@
         "ACTIONED": "No actioned reports yet",
         "DISMISSED": "No dismissed reports yet"
       },
-      "openReportsCount": "Reports on frame: {count}"
+      "openReportsCount": "Reports on frame: {count}",
+      "intro": "Guests’ reports on frames: the newest first; decide on the report’s page."
     },
     "collectionStatuses": {
       "ACTIVE": "Active",
@@ -1659,7 +1660,8 @@
       "previous": "Earlier appeals ({count})",
       "previousNote": "Decision: {note}",
       "reports": "Reports on this frame ({count})",
-      "resolvedElsewhere": "The appeal was already decided the other way."
+      "resolvedElsewhere": "The appeal was already decided the other way.",
+      "intro": "Admins’ appeals against hidden frames and blocked collections."
     },
     "billing": {
       "title": "Account plans",
@@ -1709,7 +1711,8 @@
       "endDateError": "Choose a day in the future.",
       "grant": "Grant plan",
       "replace": "Replace plan",
-      "planLine": "{what} {when}"
+      "planLine": "{what} {when}",
+      "searchLabel": "Find an account"
     },
     "billingNav": {
       "label": "Billing sections",

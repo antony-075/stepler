@@ -60,8 +60,14 @@ test.describe('ops console access', () => {
     await expect(row).toContainText('Порушує приватність');
     await expect(row).toContainText(seeded.title);
 
-    await page.getByRole('tab', { name: 'Відхилені' }).click();
+    // The statuses are the console's tab row: links, the current one `aria-current="page"`.
+    const statuses = page.getByRole('navigation', { name: 'Стан скарг' });
+    await statuses.getByRole('link', { name: 'Відхилені' }).click();
     await expect(page).toHaveURL(/status=dismissed/);
+    await expect(statuses.getByRole('link', { name: 'Відхилені' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     await expect(page.getByText('Відхилених скарг ще немає')).toBeVisible();
   });
 

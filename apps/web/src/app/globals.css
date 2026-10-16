@@ -195,3 +195,96 @@
     }
   }
 }
+
+/*
+ * The operator console (owner remark 2026-10-16: «чуть темнее с черным акцентом»; DESIGN-SYSTEM
+ * §6.12): its own surface over the V1 tokens, so it is never mistaken for the user app. A
+ * darker page under white panels; black (white in the dark theme) for primary actions, the
+ * current place, links and focus instead of the indigo; a near-black chrome (`--ops-chrome-*`)
+ * for the sidebar. Set on the console's root and, while it is open, on <html>, so dialogs and
+ * menus in portals follow it. Text pairs keep 4.5:1 (muted 7.2:1 on white, chrome muted 7.9:1).
+ */
+[data-surface='ops'] {
+  --background: #e8e8eb;
+  --subtle: #f4f4f5;
+  --border: #dcdce0;
+  --border-strong: #c6c6cc;
+  --muted-foreground: #52525b;
+  --track: #dcdce0;
+  --primary: #18181b;
+  --primary-hover: #27272a;
+  --primary-active: #3f3f46;
+  --primary-foreground: #ffffff;
+  --pencil: #18181b;
+  --pencil-hover: #27272a;
+  --pencil-active: #3f3f46;
+  --pencil-foreground: #ffffff;
+  --pencil-soft: #f1f1f3;
+  --link: #18181b;
+  --link-hover: #000000;
+  --info-soft: #f1f1f3;
+  --ring: #18181b;
+  --ops-chrome: #0b0b0d;
+  --ops-chrome-foreground: #fafafa;
+  --ops-chrome-muted: #a1a1aa;
+  --ops-chrome-hover: #1c1c20;
+  --ops-chrome-current: #2a2a2f;
+  --ops-chrome-border: #232328;
+  --ops-chrome-ring: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-surface='ops'],
+  :root:not([data-theme='light']) [data-surface='ops'] {
+    --background: #060607;
+    --card: #131316;
+    --popover: #131316;
+    --subtle: #18181b;
+    --border: #26262b;
+    --border-strong: #34343a;
+    --muted-foreground: #a1a1aa;
+    --track: #26262b;
+    --primary: #fafafa;
+    --primary-hover: #e4e4e7;
+    --primary-active: #d4d4d8;
+    --primary-foreground: #0b0b0d;
+    --pencil: #fafafa;
+    --pencil-hover: #e4e4e7;
+    --pencil-active: #d4d4d8;
+    --pencil-foreground: #0b0b0d;
+    --pencil-soft: #222226;
+    --link: #fafafa;
+    --link-hover: #ffffff;
+    --info-soft: #222226;
+    --ring: #fafafa;
+    --ops-chrome: #000000;
+    --ops-chrome-border: #1c1c20;
+  }
+}
+
+:root[data-theme='dark'][data-surface='ops'],
+:root[data-theme='dark'] [data-surface='ops'] {
+  --background: #060607;
+  --card: #131316;
+  --popover: #131316;
+  --subtle: #18181b;
+  --border: #26262b;
+  --border-strong: #34343a;
+  --muted-foreground: #a1a1aa;
+  --track: #26262b;
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-active: #d4d4d8;
+  --primary-foreground: #0b0b0d;
+  --pencil: #fafafa;
+  --pencil-hover: #e4e4e7;
+  --pencil-active: #d4d4d8;
+  --pencil-foreground: #0b0b0d;
+  --pencil-soft: #222226;
+  --link: #fafafa;
+  --link-hover: #ffffff;
+  --info-soft: #222226;
+  --ring: #fafafa;
+  --ops-chrome: #000000;
+  --ops-chrome-border: #1c1c20;
+}

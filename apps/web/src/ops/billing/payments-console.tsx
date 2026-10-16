@@ -35,6 +35,7 @@ import { useState } from 'react';
 import { billingKeys, fetchPayments, type PaymentFilters } from '../api/billing';
 import { KYIV, PAYMENT_BADGE, PAYMENT_STATUSES } from './billing-labels';
 import { formatMinor } from './plan-format';
+import { OpsFilterBar, OpsPageHeader } from '../ops-page';
 
 const ALL = 'all';
 const TRUE = 'true';
@@ -53,12 +54,7 @@ export function PaymentsConsole({ filters }: { filters: PaymentFilters }) {
 
   return (
     <section aria-labelledby="ops-payments-title" className="grid gap-5">
-      <div className="grid max-w-3xl gap-1">
-        <h1 id="ops-payments-title" className="type-h1">
-          {t('title')}
-        </h1>
-        <p className="text-muted-foreground">{t('intro')}</p>
-      </div>
+      <OpsPageHeader id="ops-payments-title" title={t('title')} description={t('intro')} />
       <PaymentFilterBar key={JSON.stringify(filters)} filters={filters} />
 
       {query.isPending ? (
@@ -120,12 +116,10 @@ function PaymentFilterBar({ filters }: { filters: PaymentFilters }) {
   };
 
   return (
-    <form
-      role="search"
-      aria-label={t('filters.label')}
-      noValidate
+    <OpsFilterBar
+      label={t('filters.label')}
       onSubmit={apply}
-      className="grid gap-3 rounded-sheet border bg-card p-4 md:grid-cols-[12rem_minmax(0,1fr)_auto] md:items-end"
+      className="md:grid-cols-[12rem_minmax(0,1fr)_auto] md:items-end"
     >
       <div className="grid gap-1.5">
         <Label id="ops-payments-status">{t('filters.status')}</Label>
@@ -175,7 +169,7 @@ function PaymentFilterBar({ filters }: { filters: PaymentFilters }) {
           {t('filters.mismatch')}
         </FlagBox>
       </div>
-    </form>
+    </OpsFilterBar>
   );
 }
 
@@ -301,7 +295,7 @@ function PaymentTable({ rows }: { rows: OperatorPayment[] }) {
 function PaymentCards({ rows }: { rows: OperatorPayment[] }) {
   const text = usePaymentText();
   return (
-    <ul className="grid gap-2 md:hidden">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 md:hidden">
       {rows.map((row) => {
         const refunded = text.refunded(row);
         return (

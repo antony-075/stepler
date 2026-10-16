@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { billingKeys, fetchOffers } from '../api/billing';
 import { ListSkeleton } from './payments-console';
 import { formatMinor, formatPlanBytes } from './plan-format';
+import { OpsPageHeader } from '../ops-page';
 
 const GROUPS: readonly OfferKind[] = ['TRIAL', 'PACK', 'PACK_EXTENSION', 'SUBSCRIPTION'];
 
@@ -30,17 +31,16 @@ export function OffersConsole() {
 
   return (
     <section aria-labelledby="ops-offers-title" className="grid gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid max-w-3xl gap-1">
-          <h1 id="ops-offers-title" className="type-h1">
-            {t('offers.title')}
-          </h1>
-          <p className="text-muted-foreground">{t('offers.intro')}</p>
-        </div>
-        <Button asChild>
-          <Link href="/ops/billing/offers/new">{t('offers.create')}</Link>
-        </Button>
-      </div>
+      <OpsPageHeader
+        id="ops-offers-title"
+        title={t('offers.title')}
+        description={t('offers.intro')}
+        actions={
+          <Button asChild>
+            <Link href="/ops/billing/offers/new">{t('offers.create')}</Link>
+          </Button>
+        }
+      />
       {query.isPending ? (
         <ListSkeleton />
       ) : query.isError ? (

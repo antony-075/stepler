@@ -43,6 +43,7 @@ import { ReasonDialog } from '../reason-dialog';
 import { KYIV, SUBSCRIPTION_BADGE, SUBSCRIPTION_STATUSES } from './billing-labels';
 import { FlagBox, ListSkeleton } from './payments-console';
 import { formatMinor } from './plan-format';
+import { OpsFilterBar, OpsPageHeader } from '../ops-page';
 
 const ALL = 'all';
 const TRUE = 'true';
@@ -82,12 +83,11 @@ export function SubscriptionsConsole({ filters }: { filters: SubscriptionFilters
 
   return (
     <section aria-labelledby="ops-subscriptions-title" className="grid gap-5">
-      <div className="grid max-w-3xl gap-1">
-        <h1 id="ops-subscriptions-title" className="type-h1">
-          {t('subscriptions.title')}
-        </h1>
-        <p className="text-muted-foreground">{t('subscriptions.intro')}</p>
-      </div>
+      <OpsPageHeader
+        id="ops-subscriptions-title"
+        title={t('subscriptions.title')}
+        description={t('subscriptions.intro')}
+      />
       <SubscriptionFilterBar key={JSON.stringify(filters)} filters={filters} />
       {query.isPending ? (
         <ListSkeleton />
@@ -160,12 +160,10 @@ function SubscriptionFilterBar({ filters }: { filters: SubscriptionFilters }) {
   };
 
   return (
-    <form
-      role="search"
-      aria-label={t('filters.label')}
-      noValidate
+    <OpsFilterBar
+      label={t('filters.label')}
       onSubmit={apply}
-      className="grid gap-3 rounded-sheet border bg-card p-4 md:grid-cols-[11rem_11rem_minmax(0,1fr)_auto] md:items-end"
+      className="md:grid-cols-[11rem_11rem_minmax(0,1fr)_auto] md:items-end"
     >
       <div className="grid gap-1.5">
         <Label id="ops-subscriptions-status">{t('filters.status')}</Label>
@@ -230,7 +228,7 @@ function SubscriptionFilterBar({ filters }: { filters: SubscriptionFilters }) {
           {t('filters.needsCheck')}
         </FlagBox>
       </div>
-    </form>
+    </OpsFilterBar>
   );
 }
 
