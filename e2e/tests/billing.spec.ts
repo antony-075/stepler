@@ -45,7 +45,7 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await page.getByRole('link', { name: 'Обрати тариф' }).click();
   await expect(page).toHaveURL(/\/app\/billing\?tab=plans$/);
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Пакет на одну подію', level: 2 })).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
   await page.getByRole('tab', { name: 'Ваш тариф' }).click();
   await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
@@ -109,7 +109,7 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
   await page.getByRole('link', { name: 'Купити пакет для цієї колекції' }).click();
   await expect(page).toHaveURL(new RegExp(`/app/billing\\?collection=${id}$`));
 
-  await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити' }).click();
+  await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити «Старт»' }).click();
   const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
   await expect(dialog.getByRole('radio', { name: 'Весілля Олени' })).toBeChecked();
   await expect(dialog.getByText(/^499\s₴$/)).toBeVisible();
@@ -130,8 +130,8 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
   await expect(yours.getByRole('link', { name: 'Весілля Олени' })).toBeVisible();
   await page.getByRole('tab', { name: 'Історія платежів' }).click();
   await expect(page).toHaveURL(/\/app\/billing\?tab=history$/);
-  await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
-  await expect(page.getByRole('cell', { name: /Весілля Олени/ })).toBeVisible();
+  const row = page.locator('[data-slot="payment-row"]').filter({ hasText: 'Весілля Олени' });
+  await expect(row.getByText('Оплачено', { exact: true })).toBeVisible();
 });
 
 test('a declined card: «Оплата не пройшла» and a way to try again @desktop', async ({ page }) => {

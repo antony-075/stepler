@@ -60,8 +60,9 @@ export function shownCurrency(list: OfferList | undefined, chosen: Currency): Cu
 const SYMBOL: Record<Currency, string> = { UAH: '₴', USD: '$', EUR: '€' };
 
 /**
- * «₴ / $ / €»: the shared segmented control, hidden when no reference prices are listed; under it,
- * while $ or € is shown, one line that payment and the receipt are in hryvnias.
+ * «₴ / $ / €»: the shared pill switch (like «Щомісяця / Щороку» beside it), hidden when no
+ * reference prices are listed; under it, while $ or € is shown, one small line that payment and
+ * the receipt are in hryvnias.
  */
 export function CurrencySwitch({
   offers,
@@ -76,9 +77,9 @@ export function CurrencySwitch({
   const offered = offeredCurrencies(offers);
   if (offered.length < 2) return null;
   return (
-    <div className="grid justify-items-start gap-1">
+    <div className="grid justify-items-start gap-1.5">
       <ToggleGroup
-        variant="segmented"
+        variant="pill"
         aria-label={t('label')}
         value={value}
         onValueChange={(next) => {
@@ -90,12 +91,9 @@ export function CurrencySwitch({
             key={currency}
             value={currency}
             aria-label={t(`names.${currency}`)}
-            className="min-w-12 tabular-nums"
+            className="px-3.5 tabular-nums"
           >
             <span aria-hidden="true">{SYMBOL[currency]}</span>
-            <span className="ml-1 text-xs text-muted-foreground max-sm:hidden" aria-hidden="true">
-              {currency}
-            </span>
           </ToggleGroupItem>
         ))}
       </ToggleGroup>

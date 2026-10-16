@@ -1030,6 +1030,18 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "required": false,
+            "schema": {
+              "enum": [
+                "SUBSCRIPTION",
+                "PACK"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1142,7 +1154,105 @@
             "description": ""
           },
           "400": {
-            "description": "VALIDATION_FAILED: an invalid cursor or limit"
+            "description": "VALIDATION_FAILED: an invalid cursor, limit or group"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Billing"
+        ]
+      }
+    },
+    "/api/v1/billing/payments/totals": {
+      "get": {
+        "operationId": "BillingController_totals_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "counts": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "PACK": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "SUBSCRIPTION": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "all": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "all",
+                        "SUBSCRIPTION",
+                        "PACK"
+                      ],
+                      "type": "object"
+                    },
+                    "paidThisYear": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "amountMinor": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "currency": {
+                          "enum": [
+                            "UAH",
+                            "EUR",
+                            "USD"
+                          ],
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "amountMinor",
+                        "currency"
+                      ],
+                      "type": "object"
+                    },
+                    "year": {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "counts",
+                    "year",
+                    "paidThisYear"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
           },
           "default": {
             "content": {

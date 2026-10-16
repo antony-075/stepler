@@ -12,7 +12,7 @@ test.use({ locale: 'de-DE' });
 async function buyStartPack(page: Page, title: string): Promise<void> {
   const { id } = await createCollectionViaApi(page, title);
   await page.goto(`/app/billing?collection=${id}`);
-  await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити' }).click();
+  await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити «Старт»' }).click();
   const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
   await payAtLiqPayStub(page, 'success');
   await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
@@ -56,7 +56,9 @@ test('the operator refunds part of a pack: LiqPay, the payment and the owner’s
   await operator.close();
 
   await page.goto('/app/billing?tab=history');
-  await expect(page.getByRole('cell', { name: 'Повернено частково' })).toBeVisible();
+  await expect(
+    page.locator('[data-slot="payment-row"]').getByText('Повернено частково', { exact: true }),
+  ).toBeVisible();
 });
 
 test('the operator prices a new offer; it stays off sale until started @desktop', async ({

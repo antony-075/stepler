@@ -8,8 +8,11 @@ import {
   offerListSchema,
   type PaymentDto,
   paymentDtoSchema,
+  type PaymentGroup,
   type PaymentList,
   paymentListSchema,
+  type PaymentTotals,
+  paymentTotalsSchema,
   type PlanChangePreview,
   planChangePreviewSchema,
   type SubscriptionDto,
@@ -21,6 +24,9 @@ import { apiRequest } from './client';
 export const BILLING_KEY = ['billing'] as const;
 export const offersKey = (locale: string) => ['billing', 'offers', locale] as const;
 export const PAYMENTS_KEY = ['billing', 'payments'] as const;
+export const paymentsKey = (group: PaymentGroup | null) =>
+  ['billing', 'payments', 'list', group ?? 'all'] as const;
+export const PAYMENT_TOTALS_KEY = ['billing', 'payments', 'totals'] as const;
 export const paymentKey = (id: string) => ['billing', 'payment', id] as const;
 
 export const fetchOffers = (locale: string): Promise<OfferList> =>
@@ -41,14 +47,21 @@ export const resumeCheckout = (paymentId: string): Promise<CheckoutResponse> =>
 export const fetchPayment = (id: string): Promise<PaymentDto> =>
   apiRequest(`/billing/payments/${encodeURIComponent(id)}`, { schema: paymentDtoSchema });
 
-/** One page of the account's payments, newest first; `cursor` from the previous page. */
-export const listPayments = (cursor?: string): Promise<PaymentList> =>
+/**
+ * One page of the account's payments, newest first; `cursor` from the previous page, `group`
+ * for one chip of «Історія платежів».
+ */
+export const listPayments = (cursor?: string, group?: PaymentGroup): Promise<PaymentList> =>
   apiRequest(
     `/billing/payments?limit=${PAYMENTS_PAGE}${
       cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`
-    }`,
+    }${group === undefined ? '' : `&group=${group}`}`,
     { schema: paymentListSchema },
   );
+
+/** The chips' counts and what was paid this calendar year. */
+export const fetchPaymentTotals = (): Promise<PaymentTotals> =>
+  apiRequest('/billing/payments/totals', { schema: paymentTotalsSchema });
 
 export const PAYMENTS_PAGE = 50;
 

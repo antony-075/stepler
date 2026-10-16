@@ -2,13 +2,12 @@
 
 // Design pass (billing page v4, the owner's reference 2026-10-09; the owner's pick 2026-10-16,
 // direction A, with prices per currency; frontend-design, ui-ux-pro-max, web-design-guidelines,
-// responsive-design). The heading row also holds «₴ / $ / €» (`CurrencySwitch`): the cards show
-// reference prices in $ or € for orientation, every plan is still bought in hryvnias. The
-// subscriptions group of «Тарифи»: the heading with
-// «Щомісяця / Щороку» on the same row (under it when the row is too narrow), one caption that
-// says once that a plan renews until cancelled, the plan cards in the same auto-fit grid as the
-// packs (17rem minimum: one column on phones, side by side from tablets). Every card ends in one
-// full-width filled button, what that plan means for this account: «Оформити» without a paid
+// responsive-design). The subscriptions group of «Тарифи», as A's Plans artboard: the heading
+// (24px) and its line on the left, «Щомісяця / Щороку −17%» and «₴ / $ / €» (`CurrencySwitch`:
+// reference prices in $ or € for orientation, every plan is still bought in hryvnias) on the
+// right of the same row (under it when the row is too narrow), the plan cards two side by side
+// from `sm`, one line under them on payment and cancelling. Every card has one full-width button,
+// what that plan means for this account: «Обрати Pro» without a paid
 // plan, «Перейти на цей тариф» for a subscriber (the change dialog with the server's preview), a
 // disabled «Ваш тариф» on the current one; in grace and when cancelled the buttons wait, with the
 // reason under the cards.
@@ -26,7 +25,7 @@ import { offerButtonClass } from './offer-card';
 import { type PlanInterval, planIntervals, type PricedPlan, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
 import { SubscribeDialog } from './subscribe-dialog';
-import { SECTION_NOTE, SECTION_TITLE } from './surfaces';
+import { GROUP_NOTE, GROUP_TITLE, SECTION_NOTE } from './surfaces';
 
 export function SubscriptionsSection({
   offers,
@@ -93,17 +92,17 @@ export function SubscriptionsSection({
     <section
       id={SUBSCRIPTIONS_SECTION_ID}
       aria-labelledby="plans-title"
-      className="grid scroll-mt-20 gap-6"
+      className="grid scroll-mt-20 gap-5.5"
     >
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="grid gap-1">
-          <h2 id="plans-title" className={SECTION_TITLE}>
+          <h2 id="plans-title" className={GROUP_TITLE}>
             {t('title')}
           </h2>
-          <p className={SECTION_NOTE}>{t('intro')}</p>
+          <p className={GROUP_NOTE}>{t('intro')}</p>
         </div>
         {list === undefined ? null : (
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-start gap-2">
             <IntervalSwitch
               offers={list}
               currency={currency}
@@ -121,7 +120,7 @@ export function SubscriptionsSection({
         </div>
       ) : (
         <>
-          <ul className="grid gap-6 pt-2 sm:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid gap-6 pt-2 sm:grid-cols-2">
             {plans.map((plan) => {
               const current =
                 paid !== null && paid.offerId === plan.offer.id && paid.interval === plan.interval;
@@ -136,7 +135,7 @@ export function SubscriptionsSection({
               } else if (paid === null) {
                 action = (
                   <Button className={button} onClick={() => setChosen({ plan, mode: 'subscribe' })}>
-                    {t('subscribe')}
+                    {t('subscribe', { title: plan.offer.title })}
                   </Button>
                 );
               } else if (waitReason !== null) {
@@ -164,6 +163,7 @@ export function SubscriptionsSection({
               <span id={reasonId}>{waitReason}</span>
             </Alert>
           )}
+          <p className={SECTION_NOTE}>{t('note')}</p>
         </>
       )}
       {chosen === null ? null : chosen.mode === 'subscribe' ? (

@@ -2,8 +2,9 @@
 
 // Design pass (billing page v4, the owner's reference 2026-10-09; frontend-design,
 // web-design-guidelines). What the owner can do with the plan, on «Ваш тариф»
-// (DESIGN-SYSTEM.md §0.12): the one main action as a full-width filled button with its icon, the
-// rest as a quiet row of ghost buttons under it, «Скасувати підписку» at its end:
+// (DESIGN-SYSTEM.md §0.12; direction C's Overview artboard, owner 2026-10-16): on the right of the
+// card's heading row, the one main action as a compact dark button (last; first and full width on
+// phones), the rest as quiet ghost buttons before it:
 // - no paid plan (trial, read-only, granted by Stepler): «Купити пакет» to «Тарифи»'s packs;
 //   without a subscription also «Обрати тариф» in the quiet row;
 // - a paid plan: «Змінити тариф» (to «Тарифи»), quiet «Купити пакет» and «Скасувати підписку»
@@ -18,7 +19,7 @@ import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
 import { useToast } from '@stepler/ui/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeftRight, CreditCard, RefreshCw, RotateCcw, Tags } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type ReactNode, useId, useState } from 'react';
@@ -30,8 +31,11 @@ import { usePlanPrice } from './plan-picker';
 import { SubscribeDialog } from './subscribe-dialog';
 
 const KYIV = 'Europe/Kyiv';
-const MAIN = 'w-full';
-const QUIET = 'flex flex-wrap items-center gap-x-1 gap-y-1 -mx-3 max-sm:-mt-1';
+/** The main action: dark and compact (44px), the first and full width on phones. */
+const MAIN =
+  'h-11 md:pointer-fine:h-11 md:pointer-fine:px-4 md:pointer-fine:text-[0.9375rem] rounded-xl bg-foreground px-4 font-semibold text-background hover:bg-foreground-soft max-sm:order-first max-sm:w-full sm:order-last';
+const ROW = 'flex flex-wrap items-center gap-2 max-sm:w-full sm:justify-end';
+const QUIET = 'h-11 md:pointer-fine:h-11 max-sm:px-2.5';
 
 function useRefreshBilling() {
   const queryClient = useQueryClient();
@@ -52,32 +56,23 @@ export function PlanActions({
   const subscription = summary.subscription;
   if (subscription === null || subscription.source !== 'LIQPAY') {
     return (
-      <div className="grid gap-2">
-        <Button asChild size="lg" className={MAIN}>
-          <Link href={billingHref('plans', PACKS_SECTION_ID)}>
-            <CreditCard aria-hidden="true" />
-            {t('plan.buyPack')}
-          </Link>
+      <div className={ROW}>
+        <Button asChild className={MAIN}>
+          <Link href={billingHref('plans', PACKS_SECTION_ID)}>{t('plan.buyPack')}</Link>
         </Button>
         {subscription === null ? (
-          <div className={QUIET}>
-            <Button asChild variant="ghost">
-              <Link href={billingHref('plans', SUBSCRIPTIONS_SECTION_ID)}>
-                <Tags aria-hidden="true" />
-                {t('access.choosePlan')}
-              </Link>
-            </Button>
-          </div>
+          <Button asChild variant="ghost" className={QUIET}>
+            <Link href={billingHref('plans', SUBSCRIPTIONS_SECTION_ID)}>
+              {t('access.choosePlan')}
+            </Link>
+          </Button>
         ) : null}
       </div>
     );
   }
   const buyPack = (
-    <Button asChild variant="ghost">
-      <Link href={billingHref('plans', PACKS_SECTION_ID)}>
-        <CreditCard aria-hidden="true" />
-        {t('plan.buyPack')}
-      </Link>
+    <Button asChild variant="ghost" className={QUIET}>
+      <Link href={billingHref('plans', PACKS_SECTION_ID)}>{t('plan.buyPack')}</Link>
     </Button>
   );
   return <PaidActions subscription={subscription} resumePlan={resumePlan} buyPack={buyPack} />;
@@ -110,58 +105,41 @@ function PaidActions({
   const date = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'long', timeZone: KYIV });
 
-  const change = (
-    <Button
-      asChild={changeable}
-      size={changeable ? 'lg' : 'default'}
-      variant={changeable ? 'default' : 'ghost'}
-      className={changeable ? MAIN : undefined}
-      disabled={!changeable}
-      aria-describedby={changeable ? undefined : reasonId}
-    >
-      {changeable ? (
-        <Link href={billingHref('plans')}>
-          <ArrowLeftRight aria-hidden="true" />
-          {t('change')}
-        </Link>
-      ) : (
-        <>
-          <ArrowLeftRight aria-hidden="true" />
-          {t('change')}
-        </>
-      )}
+  const change = changeable ? (
+    <Button asChild className={MAIN}>
+      <Link href={billingHref('plans')}>{t('change')}</Link>
+    </Button>
+  ) : (
+    <Button variant="ghost" className={QUIET} disabled aria-describedby={reasonId}>
+      {t('change')}
     </Button>
   );
 
   return (
     <>
       {status === 'CANCELED' ? (
-        <div className="grid gap-2">
+        <div className={ROW}>
           {resumePlan === null ? null : (
-            <Button size="lg" className={MAIN} onClick={() => setResuming(true)}>
-              <RotateCcw aria-hidden="true" />
+            <Button className={MAIN} onClick={() => setResuming(true)}>
               {t('resume')}
             </Button>
           )}
-          <div className={QUIET}>{buyPack}</div>
+          {buyPack}
         </div>
       ) : (
-        <div className="grid gap-2">
+        <div className={ROW}>
           {payable ? (
-            <Button size="lg" className={MAIN} onClick={() => setPaying(true)}>
-              <CreditCard aria-hidden="true" />
+            <Button className={MAIN} onClick={() => setPaying(true)}>
               {t('payNow')}
             </Button>
           ) : null}
-          {changeable ? change : null}
-          <div className={QUIET}>
-            {changeable ? buyPack : change}
-            <Button variant="ghost" className="sm:ml-auto" onClick={() => setConfirming(true)}>
-              {t('cancel')}
-            </Button>
-          </div>
+          {change}
+          {buyPack}
+          <Button variant="ghost" className={QUIET} onClick={() => setConfirming(true)}>
+            {t('cancel')}
+          </Button>
           {changeable ? null : (
-            <p id={reasonId} className="text-sm text-muted-foreground">
+            <p id={reasonId} className="basis-full text-sm text-muted-foreground sm:text-right">
               {t(reasonKey)}
             </p>
           )}

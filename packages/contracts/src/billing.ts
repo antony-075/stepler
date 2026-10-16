@@ -257,13 +257,49 @@ export const offerListSchema = z.object({ items: z.array(offerDtoSchema) }).stri
 export type OfferList = z.infer<typeof offerListSchema>;
 
 /** `GET /api/v1/billing/payments`: the account's own payments, newest first. */
+/**
+ * The history's two groups (the «Підписка» / «Пакети» chips, owner's pick 2026-10-16): a plan's
+ * payments (start, renewal, change) and a pack's (the pack and its extensions).
+ */
+export const paymentGroupSchema = z.enum(['SUBSCRIPTION', 'PACK']);
+export type PaymentGroup = z.infer<typeof paymentGroupSchema>;
+export const PAYMENT_GROUP_KINDS: Record<PaymentGroup, readonly PaymentKind[]> = {
+  SUBSCRIPTION: ['SUBSCRIPTION', 'SUBSCRIPTION_RENEWAL', 'SUBSCRIPTION_CHANGE'],
+  PACK: ['PACK', 'PACK_EXTENSION'],
+};
+
 export const accountPaymentListQuerySchema = z
   .object({
     cursor: z.string().min(1).max(200).optional(),
     limit: z.coerce.number().int().min(1).max(100).default(20),
+    /** Only one group's payments; all when absent. */
+    group: paymentGroupSchema.optional(),
   })
   .strict();
 export type AccountPaymentListQuery = z.infer<typeof accountPaymentListQuerySchema>;
+
+/**
+ * `GET /api/v1/billing/payments/totals`: how many payments each chip lists, and what was paid
+ * in the current calendar year (Kyiv time): succeeded payments less their refunds, in hryvnias
+ * (the only currency charged).
+ */
+export const paymentTotalsSchema = z
+  .object({
+    counts: z
+      .object({
+        all: z.int().nonnegative(),
+        SUBSCRIPTION: z.int().nonnegative(),
+        PACK: z.int().nonnegative(),
+      })
+      .strict(),
+    year: z.int(),
+    /** Zero when nothing was paid this year (a `Money` is never zero). */
+    paidThisYear: z
+      .object({ amountMinor: z.int().nonnegative(), currency: currencySchema })
+      .strict(),
+  })
+  .strict();
+export type PaymentTotals = z.infer<typeof paymentTotalsSchema>;
 
 export const paymentListSchema = z
   .object({ items: z.array(paymentDtoSchema), nextCursor: z.string().nullable() })

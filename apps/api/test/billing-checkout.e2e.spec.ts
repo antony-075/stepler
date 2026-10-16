@@ -5,6 +5,7 @@ import {
   offerListSchema,
   paymentDtoSchema,
   paymentListSchema,
+  paymentTotalsSchema,
   currentLegalVersion,
 } from '@stepler/contracts';
 import request from 'supertest';
@@ -412,6 +413,78 @@ describe('GET /billing/payments pages', () => {
     expect(
       (await page(`?limit=2&cursor=${encodeURIComponent(one.nextCursor!)}`, stranger.cookie)).items,
     ).toEqual([]);
+  });
+});
+
+describe('GET /billing/payments by group, and the totals', () => {
+  test('a group filters the list; the totals count each group and sum this year’s paid, less refunds', async () => {
+    const s = await scene();
+    await s.checkout(packFor(s.collectionId)).expect(201);
+    const first = await prisma.payment.findFirstOrThrow({ where: { userId: s.owner.userId } });
+    const now = new Date();
+    const lastYear = new Date(Date.UTC(now.getUTCFullYear() - 1, 5, 1));
+    const rows = [
+      // Paid this year: 150,00 ₴.
+      {
+        id: '0190f0a0-0000-7000-8000-0000000000c1',
+        kind: 'PACK_EXTENSION',
+        status: 'SUCCEEDED',
+        amountMinor: 15_000,
+        refundedMinor: 0,
+        paidAt: now,
+      },
+      // Paid this year and partly refunded: 500,00 − 100,00 ₴.
+      {
+        id: '0190f0a0-0000-7000-8000-0000000000c2',
+        kind: 'PACK',
+        status: 'PARTIALLY_REFUNDED',
+        amountMinor: 50_000,
+        refundedMinor: 10_000,
+        paidAt: now,
+      },
+      // Paid last year: not this year's.
+      {
+        id: '0190f0a0-0000-7000-8000-0000000000c3',
+        kind: 'PACK',
+        status: 'SUCCEEDED',
+        amountMinor: 50_000,
+        refundedMinor: 0,
+        paidAt: lastYear,
+      },
+    ] as const;
+    for (const row of rows) {
+      await prisma.payment.create({
+        data: {
+          ...first,
+          ...row,
+          providerOrderId: row.id,
+          offerSnapshot: first.offerSnapshot as object,
+          updatedAt: undefined,
+        },
+      });
+    }
+    const get = (path: string, cookie = s.owner.cookie) =>
+      request(server).get(`/api/v1/billing${path}`).set('Cookie', cookie);
+    const packs = paymentListSchema.parse((await get('/payments?group=PACK').expect(200)).body);
+    expect(packs.items).toHaveLength(4);
+    const plans = paymentListSchema.parse(
+      (await get('/payments?group=SUBSCRIPTION').expect(200)).body,
+    );
+    expect(plans.items).toEqual([]);
+    await get('/payments?group=GIFT').expect(400);
+    expect(paymentTotalsSchema.parse((await get('/payments/totals').expect(200)).body)).toEqual({
+      counts: { all: 4, SUBSCRIPTION: 0, PACK: 4 },
+      year: Number(
+        new Intl.DateTimeFormat('en', { timeZone: 'Europe/Kyiv', year: 'numeric' }).format(now),
+      ),
+      paidThisYear: { amountMinor: 55_000, currency: 'UAH' },
+    });
+    const stranger = await signInAs(app, prisma, 'taras@example.com');
+    expect(
+      paymentTotalsSchema.parse((await get('/payments/totals', stranger.cookie).expect(200)).body)
+        .counts.all,
+    ).toBe(0);
+    await request(server).get('/api/v1/billing/payments/totals').expect(401);
   });
 });
 

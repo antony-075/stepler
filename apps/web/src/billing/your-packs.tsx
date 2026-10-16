@@ -17,6 +17,7 @@ import { PackExtensions } from '@/app/app/collections/[id]/pack-status';
 import { UsageBar } from '@/app/app/usage-bar';
 import { formatStorage } from '@/format/bytes';
 import { monoDigits } from '@/format/mono-digits';
+import { SECTION_TITLE } from './surfaces';
 
 const KYIV = 'Europe/Kyiv';
 
@@ -28,10 +29,10 @@ export function YourPacks({ collections }: { collections: Collection[] }) {
   if (packed.length === 0) return null;
   return (
     <section aria-labelledby="your-packs-title" className="grid gap-3">
-      <h2 id="your-packs-title" className="type-h2">
+      <h2 id="your-packs-title" className={SECTION_TITLE}>
         {t('title')}
       </h2>
-      <Panel>
+      <Panel className="rounded-[1.25rem] shadow-none">
         <ul className="divide-y">
           {packed.map((collection) => (
             <PackRow key={collection.id} collection={collection} />

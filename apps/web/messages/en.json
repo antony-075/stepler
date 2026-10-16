@@ -2058,17 +2058,18 @@
       "label": "“Plan and billing” sections",
       "overview": "Your plan",
       "plans": "Plans",
-      "history": "Payment history"
+      "history": "Payment history",
+      "historyShort": "History"
     },
     "offerKind": {
       "title": "What fits you?",
       "packs": {
         "title": "A pack for one event",
-        "description": "Paid once for one collection. No automatic charges."
+        "description": "One collection, paid once"
       },
       "subscriptions": {
         "title": "A subscription for organisers",
-        "description": "Several collections on one account, monthly or yearly at a discount."
+        "description": "Several events, monthly or yearly"
       }
     },
     "states": {
@@ -2111,7 +2112,7 @@
       "retentionYears": "Kept for {years, plural, one {# year} other {# years}} after payment",
       "retentionDays": "Kept for {days, plural, one {# day} other {# days}} after payment",
       "links": "Up to {count, plural, one {# additional guest link} other {# additional guest links}}",
-      "buy": "Buy",
+      "buy": "Buy “{title}”",
       "tiles": {
         "storage": "storage",
         "window": "collecting",
@@ -2207,18 +2208,22 @@
       "trouble": {
         "FAILED": "The payment failed: nothing was charged",
         "REVERSED": "The bank reversed the payment: the money went back to the card"
-      }
+      },
+      "groups": {
+        "label": "What to show",
+        "all": "All · {count}",
+        "SUBSCRIPTION": "Subscription · {count}",
+        "PACK": "Packs · {count}"
+      },
+      "year": "In {year}: <b>{amount}</b>"
     },
     "packs": {
-      "title": "Buy a pack",
-      "intro": "A one-time payment for one collection, with no automatic charges.",
+      "title": "A pack for one event",
       "unavailable": "Packs can't be bought right now.",
-      "how": "A pack covers one collection, separately from the account plan: its own storage, collecting and keeping. You can extend or enlarge it from the collection’s page.",
-      "extensionsTitle": "Already have a pack? You can extend it",
-      "extensionsNote": "Extensions are bought on the page of the collection with the pack.",
+      "extensionsTitle": "Already have a pack? Extend it",
       "extension": {
-        "WINDOW": "guests add frames for 30 more days",
-        "RETENTION": "frames are kept one more year"
+        "WINDOW": "guests can keep adding",
+        "RETENTION": "your photos stay"
       }
     },
     "extend": {
@@ -2257,16 +2262,17 @@
         "summary": "{days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}}, {minutes, plural, one {# minute} other {# minutes}} left"
       },
       "period": {
-        "start": "From {date}",
-        "today": "Today · day {day} of {days}",
-        "renews": "{date} — next charge",
-        "ends": "Active until {date}"
+        "start": "{date}",
+        "today": "Today · {day} of {days, plural, one {# day} other {# days}}",
+        "renews": "{date} — {price} charged",
+        "ends": "{date} — ends"
       },
       "yearly": {
         "percent": "−{percent}%",
-        "text": "Yearly, this plan costs {year} instead of {twelve} — two months free.",
+        "text": "Yearly, {title} costs <b>{year}</b> instead of {twelve} — two months free.",
         "action": "Switch to yearly"
-      }
+      },
+      "priceInline": "{interval, select, YEAR {yearly} other {monthly}} · {price}"
     },
     "usage": {
       "title": "Account limits",
@@ -2280,7 +2286,8 @@
       "overStorage": "You’ve exceeded your storage limit.",
       "overStorageText": "Choose a plan to add new files.",
       "nearLimit": "Almost used up",
-      "free": "{count, plural, one {# free slot left} other {# free slots left}}"
+      "free": "{count, plural, one {# free slot left} other {# free slots left}}",
+      "freeHint": "Archive a finished event to free a place."
     },
     "after": {
       "title": "What happens when it ends?",
@@ -2295,7 +2302,7 @@
     },
     "plans": {
       "title": "Subscriptions for event organisers",
-      "intro": "Several collections at once on one account. Renews automatically until cancelled.",
+      "intro": "Limits are per account: collections and storage are shared by all your events.",
       "intervalLabel": "Billing period",
       "intervals": {
         "MONTH": "Monthly",
@@ -2307,16 +2314,15 @@
       },
       "yearlyBadgeLabel": "{percent}% off when paid yearly",
       "yearlyPercent": "−{percent}%",
-      "yearlySaving": "Save {saving} a year · {perMonth}/mo",
       "unit": {
-        "MONTH": "/mo",
-        "YEAR": "/yr"
+        "MONTH": "/ mo",
+        "YEAR": "/ yr"
       },
-      "collections": "{count, plural, one {# active collection} other {# active collections}}",
-      "storage": "{size} across all collections",
-      "collectionStorage": "Up to {size} per collection",
+      "collections": "{count, plural, one {<b>#</b> active collection} other {<b>#</b> active collections}}",
+      "storage": "<b>{size}</b> of storage",
+      "collectionStorage": "Up to <b>{size}</b> per collection",
       "current": "Your plan",
-      "subscribe": "Subscribe",
+      "subscribe": "Choose {title}",
       "signIn": "Sign in to subscribe",
       "change": "Switch to this plan",
       "waitPastDue": "You can change the plan once the current period is paid.",
@@ -2325,7 +2331,14 @@
       "popular": "Most popular",
       "approx": "≈",
       "approxPrice": "≈ {price}",
-      "charged": "Paid in hryvnias: {price}"
+      "charged": "Paid in hryvnias: {price}",
+      "note": "Pay by card through LiqPay. Cancel any time: the plan lasts to the end of the paid period, then your content is kept view-only for 90 days.",
+      "yearlyTotal": "{price} a year",
+      "savingPill": "Save {saving}",
+      "everyPlan": {
+        "guests": "Unlimited guests, originals uncompressed",
+        "pages": "Guest page templates and QR codes"
+      }
     },
     "subscription": {
       "status": {

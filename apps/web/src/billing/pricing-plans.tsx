@@ -53,7 +53,7 @@ export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn
                   href={planHref(signedIn, plan.priceId)}
                   className={cn(buttonVariants(), offerButtonClass(plan.offer.highlighted))}
                 >
-                  {signedIn ? t('subscribe') : t('signIn')}
+                  {signedIn ? t('subscribe', { title: plan.offer.title }) : t('signIn')}
                 </Link>
               }
             />

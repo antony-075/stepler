@@ -37,6 +37,8 @@ import {
   paymentIdParamsSchema,
   type PaymentList,
   paymentListSchema,
+  type PaymentTotals,
+  paymentTotalsSchema,
 } from '@stepler/contracts';
 import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
 import type { AccountPrincipal } from '../auth/principal.js';
@@ -155,9 +157,19 @@ export class BillingController {
     return this.checkouts.resume(principal, params.id);
   }
 
+  /** «Історія платежів»: the count per chip and what was paid this calendar year. */
+  @Get('payments/totals')
+  @ApiResponse({ status: 200, standardSchema: paymentTotalsSchema })
+  totals(@CurrentPrincipal() principal: AccountPrincipal): Promise<PaymentTotals> {
+    return this.queries.totals(principal.userId);
+  }
+
   @Get('payments')
   @ApiResponse({ status: 200, standardSchema: paymentListSchema })
-  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: an invalid cursor or limit' })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_FAILED: an invalid cursor, limit or group',
+  })
   async payments(
     @CurrentPrincipal() principal: AccountPrincipal,
     @Query({ schema: accountPaymentListQuerySchema }) query: AccountPaymentListQuery,
