@@ -345,7 +345,17 @@
   background: var(--pc-airmail) bottom / 100% 5px no-repeat;
 }
 
+/* Phones and tablets, one view at a time (audit 2026-10-16). «Додати»: the card clear of the
+   footer; «Кадри»: the tabs as wide as the grids under them, which start right under the tabs. */
 @media (max-width: 1023.98px) {
+  [data-template='postcard'][data-view='add'] .pc-card-frame {
+    margin-bottom: 32px;
+  }
+
+  [data-template='postcard'][data-view='frames'] .pc-tabs {
+    max-width: 688px;
+  }
+
   [data-template='postcard'][data-view='frames'] .pc-sections {
     padding-top: 16px;
   }
@@ -549,6 +559,12 @@
     position: absolute;
     right: 40px;
     bottom: -40px;
+  }
+
+  /* Without a cover the card is as short as its text: the stamps and the notice keep clear of
+     the postmark stamped over its bottom edge (audit 2026-10-16). */
+  [data-template='postcard'] .pc-card:not(:has(.pc-cover-cell)) .pc-side {
+    padding-bottom: 56px;
   }
 
   [data-template='postcard'] .pc-sections {

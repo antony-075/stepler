@@ -268,7 +268,23 @@
   box-shadow: inset 0 -2px 0 var(--tpl-accent-text);
 }
 
+/* Phones and tablets, one view at a time (audit 2026-10-16). «Додати»: room between the notice
+   and the footer, which ends at the window's bottom; «Кадри»: the header and tabs as wide as the
+   sections under them, which start right under the tabs. */
 @media (max-width: 1023.98px) {
+  [data-template='journal'][data-view='add'] .jr-aside {
+    padding-bottom: 40px;
+  }
+
+  [data-template='journal'][data-view='add'] .jr-main-footer {
+    margin-top: auto;
+  }
+
+  [data-template='journal'][data-view='frames'] .jr-aside {
+    max-width: 720px;
+    padding-inline: 16px;
+  }
+
   [data-template='journal'][data-view='frames'] .jr-sections {
     padding-top: 8px;
   }

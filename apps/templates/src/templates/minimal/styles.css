@@ -272,6 +272,16 @@
 }
 
 @media (max-width: 1023.98px) {
+  /* Under the tabs the identity starts closer: the 72px lead was for the bare first screen
+     (audit 2026-10-16); the notice keeps room above the footer. */
+  [data-template='minimal'][data-view='add'] .mn-identity:not([data-placement]) {
+    padding-top: 32px;
+  }
+
+  [data-template='minimal'][data-view='add'] .mn-aside {
+    padding-bottom: 40px;
+  }
+
   /* «Додати»: the footer's wrapper ends at the window's bottom (item 95). */
   [data-template='minimal'][data-view='add'] .mn-main-footer {
     margin-top: auto;

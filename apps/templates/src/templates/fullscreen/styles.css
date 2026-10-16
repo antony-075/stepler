@@ -286,6 +286,12 @@
   border-color: #34302c;
 }
 
+/* The sheet already has the gutters: its footer's words line up with the card and the frames
+   (audit 2026-10-16), at every width. */
+[data-template='fullscreen'] footer > div {
+  padding-inline: 0;
+}
+
 [data-template='fullscreen'] .fs-actions {
   display: grid;
   gap: 2px;
@@ -459,10 +465,6 @@
 
   [data-template='fullscreen'] footer {
     max-width: none;
-  }
-
-  [data-template='fullscreen'] footer > div {
-    padding-inline: 0;
   }
 }
 

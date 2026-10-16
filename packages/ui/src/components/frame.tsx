@@ -239,15 +239,17 @@ function FrameFace({
         // The words on a sand card; type grows with the square (container = the card): 13px in a
         // phone tile, 15px from 128px, 16px from 168px. The clamp is as many whole lines as the
         // square holds under the quote mark (and the number line, when there is one), so a line
-        // is never cut through the middle in a narrow tile (a polaroid at 360px is ~92px).
+        // is never cut through the middle in a narrow tile (a polaroid at 360px is ~92px). The
+        // widths (the card's content box) come from the line heights: 17.9px (13px), 20.6px
+        // (15px), 22.4px (16px).
         <div className="@container flex size-full flex-col gap-1 bg-tint-sand p-2 @min-[168px]:gap-1.5 @min-[168px]:p-3">
           <Quote aria-hidden="true" className="size-3.5 shrink-0 text-tint-sand-ink" />
           <p
             className={cn(
               'min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:text-[0.9375rem] @min-[168px]:text-base @min-[168px]:leading-[1.4]',
               number === undefined && !name
-                ? 'line-clamp-3 @min-[128px]:line-clamp-4 @min-[168px]:line-clamp-5'
-                : 'line-clamp-2 @min-[110px]:line-clamp-3 @min-[150px]:line-clamp-4 @min-[190px]:line-clamp-5',
+                ? 'line-clamp-3 @min-[94px]:line-clamp-4 @min-[112px]:line-clamp-5'
+                : 'line-clamp-2 @min-[92px]:line-clamp-3 @min-[110px]:line-clamp-4 @min-[146px]:line-clamp-5',
             )}
           >
             {text}

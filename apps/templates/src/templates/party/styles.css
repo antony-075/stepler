@@ -231,6 +231,8 @@
 [data-template='party'] .pt-actions [data-slot='guest-legal-notice'] {
   font-size: 12.5px;
   line-height: 1.45;
+  /* With the title and the count, not centred under left-aligned text (audit 2026-10-16). */
+  text-align: var(--tpl-align);
 }
 
 [data-template='party'] .pt-note {
@@ -334,7 +336,13 @@
   text-transform: uppercase;
 }
 
+/* Phones and tablets, «Кадри»: the grids start right under the tabs; «Додати»: room between
+   the notice and the footer (audit 2026-10-16). */
 @media (max-width: 1023.98px) {
+  [data-template='party'][data-view='add'] .pt-hero {
+    padding-bottom: 40px;
+  }
+
   [data-template='party'][data-view='frames'] .pt-sections {
     padding-top: 20px;
   }
@@ -435,10 +443,6 @@
 
   [data-template='party'] .pt-ghost {
     min-height: 54px;
-  }
-
-  [data-template='party'] .pt-actions [data-slot='guest-legal-notice'] {
-    text-align: center;
   }
 
   [data-template='party'] .pt-sections {
