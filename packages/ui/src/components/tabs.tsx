@@ -150,7 +150,9 @@ function TabsTrigger({
         aria-hidden="true"
         viewBox="0 0 100 10"
         preserveAspectRatio="none"
-        className="pointer-events-none absolute inset-x-2 bottom-1.5 h-1.5 w-[calc(100%-1rem)] overflow-visible"
+        // Hidden while inactive as well: with `non-scaling-stroke` Chromium dashes in screen
+        // space, so `pathLength` alone left part of the line on inactive tabs.
+        className="pointer-events-none absolute inset-x-2 bottom-1.5 h-1.5 w-[calc(100%-1rem)] overflow-visible opacity-0 group-data-[state=active]/tab:opacity-100"
       >
         <path
           d="M2 5 C24 2 50 3 72 5 C84 6 92 4 98 3"

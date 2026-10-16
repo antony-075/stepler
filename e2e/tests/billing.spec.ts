@@ -47,7 +47,7 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Купити пакет' })).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
-  await page.getByRole('tab', { name: 'Огляд' }).click();
+  await page.getByRole('tab', { name: 'Ваш тариф' }).click();
   await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
 
@@ -92,9 +92,9 @@ test('pricing is public: two packs with prices, signing in to buy', async ({ pag
   await expect(page.getByRole('heading', { name: 'Тарифи', level: 1 })).toBeVisible();
   const start = page.getByTestId('pack-pack-start');
   await expect(start.getByRole('heading', { name: 'Старт' })).toBeVisible();
-  await expect(start.getByText(/^499,00\s₴$/)).toBeVisible();
-  await expect(page.getByTestId('pack-pack-event').getByText(/^999,00\s₴$/)).toBeVisible();
-  await expect(page.getByText(/Продовжити збір на 30 днів — 199,00\s₴/)).toBeVisible();
+  await expect(start.getByText(/^499\s₴$/)).toBeVisible();
+  await expect(page.getByTestId('pack-pack-event').getByText(/^999\s₴$/)).toBeVisible();
+  await expect(page.getByText(/Продовжити збір на 30 днів — 199\s₴/)).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
   await start.getByRole('link', { name: 'Увійти, щоб купити' }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -112,7 +112,7 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
   await page.getByTestId('pack-pack-start').getByRole('button', { name: 'Купити' }).click();
   const dialog = page.getByRole('dialog', { name: 'Пакет «Старт»' });
   await expect(dialog.getByRole('radio', { name: 'Весілля Олени' })).toBeChecked();
-  await expect(dialog.getByText(/^499,00\s₴$/)).toBeVisible();
+  await expect(dialog.getByText(/^499\s₴$/)).toBeVisible();
   await payAtLiqPayStub(page, 'success');
   await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
 
@@ -128,7 +128,7 @@ test('a pack for a trial collection: checkout, LiqPay, «Оплату отрим
   await page.goto('/app/billing');
   const yours = page.getByRole('region', { name: 'Ваші пакети' });
   await expect(yours.getByRole('link', { name: 'Весілля Олени' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Історія оплат' }).click();
+  await page.getByRole('tab', { name: 'Історія платежів' }).click();
   await expect(page).toHaveURL(/\/app\/billing\?tab=history$/);
   await expect(page.getByRole('cell', { name: 'Оплачено' })).toBeVisible();
   await expect(page.getByRole('cell', { name: /Весілля Олени/ })).toBeVisible();
@@ -221,7 +221,7 @@ test('collecting ended: «Збір завершено», extend by 30 days, gues
   await payAtLiqPayStub(page, 'success');
   await page.getByRole('button', { name: 'Продовжити збір на 30 днів' }).click();
   const confirm = page.getByRole('alertdialog', { name: 'Продовжити збір на 30 днів' });
-  await expect(confirm.getByText(/199,00\s₴/)).toBeVisible();
+  await expect(confirm.getByText(/199\s₴/)).toBeVisible();
   await confirm.getByRole('button', { name: 'Перейти до оплати' }).click();
   await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
 

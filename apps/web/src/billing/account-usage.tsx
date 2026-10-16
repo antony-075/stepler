@@ -8,10 +8,13 @@
 // what stops and links to «Тарифи» (a trial that ended with more collections than the plan
 // allows). The words carry the numbers and the state; the bars are decorative. Pack collections
 // are not counted here: that note is the InfoTip beside the title.
+// Owner's pick 2026-10-16 (direction C, unified with the page, `surfaces.ts`): two cards side by
+// side from `md`, «Сховище» with a 14px bar and «Активні колекції» with one slot per collection
+// the plan allows (filled, then dashed free ones; a plan of more than 10 gets the bar instead) and
+// «Ще N вільних місць» under them.
 import type { UsageResponse } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { InfoTip } from '@stepler/ui/components/info-tip';
-import { Panel, PanelContent, PanelHeader, PanelTitle } from '@stepler/ui/components/panel';
 import { cn } from '@stepler/ui/lib/utils';
 import { CircleAlert, FolderOpen, HardDrive, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +22,10 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { UsageBar } from '@/app/app/usage-bar';
 import { formatStorage } from '@/format/bytes';
 import { billingHref } from './billing-tab';
+import { CARD } from './surfaces';
+
+/** Up to this many collections the plan's slots are drawn one by one. */
+const MAX_SLOTS = 10;
 
 /** From this share of a limit the row warns (amber). */
 const NEAR_LIMIT = 0.9;
@@ -36,21 +43,24 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
   const format = useFormatter();
   const { activeCollections: slots, storage } = usage;
   const share = storage.limitBytes > 0 ? storage.usedBytes / storage.limitBytes : 0;
+  const free = Math.max(0, slots.limit - slots.used);
   return (
-    <Panel data-slot="account-usage">
-      <PanelHeader>
-        <div className="flex items-center gap-1.5">
-          <PanelTitle>{t('title')}</PanelTitle>
-          <InfoTip text={t('note')} />
-        </div>
-      </PanelHeader>
-      <PanelContent className="grid gap-6">
+    <section data-slot="account-usage" aria-labelledby="usage-title" className="grid gap-3">
+      <div className="flex items-center gap-1.5">
+        <h2 id="usage-title" className="text-[1.1875rem] leading-snug font-semibold">
+          {t('title')}
+        </h2>
+        <InfoTip text={t('note')} />
+      </div>
+      <div className="grid gap-6 md:grid-cols-2">
         <LimitRow
           icon={FolderOpen}
           label={t('collections')}
           value={t('of', { used: String(slots.used), limit: String(slots.limit) })}
           used={slots.used}
           limit={slots.limit}
+          slots={slots.limit <= MAX_SLOTS}
+          caption={free > 0 ? t('free', { count: free }) : undefined}
           over={{ title: t('overCollections'), text: t('overCollectionsText') }}
         />
         <LimitRow
@@ -67,8 +77,38 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
           })}
           over={{ title: t('overStorage'), text: t('overStorageText') }}
         />
-      </PanelContent>
-    </Panel>
+      </div>
+    </section>
+  );
+}
+
+const SLOT_USED = 'bg-primary';
+const SLOT_OVER = 'bg-destructive';
+const SLOT_FREE = 'border-2 border-dashed border-border-strong';
+
+function slotClass(index: number, used: number, limit: number, level: Level): string {
+  if (index >= used) return SLOT_FREE;
+  return level === 'over' && index >= limit ? SLOT_OVER : SLOT_USED;
+}
+
+const TONE: Record<Level, 'default' | 'warning' | 'destructive'> = {
+  ok: 'default',
+  near: 'warning',
+  over: 'destructive',
+};
+
+/** One slot per collection the plan allows: used ones filled, free ones dashed (decorative). */
+function Slots({ used, limit, level }: { used: number; limit: number; level: Level }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="col-start-2 grid gap-1.5"
+      style={{ gridTemplateColumns: `repeat(${Math.max(1, limit)}, minmax(0, 1fr))` }}
+    >
+      {Array.from({ length: Math.max(limit, used) }, (_, index) => (
+        <span key={index} className={cn('h-9 rounded-lg', slotClass(index, used, limit, level))} />
+      ))}
+    </span>
   );
 }
 
@@ -79,6 +119,7 @@ function LimitRow({
   used,
   limit,
   caption,
+  slots = false,
   over,
 }: {
   icon: LucideIcon;
@@ -87,6 +128,8 @@ function LimitRow({
   used: number;
   limit: number;
   caption?: string;
+  /** Draw the plan's slots one by one instead of the bar. */
+  slots?: boolean;
   over: { title: string; text: string };
 }) {
   const t = useTranslations('billing');
@@ -102,7 +145,10 @@ function LimitRow({
     <div
       data-slot="limit-row"
       data-level={level}
-      className="grid grid-cols-[1.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5"
+      className={cn(
+        CARD,
+        'grid grid-cols-[1.25rem_minmax(0,1fr)] content-start items-center gap-x-3 gap-y-3 p-6',
+      )}
     >
       <Icon aria-hidden="true" className="size-5 text-muted-foreground" />
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
@@ -117,12 +163,16 @@ function LimitRow({
           {value}
         </span>
       </div>
-      <UsageBar
-        used={used}
-        limit={limit}
-        tone={level === 'over' ? 'destructive' : level === 'near' ? 'warning' : 'default'}
-        className="col-start-2 h-2 w-full bg-border"
-      />
+      {slots ? (
+        <Slots used={used} limit={limit} level={level} />
+      ) : (
+        <UsageBar
+          used={used}
+          limit={limit}
+          tone={TONE[level]}
+          className="col-start-2 h-3.5 w-full bg-muted"
+        />
+      )}
       {captions.length === 0 ? null : (
         <p className={captionClass}>
           {captions.map((part) => (

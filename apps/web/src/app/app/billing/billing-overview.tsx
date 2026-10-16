@@ -15,6 +15,11 @@
 // - «Історія оплат» (`?tab=history`): the table alone.
 // One spacing scale: 24px between cards, 32px between groups. Choosing a tab drops the purchase
 // parameters, so a dialog opened by a link does not open again on the way back.
+// Owner's pick 2026-10-16: «Ваш тариф» and «Історія платежів» from direction C, «Тарифи» from A,
+// one look across them (`billing/surfaces.ts`): the line tabs (text and the accent underline,
+// 48px), the plan card full width with the limits as two cards under it, the offers as A's cards.
+// One currency for the page (`useBillingCurrency`: remembered, else the interface language's);
+// each «Тарифи» group shows «₴ / $ / €» beside its heading.
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { PageHeader } from '@stepler/ui/components/page-header';
@@ -29,6 +34,7 @@ import { fetchOffers, fetchSummary, offersKey, SUMMARY_KEY } from '@/api/billing
 import { AccountUsage } from '@/billing/account-usage';
 import { PlanCard } from '@/billing/account-plan';
 import { BillingAlert } from '@/billing/billing-alert';
+import { useBillingCurrency } from '@/billing/currency';
 import {
   type BillingTab,
   billingHref,
@@ -49,12 +55,6 @@ const TABS: { value: BillingTab; icon: LucideIcon }[] = [
   { value: 'history', icon: ReceiptText },
 ];
 
-// The page's tabs: the segmented control across the column, the active segment on the soft
-// accent (its thumb) with accent ink, 44px tall everywhere.
-const TAB_LIST =
-  'md:grid md:w-full md:auto-cols-[minmax(0,1fr)] [&>[data-slot=segment-thumb]]:bg-info-soft [&>[data-slot=segment-thumb]]:shadow-none';
-const TAB = 'md:pointer-fine:min-h-11 text-[0.9375rem] data-[state=active]:text-link';
-
 export function BillingOverview() {
   const t = useTranslations('billing');
   const locale = useLocale();
@@ -73,6 +73,7 @@ export function BillingOverview() {
   const hash = useSyncExternalStore(subscribeHash, readHash, noHash);
   const paysSubscription = summary.data?.subscription?.source === 'LIQPAY';
   const shownKind = offerKind ?? defaultOfferKind(params, hash, paysSubscription);
+  const [currency, setCurrency] = useBillingCurrency();
   const selectTab = (next: string) => {
     router.push(billingHref(billingTab(new URLSearchParams({ tab: next }))), { scroll: false });
   };
@@ -81,19 +82,22 @@ export function BillingOverview() {
     <>
       <PageHeader size="compact" title={t('title')} />
       <Tabs value={tab} onValueChange={selectTab} className="gap-6">
-        <TabsList variant="segmented" aria-label={t('tabs.label')} className={TAB_LIST}>
+        <TabsList aria-label={t('tabs.label')}>
           {TABS.map(({ value, icon: Icon }) => (
-            <TabsTrigger key={value} value={value} className={TAB}>
+            <TabsTrigger key={value} value={value}>
               <Icon aria-hidden="true" className="max-sm:hidden" />
               <span className="min-w-0 truncate">{t(`tabs.${value}`)}</span>
             </TabsTrigger>
           ))}
         </TabsList>
-        <TabsContent value="overview" className="grid gap-6">
+        <TabsContent value="overview" className="grid gap-8">
           {summary.isPending ? (
             <div className="grid gap-6" aria-hidden="true">
-              <Skeleton className="h-72 w-full rounded-sheet" />
-              <Skeleton className="h-52 w-full rounded-sheet" />
+              <Skeleton className="h-72 w-full rounded-[1.25rem]" />
+              <div className="grid gap-6 md:grid-cols-2">
+                <Skeleton className="h-40 w-full rounded-[1.25rem]" />
+                <Skeleton className="h-40 w-full rounded-[1.25rem] max-md:hidden" />
+              </div>
             </div>
           ) : summary.isError ? (
             <Alert
@@ -109,10 +113,8 @@ export function BillingOverview() {
           ) : (
             <>
               <BillingAlert summary={summary.data} offers={offers.data} />
-              <div className="grid items-start gap-6 xl:grid-cols-2">
-                <PlanCard summary={summary.data} offers={offers.data} />
-                <AccountUsage usage={summary.data.usage} />
-              </div>
+              <PlanCard summary={summary.data} offers={offers.data} />
+              <AccountUsage usage={summary.data.usage} />
             </>
           )}
           <YourPacks collections={own.items} />
@@ -124,9 +126,11 @@ export function BillingOverview() {
               offers={offers}
               summary={summary.data}
               collectionTitles={titles}
+              currency={currency}
+              onCurrencyChange={setCurrency}
             />
           ) : (
-            <PacksSection />
+            <PacksSection currency={currency} onCurrencyChange={setCurrency} />
           )}
           <p className="flex items-start gap-2 text-sm text-pretty text-muted-foreground">
             <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />

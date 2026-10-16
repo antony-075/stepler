@@ -36,22 +36,22 @@ test('the operator refunds part of a pack: LiqPay, the payment and the owner’s
   await operator.getByRole('button', { name: 'Показати' }).click();
   await expect(operator).toHaveURL(/\/ops\/billing\/payments\?email=/);
   await operator.getByRole('link', { name: email }).click();
-  await expect(operator.getByRole('heading', { name: /^Платіж на 499,00/ })).toBeVisible();
-  await expect(operator.getByText(/Можна повернути ще 499,00/)).toBeVisible();
+  await expect(operator.getByRole('heading', { name: /^Платіж на 499/ })).toBeVisible();
+  await expect(operator.getByText(/Можна повернути ще 499/)).toBeVisible();
 
   await operator.getByRole('button', { name: 'Повернути кошти' }).click();
   const dialog = operator.getByRole('dialog', { name: 'Повернути кошти' });
   const amount = dialog.getByLabel('Сума, грн');
   await expect(amount).toHaveValue('499,00');
   await amount.fill('300');
-  await expect(dialog.getByText(/Буде повернено 300,00.+на картку покупця/)).toBeVisible();
+  await expect(dialog.getByText(/Буде повернено 300.+на картку покупця/)).toBeVisible();
   await dialog.getByRole('button', { name: /^Повернути/ }).click();
   await expect(dialog.getByText('Вкажіть причину')).toBeVisible();
   await dialog.getByLabel('Причина').fill('Гостей було менше, ніж планували');
-  await dialog.getByRole('button', { name: /^Повернути 300,00/ }).click();
+  await dialog.getByRole('button', { name: /^Повернути 300/ }).click();
   await expect(operator.getByText('Кошти повернено').first()).toBeVisible();
   await expect(operator.getByText('Повернено частково').first()).toBeVisible();
-  await expect(operator.getByText(/Можна повернути ще 199,00/)).toBeVisible();
+  await expect(operator.getByText(/Можна повернути ще 199/)).toBeVisible();
   await expect(operator.getByText('Гостей було менше, ніж планували')).toBeVisible();
   await operator.close();
 

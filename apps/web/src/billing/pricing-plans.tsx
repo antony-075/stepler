@@ -7,28 +7,43 @@
 // signed out it goes to sign-in first.
 import type { OfferList } from '@stepler/contracts';
 import { buttonVariants } from '@stepler/ui/components/button';
+import { cn } from '@stepler/ui/lib/utils';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { CurrencySwitch, shownCurrency, useBillingCurrency } from './currency';
+import { offerButtonClass } from './offer-card';
 import { type PlanInterval, planIntervals, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
+import { SECTION_NOTE, SECTION_TITLE } from './surfaces';
 
 export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn: boolean }) {
   const t = useTranslations('billing.plans');
+  const [chosen, setCurrency] = useBillingCurrency();
+  const currency = shownCurrency(offers, chosen);
   const intervals = planIntervals(offers);
-  const [interval, setPlanInterval] = useState<PlanInterval>(intervals[0] ?? 'MONTH');
-  const plans = subscriptionPlans(offers, interval);
+  const [picked, setPlanInterval] = useState<PlanInterval>('MONTH');
+  const interval = intervals.includes(picked) ? picked : (intervals[0] ?? 'MONTH');
+  const plans = subscriptionPlans(offers, interval, currency);
   if (plans.length === 0) return null;
   return (
-    <section aria-labelledby="plans-title" className="grid gap-4">
+    <section aria-labelledby="plans-title" className="grid gap-6">
       <div className="grid gap-1">
-        <h2 id="plans-title" className="type-h2">
+        <h2 id="plans-title" className={SECTION_TITLE}>
           {t('title')}
         </h2>
-        <p className="max-w-[60ch] text-pretty text-muted-foreground">{t('intro')}</p>
+        <p className={SECTION_NOTE}>{t('intro')}</p>
       </div>
-      <IntervalSwitch offers={offers} value={interval} onChange={setPlanInterval} />
-      <ul className="grid gap-4 md:grid-cols-2">
+      <div className="flex flex-wrap items-start gap-3">
+        <IntervalSwitch
+          offers={offers}
+          currency={currency}
+          value={interval}
+          onChange={setPlanInterval}
+        />
+        <CurrencySwitch offers={offers} value={currency} onChange={setCurrency} />
+      </div>
+      <ul className="grid gap-6 pt-2 md:grid-cols-2">
         {plans.map((plan) => (
           <li key={plan.priceId}>
             <SubscriptionPlanCard
@@ -36,7 +51,7 @@ export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn
               action={
                 <Link
                   href={planHref(signedIn, plan.priceId)}
-                  className={buttonVariants({ variant: 'outline', className: 'w-full' })}
+                  className={cn(buttonVariants(), offerButtonClass(plan.offer.highlighted))}
                 >
                   {signedIn ? t('subscribe') : t('signIn')}
                 </Link>

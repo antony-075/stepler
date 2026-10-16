@@ -75,6 +75,7 @@ function pendingPlan(
     offer,
     priceId: price.id,
     price: { amountMinor: price.amountMinor, currency: price.currency },
+    display: { amountMinor: price.amountMinor, currency: price.currency },
     interval: price.interval,
   };
 }

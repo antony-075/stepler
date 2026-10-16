@@ -16,20 +16,33 @@
 // - the actions (`PlanActions`: one full-width main action, a quiet row under it), then «Що буде
 //   після завершення?» as an accent-tinted disclosure, open only when the end is close or has
 //   happened.
+// Owner's pick 2026-10-16 (direction C, unified with the page, `surfaces.ts`): the card in the
+// page's CARD; the plan's name at 32px with its badge; for a paid or granted plan a period line
+// with its start, «Сьогодні · день N з M» and its end with what it brings, over the bar; a monthly
+// plan that is sold yearly too gets one strip under it: «−17%», what a year costs instead of
+// twelve months, «Перейти на щорічну» (the change dialog on «Тарифи», `?plan=`).
 import type { BillingSummary, OfferList, SubscriptionDto } from '@stepler/contracts';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
-import { Panel, PanelContent } from '@stepler/ui/components/panel';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { ChevronDown, Info } from 'lucide-react';
+import Link from 'next/link';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { daysLeft, TRIAL_REMINDER_DAYS } from '@/app/app/access-model';
 import { UsageBar } from '@/app/app/usage-bar';
 import { monoDigits } from '@/format/mono-digits';
-import { type PlanInterval, type PricedPlan, subscriptionPlans } from './offers';
+import { BILLING_PATH } from './billing-tab';
+import {
+  formatMoney,
+  type PlanInterval,
+  type PricedPlan,
+  subscriptionPlans,
+  yearlySaving,
+} from './offers';
 import { PendingChange, PlanActions } from './plan-actions';
 import { usePlanPrice } from './plan-picker';
+import { CARD, CHIP } from './surfaces';
 
 const KYIV = 'Europe/Kyiv';
 const MINUTE_MS = 60_000;
@@ -149,13 +162,13 @@ export function PlanCard({
         };
 
   return (
-    <Panel data-slot="plan-card">
-      <PanelContent className="flex flex-col gap-5">
+    <section data-slot="plan-card" aria-label={t('plan.title')} className={cn(CARD, 'p-6 sm:p-7')}>
+      <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           <div className="grid min-w-0 gap-2">
             <p className="text-sm text-muted-foreground">{t('plan.title')}</p>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-              <h2 className="text-[1.75rem] leading-tight font-semibold tracking-tight">{title}</h2>
+              <h2 className="text-[2rem] leading-tight font-bold tracking-tight">{title}</h2>
               <Badge variant={badge.variant}>{badge.label}</Badge>
             </div>
             {parts.length === 0 ? null : (
@@ -171,11 +184,111 @@ export function PlanCard({
           {countdownEnd === null ? null : <Countdown end={countdownEnd} now={now} />}
         </div>
         {subscription === null ? null : <PendingChange subscription={subscription} />}
-        {span === null ? null : <UsageBar {...span} className="h-1.5 w-full bg-border" />}
+        {span === null || periodStart === null || access.endsAt === null ? null : (
+          <PeriodLine
+            start={date(periodStart)}
+            end={date(access.endsAt)}
+            day={Math.min(Math.ceil(span.used), Math.round(span.limit))}
+            days={Math.round(span.limit)}
+            span={span}
+            renews={subscription?.source === 'LIQPAY' && subscription.status === 'ACTIVE'}
+          />
+        )}
+        <YearlyUpsell subscription={subscription} offers={offers} />
         <PlanActions summary={summary} resumePlan={resumePlanOf(subscription, offers)} />
         <AfterEnd readOnly={readOnly} open={attention} />
-      </PanelContent>
-    </Panel>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The plan's period: its start, «Сьогодні · день N з M» and its end (what happens then: the
+ * charge for a plan that renews, the end otherwise), over the bar. The words carry it; the bar
+ * is decorative.
+ */
+function PeriodLine({
+  start,
+  end,
+  day,
+  days,
+  span,
+  renews,
+}: {
+  start: string;
+  end: string;
+  day: number;
+  days: number;
+  span: { used: number; limit: number };
+  renews: boolean;
+}) {
+  const t = useTranslations('billing.plan.period');
+  return (
+    <div data-slot="plan-period" className="grid gap-2.5">
+      <p className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-sm text-foreground-soft">
+        <span>{t('start', { date: start })}</span>
+        <span className="font-semibold text-foreground">
+          {monoDigits(t('today', { day: Math.max(1, day), days }), MONO)}
+        </span>
+        <span>{renews ? t('renews', { date: end }) : t('ends', { date: end })}</span>
+      </p>
+      <UsageBar {...span} className="h-2.5 w-full bg-muted" />
+    </div>
+  );
+}
+
+/**
+ * A monthly plan sold yearly too: «−17%», what the year costs instead of twelve months, and the
+ * way to switch («Перейти на щорічну» opens that plan's change dialog on «Тарифи»).
+ */
+function YearlyUpsell({
+  subscription,
+  offers,
+}: {
+  subscription: SubscriptionDto | null;
+  offers: OfferList | undefined;
+}) {
+  const t = useTranslations('billing.plan.yearly');
+  const format = useFormatter();
+  if (
+    offers === undefined ||
+    subscription === null ||
+    subscription.source !== 'LIQPAY' ||
+    subscription.status !== 'ACTIVE' ||
+    subscription.interval !== 'MONTH' ||
+    subscription.price === null ||
+    subscription.pendingChange !== null
+  ) {
+    return null;
+  }
+  const currency = subscription.price.currency;
+  const yearly = subscriptionPlans(offers, 'YEAR', currency).find(
+    (plan) => plan.offer.id === subscription.offerId,
+  );
+  const saving = yearly === undefined ? null : yearlySaving(yearly.offer, currency);
+  if (yearly === undefined || saving === null) return null;
+  const twelve = { amountMinor: subscription.price.amountMinor * 12, currency };
+  return (
+    <div
+      data-slot="plan-yearly"
+      className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-info-soft px-4 py-3.5"
+    >
+      <span className={cn(CHIP, 'bg-primary text-primary-foreground')}>
+        {t('percent', { percent: saving.percent })}
+      </span>
+      <p className="min-w-0 flex-1 basis-64 text-[0.9375rem] text-pretty">
+        {t('text', {
+          year: formatMoney(format.number, yearly.price),
+          twelve: formatMoney(format.number, twelve),
+        })}
+      </p>
+      <Link
+        href={`${BILLING_PATH}?tab=plans&plan=${encodeURIComponent(yearly.priceId)}`}
+        className={cn('min-h-11 content-center font-semibold text-link hover:underline', focusRing)}
+      >
+        {t('action')}
+      </Link>
+    </div>
   );
 }
 

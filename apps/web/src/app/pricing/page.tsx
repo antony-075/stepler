@@ -14,12 +14,13 @@
 //   buttons that cannot work). Amounts are Intl currency from minor units.
 import { Alert } from '@stepler/ui/components/alert';
 import { buttonVariants } from '@stepler/ui/components/button';
+import { cn } from '@stepler/ui/lib/utils';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { fetchOffersServer, getSessionUser } from '@/api/server';
-import { PackCard } from '@/billing/offer-card';
-import { extensionOffer, formatMoney, packOffers } from '@/billing/offers';
+import { offerButtonClass, PackCard } from '@/billing/offer-card';
+import { extensionOffer, formatMoney, languageCurrency, packOffers } from '@/billing/offers';
 import { PricingPlans } from '@/billing/pricing-plans';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
@@ -34,22 +35,28 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PricingPage() {
   const locale = await getLocale();
-  const [offers, user, t] = await Promise.all([
+  const [offers, user, t, tPlans] = await Promise.all([
     fetchOffersServer(locale),
     getSessionUser(),
     getTranslations('billing.pricing'),
+    getTranslations('billing.plans'),
   ]);
   const signedIn = user !== null && user !== 'unavailable';
   // Signed out: sign in first (magic links carry no return path, slice 9 [P8]).
   const ctaHref = (code: string) =>
     signedIn ? `/app/billing?pack=${encodeURIComponent(code)}` : SIGN_IN_PATH;
-  const packs = offers === null ? [] : packOffers(offers);
+  // Shown in the language's currency (₴ in Ukrainian, a $ reference price otherwise, with what is
+  // paid in hryvnias under it); the plans below follow the visitor's remembered choice and carry
+  // the switch. Payment and receipt are always in hryvnias.
+  const currency = languageCurrency(locale);
+  const packs = offers === null ? [] : packOffers(offers, currency);
   const extras =
     offers === null
       ? []
-      : [extensionOffer(offers, 'WINDOW'), extensionOffer(offers, 'RETENTION')].filter(
-          (offer) => offer !== null,
-        );
+      : [
+          extensionOffer(offers, 'WINDOW', currency),
+          extensionOffer(offers, 'RETENTION', currency),
+        ].filter((offer) => offer !== null);
   const money = (amountMinor: number, currency: 'UAH' | 'EUR' | 'USD') =>
     formatMoney((value, options) => new Intl.NumberFormat(locale, options).format(value), {
       amountMinor,
@@ -80,7 +87,7 @@ export default async function PricingPage() {
                 {t('unavailable')}
               </Alert>
             ) : (
-              <ul className="grid gap-4 md:grid-cols-2">
+              <ul className="grid gap-6 pt-2 md:grid-cols-2">
                 {packs.map((pack) => (
                   <li key={pack.offer.id}>
                     <PackCard
@@ -88,7 +95,7 @@ export default async function PricingPage() {
                       action={
                         <Link
                           href={ctaHref(pack.offer.code)}
-                          className={buttonVariants({ className: 'w-full' })}
+                          className={cn(buttonVariants(), offerButtonClass(pack.offer.highlighted))}
                         >
                           {signedIn ? t('choose') : t('signIn')}
                         </Link>
@@ -111,7 +118,12 @@ export default async function PricingPage() {
                   <li key={extra.offer.id}>
                     {t('extraPrice', {
                       title: extra.offer.title,
-                      price: money(extra.price.amountMinor, extra.price.currency),
+                      price:
+                        extra.display.currency === extra.price.currency
+                          ? money(extra.price.amountMinor, extra.price.currency)
+                          : tPlans('approxPrice', {
+                              price: money(extra.display.amountMinor, extra.display.currency),
+                            }),
                     })}
                   </li>
                 ))}

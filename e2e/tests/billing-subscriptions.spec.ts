@@ -17,16 +17,16 @@ test.use({ locale: 'de-DE' });
 
 // «Ваш тариф» on «Огляд» (the plan and the subscription in one card since billing page v3).
 const card = (page: Page) => page.locator('[data-slot="plan-card"]');
-const openTab = (page: Page, name: 'Огляд' | 'Тарифи' | 'Історія оплат') =>
+const openTab = (page: Page, name: 'Ваш тариф' | 'Тарифи' | 'Історія платежів') =>
   page.getByRole('tab', { name }).click();
 const plans = (page: Page) =>
   page.getByRole('region', { name: 'Підписка для організаторів подій' });
 
 const PLANS = {
-  'sub-pro': { title: 'Pro', consent: /^Я погоджуюся на автоматичне щомісячне списання 500,00\s₴/ },
+  'sub-pro': { title: 'Pro', consent: /^Я погоджуюся на автоматичне щомісячне списання 500\s₴/ },
   'sub-business': {
     title: 'Business',
-    consent: /^Я погоджуюся на автоматичне щомісячне списання 1\s200,00\s₴/,
+    consent: /^Я погоджуюся на автоматичне щомісячне списання 1\s200\s₴/,
   },
 } as const;
 
@@ -60,10 +60,10 @@ test('pricing shows the plans monthly and yearly, signing in to subscribe', asyn
   await page.goto('/pricing');
   const section = plans(page);
   const pro = section.getByTestId('plan-sub-pro');
-  await expect(pro.getByText(/^500,00\s₴$/)).toBeVisible();
-  await expect(section.getByTestId('plan-sub-business').getByText(/^1\s200,00\s₴$/)).toBeVisible();
+  await expect(pro.getByText(/^500\s₴$/)).toBeVisible();
+  await expect(section.getByTestId('plan-sub-business').getByText(/^1\s200\s₴$/)).toBeVisible();
   await section.getByRole('radio', { name: 'Щороку' }).click();
-  await expect(pro.getByText(/^5\s000,00\s₴$/)).toBeVisible();
+  await expect(pro.getByText(/^5\s000\s₴$/)).toBeVisible();
   await expect(pro.getByText('/рік')).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
   await pro.getByRole('link', { name: 'Увійти, щоб оформити' }).click();
@@ -96,7 +96,7 @@ test('subscribe, preview an upgrade, schedule and withdraw a yearly switch, canc
   await signIn(page, newEmail());
   await subscribePro(page);
   await expect(card(page).getByText(/^Наступне списання /)).toBeVisible();
-  await expect(card(page).getByText(/^500,00\s₴\/міс$/)).toBeVisible();
+  await expect(card(page).getByText(/^500\s₴\/міс$/)).toBeVisible();
 
   // An upgrade is priced by the server for the rest of the period. «Змінити тариф» opens «Тарифи».
   await card(page).getByRole('link', { name: 'Змінити тариф' }).click();
@@ -106,7 +106,7 @@ test('subscribe, preview an upgrade, schedule and withdraw a yearly switch, canc
     .getByRole('button', { name: 'Перейти на цей тариф' })
     .click();
   const upgrade = page.getByRole('dialog', { name: 'Перейти на «Business»' });
-  await expect(upgrade.getByText(/^Доплата зараз: .+, далі 1\s200,00\s₴\/міс$/)).toBeVisible();
+  await expect(upgrade.getByText(/^Доплата зараз: .+, далі 1\s200\s₴\/міс$/)).toBeVisible();
   await upgrade.getByRole('button', { name: 'Скасувати' }).first().click();
 
   // Monthly → yearly is scheduled for the period end; nothing is paid now (B14).
@@ -116,12 +116,12 @@ test('subscribe, preview an upgrade, schedule and withdraw a yearly switch, canc
     .getByRole('button', { name: 'Перейти на цей тариф' })
     .click();
   const yearly = page.getByRole('dialog', { name: 'Перейти на «Pro»' });
-  await expect(yearly.getByText(/^З .+ — щорічно, 5\s000,00\s₴$/)).toBeVisible();
+  await expect(yearly.getByText(/^З .+ — щорічно, 5\s000\s₴$/)).toBeVisible();
   await expect(yearly.getByText(/^Зараз нічого не списується\./)).toBeVisible();
   await yearly.getByRole('button', { name: 'Запланувати зміну' }).click();
   await expect(page.getByText('Зміну тарифу заплановано').first()).toBeVisible();
-  await openTab(page, 'Огляд');
-  await expect(card(page).getByText(/^З .+ — щорічно, 5\s000,00\s₴$/)).toBeVisible();
+  await openTab(page, 'Ваш тариф');
+  await expect(card(page).getByText(/^З .+ — щорічно, 5\s000\s₴$/)).toBeVisible();
   await card(page).getByRole('button', { name: 'Скасувати зміну' }).click();
   await expect(page.getByText('Зміну тарифу скасовано').first()).toBeVisible();
   await expect(card(page).getByText(/щорічно/)).toHaveCount(0);
@@ -149,13 +149,13 @@ test('the switch at the period end: confirm the yearly plan through LiqPay @desk
     .getByRole('button', { name: 'Перейти на цей тариф' })
     .click();
   await page.getByRole('button', { name: 'Запланувати зміну' }).click();
-  await openTab(page, 'Огляд');
+  await openTab(page, 'Ваш тариф');
   await expect(card(page).getByRole('button', { name: 'Скасувати зміну' })).toBeVisible();
 
   stopPlanForSwitch(email);
   await page.reload();
   const banner = page.getByRole('status').filter({ hasText: 'Підтвердіть оплату: Pro' });
-  await expect(banner.getByText(/щорічно, 5\s000,00\s₴/)).toBeVisible();
+  await expect(banner.getByText(/щорічно, 5\s000\s₴/)).toBeVisible();
   await expect(card(page).getByRole('button', { name: 'Скасувати зміну' })).toHaveCount(0);
   await expect(card(page).getByRole('button', { name: 'Змінити тариф' })).toBeDisabled();
 
@@ -163,14 +163,14 @@ test('the switch at the period end: confirm the yearly plan through LiqPay @desk
   const dialog = page.getByRole('dialog', { name: 'Підтвердити «Pro»' });
   await expect(dialog.getByText('Новий період почнеться з оплати.')).toBeVisible();
   await dialog
-    .getByRole('checkbox', { name: /^Я погоджуюся на автоматичне щорічне списання 5\s000,00\s₴/ })
+    .getByRole('checkbox', { name: /^Я погоджуюся на автоматичне щорічне списання 5\s000\s₴/ })
     .check();
   await payAtLiqPayStub(page, 'success');
   await dialog.getByRole('button', { name: 'Перейти до оплати' }).click();
   await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
 
   await page.goto('/app/billing');
-  await expect(card(page).getByText(/^5\s000,00\s₴\/рік$/)).toBeVisible();
+  await expect(card(page).getByText(/^5\s000\s₴\/рік$/)).toBeVisible();
   await expect(card(page).getByText('Діє', { exact: true })).toBeVisible();
   await expect(page.getByText(/Підтвердіть оплату: Pro/)).toHaveCount(0);
 });
@@ -252,14 +252,14 @@ test('an upgrade half-way is prorated and paid; the new limits at once @desktop'
   const upgrade = page.getByRole('dialog', { name: 'Перейти на «Business»' });
   // (1 200 − 500) ₴ for about half a month.
   await expect(
-    upgrade.getByText(/^Доплата зараз: 3\d\d,\d\d\s₴, далі 1\s200,00\s₴\/міс$/),
+    upgrade.getByText(/^Доплата зараз: 3\d\d(?:,\d\d)?\s₴, далі 1\s200\s₴\/міс$/),
   ).toBeVisible();
   await payAtLiqPayStub(page, 'success');
   await upgrade.getByRole('button', { name: 'Перейти до оплати' }).click();
   await expect(page.getByRole('heading', { name: 'Оплату отримано' })).toBeVisible();
   await page.goto('/app/billing');
   await expect(card(page).getByRole('heading', { name: 'Business' })).toBeVisible();
-  await expect(card(page).getByText(/^1\s200,00\s₴\/міс$/)).toBeVisible();
+  await expect(card(page).getByText(/^1\s200\s₴\/міс$/)).toBeVisible();
 });
 
 test('a downgrade that does not fit lists what to reduce; once it fits it is scheduled @desktop', async ({
@@ -286,10 +286,10 @@ test('a downgrade that does not fit lists what to reduce; once it fits it is sch
 
   await archiveCollectionViaApi(page, created[0]?.id ?? '');
   await toPro();
-  await expect(dialog.getByText(/^З .+: Pro, 500,00\s₴\/міс$/)).toBeVisible();
+  await expect(dialog.getByText(/^З .+: Pro, 500\s₴\/міс$/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Запланувати зміну' }).click();
   await expect(page.getByText('Зміну тарифу заплановано').first()).toBeVisible();
-  await openTab(page, 'Огляд');
-  await expect(card(page).getByText(/^З .+: Pro, 500,00\s₴\/міс$/)).toBeVisible();
+  await openTab(page, 'Ваш тариф');
+  await expect(card(page).getByText(/^З .+: Pro, 500\s₴\/міс$/)).toBeVisible();
   await expect(card(page).getByRole('button', { name: 'Скасувати зміну' })).toBeVisible();
 });

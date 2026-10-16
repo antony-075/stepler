@@ -2056,7 +2056,7 @@
     "title": "Plan and billing",
     "tabs": {
       "label": "“Plan and billing” sections",
-      "overview": "Overview",
+      "overview": "Your plan",
       "plans": "Plans",
       "history": "Payment history"
     },
@@ -2111,7 +2111,14 @@
       "retentionYears": "Kept for {years, plural, one {# year} other {# years}} after payment",
       "retentionDays": "Kept for {days, plural, one {# day} other {# days}} after payment",
       "links": "Up to {count, plural, one {# additional guest link} other {# additional guest links}}",
-      "buy": "Buy"
+      "buy": "Buy",
+      "tiles": {
+        "storage": "storage",
+        "window": "collecting",
+        "retention": "keeping",
+        "days": "{days, plural, one {# day} other {# days}}",
+        "years": "{years, plural, one {# year} other {# years}}"
+      }
     },
     "pricing": {
       "metaTitle": "Pricing",
@@ -2188,13 +2195,31 @@
       },
       "time": "Date and time",
       "loadMore": "Show more",
-      "loadMoreFailed": "Could not show more payments. Try again."
+      "loadMoreFailed": "Could not show more payments. Try again.",
+      "kinds": {
+        "PACK": "Event pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "New subscription",
+        "SUBSCRIPTION_RENEWAL": "Subscription renewal",
+        "SUBSCRIPTION_CHANGE": "Plan change"
+      },
+      "refunded": "{amount} refunded",
+      "trouble": {
+        "FAILED": "The payment failed: nothing was charged",
+        "REVERSED": "The bank reversed the payment: the money went back to the card"
+      }
     },
     "packs": {
       "title": "Buy a pack",
       "intro": "A one-time payment for one collection, with no automatic charges.",
       "unavailable": "Packs can't be bought right now.",
-      "how": "A pack covers one collection, separately from the account plan: its own storage, collecting and keeping. You can extend or enlarge it from the collection’s page."
+      "how": "A pack covers one collection, separately from the account plan: its own storage, collecting and keeping. You can extend or enlarge it from the collection’s page.",
+      "extensionsTitle": "Already have a pack? You can extend it",
+      "extensionsNote": "Extensions are bought on the page of the collection with the pack.",
+      "extension": {
+        "WINDOW": "guests add frames for 30 more days",
+        "RETENTION": "frames are kept one more year"
+      }
     },
     "extend": {
       "storageUse": "{used} of {limit}",
@@ -2230,6 +2255,17 @@
         "hours": "hours",
         "minutes": "min",
         "summary": "{days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}}, {minutes, plural, one {# minute} other {# minutes}} left"
+      },
+      "period": {
+        "start": "From {date}",
+        "today": "Today · day {day} of {days}",
+        "renews": "{date} — next charge",
+        "ends": "Active until {date}"
+      },
+      "yearly": {
+        "percent": "−{percent}%",
+        "text": "Yearly, this plan costs {year} instead of {twelve} — two months free.",
+        "action": "Switch to yearly"
       }
     },
     "usage": {
@@ -2243,7 +2279,8 @@
       "overCollectionsText": "Choose a plan to create new collections.",
       "overStorage": "You’ve exceeded your storage limit.",
       "overStorageText": "Choose a plan to add new files.",
-      "nearLimit": "Almost used up"
+      "nearLimit": "Almost used up",
+      "free": "{count, plural, one {# free slot left} other {# free slots left}}"
     },
     "after": {
       "title": "What happens when it ends?",
@@ -2285,7 +2322,10 @@
       "waitPastDue": "You can change the plan once the current period is paid.",
       "waitCanceled": "The subscription is cancelled. Resume it on the “Overview” tab, or choose another plan once the paid period ends.",
       "waitSwitch": "First confirm the payment for your new plan on the “Overview” tab.",
-      "popular": "Most popular"
+      "popular": "Most popular",
+      "approx": "≈",
+      "approxPrice": "≈ {price}",
+      "charged": "Paid in hryvnias: {price}"
     },
     "subscription": {
       "status": {
@@ -2370,6 +2410,15 @@
       "text": "The previous subscription has stopped. Everything works until {date}; without the payment your collections become view-only.",
       "textOpen": "The previous subscription has stopped. Without the payment your collections become view-only.",
       "confirm": "Confirm payment"
+    },
+    "currency": {
+      "label": "Price currency",
+      "names": {
+        "UAH": "Hryvnias",
+        "USD": "US dollars",
+        "EUR": "Euros"
+      },
+      "reference": "Prices in $ and € are for orientation. Payment and the receipt are in hryvnias."
     }
   }
 }
