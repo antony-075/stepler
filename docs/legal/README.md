@@ -76,4 +76,4 @@ Replacing a text **without** a new version (a typo) is an edit of the current fi
 - Readiness check at server start (`assertLegalReady`): a built server exits with a message naming each problem (`TERMS v1 is a draft`, `LEGAL_CONTACT_EMAIL is not set`) unless `LEGAL_ALLOW_DRAFT=true`. On Render a failed start fails the health check and the previous version keeps serving.
 - `docker/scripts/verify-images.sh`: proves the web image refuses to start without the flag and serves `/legal/terms` with it.
 - `e2e/tests/legal.spec.ts`: both pages in uk/en, banner, 404, no-JavaScript reading at 320px, footer links, the guest notice's new tab without a referrer; the sign-in card's checkbox and the `/accept-terms` fallback.
-- `apps/api/test/legal-acceptances.e2e.spec.ts`, `magic-link.e2e.spec.ts`, `google.e2e.spec.ts`: the gate on every route, the checkbox enforced server-side on both sign-in paths, stale versions, idempotency.
+- `apps/api/test/legal-acceptances.e2e.spec.ts`, `password-auth.e2e.spec.ts`, `google.e2e.spec.ts`: the gate on every route, the checkbox enforced server-side on both sign-in paths, stale versions, idempotency.

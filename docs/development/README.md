@@ -141,12 +141,13 @@ These are names only; real values never go into the repository. Staging and prod
 | `NODE_ENV` | api | yes | `development`, `test` or `production` |
 | `API_PORT` | api | no | Listen port, default `4000` |
 | `LOG_LEVEL` | api | no | `fatal`…`trace`, default `info` |
-| `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Magic links, the OAuth redirect URI and the CSRF `Origin` check use it |
+| `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Mailed confirmation/reset links, the OAuth redirect URI and the CSRF `Origin` check use it |
 | `DATABASE_URL` | api | yes | PostgreSQL connection URL |
 | `SHADOW_DATABASE_URL` | api (CLI) | for `db:check` / `db:migrate` | Disposable database Prisma resets (`stepler_shadow`); never the dev or test database |
 | `COOKIE_SECURE` | api | no | Adds `Secure` to cookies; default `true` in production, else `false` |
 | `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
-| `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |
+| `EMAIL_VERIFICATION_TTL_HOURS` | api | no | Lifetime of the e-mail confirmation link (ADR 0019), default `24` |
+| `PASSWORD_RESET_TTL_MINUTES` | api | no | Lifetime of the password reset link, default `60` |
 | `OPERATOR_EMAILS` | api, worker | no | Comma-separated operator e-mails (ADR 0013): a dedicated service mailbox such as `moderation@<domain>`, never a personal account. The API grants the operator role (the `/ops` console); the worker sends each new report there. Default empty |
 | `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback`. `true` is rejected (it would trust any client's `X-Forwarded-For`) |
 | `APP_SECRET` | api | yes | Base64 of ≥ 32 random bytes; root key for HKDF-derived keys. Distinct per environment |
@@ -163,9 +164,13 @@ These are names only; real values never go into the repository. Staging and prod
 | `S3_SECRET_ACCESS_KEY` | api | yes | Bucket-scoped secret key |
 | `S3_FORCE_PATH_STYLE` | api | no | `true` for the emulator; default `false` |
 | `STORAGE_CORS_ORIGINS` | `storage:bootstrap` | no | Dev/CI only: comma-separated browser origins for the local buckets' CORS rule; default `http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:3100`. `E2E_WEB_PORT`, when set, adds `http://127.0.0.1:<port>` |
-| `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
-| `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
-| `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |
+| `LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR` | api | no | Confirmation/reset mails per address per hour (counted from token rows); default `5` |
+| `LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR` | api | no | Registration, resend and forgot-password requests per IP per hour, counted after Turnstile; default `20` |
+| `LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR` | api | no | Link preview/confirm/reset calls per IP per hour; default `60` |
+| `LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR` | api | no | `POST /auth/login` per IP per hour; default `60` |
+| `LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN` | api | no | Wrong passwords per address + IP in 15 minutes before `429`; default `10` |
+| `LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR` | api | no | Wrong passwords per address (any IP) per hour before `429`; default `30` |
+| `LIMIT_MAGIC_LINK_*` | api | no | **Removed** (ADR 0019); unset them on Render |
 | `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_COLLECTION`, `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | **Retired** (ADR 0018): active collections, storage and guest links come from the account's trial, plan or grant, or the collection's pack (`BillingOffer` rows, edited in `/ops`). Still accepted and ignored for one release; the API warns at startup when one is set |
 | `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
 | `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |

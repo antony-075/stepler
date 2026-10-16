@@ -19,7 +19,7 @@ Items marked **[assumption]** are low-risk defaults chosen by engineering; the o
 
 MVP validates the loop: **create collection → share link/QR → guests contribute → admin manages content**.
 
-In scope: admin auth (magic link + Google), collections, default + additional guest links, guest sessions, photo/video/document upload, text submission, gallery visibility, own-content deletion, admin deletion, QR, thumbnails/posters, content reports + operator flow, limits/rate limits, uk/en i18n, legal pages, staging/production-ready images, CI.
+In scope: admin auth (e-mail + password + Google, ADR 0019), collections, default + additional guest links, guest sessions, photo/video/document upload, text submission, gallery visibility, own-content deletion, admin deletion, QR, thumbnails/posters, content reports + operator flow, limits/rate limits, uk/en i18n, legal pages, staging/production-ready images, CI.
 
 Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, analytics, ZIP/export, transcoding, moderation queue, link expiration, admin uploads via UI (one exception since slice 8a, 2026-10-04: the owner uploads the collection cover, never content), operator admin panel, form builder, resumable upload after browser close.
 
@@ -42,7 +42,7 @@ Out of scope for MVP (post-MVP): billing/payments, folders, retention policies, 
                    presigned PUT/GET        v                    v
  Browser ─────────────────────────────► Cloudflare R2 (EU jurisdiction bucket)
 
- api ──► email provider (magic link)   api ──► Turnstile verify   api/web ──► error monitoring
+ api ──► email provider (verify/reset)   api ──► Turnstile verify   api/web ──► error monitoring
 ```
 
 - **Same-origin topology** [assumption]: web and api are served under one host; `/api/*` routes to NestJS through a streaming Next.js route handler (`app/api/[...path]/route.ts`, runtime-configured `API_INTERNAL_URL`, so one image works in every environment; build-time rewrites would bake the URL in, and middleware rewrites leak the internal URL and buffer bodies at 10 MB). Client-supplied forwarding headers are always dropped; behind an edge, the web forwards only the client IP from the header the edge overwrites (`CLIENT_IP_HEADER`, Render: `cf-connecting-ip`, ADR 0014). The API builds public URLs from configured origins, never from request `Host`/forwarded headers. An ingress/reverse proxy may take over this routing in deployed environments, depending on the hosting decision. Removes CORS for the app, simplifies cookies. Uploads/downloads go to R2 directly, so the extra hop only carries small JSON.
@@ -95,7 +95,7 @@ Feature modules (dependencies point one way; no cycles):
 
 | Module | Responsibility |
 |---|---|
-| `auth` | magic link, Google OAuth, admin sessions, operator resolution, Turnstile verification |
+| `auth` | e-mail + password, Google OAuth, admin sessions, operator resolution, Turnstile verification |
 | `users` | profile, locale, legal acceptances, account blocking |
 | `collections` | CRUD, archive, delete orchestration, owner scoping |
 | `guest-access` | guest links (create/permissions/deactivate/revoke/rotate), guest sessions |
@@ -124,17 +124,19 @@ Conventions:
 
 ## 6. Authentication
 
-Decision details: ADR 0006.
+Decision details: ADR 0006; e-mail + password: ADR 0019 (supersedes the magic link).
 
-- **Methods:** magic link (email) + Google OAuth. No passwords.
-- **Registration:** open, protected by Turnstile on magic-link requests (ADR 0012), rate limits and account limits (§13).
+- **Methods:** e-mail + password, and Google OAuth. The magic link was removed (owner decision 2026-10-16); mailed links remain only to confirm the address and to reset the password.
+- **Registration:** `/register`, open. It is protected by Turnstile (ADR 0012) on every mail-sending request, by rate limits and by account limits (§13). The password is typed twice and must pass the shared policy (8+ characters, upper, lower, digit, special; `passwordChecks` in `contracts`); an animated meter lists what is missing. The answer is `202` for any address (no enumeration). *Implemented 2026-10-16.*
+- **Confirmation before sign-in:** the account starts unverified. `/auth/verify?token=` previews the token (read-only, scanner-safe), and «Підтвердити пошту» consumes it, sets `emailVerifiedAt`, starts the trial (ADR 0018) and signs in. Login before that answers `403 EMAIL_NOT_VERIFIED` (only to the right password).
+- **Passwords:** Argon2id (m 19 MiB, t 2, p 1) in `PasswordCredential`. One `401 INVALID_CREDENTIALS` for an unknown address and a wrong password, at equal hashing cost. Failure windows per address + IP (15 min) and per address (hour) answer `429`; there is no permanent lockout.
+- **Reset and change:** «Забули пароль?» mails a single-use 60-minute link (also how a Google-only account sets a first password). The reset ends every session. «Акаунт → Пароль» needs the current password and ends the other sessions.
 - **Sessions:** opaque random token in an `HttpOnly; Secure; SameSite=Lax; Path=/` cookie; only its SHA-256 hash is stored. Revocable server-side. No JWT.
 - **CSRF:** SameSite=Lax + every unsafe method must send `Origin` equal to `APP_ORIGIN` (403 `CSRF_ORIGIN_MISMATCH`), public routes included; future signed webhooks opt out with `@SkipOriginCheck()`. *Implemented in Phase 2.*
-- **Magic link verification:** the email links to the web page `/auth/verify?token=…`. The page first calls a read-only `POST /auth/magic-link/preview` and shows "Sign in as <email>"; only the Sign in button calls `POST /auth/magic-link/verify`, which consumes the token. Email scanners that open links therefore cannot use them up, and a victim who opens an attacker's link sees a foreign address (owner decisions 2026-09-29). *Implemented in Phase 2.*
-- **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified.
+- **Account model:** `User` + `AuthAccount(provider, providerAccountId)` so more OAuth providers can be added without changing `User`. A Google identity is linked to an existing user by email only when Google reports the email as verified; linking to an unconfirmed password account drops that unproven password and confirms the address (ADR 0019).
 - **Operator:** users whose verified email is in `OPERATOR_EMAILS` config (ADR 0013).
-- **Legal acceptance (ADR 0016, owner decision L1):** given at the request that starts registration and recorded when the account is created or the sign-in completes. The sign-in card has a required checkbox; it sends the current versions with `POST /auth/magic-link` (stored on the `MagicLinkToken` row) or with `GET /auth/google/start?terms=&privacy=` (stored in the signed `st_oauth` transaction); magic-link verify and the Google callback write the `LegalAcceptance` rows in the sign-in transaction, idempotently, only for versions current at that moment. The API enforces the checkbox: a request without versions → `400 VALIDATION_FAILED` / a redirect to `/login?error=LEGAL_ACCEPTANCE_REQUIRED` without the OAuth cookie; stale versions → `400 LEGAL_VERSION_OUTDATED` / `…?error=LEGAL_VERSION_OUTDATED`. `AuthGuard` answers `403 LEGAL_ACCEPTANCE_REQUIRED` on every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` until both documents are accepted; the web sends such users to the `/accept-terms` fallback (accounts from before slice 10, a link whose versions went stale, a forced `requireReacceptance`). *Implemented in slice 10 (PR F2).*
-- **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verifies magic links only by GET).
+- **Legal acceptance (ADR 0016, owner decision L1):** given at the request that starts registration and recorded when the account is created or the sign-in completes. The registration card has a required checkbox; it sends the current versions with `POST /auth/register` (recorded with the account, ADR 0019) or with `GET /auth/google/start?terms=&privacy=` (stored in the signed `st_oauth` transaction); the Google callback writes the `LegalAcceptance` rows in the sign-in transaction, idempotently, only for versions current at that moment. The API enforces the checkbox: a request without versions → `400 VALIDATION_FAILED` / a redirect to `/login?error=LEGAL_ACCEPTANCE_REQUIRED` without the OAuth cookie; stale versions → `400 LEGAL_VERSION_OUTDATED` / `…?error=LEGAL_VERSION_OUTDATED`. `AuthGuard` answers `403 LEGAL_ACCEPTANCE_REQUIRED` on every account route except `GET /me`, `PATCH /me` and `POST /me/legal-acceptances` until both documents are accepted; the web sends such users to the `/accept-terms` fallback (accounts from before slice 10, a link whose versions went stale, a forced `requireReacceptance`). *Implemented in slice 10 (PR F2).*
+- **Implementation:** in-house (spike S1, ADR 0006: Better Auth stores session tokens in plain text and verified magic links only by GET).
 
 ---
 
@@ -159,11 +161,14 @@ AuthSession
   id, userId → User (cascade), tokenHash (unique), expiresAt, lastUsedAt, createdAt
   INDEX (userId)
 
-MagicLinkToken
-  id, email, tokenHash (unique), expiresAt, consumedAt?, locale, requestIpHash?,
-  legalTermsVersion?, legalPrivacyVersion?, createdAt   -- versions accepted on the card (slice 10)
-  INDEX (email, createdAt)          -- per-email rate limit derived from rows
-  SQL CHECK versions match ^v[1-9][0-9]{0,3}$ when set
+PasswordCredential         -- ADR 0019
+  userId (PK) → User (cascade), passwordHash, createdAt, updatedAt
+  SQL CHECK passwordHash LIKE '$argon2id$%'
+
+AuthEmailToken             -- ADR 0019; replaces MagicLinkToken
+  id, userId → User (cascade), purpose (VERIFY_EMAIL|RESET_PASSWORD), tokenHash (unique),
+  expiresAt, consumedAt?, requestIpHash?, createdAt
+  INDEX (userId, purpose, createdAt)   -- per-address mail limit derived from rows
 
 LegalAcceptance            -- slice 10 (ADR 0016)
   id, userId → User (cascade), document (TERMS|PRIVACY), version, acceptedAt, requestId?
@@ -171,7 +176,7 @@ LegalAcceptance            -- slice 10 (ADR 0016)
   SQL CHECK version ~ ^v[1-9][0-9]{0,3}$    -- no IP address (owner decision L2)
 ```
 
-(Auth is implemented in-house: spike S1 rejected Better Auth because it stores session tokens in plain text and verifies magic links only by GET, see ADR 0006.)
+(Auth is implemented in-house: spike S1 rejected Better Auth because it stores session tokens in plain text and verified magic links only by GET, see ADR 0006.)
 
 ### 7.2 Collections and guest access
 
@@ -383,11 +388,16 @@ Resource map (MVP):
 
 ```text
 Auth / me
-  GET    /auth/methods                         {magicLink, google, turnstileSiteKey, legal: {terms, privacy}}
-  POST   /auth/magic-link                      (Turnstile token and legal {terms, privacy} required) → 202, same body for every email
-  POST   /auth/magic-link/preview              {token} → {email}; read-only
-  POST   /auth/magic-link/verify               {token} → sets session cookie
-  GET    /auth/google/start?terms=&privacy=[&returnTo=] | /auth/google/callback
+  GET    /auth/methods                         {password, google, turnstileSiteKey, legal: {terms, privacy}}
+  POST   /auth/register                        {email, password, turnstileToken, locale?, legal} → 202, same body for every email
+  POST   /auth/login                           {email, password} → sets session cookie; 401 INVALID_CREDENTIALS, 403 EMAIL_NOT_VERIFIED
+  POST   /auth/verification                    {email, turnstileToken, locale?} → 202 (resend the confirmation)
+  POST   /auth/verification/preview            {token} → {email}; read-only
+  POST   /auth/verification/confirm            {token} → sets session cookie
+  POST   /auth/password/forgot                 {email, turnstileToken, locale?} → 202
+  POST   /auth/password/reset                  {token, password} → ends every session, sets session cookie
+  POST   /auth/password                        (signed in) {currentPassword, newPassword} → 204, ends the other sessions
+  GET    /auth/google/start[?terms=&privacy=][&returnTo=] | /auth/google/callback
   POST   /auth/logout                          → 204, idempotent
   GET    /me          PATCH /me (displayName, locale)     (both return legal: {accepted, documents})
   POST   /me/legal-acceptances                 {acceptances: [{document, version}]} → MeResponse; fallback path
@@ -615,7 +625,8 @@ Decision details: ADR 0010, and ADR 0018 for what is sold. Abuse and rate limits
 | Files per upload operation (UI) | 100 |
 | Concurrent `INITIATED` uploads per guest session | 10 [assumption] |
 | Upload initiations per guest session | 300 / hour |
-| Magic link requests | 5 / hour per email, 20 / hour per IP |
+| Account mails (confirmation, reset) | 5 / hour per address, 20 / hour per IP |
+| Password sign-in | 60 / hour per IP; failures 10 / 15 min per address + IP, 30 / hour per address |
 | Guest session creation | 120 / minute per IP (raised from 30 like [G10]: venue NAT) |
 | Guest texts | 60 / hour per guest session and 60 / minute per IP |
 | Guest reads (context, content list, one item) | 600 / minute per IP and route |
@@ -691,14 +702,14 @@ Decision details: ADR 0011.
 - Languages: Ukrainian (default) and English.
 - **No locale segment in URLs**: QR/guest links must be identical for everyone. Resolution order: admin profile locale → locale cookie → `Accept-Language` → `uk`.
 - Web: message catalogs per locale; next-intl in "without i18n routing" mode (verified in spike S8, ADR 0011); lint rule against literal JSX strings.
-- API: returns error codes, not localized prose. Emails (magic link) are rendered by the API in the recipient's locale.
+- API: returns error codes, not localized prose. Emails (confirmation, reset) are rendered by the API in the recipient's locale.
 
 ---
 
 ## 17. Observability
 
 - Structured JSON logs (nestjs-pino) with request ID (`x-request-id` in/out) in api and worker; job logs carry the job ID and the originating request ID.
-- Redaction: cookies, `Authorization`, magic-link tokens, guest link tokens, signed URL query strings, text content.
+- Redaction: cookies, `Authorization`, mailed account tokens, passwords, guest link tokens, signed URL query strings, text content.
 - Error monitoring behind an adapter; provider chosen later (open).
 - Logged with reason codes: upload rejections/expiries, processing failures, storage errors, quota denials, rate-limit hits, report creation (`report.created` with `{reportId, collectionId, reason, hasContact}`), operator actions (`{action, targetType, targetId}`), report mail failures (the SMTP code only). Never a reporter's address, a description or an IP.
 - Health: `/health/live` (process), `/health/ready` (DB + storage reachability).
