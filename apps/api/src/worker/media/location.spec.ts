@@ -10,6 +10,7 @@ import {
   EXIFTOOL_BAD_FILE,
   exiftoolLocationTags,
   ffprobeLocationKeys,
+  locationTagsOf,
   stripLocation,
 } from './location.js';
 import { PermanentMediaError } from './media-error.js';
@@ -213,6 +214,27 @@ describe('exiftool outcomes', () => {
     ]) {
       expect(EXIFTOOL_BAD_FILE.test(retried)).toBe(false);
     }
+  });
+
+  test('a warning is not a location tag, in whichever group exiftool puts it', () => {
+    // An iPhone MOV (Live Photo and scene-light tracks): it was read as a tag left behind, so
+    // every iPhone video failed as "location metadata is still present after stripping".
+    expect(
+      locationTagsOf({
+        SourceFile: 'original',
+        'ExifTool:Warning': 'Bad CRC for IDAT chunk',
+        'Track4:Warning': '[minor] The ExtractEmbedded option may find more tags in the media data',
+      }),
+    ).toEqual({});
+    expect(
+      locationTagsOf({ 'Track4:Warning': 'x', 'Keys:GPSCoordinates': '50.45 N, 30.52 E' }),
+    ).toEqual({ 'Keys:GPSCoordinates': '50.45 N, 30.52 E' });
+  });
+
+  test('an incomplete read in a track group fails closed too', () => {
+    expect(() => assertCompleteRead({ 'Track2:Warning': 'Truncated mdat atom' })).toThrow(
+      PermanentMediaError,
+    );
   });
 
   test('an incomplete read (Skipping, Truncated) fails closed; other warnings do not', () => {
