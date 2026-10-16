@@ -23,7 +23,7 @@ export function toAcceptanceRecords(
 
 /**
  * Acceptance of the legal documents (ADR 0016). One recording function for every path: the
- * magic-link verify and the Google callback (inside their sign-in transactions) and the fallback
+ * registration (ADR 0019) and the Google callback (inside their transactions) and the fallback
  * endpoint. Only versions current at that moment are written, so a stale card or link records
  * nothing and the `AuthGuard` gate sends the user to the fallback page.
  */

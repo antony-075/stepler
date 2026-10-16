@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { smtpErrorFields } from './magic-link.service.js';
+import { smtpErrorFields } from './smtp-error-fields.js';
 
 describe('smtpErrorFields', () => {
   test('keeps diagnosable fields and drops the message that quotes the recipient', () => {

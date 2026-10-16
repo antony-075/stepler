@@ -10,10 +10,13 @@ const noEntitlements = {} as EntitlementResolver;
 describe('LimitsService', () => {
   test('returns config defaults', () => {
     const limits = new LimitsService(testEnv(), noEntitlements);
-    expect(limits.magicLink()).toEqual({
-      perEmailPerHour: 5,
-      perIpPerHour: 20,
-      previewPerIpPerHour: 60,
+    expect(limits.auth()).toEqual({
+      emailsPerAddressPerHour: 5,
+      emailsPerIpPerHour: 20,
+      tokenChecksPerIpPerHour: 60,
+      loginAttemptsPerIpPerHour: 60,
+      loginFailuresPerAddressIpPer15Min: 10,
+      loginFailuresPerAddressPerHour: 30,
     });
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(120);
     expect(limits.guestSessionCreatePerIpPerMinute()).toBe(120);
@@ -36,7 +39,7 @@ describe('LimitsService', () => {
   test('applies env overrides', () => {
     const limits = new LimitsService(
       testEnv({
-        LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '2',
+        LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: '2',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '30',
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '40',
         LIMIT_FILE_BYTES_VIDEO: '3000000000',
@@ -46,6 +49,6 @@ describe('LimitsService', () => {
     expect(limits.guestSessionCreatePerIpPerMinute()).toBe(40);
     expect(limits.fileRules().fileBytes.VIDEO).toBe(3_000_000_000n);
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(30);
-    expect(limits.magicLink().perEmailPerHour).toBe(2);
+    expect(limits.auth().emailsPerAddressPerHour).toBe(2);
   });
 });

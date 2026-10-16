@@ -71,9 +71,14 @@ export class EntitlementGate {
  */
 export const GATE_ALLOW_LIST: readonly string[] = [
   // Auth, account and legal acceptance.
-  'POST /api/v1/auth/magic-link',
-  'POST /api/v1/auth/magic-link/preview',
-  'POST /api/v1/auth/magic-link/verify',
+  'POST /api/v1/auth/register',
+  'POST /api/v1/auth/login',
+  'POST /api/v1/auth/verification',
+  'POST /api/v1/auth/verification/preview',
+  'POST /api/v1/auth/verification/confirm',
+  'POST /api/v1/auth/password/forgot',
+  'POST /api/v1/auth/password/reset',
+  'POST /api/v1/auth/password',
   'POST /api/v1/auth/logout',
   'PATCH /api/v1/me',
   'POST /api/v1/me/legal-acceptances',

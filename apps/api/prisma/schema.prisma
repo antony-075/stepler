@@ -134,6 +134,13 @@ enum AuthProvider {
   EMAIL
 }
 
+/// What an emailed token does (ADR 0019): confirms the address, or lets the mailbox set a new
+/// password (also how an account without one gets its first).
+enum AuthTokenPurpose {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
 /// Why a guest reported a frame (R1; contracts `REPORT_REASONS`).
 enum ReportReason {
   ILLEGAL
@@ -273,6 +280,8 @@ model User {
   refundsMade        Refund[]
   accounts           AuthAccount[]
   sessions           AuthSession[]
+  passwordCredential PasswordCredential?
+  authEmailTokens    AuthEmailToken[]
   collections        Collection[]
   uploadSessions     UploadSession[]
   legalAcceptances   LegalAcceptance[]
@@ -318,23 +327,31 @@ model LegalAcceptance {
   @@unique([userId, document, version])
 }
 
-model MagicLinkToken {
-  id                  String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email               String    @db.Citext
-  /// SHA-256 of the emailed token; the raw token is never stored.
-  tokenHash           String    @unique
-  expiresAt           DateTime  @db.Timestamptz(3)
-  consumedAt          DateTime? @db.Timestamptz(3)
-  locale              Locale
-  /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
-  requestIpHash       String?
-  /// Legal versions accepted on the sign-in card (ADR 0016), recorded at verify. NULL on links
-  /// issued before slice 10 (nothing is recorded). CHECK "MagicLinkToken_legal_versions_format".
-  legalTermsVersion   String?
-  legalPrivacyVersion String?
-  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+/// The account's password (ADR 0019): an Argon2id PHC string (`$argon2id$v=19$m=…`), never the
+/// password. One per user; an account from Google may have none.
+model PasswordCredential {
+  userId       String   @id @db.Uuid
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  @@index([email, createdAt])
+/// A single-use, expiring token mailed to the account's address (ADR 0019): only its SHA-256 is
+/// stored. Consumed by one conditional UPDATE, so two clicks cannot both use it.
+model AuthEmailToken {
+  id            String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId        String           @db.Uuid
+  purpose       AuthTokenPurpose
+  tokenHash     String           @unique
+  expiresAt     DateTime         @db.Timestamptz(3)
+  consumedAt    DateTime?        @db.Timestamptz(3)
+  /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
+  requestIpHash String?
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
 }
 
 model Collection {

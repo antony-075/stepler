@@ -164,7 +164,9 @@ const apiEnvSchema = z
 
     COOKIE_SECURE: bool.optional(),
     SESSION_TTL_DAYS: positiveInt(30),
-    MAGIC_LINK_TTL_MINUTES: positiveInt(15),
+    // Mailed account links (ADR 0019): confirming the address, setting a new password.
+    EMAIL_VERIFICATION_TTL_HOURS: positiveInt(24),
+    PASSWORD_RESET_TTL_MINUTES: positiveInt(60),
     API_TRUST_PROXY: trustProxy.default(false),
     APP_SECRET: appSecret,
 
@@ -174,9 +176,15 @@ const apiEnvSchema = z
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
 
-    LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: positiveInt(5),
-    LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: positiveInt(20),
-    LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: positiveInt(60),
+    // Account mails (registration, verification again, password reset), ADR 0019.
+    LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: positiveInt(5),
+    LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: positiveInt(20),
+    // Opening or using a mailed link (preview, confirm, reset), per IP.
+    LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR: positiveInt(60),
+    // Sign-in: attempts per IP; failures per address and IP, and per address from anywhere.
+    LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: positiveInt(60),
+    LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN: positiveInt(10),
+    LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR: positiveInt(30),
     // Active collections, storage and guest links come from entitlements now (ADR 0018); the
     // creations per day stay here: abuse, not sold.
     LIMIT_COLLECTION_CREATIONS_PER_DAY: positiveInt(10),

@@ -5,10 +5,14 @@ import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
 import type { Prisma } from '../generated/prisma/client.js';
 
-export interface MagicLinkLimits {
-  perEmailPerHour: number;
-  perIpPerHour: number;
-  previewPerIpPerHour: number;
+/** Account mails and sign-in attempts (ADR 0019). */
+export interface AuthLimits {
+  emailsPerAddressPerHour: number;
+  emailsPerIpPerHour: number;
+  tokenChecksPerIpPerHour: number;
+  loginAttemptsPerIpPerHour: number;
+  loginFailuresPerAddressIpPer15Min: number;
+  loginFailuresPerAddressPerHour: number;
 }
 
 /**
@@ -69,11 +73,14 @@ export class LimitsService {
     private readonly entitlements: EntitlementResolver,
   ) {}
 
-  magicLink(): MagicLinkLimits {
+  auth(): AuthLimits {
     return {
-      perEmailPerHour: this.env.LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR,
-      perIpPerHour: this.env.LIMIT_MAGIC_LINK_PER_IP_PER_HOUR,
-      previewPerIpPerHour: this.env.LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR,
+      emailsPerAddressPerHour: this.env.LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR,
+      emailsPerIpPerHour: this.env.LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR,
+      tokenChecksPerIpPerHour: this.env.LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR,
+      loginAttemptsPerIpPerHour: this.env.LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR,
+      loginFailuresPerAddressIpPer15Min: this.env.LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN,
+      loginFailuresPerAddressPerHour: this.env.LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR,
     };
   }
 

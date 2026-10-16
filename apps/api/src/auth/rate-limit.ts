@@ -14,11 +14,13 @@ import { hashToken } from './tokens.js';
 
 /**
  * Named per-IP limits enforced by `RateLimitGuard`; a route opts into one with `@RateLimit`.
- * The magic-link request limit is not here: it is counted only after Turnstile passes
- * (`MagicLinkService`), so junk requests cannot use it up for everyone behind one IP.
+ * The account-mail limit is not here: it is counted only after Turnstile passes
+ * (`PasswordAuthService`), so junk requests cannot use it up for everyone behind one IP; nor are
+ * the sign-in failure limits, counted per address after a failed check.
  */
 export type RateLimitName =
-  | 'magic-link-preview'
+  | 'auth-token'
+  | 'auth-login'
   | 'guest-link-resolve'
   | 'guest-session-create'
   | 'guest-text-create'
@@ -71,7 +73,7 @@ function adminUserTracker(req: Record<string, unknown>): string {
  * storage is an open decision for multi-instance deployments (spec §21).
  */
 export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions {
-  const { previewPerIpPerHour } = limits.magicLink();
+  const auth = limits.auth();
   const named = (name: RateLimitName, limit: number, ttl: number) => ({
     name,
     ttl,
@@ -80,7 +82,10 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
   });
   return {
     throttlers: [
-      named('magic-link-preview', previewPerIpPerHour, HOUR_MS),
+      // Mailed links (preview, confirm, reset): bounds load, a token has 256 bits.
+      named('auth-token', auth.tokenChecksPerIpPerHour, HOUR_MS),
+      // Sign-in attempts per IP, before any password is checked (ADR 0019).
+      named('auth-login', auth.loginAttemptsPerIpPerHour, HOUR_MS),
       // Bounds load, not guessing (a token has 256 bits). Guests behind one venue NAT share an IP,
       // hence the generous default [G10].
       named('guest-link-resolve', limits.guestLinkResolvePerIpPerMinute(), MINUTE_MS),

@@ -44,16 +44,17 @@ export class GoogleController {
 
   /**
    * Starts the OAuth flow: stores state, PKCE verifier and the accepted legal versions (the
-   * sign-in card's checkbox, ADR 0016) in a signed cookie, then 302 to Google. Without current
-   * versions it goes back to the login page with an error and sets no cookie, so Google is
-   * never contacted.
+   * registration form's checkbox, ADR 0016) in a signed cookie, then 302 to Google. From the
+   * sign-in form the versions are absent (`null`: a new account then accepts on the fallback
+   * page); given but invalid or not current, it goes back to the login page with an error and
+   * sets no cookie, so Google is never contacted.
    */
   @Get('start')
   @Redirect()
   @ApiResponse({
     status: 302,
     description:
-      'To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off',
+      'To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED with invalid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off',
   })
   start(
     @Req() req: IncomingMessage,
@@ -69,16 +70,20 @@ export class GoogleController {
     if (req.headers['sec-fetch-site'] === 'cross-site') {
       return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
     }
-    const legal = legalVersionsSchema.safeParse({ terms, privacy });
-    if (!legal.success) return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
-    if (!isCurrentLegalVersions(legal.data)) return this.failure('LEGAL_VERSION_OUTDATED');
+    let accepted = null;
+    if (terms !== undefined || privacy !== undefined) {
+      const legal = legalVersionsSchema.safeParse({ terms, privacy });
+      if (!legal.success) return this.failure('LEGAL_ACCEPTANCE_REQUIRED');
+      if (!isCurrentLegalVersions(legal.data)) return this.failure('LEGAL_VERSION_OUTDATED');
+      accepted = legal.data;
+    }
     const state = generateState();
     const codeVerifier = generateCodeVerifier();
     const transaction = {
       state,
       codeVerifier,
       returnTo: safeReturnTo(returnTo),
-      legal: legal.data,
+      legal: accepted,
     };
     setOAuthCookie(res, encodeTransaction(this.cookieKey, transaction), this.env);
     return { url: google.authorizationUrl(state, codeVerifier).toString() };

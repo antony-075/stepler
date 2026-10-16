@@ -56,7 +56,11 @@
               "SUBSCRIPTION_EXISTS",
               "REFUND_EXCEEDS_PAID",
               "PAYMENT_PROVIDER_UNAVAILABLE",
-              "BILLING_SIGNATURE_INVALID"
+              "BILLING_SIGNATURE_INVALID",
+              "INVALID_CREDENTIALS",
+              "EMAIL_NOT_VERIFIED",
+              "AUTH_TOKEN_INVALID",
+              "CURRENT_PASSWORD_INVALID"
             ],
             "type": "string"
           },
@@ -171,7 +175,7 @@
         "parameters": [],
         "responses": {
           "302": {
-            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED without valid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
+            "description": "To Google; to /login?error=LEGAL_ACCEPTANCE_REQUIRED with invalid `terms`/`privacy` or when started cross-site (`Sec-Fetch-Site: cross-site`), or /login?error=LEGAL_VERSION_OUTDATED when they are not current; 404 when Google sign-in is off"
           },
           "default": {
             "content": {
@@ -189,33 +193,9 @@
         ]
       }
     },
-    "/api/v1/auth/logout": {
+    "/api/v1/auth/login": {
       "post": {
-        "operationId": "AuthController_logout_v1",
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": "Signed out; the session cookie is cleared"
-          },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/v1/auth/magic-link": {
-      "post": {
-        "operationId": "MagicLinkController_request_v1",
+        "operationId": "PasswordAuthController_login_v1",
         "parameters": [],
         "requestBody": {
           "content": {
@@ -226,167 +206,15 @@
                   "email": {
                     "type": "string"
                   },
-                  "legal": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "privacy": {
-                        "pattern": "^v[1-9]\\d{0,3}$",
-                        "type": "string"
-                      },
-                      "terms": {
-                        "pattern": "^v[1-9]\\d{0,3}$",
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "terms",
-                      "privacy"
-                    ],
-                    "type": "object"
-                  },
-                  "locale": {
-                    "enum": [
-                      "uk",
-                      "en"
-                    ],
-                    "type": "string"
-                  },
-                  "turnstileToken": {
-                    "maxLength": 2048,
+                  "password": {
+                    "maxLength": 128,
                     "minLength": 1,
                     "type": "string"
                   }
                 },
                 "required": [
                   "email",
-                  "turnstileToken",
-                  "legal"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "202": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "status": {
-                      "enum": [
-                        "sent"
-                      ],
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "status"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "400": {
-            "description": "VALIDATION_FAILED (also without `legal`), TURNSTILE_FAILED, or LEGAL_VERSION_OUTDATED (refetch GET /auth/methods)"
-          },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/v1/auth/magic-link/preview": {
-      "post": {
-        "operationId": "MagicLinkController_preview_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "token": {
-                    "pattern": "^[A-Za-z0-9_-]{43}$",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "token"
-                ],
-                "type": "object"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "email": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "email"
-                  ],
-                  "type": "object"
-                }
-              }
-            },
-            "description": ""
-          },
-          "default": {
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            },
-            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/v1/auth/magic-link/verify": {
-      "post": {
-        "operationId": "MagicLinkController_verify_v1",
-        "parameters": [],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "additionalProperties": false,
-                "properties": {
-                  "token": {
-                    "pattern": "^[A-Za-z0-9_-]{43}$",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "token"
+                  "password"
                 ],
                 "type": "object"
               }
@@ -416,6 +244,39 @@
               }
             },
             "description": ""
+          },
+          "401": {
+            "description": "INVALID_CREDENTIALS: an unknown address or a wrong password (one answer)"
+          },
+          "403": {
+            "description": "EMAIL_NOT_VERIFIED (the right password, the address not confirmed yet), ACCOUNT_BLOCKED"
+          },
+          "429": {
+            "description": "RATE_LIMITED: per IP, or failures per address"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout_v1",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Signed out; the session cookie is cleared"
           },
           "default": {
             "content": {
@@ -465,7 +326,7 @@
                       ],
                       "type": "object"
                     },
-                    "magicLink": {
+                    "password": {
                       "enum": [
                         true
                       ],
@@ -476,7 +337,7 @@
                     }
                   },
                   "required": [
-                    "magicLink",
+                    "password",
                     "google",
                     "turnstileSiteKey",
                     "legal"
@@ -486,6 +347,520 @@
               }
             },
             "description": ""
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password": {
+      "post": {
+        "operationId": "PasswordAuthController_change_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "currentPassword": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "maxLength": 128,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "currentPassword",
+                  "newPassword"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Changed; this session stays signed in"
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (the rules), CURRENT_PASSWORD_INVALID (also for an account without a password: it sets one through the reset link); 429 RATE_LIMITED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/forgot": {
+      "post": {
+        "operationId": "PasswordAuthController_forgot_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "uk",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "turnstileToken": {
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "turnstileToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "sent"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED or TURNSTILE_FAILED; 429 RATE_LIMITED (per IP, after Turnstile)"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password/reset": {
+      "post": {
+        "operationId": "PasswordAuthController_reset_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "password": {
+                    "maxLength": 128,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "token": {
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "signed-in"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (the rules); AUTH_TOKEN_INVALID: unknown, used or expired; 403 ACCOUNT_BLOCKED; 429 RATE_LIMITED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "PasswordAuthController_register_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "legal": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "privacy": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      },
+                      "terms": {
+                        "pattern": "^v[1-9]\\d{0,3}$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "terms",
+                      "privacy"
+                    ],
+                    "type": "object"
+                  },
+                  "locale": {
+                    "enum": [
+                      "uk",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "password": {
+                    "maxLength": 128,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]*$",
+                    "type": "string"
+                  },
+                  "turnstileToken": {
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "password",
+                  "turnstileToken",
+                  "legal"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "sent"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED (the password rules, or without `legal`), TURNSTILE_FAILED, LEGAL_VERSION_OUTDATED; 429 RATE_LIMITED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/verification": {
+      "post": {
+        "operationId": "PasswordAuthController_resendVerification_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "locale": {
+                    "enum": [
+                      "uk",
+                      "en"
+                    ],
+                    "type": "string"
+                  },
+                  "turnstileToken": {
+                    "maxLength": 2048,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "email",
+                  "turnstileToken"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "sent"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "VALIDATION_FAILED or TURNSTILE_FAILED; 429 RATE_LIMITED (per IP, after Turnstile)"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/verification/confirm": {
+      "post": {
+        "operationId": "PasswordAuthController_confirm_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "signed-in"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "AUTH_TOKEN_INVALID: unknown, used or expired; 403 ACCOUNT_BLOCKED; 429 RATE_LIMITED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/verification/preview": {
+      "post": {
+        "operationId": "PasswordAuthController_preview_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "email": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "email"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "AUTH_TOKEN_INVALID: unknown, used or expired; 403 ACCOUNT_BLOCKED; 429 RATE_LIMITED"
           },
           "default": {
             "content": {
@@ -17395,6 +17770,9 @@
                       "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
                       "type": "string"
                     },
+                    "hasPassword": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -17465,6 +17843,7 @@
                     "displayName",
                     "locale",
                     "isOperator",
+                    "hasPassword",
                     "legal"
                   ],
                   "type": "object"
@@ -17539,6 +17918,9 @@
                       "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
                       "type": "string"
                     },
+                    "hasPassword": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -17609,6 +17991,7 @@
                     "displayName",
                     "locale",
                     "isOperator",
+                    "hasPassword",
                     "legal"
                   ],
                   "type": "object"
@@ -17703,6 +18086,9 @@
                       "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
                       "type": "string"
                     },
+                    "hasPassword": {
+                      "type": "boolean"
+                    },
                     "id": {
                       "format": "uuid",
                       "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
@@ -17773,6 +18159,7 @@
                     "displayName",
                     "locale",
                     "isOperator",
+                    "hasPassword",
                     "legal"
                   ],
                   "type": "object"

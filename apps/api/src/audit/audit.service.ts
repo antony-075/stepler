@@ -49,7 +49,12 @@ export type AuditAction =
   | 'billing.offer_activate'
   | 'billing.offer_deactivate'
   | 'billing.price_set'
-  | 'billing.price_deactivate';
+  | 'billing.price_deactivate'
+  // E-mail + password accounts (ADR 0019); the account acts as itself.
+  | 'account.register'
+  | 'account.email_verify'
+  | 'account.password_reset'
+  | 'account.password_change';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';

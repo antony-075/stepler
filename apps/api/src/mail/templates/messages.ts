@@ -2,66 +2,105 @@ export type MailLocale = 'uk' | 'en';
 
 type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 
-interface MagicLinkCopy {
+/** What an account mail is for (ADR 0019). */
+export type AuthMailKind = 'verify' | 'reset' | 'exists';
+
+interface AuthMailCopy {
   subject: string;
   heading: string;
   intro: string;
+  /** `null`: the mail carries no button (only the account-exists notice links to two pages). */
   button: string;
-  /** `{minutes}` is replaced with the number and the unit in the correct plural form. */
-  expiry: string;
-  minutes: PluralForms;
+  /** `{duration}` is replaced with the number and the unit in the correct plural form. */
+  expiry: string | null;
   ignore: string;
-  fallback: string;
-  /**
-   * The acceptance line (ADR 0016): the mailbox owner confirms by signing in. Placeholder copy
-   * the lawyer replaces, like `login.legalCheckbox` in the web catalogs. The sentence is
-   * `${before}<terms>${and}<privacy>${after}`.
-   */
-  legal: { before: string; terms: string; and: string; privacy: string; after: string };
 }
 
-/** Email copy (uk default, en). Final wording may change in Phase 3. */
-export const MAGIC_LINK_COPY: Readonly<Record<MailLocale, MagicLinkCopy>> = {
+interface DurationForms {
+  minutes: PluralForms;
+  hours: PluralForms;
+}
+
+/** Account mails (uk default, en). */
+export const AUTH_MAIL_COPY: Readonly<
+  Record<MailLocale, Record<AuthMailKind, AuthMailCopy> & { fallback: string } & DurationForms>
+> = {
   uk: {
-    subject: 'Вхід до Stepler',
-    heading: 'Вхід до Stepler',
-    intro: 'Щоб увійти, натисніть кнопку нижче.',
-    button: 'Увійти',
-    expiry: 'Посилання діє {minutes} і працює один раз.',
-    minutes: { one: 'хвилину', few: 'хвилини', many: 'хвилин', other: 'хвилини' },
-    ignore: 'Якщо ви не надсилали цей запит, просто проігноруйте цей лист.',
-    fallback: 'Якщо кнопка не працює, відкрийте це посилання:',
-    legal: {
-      before: 'Продовжуючи, ви приймаєте ',
-      terms: 'Умови використання',
-      and: ' та ',
-      privacy: 'Політику конфіденційності',
-      after: '.',
+    verify: {
+      subject: 'Підтвердіть пошту для Stepler',
+      heading: 'Підтвердіть свою пошту',
+      intro: 'Ви створили акаунт у Stepler. Натисніть кнопку, щоб підтвердити цю адресу й увійти.',
+      button: 'Підтвердити пошту',
+      expiry: 'Посилання діє {duration} і працює один раз.',
+      ignore: 'Якщо ви не створювали акаунт, просто проігноруйте цей лист.',
     },
+    reset: {
+      subject: 'Новий пароль для Stepler',
+      heading: 'Задайте новий пароль',
+      intro:
+        'Ми отримали запит на новий пароль для вашого акаунта. Натисніть кнопку, щоб його задати.',
+      button: 'Задати пароль',
+      expiry:
+        'Посилання діє {duration} і працює один раз. Після зміни пароля всі інші входи завершаться.',
+      ignore: 'Якщо ви не просили новий пароль, проігноруйте цей лист: старий продовжує діяти.',
+    },
+    exists: {
+      subject: 'Ваш акаунт у Stepler уже є',
+      heading: 'Акаунт із цією поштою вже є',
+      intro:
+        'Хтось спробував створити новий акаунт Stepler з вашою адресою. Акаунт уже існує: увійдіть або задайте новий пароль, якщо забули його.',
+      button: 'Увійти',
+      expiry: null,
+      ignore: 'Якщо це були не ви, нічого робити не потрібно.',
+    },
+    fallback: 'Якщо кнопка не працює, відкрийте це посилання:',
+    minutes: { one: 'хвилину', few: 'хвилини', many: 'хвилин', other: 'хвилини' },
+    hours: { one: 'годину', few: 'години', many: 'годин', other: 'години' },
   },
   en: {
-    subject: 'Sign in to Stepler',
-    heading: 'Sign in to Stepler',
-    intro: 'Use the button below to sign in.',
-    button: 'Sign in',
-    expiry: 'The link is valid for {minutes} and works once.',
-    minutes: { one: 'minute', other: 'minutes' },
-    ignore: "If you didn't request this, ignore this email.",
-    fallback: "If the button doesn't work, open this link:",
-    legal: {
-      before: 'By continuing, you accept the ',
-      terms: 'Terms of Service',
-      and: ' and the ',
-      privacy: 'Privacy Policy',
-      after: '.',
+    verify: {
+      subject: 'Confirm your e-mail for Stepler',
+      heading: 'Confirm your e-mail',
+      intro: 'You created a Stepler account. Use the button to confirm this address and sign in.',
+      button: 'Confirm e-mail',
+      expiry: 'The link is valid for {duration} and works once.',
+      ignore: "If you didn't create an account, ignore this e-mail.",
     },
+    reset: {
+      subject: 'A new password for Stepler',
+      heading: 'Set a new password',
+      intro: 'We received a request for a new password for your account. Use the button to set it.',
+      button: 'Set password',
+      expiry:
+        'The link is valid for {duration} and works once. Changing the password signs out every other session.',
+      ignore: "If you didn't ask for a new password, ignore this e-mail: the old one still works.",
+    },
+    exists: {
+      subject: 'You already have a Stepler account',
+      heading: 'An account with this e-mail exists',
+      intro:
+        'Someone tried to create a new Stepler account with your address. The account already exists: sign in, or set a new password if you forgot it.',
+      button: 'Sign in',
+      expiry: null,
+      ignore: "If this wasn't you, there's nothing to do.",
+    },
+    fallback: "If the button doesn't work, open this link:",
+    minutes: { one: 'minute', other: 'minutes' },
+    hours: { one: 'hour', other: 'hours' },
   },
 };
 
+function formatDuration(locale: MailLocale, value: number, forms: PluralForms): string {
+  const rule = new Intl.PluralRules(locale).select(value);
+  return `${value} ${forms[rule] ?? forms.other}`;
+}
+
 export function formatMinutes(locale: MailLocale, minutes: number): string {
-  const forms = MAGIC_LINK_COPY[locale].minutes;
-  const rule = new Intl.PluralRules(locale).select(minutes);
-  return `${minutes} ${forms[rule] ?? forms.other}`;
+  return formatDuration(locale, minutes, AUTH_MAIL_COPY[locale].minutes);
+}
+
+export function formatHours(locale: MailLocale, hours: number): string {
+  return formatDuration(locale, hours, AUTH_MAIL_COPY[locale].hours);
 }
 
 /** Report reasons as the reporter picked them (R1); mirrors the web's `ops.reasons`. */

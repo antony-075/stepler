@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import { LEGAL_DOCUMENTS } from '@stepler/contracts';
+import { PasswordHasher } from '../../src/auth/password-hasher.js';
 import { SessionService } from '../../src/auth/session.service.js';
 import type { PrismaClient } from '../../src/generated/prisma/client.js';
 import { freshTrialEnd, grantTestPlan } from './billing.js';
@@ -13,6 +14,17 @@ import { freshTrialEnd, grantTestPlan } from './billing.js';
  * it also gets a complimentary plan with the pre-billing limits (`TEST_PLAN_LIMITS`), so suites
  * that are not about entitlements are not bound by the trial's 1 collection and 1 GiB.
  */
+/** Gives the user a password (Argon2id, as the API stores it) for the e-mail + password routes. */
+export async function givePassword(
+  app: INestApplication,
+  prisma: PrismaClient,
+  userId: string,
+  password: string,
+): Promise<void> {
+  const passwordHash = await app.get(PasswordHasher).hash(password);
+  await prisma.passwordCredential.create({ data: { userId, passwordHash } });
+}
+
 export async function signInAs(
   app: INestApplication,
   prisma: PrismaClient,
