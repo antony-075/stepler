@@ -69,8 +69,7 @@ export function BillingOverview() {
   // «Тарифи» shows one kind of offer; until the owner picks, what the link or the account says.
   const [offerKind, setOfferKind] = useState<OfferKind | null>(null);
   const hash = useSyncExternalStore(subscribeHash, readHash, noHash);
-  const paysSubscription = summary.data?.subscription?.source === 'LIQPAY';
-  const shownKind = offerKind ?? defaultOfferKind(params, hash, paysSubscription);
+  const shownKind = offerKind ?? defaultOfferKind(params, hash);
   const [currency, setCurrency] = useBillingCurrency();
   const selectTab = (next: string) => {
     router.push(billingHref(billingTab(new URLSearchParams({ tab: next }))), { scroll: false });

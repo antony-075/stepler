@@ -17,8 +17,8 @@ const CARD =
   'grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-[0.875rem] p-3.5 hover:border-input sm:items-start sm:gap-3.5 sm:rounded-2xl sm:p-4.5 data-[state=checked]:border-primary data-[state=checked]:shadow-[inset_0_0_0_1px_var(--primary),0_0_0_4px_var(--info-soft)] data-[state=checked]:focus-visible:border-primary [&>[data-slot=option-card-check]]:hidden [&>span:nth-child(2)]:gap-1 [&>span:nth-child(2)]:p-0 [&>span:nth-child(2)>span:first-child]:text-[0.9375rem] sm:[&>span:nth-child(2)>span:first-child]:text-base max-sm:[&>span:nth-child(2)>span:last-child]:text-[0.8125rem]';
 
 const KINDS: { value: OfferKind; icon: LucideIcon }[] = [
-  { value: 'packs', icon: CalendarHeart },
   { value: 'subscriptions', icon: Repeat },
+  { value: 'packs', icon: CalendarHeart },
 ];
 
 export function OfferKindChooser({

@@ -38,20 +38,15 @@ export function billingHref(tab: BillingTab, hash?: string): string {
 export type OfferKind = 'packs' | 'subscriptions';
 
 /**
- * Which kind «Тарифи» shows until the owner picks one: what a link asked for (`?plan=` a
- * subscription, as does `#subscriptions`; `?pack=`, `?collection=` or `#packs` a pack), else
- * subscriptions for an account
- * that pays for one, else packs (most owners buy for one event).
+ * Which kind «Тарифи» shows until the owner picks one: packs when a link asked for one
+ * (`?pack=`, `?collection=`, `#packs`), else subscriptions (owner 2026-10-16: the subscription
+ * comes first and is chosen by default).
  */
 export function defaultOfferKind(
   params: { get(name: string): string | null },
   hash: string,
-  paysSubscription: boolean,
 ): OfferKind {
-  if (params.get('plan') !== null || hash === `#${SUBSCRIPTIONS_SECTION_ID}`) {
-    return 'subscriptions';
-  }
   if (params.get('pack') !== null || params.get('collection') !== null) return 'packs';
   if (hash === `#${PACKS_SECTION_ID}`) return 'packs';
-  return paysSubscription ? 'subscriptions' : 'packs';
+  return 'subscriptions';
 }

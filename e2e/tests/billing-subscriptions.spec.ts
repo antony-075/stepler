@@ -82,9 +82,12 @@ test('pricing shows the plans monthly and yearly, signing in to subscribe', asyn
 test('the subscribe dialog needs the auto-renewal consent; nothing overflows', async ({ page }) => {
   await signIn(page, newEmail());
   await page.goto('/app/billing?tab=plans');
-  // «Тарифи» asks which kind fits; without a subscription it starts on the packs.
+  // «Тарифи» asks which kind fits and starts on the subscriptions (owner 2026-10-16); the packs
+  // are one click away.
   const kind = page.getByRole('radiogroup', { name: 'Що вам підходить?' });
-  await expect(kind.getByRole('radio', { name: 'Пакет на одну подію' })).toBeChecked();
+  await expect(kind.getByRole('radio', { name: 'Підписка для організаторів' })).toBeChecked();
+  await expect(page.getByRole('heading', { name: 'Пакет на одну подію', level: 2 })).toHaveCount(0);
+  await kind.getByRole('radio', { name: 'Пакет на одну подію' }).click();
   await expect(page.getByRole('heading', { name: 'Пакет на одну подію', level: 2 })).toBeVisible();
   await expect(plans(page)).toHaveCount(0);
   await kind.getByRole('radio', { name: 'Підписка для організаторів' }).click();

@@ -38,19 +38,17 @@ describe('billingHref', () => {
 });
 
 describe('defaultOfferKind', () => {
-  const kind = (search: string, hash = '', pays = false) =>
-    defaultOfferKind(new URLSearchParams(search), hash, pays);
+  const kind = (search: string, hash = '') => defaultOfferKind(new URLSearchParams(search), hash);
 
-  test('a link decides: a plan shows subscriptions, a pack or a collection shows packs', () => {
-    expect(kind('plan=0190', '', false)).toBe('subscriptions');
-    expect(kind('pack=pack-start', '', true)).toBe('packs');
-    expect(kind('collection=0190', '', true)).toBe('packs');
-    expect(kind('tab=plans', '#packs', true)).toBe('packs');
-    expect(kind('tab=plans', '#subscriptions', false)).toBe('subscriptions');
+  test('a link to a pack or a collection shows packs', () => {
+    expect(kind('pack=pack-start')).toBe('packs');
+    expect(kind('collection=0190')).toBe('packs');
+    expect(kind('tab=plans', '#packs')).toBe('packs');
   });
 
-  test('otherwise a subscriber sees subscriptions, everyone else packs', () => {
-    expect(kind('tab=plans', '', true)).toBe('subscriptions');
-    expect(kind('tab=plans', '', false)).toBe('packs');
+  test('otherwise subscriptions, the default (owner 2026-10-16)', () => {
+    expect(kind('tab=plans')).toBe('subscriptions');
+    expect(kind('plan=0190')).toBe('subscriptions');
+    expect(kind('tab=plans', '#subscriptions')).toBe('subscriptions');
   });
 });

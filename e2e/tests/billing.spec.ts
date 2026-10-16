@@ -41,11 +41,14 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
   await expect(create).toHaveAccessibleDescription(/Гості не можуть нічого додавати/);
   expect(await horizontalOverflow(page)).toBe(0);
 
-  // «Обрати тариф» opens «Тарифи» with the packs (M2); «Огляд» says the account is read-only.
+  // «Обрати тариф» opens «Тарифи» on the subscriptions (owner 2026-10-16); «Огляд» says the
+  // account is read-only.
   await page.getByRole('link', { name: 'Обрати тариф' }).click();
   await expect(page).toHaveURL(/\/app\/billing\?tab=plans$/);
   await expect(page.getByRole('heading', { name: 'Тариф і оплата', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Пакет на одну подію', level: 2 })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Підписка для організаторів подій', level: 2 }),
+  ).toBeVisible();
   expect(await horizontalOverflow(page)).toBe(0);
   await page.getByRole('tab', { name: 'Ваш тариф' }).click();
   await expect(page.getByText('Лише перегляд', { exact: true })).toBeVisible();
