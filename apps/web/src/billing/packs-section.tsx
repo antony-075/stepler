@@ -3,10 +3,10 @@
 // Design pass (billing page v3, owner 2026-10-09; the owner's pick 2026-10-16, direction A, with
 // prices per currency; frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design).
 // The packs group of «Тарифи», as A's PlansPhone artboard: the heading «Пакет на одну подію» with
-// «₴ / $ / €» on the same row, the pack cards (tickets: the price over a tear line, the three
-// facts as tiles under it) two side by side from `sm`. Under them «Уже маєте пакет? Продовжте
-// його»: the two extensions with their prices as quiet rows (bought from the collection's own
-// page). «Купити «Старт»» opens the dialog; `?pack=` / `?collection=` open it with that choice
+// «₴ / $ / €» on the same row, the pack cards (the plan cards' look, owner's feedback 2026-10-16:
+// no tickets; the facts as check rows) two side by side from `sm`. Under them «Уже маєте пакет?
+// Продовжте його»: the two extensions with their prices as rows of one bordered list (bought from
+// the collection's own page). «Купити «Старт»» opens the dialog; `?pack=` / `?collection=` open it with that choice
 // made.
 import type { Currency } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
@@ -19,10 +19,10 @@ import { useState } from 'react';
 import { fetchOffers, offersKey } from '@/api/billing';
 import { PACKS_SECTION_ID } from './billing-tab';
 import { BuyPackDialog } from './buy-pack-dialog';
-import { CurrencySwitch, shownCurrency } from './currency';
+import { CurrencyNote, CurrencySwitch, shownCurrency } from './currency';
 import { offerButtonClass, PackCard } from './offer-card';
 import { extensionOffer, formatMoney, packOffers } from './offers';
-import { GROUP_TITLE } from './surfaces';
+import { GROUP_TITLE, SECTION_NOTE } from './surfaces';
 
 export function PacksSection({
   currency: chosenCurrency,
@@ -55,7 +55,7 @@ export function PacksSection({
       aria-labelledby="packs-title"
       className="grid scroll-mt-20 gap-5.5"
     >
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 pt-2">
         <h2 id="packs-title" className={GROUP_TITLE}>
           {t('packs.title')}
         </h2>
@@ -78,8 +78,6 @@ export function PacksSection({
             <li key={item.offer.id}>
               <PackCard
                 pack={item}
-                // The admin shell's panel: the page colour on phones, the framed card from `lg`.
-                surface="bg-background lg:bg-card"
                 action={
                   <Button
                     className={offerButtonClass(item.offer.highlighted)}
@@ -94,23 +92,20 @@ export function PacksSection({
         </ul>
       )}
       {extensions.length === 0 ? null : (
-        <section aria-labelledby="extensions-title" className="grid gap-2.5">
+        <section aria-labelledby="extensions-title" className="grid gap-3 pt-2">
           <h3 id="extensions-title" className="text-[1.0625rem] font-semibold">
             {t('packs.extensionsTitle')}
           </h3>
-          <ul className="grid gap-2.5 sm:grid-cols-2">
+          <ul className="divide-y divide-muted overflow-hidden rounded-[1.25rem] border bg-card text-card-foreground">
             {extensions.map(({ kind, offer }) => (
-              <li
-                key={kind}
-                className="flex items-center gap-3 rounded-[0.875rem] border bg-card px-4 py-3.5 text-card-foreground"
-              >
-                <span className="grid min-w-0 flex-1">
-                  <span className="text-[0.9375rem] font-medium">{offer.offer.title}</span>
+              <li key={kind} className="flex items-center gap-4 px-5 py-3.5">
+                <span className="grid min-w-0 flex-1 gap-0.5">
+                  <span className="text-[0.9375rem] font-semibold">{offer.offer.title}</span>
                   <span className="text-[0.8125rem] text-muted-foreground">
                     {t(`packs.extension.${kind}`)}
                   </span>
                 </span>
-                <span className="text-base font-semibold tabular-nums">
+                <span className="shrink-0 text-right text-base font-bold tabular-nums">
                   {offer.display.currency === offer.price.currency
                     ? formatMoney(format.number, offer.price)
                     : t('plans.approxPrice', { price: formatMoney(format.number, offer.display) })}
@@ -120,6 +115,7 @@ export function PacksSection({
           </ul>
         </section>
       )}
+      {list === undefined ? null : <CurrencyNote offers={list} className={SECTION_NOTE} />}
       {pack === null ? null : (
         <BuyPackDialog
           key={pack.offer.id}

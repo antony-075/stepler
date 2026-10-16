@@ -34,6 +34,9 @@ const KYIV = 'Europe/Kyiv';
 /** The main action: dark and compact (44px), the first and full width on phones. */
 const MAIN =
   'h-11 md:pointer-fine:h-11 md:pointer-fine:px-4 md:pointer-fine:text-[0.9375rem] rounded-xl bg-foreground px-4 font-semibold text-background hover:bg-foreground-soft max-sm:order-first max-sm:w-full sm:order-last';
+/** A granted plan's only action, «Купити пакет»: secondary, an outline at the main one's size. */
+const SECONDARY =
+  'h-11 md:pointer-fine:h-11 md:pointer-fine:px-4 md:pointer-fine:text-[0.9375rem] rounded-xl px-4 font-semibold max-sm:w-full';
 const ROW = 'flex flex-wrap items-center gap-2 max-sm:w-full sm:justify-end';
 const QUIET = 'h-11 md:pointer-fine:h-11 max-sm:px-2.5';
 
@@ -57,7 +60,12 @@ export function PlanActions({
   if (subscription === null || subscription.source !== 'LIQPAY') {
     return (
       <div className={ROW}>
-        <Button asChild className={MAIN}>
+        <Button
+          asChild
+          {...(subscription === null
+            ? { className: MAIN }
+            : { variant: 'outline', className: SECONDARY })}
+        >
           <Link href={billingHref('plans', PACKS_SECTION_ID)}>{t('plan.buyPack')}</Link>
         </Button>
         {subscription === null ? (

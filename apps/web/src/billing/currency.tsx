@@ -60,9 +60,10 @@ export function shownCurrency(list: OfferList | undefined, chosen: Currency): Cu
 const SYMBOL: Record<Currency, string> = { UAH: '₴', USD: '$', EUR: '€' };
 
 /**
- * «₴ / $ / €»: the shared pill switch (like «Щомісяця / Щороку» beside it), hidden when no
- * reference prices are listed; under it, while $ or € is shown, one small line that payment and
- * the receipt are in hryvnias.
+ * «₴ / $ / €»: the shared pill track at the interval switch's height (40px), three equal 40px
+ * segments, so choosing one never moves anything (owner's feedback 2026-10-16: it jumped). Hidden
+ * when no reference prices are listed. That payment and the receipt are in hryvnias is
+ * `CurrencyNote`, always in the section's foot, so the header row never changes either.
  */
 export function CurrencySwitch({
   offers,
@@ -77,34 +78,35 @@ export function CurrencySwitch({
   const offered = offeredCurrencies(offers);
   if (offered.length < 2) return null;
   return (
-    <div className="grid justify-items-start gap-1.5">
-      <ToggleGroup
-        variant="pill"
-        aria-label={t('label')}
-        value={value}
-        onValueChange={(next) => {
-          if (next !== '') onChange(next as Currency);
-        }}
-      >
-        {offered.map((currency) => (
-          <ToggleGroupItem
-            key={currency}
-            value={currency}
-            aria-label={t(`names.${currency}`)}
-            className="px-3.5 tabular-nums"
-          >
-            <span aria-hidden="true">{SYMBOL[currency]}</span>
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      {value === CHARGE_CURRENCY ? null : (
-        <p
-          data-slot="currency-note"
-          className="max-w-[34ch] text-xs text-pretty text-muted-foreground"
+    <ToggleGroup
+      variant="pill"
+      aria-label={t('label')}
+      value={value}
+      onValueChange={(next) => {
+        if (next !== '') onChange(next as Currency);
+      }}
+    >
+      {offered.map((currency) => (
+        <ToggleGroupItem
+          key={currency}
+          value={currency}
+          aria-label={t(`names.${currency}`)}
+          className="w-10 px-0 tabular-nums"
         >
-          {t('reference')}
-        </p>
-      )}
-    </div>
+          <span aria-hidden="true">{SYMBOL[currency]}</span>
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+/** «Ціни в $ і € — для орієнтиру. Оплата й чек — у гривнях.», where the switch is shown. */
+export function CurrencyNote({ offers, className }: { offers: OfferList; className?: string }) {
+  const t = useTranslations('billing.currency');
+  if (offeredCurrencies(offers).length < 2) return null;
+  return (
+    <p data-slot="currency-note" className={className}>
+      {t('reference')}
+    </p>
   );
 }

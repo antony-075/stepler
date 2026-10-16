@@ -11,8 +11,8 @@
 // Owner's pick 2026-10-16, one to one with direction C's Overview artboard: no visible title (an
 // sr-only heading keeps the outline), two bordered cards side by side from `md`: «Сховище» first
 // with «48 з 200 ГБ» muted on the right and a 14px bar, «Активні колекції» with one 40px slot per
-// collection the plan allows (filled, then dashed free ones; a plan of more than 10 gets the bar
-// instead) and «Ще 2 вільні місця. Заархівуйте завершену подію, щоб звільнити місце.» under
+// collection the plan allows (filled, then dashed free ones; 10 to a row, so a plan of 20 draws
+// two rows of smaller ones; more than 30 get the bar instead) and «Ще 2 вільні місця. Заархівуйте завершену подію, щоб звільнити місце.» under
 // them. That pack collections are not counted is the storage card's last line.
 import type { UsageResponse } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
@@ -24,8 +24,14 @@ import { UsageBar } from '@/app/app/usage-bar';
 import { formatStorage } from '@/format/bytes';
 import { billingHref } from './billing-tab';
 
-/** Up to this many collections the plan's slots are drawn one by one. */
-const MAX_SLOTS = 10;
+/** Up to this many collections the plan's slots are drawn one by one; more get the bar. */
+const MAX_SLOTS = 30;
+
+/** Slots in a row: a plan of 20 draws two rows of 10, smaller ones. */
+const SLOTS_PER_ROW = 10;
+
+/** Under this share the storage caption reads «<1%», never «0%» while something is stored. */
+const MIN_PERCENT = 0.01;
 
 /** From this share of a limit the row warns (amber). */
 const NEAR_LIMIT = 0.9;
@@ -43,6 +49,9 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
   const format = useFormatter();
   const { activeCollections: slots, storage } = usage;
   const share = storage.limitBytes > 0 ? storage.usedBytes / storage.limitBytes : 0;
+  const percent = (value: number) =>
+    format.number(value, { style: 'percent', maximumFractionDigits: 0 });
+  const shareText = share > 0 && share < MIN_PERCENT ? `<${percent(MIN_PERCENT)}` : percent(share);
   const free = Math.max(0, slots.limit - slots.used);
   return (
     <section data-slot="account-usage" aria-labelledby="usage-title">
@@ -58,9 +67,7 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
           })}
           used={storage.usedBytes}
           limit={storage.limitBytes}
-          caption={`${t('used', {
-            percent: format.number(share, { style: 'percent', maximumFractionDigits: 0 }),
-          })}. ${t('note')}`}
+          caption={`${t('used', { percent: shareText })}. ${t('note')}`}
           over={{ title: t('overStorage'), text: t('overStorageText') }}
         />
         <LimitRow
@@ -77,6 +84,9 @@ export function AccountUsage({ usage }: { usage: UsageResponse }) {
   );
 }
 
+/** A slot's size: one row of up to 10, or the smaller ones of a plan of more. */
+const SLOT_LARGE = 'h-10 rounded-[0.625rem]';
+const SLOT_SMALL = 'h-6 rounded-md';
 const SLOT_USED = 'bg-primary';
 const SLOT_OVER = 'bg-destructive';
 const SLOT_FREE = 'border-2 border-dashed border-border-strong';
@@ -94,16 +104,18 @@ const TONE: Record<Level, 'default' | 'warning' | 'destructive'> = {
 
 /** One slot per collection the plan allows: used ones filled, free ones dashed (decorative). */
 function Slots({ used, limit, level }: { used: number; limit: number; level: Level }) {
+  const columns = Math.max(1, Math.min(limit, SLOTS_PER_ROW));
+  const rows = Math.ceil(Math.max(limit, used) / columns);
   return (
     <span
       aria-hidden="true"
       className="grid gap-1.5"
-      style={{ gridTemplateColumns: `repeat(${Math.max(1, limit)}, minmax(0, 1fr))` }}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: Math.max(limit, used) }, (_, index) => (
         <span
           key={index}
-          className={cn('h-10 rounded-[0.625rem]', slotClass(index, used, limit, level))}
+          className={cn(rows > 1 ? SLOT_SMALL : SLOT_LARGE, slotClass(index, used, limit, level))}
         />
       ))}
     </span>

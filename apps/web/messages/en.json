@@ -2118,18 +2118,13 @@
     },
     "pack": {
       "oneTime": "one-time",
-      "storage": "{size} for photos, videos and documents",
-      "window": "Guests add for {days, plural, one {# day} other {# days}} after payment",
-      "retentionYears": "Kept for {years, plural, one {# year} other {# years}} after payment",
-      "retentionDays": "Kept for {days, plural, one {# day} other {# days}} after payment",
       "links": "Up to {count, plural, one {# additional guest link} other {# additional guest links}}",
       "buy": "Buy “{title}”",
-      "tiles": {
-        "storage": "storage",
-        "window": "collecting",
-        "retention": "keeping",
-        "days": "{days, plural, one {# day} other {# days}}",
-        "years": "{years, plural, one {# year} other {# years}}"
+      "facts": {
+        "storage": "<b>{size}</b> of storage",
+        "window": "<b>{days, plural, one {# day} other {# days}}</b> of collecting",
+        "retentionYears": "Kept for <b>{years, plural, one {# year} other {# years}}</b>",
+        "retentionDays": "Kept for <b>{days, plural, one {# day} other {# days}}</b>"
       }
     },
     "pricing": {
@@ -2256,7 +2251,6 @@
         "COMPLIMENTARY": "Free plan",
         "NONE": "No plan"
       },
-      "trialBadge": "Trial",
       "until": "Valid until {date}",
       "open": "No end date",
       "switchAwaiting": "Confirm the payment for your new plan by {date}",
@@ -2283,7 +2277,11 @@
         "text": "Yearly, {title} costs <b>{year}</b> instead of {twelve} — two months free.",
         "action": "Switch to yearly"
       },
-      "priceInline": "{interval, select, YEAR {yearly} other {monthly}} · {price}"
+      "priceInline": "{interval, select, YEAR {yearly} other {monthly}} · {price}",
+      "grantInline": {
+        "collections": "{count, plural, one {# collection} other {# collections}}",
+        "granted": "granted by Stepler"
+      }
     },
     "usage": {
       "title": "Account limits",
@@ -2361,7 +2359,7 @@
       "next": "Next charge on {date}",
       "pastDue": "We could not charge for the new period. Everything works until {date}; pay to keep access.",
       "pastDueOver": "The grace period is over: collections are view-only. Pay to restore access.",
-      "grantedOpen": "Granted with no end date",
+      "grantedOpen": "No end date",
       "grantedUntil": "Granted until {date}",
       "pending": "From {date}: {title}, {price}",
       "pendingSwitch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",

@@ -2118,18 +2118,13 @@
     },
     "pack": {
       "oneTime": "разово",
-      "storage": "{size} для фото, відео й документів",
-      "window": "Гості додають {days, plural, one {# день} few {# дні} other {# днів}} від оплати",
-      "retentionYears": "Зберігаємо {years, plural, one {# рік} few {# роки} other {# років}} від оплати",
-      "retentionDays": "Зберігаємо {days, plural, one {# день} few {# дні} other {# днів}} від оплати",
       "links": "До {count, plural, one {# додаткового посилання} few {# додаткових посилань} other {# додаткових посилань}} для гостей",
       "buy": "Купити «{title}»",
-      "tiles": {
-        "storage": "сховище",
-        "window": "збору",
-        "retention": "зберігання",
-        "days": "{days, plural, one {# день} few {# дні} other {# днів}}",
-        "years": "{years, plural, one {# рік} few {# роки} other {# років}}"
+      "facts": {
+        "storage": "<b>{size}</b> сховища",
+        "window": "<b>{days, plural, one {# день} few {# дні} other {# днів}}</b> збору",
+        "retentionYears": "<b>{years, plural, one {# рік} few {# роки} other {# років}}</b> зберігання",
+        "retentionDays": "<b>{days, plural, one {# день} few {# дні} other {# днів}}</b> зберігання"
       }
     },
     "pricing": {
@@ -2199,8 +2194,8 @@
       "statuses": {
         "PENDING": "Очікує",
         "SUCCEEDED": "Оплачено",
-        "FAILED": "Не пройшла",
-        "EXPIRED": "Не завершена",
+        "FAILED": "Не вдалося",
+        "EXPIRED": "Не завершено",
         "REVERSED": "Скасовано банком",
         "REFUNDED": "Повернено",
         "PARTIALLY_REFUNDED": "Повернено частково"
@@ -2256,7 +2251,6 @@
         "COMPLIMENTARY": "Безкоштовний тариф",
         "NONE": "Без тарифу"
       },
-      "trialBadge": "Пробний",
       "until": "Діє до {date}",
       "open": "Без терміну",
       "switchAwaiting": "Підтвердіть оплату нового тарифу до {date}",
@@ -2283,7 +2277,11 @@
         "text": "Щороку {title} коштує <b>{year}</b> замість {twelve} — це два місяці безкоштовно.",
         "action": "Перейти на щорічну"
       },
-      "priceInline": "{interval, select, YEAR {щороку} other {щомісяця}} · {price}"
+      "priceInline": "{interval, select, YEAR {щороку} other {щомісяця}} · {price}",
+      "grantInline": {
+        "collections": "{count, plural, one {# колекція} few {# колекції} other {# колекцій}}",
+        "granted": "надано Stepler"
+      }
     },
     "usage": {
       "title": "Ліміти акаунта",
@@ -2361,7 +2359,7 @@
       "next": "Наступне списання {date}",
       "pastDue": "Не вдалося списати оплату за новий період. Усе працює до {date} — оплатіть, щоб не втратити доступ.",
       "pastDueOver": "Пільговий період завершився: колекції лише для перегляду. Оплатіть, щоб відновити доступ.",
-      "grantedOpen": "Надано без кінцевої дати",
+      "grantedOpen": "Діє без кінцевої дати",
       "grantedUntil": "Надано до {date}",
       "pending": "З {date}: {title}, {price}",
       "pendingSwitch": "З {date} — {interval, select, YEAR {щорічно} other {щомісяця}}, {amount}",

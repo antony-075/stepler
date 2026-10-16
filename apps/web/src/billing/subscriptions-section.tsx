@@ -6,7 +6,8 @@
 // (24px) and its line on the left, «Щомісяця / Щороку −17%» and «₴ / $ / €» (`CurrencySwitch`:
 // reference prices in $ or € for orientation, every plan is still bought in hryvnias) on the
 // right of the same row (under it when the row is too narrow), the plan cards two side by side
-// from `sm`, one line under them on payment and cancelling. Every card has one full-width button,
+// from `sm`, under them one line on payment and cancelling and one that $ and € are for orientation
+// (payment and the receipt are in hryvnias). Every card has one full-width button,
 // what that plan means for this account: «Обрати Pro» without a paid
 // plan, «Перейти на цей тариф» for a subscriber (the change dialog with the server's preview), a
 // disabled «Ваш тариф» on the current one; in grace and when cancelled the buttons wait, with the
@@ -20,7 +21,7 @@ import { useSearchParams } from 'next/navigation';
 import { useId, useState } from 'react';
 import { SUBSCRIPTIONS_SECTION_ID } from './billing-tab';
 import { ChangePlanDialog } from './change-plan-dialog';
-import { CurrencySwitch, shownCurrency } from './currency';
+import { CurrencyNote, CurrencySwitch, shownCurrency } from './currency';
 import { offerButtonClass } from './offer-card';
 import { type PlanInterval, planIntervals, type PricedPlan, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
@@ -102,7 +103,7 @@ export function SubscriptionsSection({
           <p className={GROUP_NOTE}>{t('intro')}</p>
         </div>
         {list === undefined ? null : (
-          <div className="flex flex-wrap items-start gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <IntervalSwitch
               offers={list}
               currency={currency}
@@ -163,7 +164,10 @@ export function SubscriptionsSection({
               <span id={reasonId}>{waitReason}</span>
             </Alert>
           )}
-          <p className={SECTION_NOTE}>{t('note')}</p>
+          <div className="grid gap-1">
+            <p className={SECTION_NOTE}>{t('note')}</p>
+            <CurrencyNote offers={list} className={SECTION_NOTE} />
+          </div>
         </>
       )}
       {chosen === null ? null : chosen.mode === 'subscribe' ? (

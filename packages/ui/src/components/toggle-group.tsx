@@ -147,11 +147,14 @@ const segmentClassName = cn(
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground",
 );
 
-/** A pill: transparent on the track; the selected one is white with a soft shadow. */
+/**
+ * A pill: transparent on the track; the selected one is white with a soft shadow. One weight for
+ * every state, so choosing a pill never changes its width.
+ */
 const pillClassName = cn(
-  'group/chip inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-full px-4.5 text-[0.9375rem] whitespace-nowrap text-foreground-soft transition-[color,background-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
+  'group/chip inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-full px-4.5 text-[0.9375rem] font-medium whitespace-nowrap text-foreground-soft transition-[color,background-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
   focusRingInset,
-  'hover:text-foreground aria-checked:bg-card aria-checked:font-semibold aria-checked:text-foreground aria-checked:shadow-[0_1px_3px_rgb(0_0_0/0.12)]',
+  'hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_3px_rgb(0_0_0/0.12)]',
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 );
 

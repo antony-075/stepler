@@ -4,21 +4,24 @@
 // - a row of chips «Усі · 4 / Підписка · 2 / Пакети · 2» (a radio group; the counts and the
 //   filter come from the API, `GET /billing/payments/totals` and `?group=`) and «За 2026 рік:
 //   4 500 ₴» on the right (what was paid this calendar year, less refunds);
-// - one bordered list (radius 20, no shadow); each row: the date (dd.mm.yyyy, Kyiv), what was
-//   bought with one muted detail line, the state as a dot and a word, the amount on the right. A
-//   payment that failed or was reversed is the amber row with what that means in amber;
+// - one bordered list (radius 20, no shadow), at most 960px wide so a row reads as one line;
+//   each dense row: the date (dd.mm.yyyy, Kyiv, 110px, muted), a 36px tile for what was bought
+//   (↻ a plan, a ticket for a pack, a clock for more days), the title with one muted detail line,
+//   then the state as a small pill and the amount, together in a fixed-width group on the right.
+//   A payment that failed or was reversed is the amber row with what that means in amber;
+// - «За 2026 рік» only when something was paid this year (no «0 ₴»);
 // - «Показати ще» centred under the list (pages of 50).
-// From `md` the four parts sit in columns; below it the date and state go under what and amount,
-// so nothing scrolls sideways at 320px.
-import type { PaymentDto, PaymentGroup, PaymentStatus } from '@stepler/contracts';
+// Owner's feedback 2026-10-16 («уродливая таблица, куча пустого места»). Below `md` a row is two
+// lines: the title and the amount, then the date with the detail and the pill (the tile from `sm`).
+import type { PaymentDto, PaymentGroup, PaymentKind, PaymentStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
-import type { BadgeVariant } from '@stepler/ui/components/badge';
+import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { ReceiptText } from 'lucide-react';
+import { Clock, type LucideIcon, ReceiptText, RefreshCw, Ticket } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { type KeyboardEvent, useRef, useState } from 'react';
 import { fetchPaymentTotals, listPayments, PAYMENT_TOTALS_KEY, paymentsKey } from '@/api/billing';
@@ -27,6 +30,7 @@ import { formatMoney } from './offers';
 /** The chip and message key of «Усі». */
 const ALL = 'all';
 const KYIV = 'Europe/Kyiv';
+const SEPARATOR = ' · ';
 
 /** A payment state's tone (the ops console and the return page share it). */
 export const PAYMENT_BADGE: Record<PaymentStatus, BadgeVariant> = {
@@ -39,25 +43,19 @@ export const PAYMENT_BADGE: Record<PaymentStatus, BadgeVariant> = {
   PARTIALLY_REFUNDED: 'neutral',
 };
 
-/** The dot: round, or a small square for the rows that need a second look (C). */
-const DOT: Record<PaymentStatus, string> = {
-  PENDING: 'rounded-full bg-primary',
-  SUCCEEDED: 'rounded-full bg-success-dot',
-  FAILED: 'rounded-[2px] bg-warning',
-  EXPIRED: 'rounded-full bg-input',
-  REVERSED: 'rounded-[2px] bg-warning',
-  REFUNDED: 'rounded-full bg-input',
-  PARTIALLY_REFUNDED: 'rounded-full bg-input',
+/** The state's pill in the list: amber for the money that did not arrive or went back. */
+const ROW_BADGE: Record<PaymentStatus, BadgeVariant> = {
+  ...PAYMENT_BADGE,
+  FAILED: 'warning',
 };
 
-const WORD: Record<PaymentStatus, string> = {
-  PENDING: 'text-link',
-  SUCCEEDED: 'text-success',
-  FAILED: 'text-warning',
-  EXPIRED: 'text-muted-foreground',
-  REVERSED: 'text-warning',
-  REFUNDED: 'text-muted-foreground',
-  PARTIALLY_REFUNDED: 'text-muted-foreground',
+/** What was bought, as the row's 36px tile: a plan renews, a pack is one event, more days. */
+const KIND_ICON: Record<PaymentKind, LucideIcon> = {
+  SUBSCRIPTION: RefreshCw,
+  SUBSCRIPTION_RENEWAL: RefreshCw,
+  SUBSCRIPTION_CHANGE: RefreshCw,
+  PACK: Ticket,
+  PACK_EXTENSION: Clock,
 };
 
 /** The rows that need a second look: the money did not arrive or went back. */
@@ -70,6 +68,9 @@ type Chip = PaymentGroup | null;
 const CHIPS: readonly Chip[] = [null, 'SUBSCRIPTION', 'PACK'];
 
 const LIST = 'overflow-hidden rounded-[1.25rem] border bg-card text-card-foreground';
+
+/** The list's measure: dense rows read as one line each; wider only spreads them apart. */
+const MEASURE = 'w-full max-w-240';
 
 export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<string, string> }) {
   const t = useTranslations('billing.history');
@@ -88,7 +89,7 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
   const paid = totals.data?.paidThisYear;
 
   return (
-    <section aria-labelledby="history-title" className="grid gap-6">
+    <section aria-labelledby="history-title" className={cn(MEASURE, 'grid gap-5')}>
       {/* The tab «Історія платежів» names it on screen; the heading stays for the outline. */}
       <h2 id="history-title" className="sr-only">
         {t('title')}
@@ -103,7 +104,7 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
             }
             name={t('groups.label')}
           />
-          {paid === undefined || totals.data === undefined ? null : (
+          {paid === undefined || paid.amountMinor === 0 || totals.data === undefined ? null : (
             <p className="text-[0.9375rem] text-foreground-soft">
               {t.rich('year', {
                 year: totals.data.year,
@@ -116,9 +117,9 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
       )}
       {payments.isPending ? (
         <div className={cn(LIST, 'grid gap-px')} aria-hidden="true">
-          <Skeleton className="h-18 w-full rounded-none" />
-          <Skeleton className="h-18 w-full rounded-none" />
-          <Skeleton className="h-18 w-full rounded-none" />
+          <Skeleton className="h-16 w-full rounded-none" />
+          <Skeleton className="h-16 w-full rounded-none" />
+          <Skeleton className="h-16 w-full rounded-none" />
         </div>
       ) : payments.isError ? (
         <Alert
@@ -236,6 +237,7 @@ function PaymentRow({
   const t = useTranslations('billing.history');
   const format = useFormatter();
   const trouble = TROUBLE.has(payment.status);
+  const Icon = KIND_ICON[payment.kind];
   const when = format.dateTime(new Date(payment.createdAt), {
     day: '2-digit',
     month: '2-digit',
@@ -258,40 +260,49 @@ function PaymentRow({
       data-slot="payment-row"
       data-status={payment.status}
       className={cn(
-        'grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 border-t border-muted px-5 py-4 first:border-t-0 md:grid-cols-[7.5rem_minmax(0,1fr)_auto_auto] md:items-center md:gap-x-5 md:px-[1.375rem] md:py-[1.125rem]',
+        'flex items-center gap-3.5 border-t border-muted px-4 py-3.5 first:border-t-0 md:gap-4 md:px-5',
         trouble && 'bg-warning-soft',
       )}
     >
       <span
         className={cn(
-          'text-sm tabular-nums max-md:col-start-1 max-md:row-start-2',
+          'w-[6.875rem] shrink-0 text-sm tabular-nums max-md:hidden',
           trouble ? 'text-warning' : 'text-muted-foreground',
         )}
       >
         {when}
       </span>
-      <span className="grid min-w-0 max-md:col-start-1 max-md:row-start-1">
-        <span className="font-semibold [overflow-wrap:anywhere]">{payment.offerTitle}</span>
+      <span
+        aria-hidden="true"
+        className="grid size-9 shrink-0 place-items-center rounded-xl bg-muted text-foreground-soft max-sm:hidden"
+      >
+        <Icon className="size-4" />
+      </span>
+      <span className="grid min-w-0 flex-1 gap-0.5">
+        <span className="text-[0.9375rem] leading-snug font-semibold [overflow-wrap:anywhere]">
+          {payment.offerTitle}
+        </span>
         <span
           className={cn(
-            'text-sm [overflow-wrap:anywhere]',
+            'text-[0.8125rem] leading-snug [overflow-wrap:anywhere]',
             trouble ? 'text-warning' : 'text-muted-foreground',
           )}
         >
-          {trouble ? t(troubleKey(payment.status)) : details.join(' · ')}
+          <span className="tabular-nums md:hidden">{when + SEPARATOR}</span>
+          {trouble ? t(troubleKey(payment.status)) : details.join(SEPARATOR)}
         </span>
       </span>
-      <span
-        className={cn(
-          'inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold max-md:col-start-2 max-md:row-start-2 max-md:justify-self-end',
-          WORD[payment.status],
-        )}
-      >
-        <span aria-hidden="true" className={cn('size-2 shrink-0', DOT[payment.status])} />
-        {t(`statuses.${payment.status}`)}
-      </span>
-      <span className="text-right font-bold tabular-nums max-md:col-start-2 max-md:row-start-1 md:min-w-[5.625rem]">
-        {formatMoney(format.number, payment)}
+      <span className="flex shrink-0 items-end gap-1 max-md:flex-col-reverse md:w-[15.5rem] md:items-center md:justify-end md:gap-4">
+        <Badge
+          variant={ROW_BADGE[payment.status]}
+          // On the amber row the pill keeps its edge: white under the amber words.
+          className={cn(trouble && 'bg-card')}
+        >
+          {t(`statuses.${payment.status}`)}
+        </Badge>
+        <span className="text-right text-[0.9375rem] font-bold tabular-nums md:w-24">
+          {formatMoney(format.number, payment)}
+        </span>
       </span>
     </li>
   );

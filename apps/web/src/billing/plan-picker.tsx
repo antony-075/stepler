@@ -156,6 +156,7 @@ export function SubscriptionPlanCard({ plan, action }: { plan: PricedPlan; actio
             }
           : null
       }
+      yearlySlot
       facts={facts}
       action={action}
       highlighted={plan.offer.highlighted}

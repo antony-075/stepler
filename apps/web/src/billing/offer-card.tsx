@@ -1,24 +1,25 @@
 // Design pass (owner's pick 2026-10-16: «Тарифи» one to one with direction A's artboards, Plans
 // and PlansPhone; frontend-design, ui-ux-pro-max, web-design-guidelines, responsive-design;
 // DESIGN-SYSTEM.md §0.12). The offer cards of «Тарифи» and /pricing, read top to bottom the way an
-// owner decides on a phone:
-// - `PlanCard` (a subscription): the name large with its one line, the price as the one big thing
-//   (44px, tabular) with «/ міс» beside it; yearly, the price per month with the year's sum, the
-//   twelve monthly prices struck through and the saving pill under it; the action (52px, an ink
-//   outline); the limits as a check list under a hairline;
-// - `PackCard` (a ticket): the name as a small uppercase label, the price (38px) «разово» and the
-//   one line, a dashed tear line with the page's colour biting the two sides, the three facts as
-//   tiles, the action «Купити «Старт»»;
+// owner decides on a phone, one card for plans and packs alike:
+// - `PlanCard`: the name large with its one line, the price as the one big thing (44px, tabular)
+//   with «/ міс» or «разово» beside it; yearly, the price per month with the year's sum, the twelve
+//   monthly prices struck through and the saving pill under it; the action (52px, an ink outline);
+//   the limits as a check list under a hairline;
+// - `PackCard`: the same card for a pack (owner's feedback 2026-10-16: «что это за билеты?» — no
+//   ticket), its facts as check rows: «10 ГБ сховища», «30 днів збору», «1 рік зберігання»;
 // - shown in $ or € (a reference price, owner 2026-10-16) the price reads «≈ $25» and one line
-//   under it says what is paid in hryvnias («Оплата в гривнях: 1 000 ₴/міс»);
+//   under it says what is paid in hryvnias («Оплата в гривнях: 1 000 ₴/міс»). That line's place
+//   and the yearly line's are kept empty when they have nothing to say, so switching the currency
+//   or the period never moves the button or the list (the owner's «скачет»);
 // - `highlighted` (the offer's flag, set in /ops): the page's one dark surface (`FEATURED`), an
-//   accent outline with an accent glow and the «Найпопулярніший» ribbon on its top edge (left on a
-//   plan, right on a ticket), in words, not colour alone; its button is white.
+//   accent outline with an accent glow and the «Найпопулярніший» ribbon on its top edge, in words,
+//   not colour alone; its button is white.
 // Works in server and client components alike (next-intl's sync hooks).
 import { cn } from '@stepler/ui/lib/utils';
 import { Check } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { formatStorage } from '@/format/bytes';
 import { formatMoney, type PricedOffer, retentionYears } from './offers';
 import { FEATURED } from './surfaces';
@@ -40,20 +41,16 @@ const TONE = {
     soft: 'text-foreground-soft',
     struck: 'text-muted-foreground/70',
     saving: 'bg-success-soft text-success',
-    tile: 'bg-muted',
     rule: 'border-muted',
     check: 'text-link',
-    dash: 'border-border',
   },
   featured: {
     muted: 'text-inverse-muted/75',
     soft: 'text-inverse-muted',
     struck: 'text-inverse-muted/55',
     saving: 'bg-[rgb(34_197_94/0.18)] text-[#86efac]',
-    tile: 'bg-white/8',
     rule: 'border-white/10',
     check: 'text-inverse-ring',
-    dash: 'border-white/18',
   },
 } as const;
 
@@ -61,20 +58,13 @@ type Tone = (typeof TONE)[keyof typeof TONE];
 
 const LIGHT_PLAN =
   'border bg-card text-card-foreground shadow-[0_1px_2px_rgb(24_24_27/0.04),0_12px_32px_-18px_rgb(24_24_27/0.18)]';
-const LIGHT_TICKET =
-  'border bg-card text-card-foreground shadow-[0_12px_28px_-18px_rgb(24_24_27/0.25)]';
 const FEATURED_EDGE =
   'outline-2 -outline-offset-2 outline-primary shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--primary)_55%,transparent)]';
 
-function Ribbon({ side }: { side: 'left' | 'right' }) {
+function Ribbon() {
   const t = useTranslations('billing.plans');
   return (
-    <span
-      className={cn(
-        'absolute -top-3.5 inline-flex h-7 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-foreground',
-        side === 'left' ? 'left-7.5' : 'right-5.5',
-      )}
-    >
+    <span className="absolute -top-3.5 left-7.5 inline-flex h-7 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-foreground">
       {t('popular')}
     </span>
   );
@@ -86,31 +76,22 @@ function Price({
   unit,
   approx,
   tone,
-  size,
 }: {
   price: string;
   unit: string;
   approx: boolean;
   tone: Tone;
-  size: 'plan' | 'ticket';
 }) {
   const t = useTranslations('billing.plans');
   return (
     <p className="flex flex-wrap items-baseline gap-x-2">
       {approx ? (
-        <span className={cn('text-2xl font-semibold', tone.muted)}>{t('approx')}</span>
+        <span className={cn('text-2xl leading-none font-semibold', tone.muted)}>{t('approx')}</span>
       ) : null}
-      <span
-        className={cn(
-          'leading-none font-bold tabular-nums',
-          size === 'plan' ? 'text-[2.75rem] tracking-[-0.02em]' : 'text-[2.375rem]',
-        )}
-      >
+      <span className="text-[2.75rem] leading-none font-bold tracking-[-0.02em] tabular-nums">
         {price}
       </span>
-      <span className={cn(size === 'plan' ? 'text-[0.9375rem]' : 'text-sm', tone.muted)}>
-        {unit}
-      </span>
+      <span className={cn('text-[0.9375rem] leading-none', tone.muted)}>{unit}</span>
     </p>
   );
 }
@@ -130,6 +111,7 @@ export function PlanCard({
   unit,
   charged = null,
   yearly = null,
+  yearlySlot = false,
   facts,
   action,
   highlighted = false,
@@ -142,6 +124,8 @@ export function PlanCard({
   /** Shown in $ or €: what is really paid, in hryvnias («1 000 ₴/міс»); `null` in hryvnias. */
   charged?: string | null;
   yearly?: YearlyLine | null;
+  /** Keep the yearly line's place while it is empty (a list with the period switch). */
+  yearlySlot?: boolean;
   facts: ReactNode[];
   action: ReactNode;
   highlighted?: boolean;
@@ -157,7 +141,7 @@ export function PlanCard({
       data-testid={testId}
       data-highlighted={highlighted || undefined}
     >
-      {highlighted ? <Ribbon side="left" /> : null}
+      {highlighted ? <Ribbon /> : null}
       <div className="grid gap-1.5">
         <h3 className="text-[1.625rem] leading-tight font-bold">{title}</h3>
         {description == null ? null : (
@@ -165,11 +149,18 @@ export function PlanCard({
         )}
       </div>
       <div className="grid gap-1.5">
-        <Price price={price} unit={unit} approx={charged !== null} tone={tone} size="plan" />
-        {yearly === null ? null : (
-          <p className="flex flex-wrap items-center gap-2 text-sm">
+        <Price price={price} unit={unit} approx={charged !== null} tone={tone} />
+        {yearly === null ? (
+          yearlySlot ? (
+            <span aria-hidden="true" className="h-6" />
+          ) : null
+        ) : (
+          // One line at any width, so the period switch never moves the card: on narrower cards the
+          // struck twelve months give way (the saving pill says it); at 320px it may run into the
+          // card's padding rather than widen the card (`w-0 min-w-full`).
+          <p className="flex h-6 w-0 min-w-full items-center gap-2 text-[0.8125rem] whitespace-nowrap xl:text-sm">
             <span className={tone.soft}>{t('yearlyTotal', { price: yearly.total })}</span>
-            <s className={tone.struck}>{yearly.full}</s>
+            <s className={cn(tone.struck, 'max-xl:hidden')}>{yearly.full}</s>
             <span
               className={cn(
                 'inline-flex h-6 items-center rounded-full px-2.25 font-semibold tabular-nums',
@@ -180,11 +171,12 @@ export function PlanCard({
             </span>
           </p>
         )}
-        {charged === null ? null : (
-          <p data-slot="charged-uah" className={cn('text-sm', tone.muted)}>
-            {t('charged', { price: charged })}
-          </p>
-        )}
+        <p
+          data-slot="charged-uah"
+          className={cn('min-h-5 text-sm leading-5 tabular-nums', tone.muted)}
+        >
+          {charged === null ? null : t('charged', { price: charged })}
+        </p>
       </div>
       <div className="mt-auto grid">{action}</div>
       {facts.length === 0 ? null : (
@@ -205,120 +197,45 @@ export function PlanCard({
   );
 }
 
-export interface OfferTile {
-  value: string;
-  label: string;
-}
+const bold = (chunks: ReactNode): ReactElement => <b className="font-semibold">{chunks}</b>;
 
-/**
- * A ticket's tear line: a dashed rule with a half circle in the page's colour biting each side
- * (decorative). `surface` is the colour the card sits on.
- */
-function TearLine({
-  dash,
-  highlighted,
-  surface,
-}: {
-  dash: string;
-  highlighted: boolean;
-  surface: string;
-}) {
-  const notch = cn(
-    'absolute -top-3.25 size-6 rounded-full',
-    surface,
-    highlighted ? null : 'border-border',
-  );
-  return (
-    <div aria-hidden="true" className={cn('relative mx-4.5 h-0 border-t-2 border-dashed', dash)}>
-      <span className={cn(notch, '-left-8', !highlighted && 'border-r')} />
-      <span className={cn(notch, '-right-8', !highlighted && 'border-l')} />
-    </div>
-  );
-}
-
-export function PackCard({
-  pack,
-  action,
-  surface = 'bg-background',
-}: {
-  pack: PricedOffer;
-  action: ReactNode;
-  /** What the card sits on, for the tear line's notches (the page's background by default). */
-  surface?: string;
-}) {
+/** A pack: the plan card with «разово» and the pack's facts as check rows. */
+export function PackCard({ pack, action }: { pack: PricedOffer; action: ReactNode }) {
   const t = useTranslations('billing.pack');
-  const tPlans = useTranslations('billing.plans');
   const format = useFormatter();
   const { limits } = pack.offer;
-  const highlighted = pack.offer.highlighted;
-  const tone = highlighted ? TONE.featured : TONE.light;
-  const storage =
-    limits.collectionStorageBytes === null ? null : Number(limits.collectionStorageBytes);
-  const years = limits.retentionDays === null ? null : retentionYears(limits.retentionDays);
-  const tiles: OfferTile[] = [];
-  if (storage !== null) {
-    tiles.push({ value: formatStorage(format.number, storage), label: t('tiles.storage') });
+  const facts: ReactNode[] = [];
+  if (limits.collectionStorageBytes !== null) {
+    const size = formatStorage(format.number, Number(limits.collectionStorageBytes));
+    facts.push(t.rich('facts.storage', { size, b: bold }));
   }
   if (limits.windowDays !== null) {
-    tiles.push({ value: t('tiles.days', { days: limits.windowDays }), label: t('tiles.window') });
+    facts.push(t.rich('facts.window', { days: limits.windowDays, b: bold }));
   }
   if (limits.retentionDays !== null) {
-    tiles.push({
-      value:
-        years === null
-          ? t('tiles.days', { days: limits.retentionDays })
-          : t('tiles.years', { years }),
-      label: t('tiles.retention'),
-    });
+    const years = retentionYears(limits.retentionDays);
+    facts.push(
+      years === null
+        ? t.rich('facts.retentionDays', { days: limits.retentionDays, b: bold })
+        : t.rich('facts.retentionYears', { years, b: bold }),
+    );
   }
-  const charged =
-    pack.display.currency === pack.price.currency ? null : formatMoney(format.number, pack.price);
+  if (limits.guestLinks !== null) facts.push(t('links', { count: limits.guestLinks }));
   return (
-    <article
-      className={cn(
-        'relative flex h-full flex-col rounded-[1.375rem]',
-        highlighted ? cn(FEATURED, 'rounded-[1.375rem]', FEATURED_EDGE) : LIGHT_TICKET,
-      )}
-      data-testid={`pack-${pack.offer.code}`}
-      data-highlighted={highlighted || undefined}
-    >
-      {highlighted ? <Ribbon side="right" /> : null}
-      <div className="grid gap-1.5 px-5.5 pt-5.5 pb-4.5">
-        <h3
-          className={cn('text-[0.8125rem] font-semibold tracking-[0.04em] uppercase', tone.muted)}
-        >
-          {pack.offer.title}
-        </h3>
-        <Price
-          price={formatMoney(format.number, pack.display)}
-          unit={t('oneTime')}
-          approx={charged !== null}
-          tone={tone}
-          size="ticket"
-        />
-        {charged === null ? null : (
-          <p data-slot="charged-uah" className={cn('text-sm', tone.muted)}>
-            {tPlans('charged', { price: charged })}
-          </p>
-        )}
-        {pack.offer.description == null ? null : (
-          <p className={cn('text-sm text-pretty', tone.soft)}>{pack.offer.description}</p>
-        )}
-      </div>
-      <TearLine dash={tone.dash} highlighted={highlighted} surface={surface} />
-      <div className="mt-auto grid gap-4 px-5.5 pt-4.5 pb-5.5">
-        {tiles.length === 0 ? null : (
-          <ul className="grid grid-cols-3 gap-2 text-center">
-            {tiles.map((tile) => (
-              <li key={tile.label} className={cn('grid gap-0.5 rounded-xl px-1 py-2.5', tone.tile)}>
-                <span className="text-base font-bold tabular-nums">{tile.value}</span>
-                <span className={cn('text-xs', tone.muted)}>{tile.label}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="grid">{action}</div>
-      </div>
-    </article>
+    <PlanCard
+      testId={`pack-${pack.offer.code}`}
+      title={pack.offer.title}
+      description={pack.offer.description}
+      price={formatMoney(format.number, pack.display)}
+      unit={t('oneTime')}
+      charged={
+        pack.display.currency === pack.price.currency
+          ? null
+          : formatMoney(format.number, pack.price)
+      }
+      facts={facts}
+      action={action}
+      highlighted={pack.offer.highlighted}
+    />
   );
 }

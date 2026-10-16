@@ -3,7 +3,8 @@
 // Design pass (billing page v4, the owner's reference 2026-10-09; frontend-design, ui-ux-pro-max,
 // web-design-guidelines). «Ваш тариф» on «Огляд»: ONE card for the plan (DESIGN-SYSTEM.md §0.12):
 // - «Ваш тариф» small, the plan's name large and at most one badge: the subscription's own
-//   (Скасовано / Очікує оплати / Надано Stepler) or the access state (Пробний / Лише перегляд);
+//   (Скасовано / Очікує оплати) or the access state (Пробний / Лише перегляд); a granted plan
+//   has none: «20 колекцій · 1 ТБ · надано Stepler» beside its name says it;
 // - one line for time when it is not the period line's: «Доступ до …» when cancelled, «Оплатіть
 //   до …» in grace, «Діє до … | залишилось N днів» (the days in the accent, amber in the last 3)
 //   for a trial. The long explanation is the tab's one alert;
@@ -21,7 +22,9 @@
 // днів», «16 листопада — списання 1 000 ₴») over a 10px bar; a monthly plan that is sold yearly
 // too gets one strip under it: a square «−17%», what a year costs instead of twelve months,
 // «Перейти на щорічну» (the change dialog on «Тарифи», `?plan=`); «Що буде після завершення?» a
-// quiet disclosure at the end.
+// quiet disclosure at the end. A granted plan: «Business» with «20 колекцій · 1 ТБ · надано
+// Stepler» beside it, «Діє без кінцевої дати» under it when it has no end (the period line and
+// the countdown when it has one), «Купити пакет» as a secondary outline.
 import type { BillingSummary, OfferList, SubscriptionDto } from '@stepler/contracts';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
 import { focusRing } from '@stepler/ui/lib/focus';
@@ -32,6 +35,7 @@ import { useFormatter, useNow, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { daysLeft, TRIAL_REMINDER_DAYS } from '@/app/app/access-model';
 import { UsageBar } from '@/app/app/usage-bar';
+import { formatStorage } from '@/format/bytes';
 import { monoDigits } from '@/format/mono-digits';
 import { BILLING_PATH } from './billing-tab';
 import {
@@ -73,9 +77,8 @@ function badgeOf(
   subscription: SubscriptionDto | null,
 ): { variant: BadgeVariant; label: string } | null {
   if (subscription !== null) {
-    if (subscription.source === 'COMPLIMENTARY') {
-      return { variant: 'success', label: t('subscription.status.granted') };
-    }
+    // A granted plan says so in its inline details («… · надано Stepler»).
+    if (subscription.source === 'COMPLIMENTARY') return null;
     if (subscription.status === 'CANCELED') {
       return { variant: 'neutral', label: t('subscription.status.canceled') };
     }
@@ -86,7 +89,7 @@ function badgeOf(
   }
   if (access.state === 'READ_ONLY') return { variant: 'warning', label: t('states.READ_ONLY') };
   if (access.state === 'GRACE') return { variant: 'warning', label: t('states.GRACE') };
-  if (access.reason === 'TRIAL') return { variant: 'info', label: t('plan.trialBadge') };
+  // A trial's name says it («Пробний період»); a badge beside it would repeat it.
   return null;
 }
 
@@ -150,13 +153,28 @@ export function PlanCard({
   const countdownEnd = readOnly ? null : countdownTarget(access, subscription);
   const paid =
     subscription !== null && subscription.source === 'LIQPAY' && !trial ? subscription : null;
-  const inline =
-    paid === null || paid.price === null || paid.interval === null
-      ? null
-      : t('plan.priceInline', {
-          interval: paid.interval,
-          price: formatMoney(format.number, paid.price),
-        });
+  const granted =
+    subscription !== null && subscription.source === 'COMPLIMENTARY' && !trial
+      ? subscription
+      : null;
+  let inline: string | null = null;
+  if (paid !== null && paid.price !== null && paid.interval !== null) {
+    inline = t('plan.priceInline', {
+      interval: paid.interval,
+      price: formatMoney(format.number, paid.price),
+    });
+  } else if (granted !== null) {
+    const { activeCollections, storageBytes } = granted.limits;
+    inline = [
+      activeCollections === null
+        ? null
+        : t('plan.grantInline.collections', { count: activeCollections }),
+      storageBytes === null ? null : formatStorage(format.number, Number(storageBytes)),
+      t('plan.grantInline.granted'),
+    ]
+      .filter((part): part is string => part !== null)
+      .join(' · ');
+  }
   const renewing = paid !== null && paid.status === 'ACTIVE' ? paid : null;
 
   const periodStart =
@@ -186,7 +204,7 @@ export function PlanCard({
               {inline === null ? null : (
                 <>
                   {' '}
-                  <span className="text-base font-medium text-muted-foreground tabular-nums">
+                  <span className="text-base font-medium text-muted-foreground tabular-nums max-sm:mt-1 max-sm:block">
                     {inline}
                   </span>
                 </>
@@ -300,7 +318,7 @@ function YearlyUpsell({
   return (
     <div
       data-slot="plan-yearly"
-      className="flex flex-wrap items-center gap-3.5 rounded-2xl bg-info-soft px-4.5 py-4"
+      className="flex flex-wrap items-center gap-3.5 rounded-[0.875rem] bg-info-soft px-4.5 py-4"
     >
       <span
         aria-hidden="true"
