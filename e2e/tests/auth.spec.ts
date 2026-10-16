@@ -75,7 +75,7 @@ test('the meter says what is missing; «Створити акаунт» needs th
   await password.fill('abc');
   // Not colour alone: the checklist names every rule and its state.
   await expect(meter).toHaveAttribute('aria-valuenow', '1');
-  await expect(page.getByText('Щонайменше 8 символів').first()).toBeVisible();
+  await expect(page.getByText('8+ символів').first()).toBeVisible();
   await password.fill('Abcdefg1!');
   await expect(meter).toHaveAttribute('aria-valuenow', '5');
   await page.getByLabel(REGISTER_UK.confirm).fill('Abcdefg1?');

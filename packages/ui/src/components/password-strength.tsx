@@ -3,7 +3,7 @@ import { cn } from '../lib/utils';
 
 type StrengthRule = {
   id: string;
-  /** What the rule asks, in the page's language («Щонайменше 8 символів»). */
+  /** What the rule asks, in the page's language («8+ символів»). */
   label: string;
   met: boolean;
 };
@@ -55,7 +55,8 @@ function fill(met: number, total: number): string {
  * one per rule, that fill left to right as rules are met and change colour by level; the level in
  * words beside it; the rules under it as small chips in a wrapping row (owner 2026-10-16: the
  * same checklist, less loud than a column of circles): a met rule turns green with a check that
- * pops in, a missing one stays a quiet grey chip with a dot (no red crosses), and each carries
+ * pops in, a missing one stays a quiet grey chip (no red crosses); the labels are short so the five
+ * fit two rows, and each carries
  * its state in words for screen readers, so nothing relies on colour. A polite live region repeats only the
  * summary («Ще потрібна…»), not every keystroke's list. Segments grow with a short transition
  * that stops under reduced motion.
@@ -115,25 +116,22 @@ function PasswordStrength({
           {levelText}
         </span>
       </div>
-      <ul className="flex flex-wrap gap-1.5">
+      <ul className="flex flex-wrap gap-1">
         {rules.map((rule) => (
           <li
             key={rule.id}
             className={cn(
-              'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[0.8125rem] font-medium transition-[background-color,border-color,color] duration-(--duration-base) motion-reduce:transition-none',
+              'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[0.8125rem] font-medium transition-[background-color,border-color,color] duration-(--duration-base) motion-reduce:transition-none',
               rule.met ? CHIP_MET : pristine ? CHIP_PRISTINE : CHIP_MISSING,
             )}
           >
-            <span aria-hidden="true" className="grid size-3.5 shrink-0 place-items-center">
-              {rule.met ? (
-                <Check
-                  className="size-3.5 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
-                  strokeWidth={3}
-                />
-              ) : (
-                <span className="size-1.5 rounded-full bg-current opacity-60" />
-              )}
-            </span>
+            {rule.met ? (
+              <Check
+                aria-hidden="true"
+                className="size-3.5 shrink-0 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
+                strokeWidth={3}
+              />
+            ) : null}
             <span>
               {rule.label}
               <span className="sr-only">{stateText(rule.met ? metText : missingText)}</span>

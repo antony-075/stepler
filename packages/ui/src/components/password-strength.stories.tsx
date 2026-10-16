@@ -7,11 +7,11 @@ import { PasswordMatch, PasswordStrength, type StrengthRule } from './password-s
 /** The app's rules (packages/contracts `passwordChecks`), mirrored for the stories. */
 function rulesFor(password: string): StrengthRule[] {
   return [
-    { id: 'length', label: 'Щонайменше 8 символів', met: Array.from(password).length >= 8 },
+    { id: 'length', label: '8+ символів', met: Array.from(password).length >= 8 },
     { id: 'upper', label: 'Велика літера', met: /\p{Lu}/u.test(password) },
     { id: 'lower', label: 'Мала літера', met: /\p{Ll}/u.test(password) },
     { id: 'digit', label: 'Цифра', met: /\p{Nd}/u.test(password) },
-    { id: 'special', label: 'Спецсимвол (!, ?, # …)', met: /[^\p{L}\p{N}\s]/u.test(password) },
+    { id: 'special', label: 'Символ: ! ? # $', met: /[^\p{L}\p{N}\s]/u.test(password) },
   ];
 }
 

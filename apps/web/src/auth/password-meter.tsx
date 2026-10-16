@@ -6,6 +6,12 @@ import { useTranslations } from 'next-intl';
 
 type Level = 'empty' | 'weak' | 'fair' | 'good' | 'strong';
 
+/**
+ * The chips' order (owner 2026-10-17: five chips in two rows): the three short letter and digit
+ * rules first, then the length and the symbol, so the rows break evenly down to a 360px phone.
+ */
+const CHIP_ORDER: readonly PasswordRule[] = ['upper', 'lower', 'digit', 'length', 'special'];
+
 /** The meter's word for how many of the five rules hold. */
 export function strengthLevel(password: string, met: number): Level {
   if (password === '') return 'empty';
@@ -21,7 +27,7 @@ export function strengthLevel(password: string, met: number): Level {
 export function PasswordMeter({ password, id }: { password: string; id: string }) {
   const t = useTranslations('password');
   const checks = passwordChecks(password);
-  const rules = PASSWORD_RULES.map((rule) => ({
+  const rules = CHIP_ORDER.map((rule) => ({
     id: rule,
     label: t(`rules.${rule}`),
     met: checks[rule],

@@ -15,7 +15,7 @@ export type AuthVariant = 'login' | 'register' | 'step';
  * and the line under it a little bigger), one rule for every account page.
  */
 const CARD = cn(
-  'landing-rise w-full min-w-0 rounded-[1.75rem] border border-border bg-card p-6 shadow-[0_40px_80px_-40px_rgb(24_24_27/0.35)] sm:p-10',
+  'landing-rise w-full min-w-0 rounded-[1.75rem] border border-border bg-card p-5 shadow-[0_40px_80px_-40px_rgb(24_24_27/0.35)] sm:p-10',
   '[&_h1]:text-[clamp(1.625rem,1.35rem+0.9vw,2rem)] [&_h1]:leading-tight [&_h1]:font-[700] [&_h1]:tracking-[-0.025em]',
   '[&_h1+p]:text-[1.0625rem] [&_h1+p]:leading-relaxed',
 );
