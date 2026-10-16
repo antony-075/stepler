@@ -15,6 +15,7 @@ import type {
 } from '../generated/prisma/client.js';
 import { CheckoutForms } from './checkout-forms.js';
 import { type OfferSnapshot, snapshotOf } from './offer-snapshot.js';
+import { SALE_CURRENCY } from './sale-currency.js';
 
 type Db = Prisma.TransactionClient;
 /** Subscriptions are checked out by `SubscriptionsService`. */
@@ -121,10 +122,19 @@ export class CheckoutService {
     return { paymentId, status: 'PENDING', form };
   }
 
-  /** The live price of a live offer, in a currency we sell; else `409 OFFER_UNAVAILABLE`. */
+  /**
+   * The live UAH price of a live offer; else `409 OFFER_UNAVAILABLE` (a USD or EUR price is a
+   * reference amount, never sold: `SALE_CURRENCY`).
+   */
   private async activePrice(tx: Db, priceId: string): Promise<PricedOffer> {
     const price = await tx.billingPrice.findFirst({
-      where: { id: priceId, active: true, interval: 'ONE_TIME', offer: { active: true } },
+      where: {
+        id: priceId,
+        active: true,
+        interval: 'ONE_TIME',
+        currency: SALE_CURRENCY,
+        offer: { active: true },
+      },
       include: { offer: true },
     });
     if (price === null) throw new AppError('OFFER_UNAVAILABLE', 409);

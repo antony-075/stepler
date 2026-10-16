@@ -26,6 +26,7 @@ import { CheckoutForms, type FormUser } from './checkout-forms.js';
 import { prorate } from './domain/proration.js';
 import { EntitlementResolver } from './entitlement-resolver.js';
 import { snapshotOf } from './offer-snapshot.js';
+import { SALE_CURRENCY } from './sale-currency.js';
 import {
   PAYMENT_PROVIDER,
   type CheckoutForm,
@@ -127,7 +128,6 @@ export class SubscriptionsService {
       const sub = await this.changeable(tx, userId);
       const target = await this.subscriptionPrice(tx, priceId);
       if (target.id === sub.priceId) throw new AppError('OFFER_UNAVAILABLE', 409);
-      assertSameCurrency(sub, target);
       const current = await tx.billingOffer.findUniqueOrThrow({ where: { id: sub.offerId } });
       const kind = changeKind(sub, current, target);
       const locale = (await tx.user.findUniqueOrThrow({ where: { id: userId } })).locale;
@@ -301,7 +301,6 @@ export class SubscriptionsService {
       await lockSubscription(tx, sub.id);
       const target = await this.subscriptionPrice(tx, priceId);
       if (target.id === sub.priceId) throw new AppError('OFFER_UNAVAILABLE', 409);
-      assertSameCurrency(sub, target);
       const current = await tx.billingOffer.findUniqueOrThrow({ where: { id: sub.offerId } });
       const kind = changeKind(sub, current, target);
       if (kind === 'UPGRADE') {
@@ -393,12 +392,13 @@ export class SubscriptionsService {
     if (!this.forms.enabled) throw new AppError('PAYMENT_PROVIDER_UNAVAILABLE', 503);
   }
 
-  /** A live price of a live subscription offer, monthly or yearly; else `409`. */
+  /** A live UAH price of a live subscription offer, monthly or yearly; else `409`. */
   private async subscriptionPrice(tx: Db, priceId: string): Promise<PricedPlan> {
     const price = await tx.billingPrice.findFirst({
       where: {
         id: priceId,
         active: true,
+        currency: SALE_CURRENCY,
         interval: { in: ['MONTH', 'YEAR'] },
         offer: { active: true, kind: 'SUBSCRIPTION' },
       },
@@ -795,16 +795,6 @@ function changeKind(sub: Subscription, current: BillingOffer, target: PricedPlan
 }
 
 /** The owner's row, locked first [C9]; its e-mail and language go into the checkout. */
-/**
- * A plan change stays in the subscription's currency (ADR 0018, B2): LiqPay changes the amount
- * of a recurring order, never its currency; another currency is a new subscription.
- */
-function assertSameCurrency(sub: Pick<Subscription, 'currency'>, target: PricedPlan): void {
-  if (sub.currency !== null && sub.currency !== target.currency) {
-    throw new AppError('CURRENCY_MISMATCH', 409);
-  }
-}
-
 export async function lockUser(tx: Db, userId: string): Promise<FormUser> {
   const [user] = await tx.$queryRaw<FormUser[]>`
     SELECT "email"::text AS "email", "locale"::text AS "locale"

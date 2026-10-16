@@ -58,8 +58,6 @@ export const ERROR_CODES = [
   'REFUND_EXCEEDS_PAID',
   'PAYMENT_PROVIDER_UNAVAILABLE',
   'BILLING_SIGNATURE_INVALID',
-  // A subscription changes plan only within the currency it was bought in (ADR 0018, B2).
-  'CURRENCY_MISMATCH',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

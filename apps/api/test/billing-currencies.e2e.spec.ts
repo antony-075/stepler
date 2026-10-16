@@ -11,7 +11,6 @@ import { listenOnLoopback } from './support/app.js';
 import {
   givePack,
   liqpayEnv,
-  payFields,
   priceCatalogue,
   type PricedCode,
   priceSubscriptions,
@@ -25,9 +24,10 @@ import { ORIGIN, seedCollection } from './support/guests.js';
 import { LiqPayStub } from './support/liqpay-stub.js';
 import { signInAs } from './support/sessions.js';
 
-// Prices in UAH, USD and EUR (ADR 0018 B2, owner decision 2026-10-16): each offer has its own
-// round price per currency, the customer pays in the price's currency through LiqPay, and a
-// subscription changes plan only within the currency it was bought in.
+// Prices in UAH, USD and EUR (ADR 0018 B2, owner 2026-10-16): each offer may carry a round USD and
+// EUR price, listed with the UAH one so the pages can show it for orientation; but we charge and
+// issue receipts in hryvnias only («оплата будет производиться в гривне и чек будет гривневый»),
+// so a checkout, a subscription or a plan change at a USD or EUR price is refused.
 
 const DAY_MS = 24 * 3600_000;
 const TERMS = currentLegalVersion('TERMS').version;
@@ -90,13 +90,6 @@ async function scene(email = 'olena@example.com') {
   return { owner, collectionId, checkout };
 }
 
-function formData(body: unknown) {
-  const response = checkoutResponseSchema.parse(body);
-  const fields = response.form?.fields;
-  if (fields === undefined) throw new Error('no form');
-  return { response, data: decodeData(fields.data) };
-}
-
 describe('currencies', () => {
   test('the catalogue lists every live price of every currency', async () => {
     const res = await request(server).get('/api/v1/billing/offers').expect(200);
@@ -108,12 +101,9 @@ describe('currencies', () => {
     ]);
   });
 
-  test.each([
-    ['USD', '12.00'],
-    ['EUR', '11.00'],
-  ] as const)(
-    'a pack checkout in %s: LiqPay gets the price’s currency',
-    async (currency, amount) => {
+  test.each(['USD', 'EUR'] as const)(
+    'a pack at its %s price is not sold: 409, no payment',
+    async (currency) => {
       const s = await scene();
       const res = await s
         .checkout({
@@ -121,120 +111,40 @@ describe('currencies', () => {
           priceId: foreign[`pack-start:${currency}`],
           collectionId: s.collectionId,
         })
-        .expect(201);
-      const { response, data } = formData(res.body);
-      expect(data).toMatchObject({ action: 'pay', amount, currency });
-      expect(
-        await prisma.payment.findUniqueOrThrow({ where: { id: response.paymentId ?? '' } }),
-      ).toMatchObject({ currency, amountMinor: Number.parseFloat(amount) * 100 });
+        .expect(409);
+      expect(res.body).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
+      expect(await prisma.payment.count()).toBe(0);
     },
   );
 
-  test('a USD callback settles the USD payment; a UAH one for it is a mismatch', async () => {
-    const s = await scene();
-    const res = await s
-      .checkout({ kind: 'PACK', priceId: foreign['pack-start:USD'], collectionId: s.collectionId })
-      .expect(201);
-    const payment = await prisma.payment.findUniqueOrThrow({
-      where: { id: checkoutResponseSchema.parse(res.body).paymentId ?? '' },
-    });
-    await request(server)
-      .post('/api/v1/billing/liqpay/callback')
-      .type('form')
-      .send(signedCallback(payFields(payment, 'success')))
-      .expect(200);
-    expect(await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).toMatchObject({
-      status: 'SUCCEEDED',
-      mismatch: false,
-      currency: 'USD',
-    });
-    expect(
-      (await prisma.collection.findUniqueOrThrow({ where: { id: s.collectionId } })).entitlement,
-    ).toBe('PACK');
-
-    const other = await scene('taras@example.com');
-    const second = await other
-      .checkout({
-        kind: 'PACK',
-        priceId: foreign['pack-start:USD'],
-        collectionId: other.collectionId,
-      })
-      .expect(201);
-    const pending = await prisma.payment.findUniqueOrThrow({
-      where: { id: checkoutResponseSchema.parse(second.body).paymentId ?? '' },
-    });
-    await request(server)
-      .post('/api/v1/billing/liqpay/callback')
-      .type('form')
-      .send(signedCallback(payFields({ ...pending, currency: 'UAH' }, 'success')))
-      .expect(200);
-    expect(await prisma.payment.findUniqueOrThrow({ where: { id: pending.id } })).toMatchObject({
-      mismatch: true,
-    });
-    expect(
-      (await prisma.collection.findUniqueOrThrow({ where: { id: other.collectionId } }))
-        .entitlement,
-    ).not.toBe('PACK');
-  });
-
-  test('a storage upgrade costs the tier difference in the currency paid; none in EUR', async () => {
+  test('a storage upgrade is priced in hryvnias; at the USD price of «Подія» it is refused', async () => {
     const s = await scene();
     await givePack(prisma, s.collectionId, {
       windowEndsAt: new Date(Date.now() + 10 * DAY_MS),
       retentionEndsAt: new Date(Date.now() + 300 * DAY_MS),
     });
-    const usd = await s
+    const refused = await s
       .checkout({
         kind: 'PACK_EXTENSION',
         priceId: foreign['pack-event:USD'],
         collectionId: s.collectionId,
       })
+      .expect(409);
+    expect(refused.body).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
+    const res = await s
+      .checkout({
+        kind: 'PACK_EXTENSION',
+        priceId: catalogue['pack-event'].priceId,
+        collectionId: s.collectionId,
+      })
       .expect(201);
-    expect(formData(usd.body).data).toMatchObject({ amount: '24.00', currency: 'USD' });
-    await prisma.payment.updateMany({
-      where: { collectionId: s.collectionId, status: 'PENDING' },
-      data: { status: 'FAILED', failedAt: new Date() },
-    });
-
-    // «Подія» has no EUR price: an EUR upgrade cannot be priced (the UAH «Подія» is no answer).
-    await prisma.billingPrice.create({
-      data: {
-        offerId: catalogue['pack-event'].offerId,
-        interval: 'ONE_TIME',
-        currency: 'EUR',
-        amountMinor: 3_200,
-      },
-    });
-    await prisma.billingPrice.updateMany({
-      where: { offerId: catalogue['pack-start'].offerId, currency: 'EUR' },
-      data: { active: false },
-    });
-    const eventEur = await prisma.billingPrice.findFirstOrThrow({
-      where: { offerId: catalogue['pack-event'].offerId, currency: 'EUR', active: true },
-    });
-    expect(
-      (
-        await s
-          .checkout({
-            kind: 'PACK_EXTENSION',
-            priceId: eventEur.id,
-            collectionId: s.collectionId,
-          })
-          .expect(409)
-      ).body,
-    ).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
-
-    await prisma.billingPrice.updateMany({
-      where: { offerId: catalogue['pack-start'].offerId, currency: 'EUR' },
-      data: { active: true },
-    });
-    const eur = await s
-      .checkout({ kind: 'PACK_EXTENSION', priceId: eventEur.id, collectionId: s.collectionId })
-      .expect(201);
-    expect(formData(eur.body).data).toMatchObject({ amount: '21.00', currency: 'EUR' });
+    const response = checkoutResponseSchema.parse(res.body);
+    const fields = response.form?.fields;
+    if (fields === undefined) throw new Error('no form');
+    expect(decodeData(fields.data)).toMatchObject({ currency: 'UAH' });
   });
 
-  test('a plan change stays in the subscription’s currency: another is 409 CURRENCY_MISMATCH', async () => {
+  test('a subscription or a plan change at a USD price is refused; at UAH it is sold', async () => {
     const proUsd = await prisma.billingPrice.create({
       data: {
         offerId: subs['sub-pro'].offerId,
@@ -243,6 +153,32 @@ describe('currencies', () => {
         amountMinor: 2_500,
       },
     });
+    const account = await signInAs(app, prisma, 'olena@example.com', true, true, 'trial');
+    const call = (method: 'get' | 'post', path: string) =>
+      request(server)
+        [method](`/api/v1/billing${path}`)
+        .set('Origin', ORIGIN)
+        .set('Cookie', account.cookie);
+    const subscribe = (priceId: string) =>
+      call('post', '/checkouts').send({
+        kind: 'SUBSCRIPTION',
+        priceId,
+        autoRenewConsent: true,
+        termsVersion: TERMS,
+      });
+    expect((await subscribe(proUsd.id).expect(409)).body).toMatchObject({
+      code: 'OFFER_UNAVAILABLE',
+    });
+    const res = await subscribe(subs['sub-pro'].MONTH).expect(201);
+    const start = await prisma.payment.findUniqueOrThrow({
+      where: { id: checkoutResponseSchema.parse(res.body).paymentId ?? '' },
+    });
+    expect(start.currency).toBe('UAH');
+    await request(server)
+      .post('/api/v1/billing/liqpay/callback')
+      .type('form')
+      .send(signedCallback(subscribeFields(start)))
+      .expect(200);
     const businessUsd = await prisma.billingPrice.create({
       data: {
         offerId: subs['sub-business'].offerId,
@@ -251,46 +187,12 @@ describe('currencies', () => {
         amountMinor: 7_500,
       },
     });
-    const account = await signInAs(app, prisma, 'olena@example.com', true, true, 'trial');
-    const call = (method: 'get' | 'post', path: string) =>
-      request(server)
-        [method](`/api/v1/billing${path}`)
-        .set('Origin', ORIGIN)
-        .set('Cookie', account.cookie);
-    const res = await call('post', '/checkouts')
-      .send({
-        kind: 'SUBSCRIPTION',
-        priceId: proUsd.id,
-        autoRenewConsent: true,
-        termsVersion: TERMS,
-      })
-      .expect(201);
-    const { response, data } = formData(res.body);
-    expect(data).toMatchObject({ action: 'subscribe', amount: '25.00', currency: 'USD' });
-    const start = await prisma.payment.findUniqueOrThrow({
-      where: { id: response.paymentId ?? '' },
-    });
-    await request(server)
-      .post('/api/v1/billing/liqpay/callback')
-      .type('form')
-      .send(signedCallback(subscribeFields(start)))
-      .expect(200);
-    const sub = await prisma.subscription.findFirstOrThrow({ where: { userId: account.userId } });
-    expect(sub).toMatchObject({ status: 'ACTIVE', currency: 'USD', amountMinor: 2_500 });
-
-    for (const priceId of [subs['sub-business'].MONTH, subs['sub-pro'].YEAR]) {
-      expect(
-        (await call('get', `/subscription/change-preview?priceId=${priceId}`).expect(409)).body,
-      ).toMatchObject({ code: 'CURRENCY_MISMATCH' });
-      expect(
-        (
-          await call('post', '/checkouts')
-            .send({ kind: 'SUBSCRIPTION_CHANGE', priceId })
-            .expect(409)
-        ).body,
-      ).toMatchObject({ code: 'CURRENCY_MISMATCH' });
-    }
-    // Within USD the change is priced as usual.
-    await call('get', `/subscription/change-preview?priceId=${businessUsd.id}`).expect(200);
+    expect(
+      (await call('get', `/subscription/change-preview?priceId=${businessUsd.id}`).expect(409))
+        .body,
+    ).toMatchObject({ code: 'OFFER_UNAVAILABLE' });
+    await call('get', `/subscription/change-preview?priceId=${subs['sub-business'].MONTH}`).expect(
+      200,
+    );
   });
 });

@@ -118,16 +118,14 @@ Unverified: the archive's rows for `regular` charges (that they carry the subscr
 - Callback retry policy and source IPs (not documented; the design does not depend on them: signature + reconciliation).
 - The live (production) merchant: a 1 грн payment, refunded, before launch (sandbox checklist, plan Task 23).
 
-## Addendum 2026-10-16: USD and EUR prices (B2)
+## Addendum 2026-10-16: USD and EUR reference prices (B2)
 
 Status: accepted (owner).
 
-- **Decision.** UAH, USD and EUR are sold. Each offer has its own round price per currency (`BillingPrice` per offer, period and currency, as the model already had); `/ops` edits and switches off each slot (`PUT …/offers/:id/prices`, `POST …/offers/:id/prices/deactivate`, audited `billing.price_set` / `billing.price_deactivate`). The customer pays in the price's currency; LiqPay gets that `currency` on `pay`, `subscribe` and `subscribe_update`, and a callback in another currency than the payment's snapshot is a mismatch (nothing granted). The UI's default currency follows the interface language (uk → UAH, en → USD), with a switcher.
-- **A subscription's currency is fixed at purchase.** Renewals charge in it; a plan change (`change-preview`, `SUBSCRIPTION_CHANGE`) to a price in another currency is `409 CURRENCY_MISMATCH`: LiqPay changes a recurring order's amount, not its currency. Another currency is a new subscription once the current one ends.
-- **A pack's storage upgrade** costs the difference of the two packs' prices in the currency paid; either missing in that currency → `409 OFFER_UNAVAILABLE`.
-- **Fiscal receipts fail closed:** with `BILLING_FISCAL_MODE=liqpay_rro` only UAH checkouts are allowed (a Ukrainian receipt is in hryvnias; how LiqPay's ПРРО books a currency payment is unconfirmed).
-- **Alternatives.** A display-only conversion (≈ $24 at the NBU rate, always paid in UAH): simpler, but foreign customers see odd amounts and pay with their bank's conversion; rejected by the owner.
-- **Unverified.** USD/EUR `pay`, `subscribe`, `regular` and `refund` against the LiqPay sandbox and the live merchant (needs USD/EUR enabled on the merchant and the ФОП's currency account); see `docs/deployment/billing.md`.
+- **Decision.** Payment and the receipt stay in hryvnias (owner: «Цены в долларах и евро — это просто для понимания, все равно оплата будет производиться в гривне и чек будет гривневый»). Each offer may carry a round **reference** price in USD and EUR (`BillingPrice` per offer, period and currency, as the model already had); `/ops` edits and switches off each slot (`PUT …/offers/:id/prices`, `POST …/offers/:id/prices/deactivate`, audited `billing.price_set` / `billing.price_deactivate`). The catalogue lists them with the UAH price; the pages show the chosen currency for orientation (default by interface language: uk → UAH, en → USD) with the hryvnia amount that will be charged.
+- **Only UAH is sold** (`SALE_CURRENCY`): a checkout, a subscription or a plan change at a USD or EUR price is `409 OFFER_UNAVAILABLE`. Subscriptions, renewals, plan changes and the storage upgrade are therefore all in UAH; LiqPay always gets `currency: UAH`. The fiscal receipt check (`liqpay_rro` refuses a non-UAH sale) stays as a second guard.
+- **Alternatives.** Selling in USD/EUR (a currency account for the ФОП, currencies on the LiqPay merchant, the receipt question): proposed, then dropped by the owner the same day. A conversion at the NBU rate: odd amounts that change daily; reference prices are round and set by hand.
+- **Consequences.** A reference price can drift from the UAH one as the rate moves: review them with the UAH prices (`docs/product/pricing.md`). A foreign card pays the UAH amount with its bank's conversion and LiqPay's 2% foreign-card fee.
 
 ## Sources (LiqPay official documentation, read 2026-10-07)
 

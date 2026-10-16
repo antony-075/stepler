@@ -25,9 +25,9 @@ The UI computes the discount from the two live prices of a plan (`yearlySaving` 
 
 A pack already includes a year of keeping, so it has no yearly variant; the next year is the retention extension.
 
-### USD and EUR (owner decision 2026-10-16)
+### USD and EUR, for orientation (owner decision 2026-10-16)
 
-Each offer has its **own round price in each currency**, set in `/ops` → **Тарифи і ціни** (a group per currency); the customer picks the currency and pays in it through LiqPay. Not a conversion at checkout: a USD price stays $25 whatever the day's rate. A subscription renews and changes plan only in the currency it was bought in (another currency is a new subscription after the current one ends); a pack's storage upgrade costs the difference of the two packs' prices in the currency paid.
+Payment and the receipt are **always in hryvnias**. Each offer carries a round **reference** price in USD and EUR, set in `/ops` → **Тарифи і ціни** (a group per currency); the pages show the currency the reader picks (by default ₴ in Ukrainian, $ in English) with the hryvnia amount charged beside it. The API refuses a checkout at a USD or EUR price (`409 OFFER_UNAVAILABLE`).
 
 | Offer | UAH | USD | EUR |
 |---|---|---|---|
@@ -41,9 +41,7 @@ Each offer has its **own round price in each currency**, set in `/ops` → **Т�
 
 **Rule:** the UAH price at the day's rate (2026-10-16: ≈ 42 ₴/$, ≈ 48.5 ₴/€), rounded **up** to a whole dollar or euro; yearly = 10 × monthly, as in UAH. Review the foreign prices when the rate moves by more than ~10%; a change is a new price for new purchases only.
 
-**Costs differ:** LiqPay takes 2% on foreign cards (1.3% on Ukrainian ones); the 6% tax applies to the hryvnia value of the revenue. `BILLING_MIN_CHARGE_MINOR` (100) is 100 minor units in any currency: 1 ₴, $1 or €1.
-
-**Before selling in USD/EUR (launch checklist):** the ФОП needs a currency account at the bank, and USD/EUR enabled in the LiqPay merchant settings; the accountant confirms the foreign-currency revenue rules. With fiscal receipts on (`BILLING_FISCAL_MODE=liqpay_rro`) only UAH is sold until it is confirmed how LiqPay's ПРРО books a currency payment (the API refuses USD/EUR checkouts then with `409 OFFER_UNAVAILABLE`). A USD/EUR payment and renewal are **not yet verified** against the LiqPay sandbox.
+A foreign card pays the UAH amount with its bank's conversion; LiqPay takes 2% on foreign cards (1.3% on Ukrainian ones).
 
 ## How the prices were derived
 

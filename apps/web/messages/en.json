@@ -50,8 +50,7 @@
     "SUBSCRIPTION_EXISTS": "You already have an active subscription.",
     "REFUND_EXCEEDS_PAID": "The refund is more than was paid.",
     "PAYMENT_PROVIDER_UNAVAILABLE": "Payments are temporarily unavailable. Please try again later.",
-    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified.",
-    "CURRENCY_MISMATCH": "A plan can only be changed in the currency the subscription was bought in."
+    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified."
   },
   "login": {
     "pageTitle": "Sign in",

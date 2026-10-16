@@ -56,8 +56,7 @@
               "SUBSCRIPTION_EXISTS",
               "REFUND_EXCEEDS_PAID",
               "PAYMENT_PROVIDER_UNAVAILABLE",
-              "BILLING_SIGNATURE_INVALID",
-              "CURRENCY_MISMATCH"
+              "BILLING_SIGNATURE_INVALID"
             ],
             "type": "string"
           },
