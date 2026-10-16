@@ -363,6 +363,58 @@ describe('payments are the account’s own', () => {
   });
 });
 
+describe('GET /billing/payments pages', () => {
+  test('newest first, by cursor to the last page; a bad cursor is 400; another account sees none', async () => {
+    const s = await scene();
+    const { response } = decodedForm((await s.checkout(packFor(s.collectionId)).expect(201)).body);
+    const first = await prisma.payment.findFirstOrThrow({ where: { userId: s.owner.userId } });
+    expect(first.id).toBe(response.paymentId);
+    // Two older, expired orders of the same account.
+    const older = ['0190f0a0-0000-7000-8000-0000000000b1', '0190f0a0-0000-7000-8000-0000000000b2'];
+    for (const [i, id] of older.entries()) {
+      await prisma.payment.create({
+        data: {
+          ...first,
+          id,
+          providerOrderId: id,
+          status: 'EXPIRED',
+          offerSnapshot: first.offerSnapshot as object,
+          createdAt: new Date(first.createdAt.getTime() - (i + 1) * DAY_MS),
+          updatedAt: undefined,
+        },
+      });
+    }
+    const page = async (query: string, cookie = s.owner.cookie) =>
+      paymentListSchema.parse(
+        (
+          await request(server)
+            .get(`/api/v1/billing/payments${query}`)
+            .set('Cookie', cookie)
+            .expect(200)
+        ).body,
+      );
+    const one = await page('?limit=2');
+    expect(one.items.map((p) => p.id)).toEqual([first.id, older[0]]);
+    expect(one.nextCursor).not.toBeNull();
+    const two = await page(`?limit=2&cursor=${encodeURIComponent(one.nextCursor!)}`);
+    expect(two.items.map((p) => p.id)).toEqual([older[1]]);
+    expect(two.nextCursor).toBeNull();
+    await request(server)
+      .get('/api/v1/billing/payments?cursor=garbage')
+      .set('Cookie', s.owner.cookie)
+      .expect(400);
+    await request(server)
+      .get('/api/v1/billing/payments?limit=101')
+      .set('Cookie', s.owner.cookie)
+      .expect(400);
+    // The cursor is a position, never a key to someone else's list.
+    const stranger = await signInAs(app, prisma, 'taras@example.com');
+    expect(
+      (await page(`?limit=2&cursor=${encodeURIComponent(one.nextCursor!)}`, stranger.cookie)).items,
+    ).toEqual([]);
+  });
+});
+
 describe('POST /billing/payments/:id/checkout (pay the same order again)', () => {
   test('own pending: the same order, freshly signed; otherwise 404 or 409', async () => {
     const s = await scene();

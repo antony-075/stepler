@@ -41,8 +41,16 @@ export const resumeCheckout = (paymentId: string): Promise<CheckoutResponse> =>
 export const fetchPayment = (id: string): Promise<PaymentDto> =>
   apiRequest(`/billing/payments/${encodeURIComponent(id)}`, { schema: paymentDtoSchema });
 
-export const listPayments = (): Promise<PaymentList> =>
-  apiRequest('/billing/payments?limit=50', { schema: paymentListSchema });
+/** One page of the account's payments, newest first; `cursor` from the previous page. */
+export const listPayments = (cursor?: string): Promise<PaymentList> =>
+  apiRequest(
+    `/billing/payments?limit=${PAYMENTS_PAGE}${
+      cursor === undefined ? '' : `&cursor=${encodeURIComponent(cursor)}`
+    }`,
+    { schema: paymentListSchema },
+  );
+
+export const PAYMENTS_PAGE = 50;
 
 export const SUMMARY_KEY = ['billing', 'summary'] as const;
 export const changePreviewKey = (priceId: string) =>

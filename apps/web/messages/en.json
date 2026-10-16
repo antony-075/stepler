@@ -2166,7 +2166,9 @@
         "REFUNDED": "Refunded",
         "PARTIALLY_REFUNDED": "Partly refunded"
       },
-      "time": "Date and time"
+      "time": "Date and time",
+      "loadMore": "Show more",
+      "loadMoreFailed": "Could not show more payments. Try again."
     },
     "packs": {
       "title": "Buy a pack",

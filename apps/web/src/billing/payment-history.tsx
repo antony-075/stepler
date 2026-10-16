@@ -7,14 +7,15 @@
 // name under it when known, the amount (mono) and the state as a badge in words. From `md` a real
 // table with headers; below it each payment is a stacked block (what and amount, then date and
 // state), so nothing scrolls sideways at 320px. Empty, loading and error states. Since v3 it is
-// the «Історія оплат» tab alone.
+// the «Історія оплат» tab alone. Paged by the API, 50 at a time, «Показати ще» under the table
+// (a button, as in the frame lists).
 import type { PaymentStatus } from '@stepler/contracts';
 import { Alert } from '@stepler/ui/components/alert';
 import { Badge, type BadgeVariant } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { Skeleton } from '@stepler/ui/components/skeleton';
 import { cn } from '@stepler/ui/lib/utils';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { ReceiptText } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { listPayments, PAYMENTS_KEY } from '@/api/billing';
@@ -41,7 +42,13 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
   const t = useTranslations('billing.history');
   const tBilling = useTranslations('billing');
   const format = useFormatter();
-  const payments = useQuery({ queryKey: PAYMENTS_KEY, queryFn: listPayments });
+  const payments = useInfiniteQuery({
+    queryKey: PAYMENTS_KEY,
+    queryFn: ({ pageParam }) => listPayments(pageParam ?? undefined),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+  });
+  const items = payments.data?.pages.flatMap((page) => page.items) ?? [];
   const when = (iso: string) =>
     format.dateTime(new Date(iso), { dateStyle: 'medium', timeStyle: 'short', timeZone: KYIV });
 
@@ -68,7 +75,7 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
         >
           {t('loadFailed')}
         </Alert>
-      ) : payments.data.items.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className={cn(SURFACE, 'flex items-center gap-3 p-4 text-muted-foreground sm:p-5')}>
           <ReceiptText aria-hidden="true" className="size-5 shrink-0" />
           <p>{t('empty')}</p>
@@ -93,7 +100,7 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
               </tr>
             </thead>
             <tbody className="max-md:block">
-              {payments.data.items.map((payment) => {
+              {items.map((payment) => {
                 const collection =
                   payment.collectionId === null
                     ? undefined
@@ -149,6 +156,19 @@ export function PaymentHistory({ collectionTitles }: { collectionTitles: Map<str
           </table>
         </div>
       )}
+      {payments.hasNextPage ? (
+        <Button
+          variant="outline"
+          className="justify-self-center"
+          aria-disabled={payments.isFetchingNextPage || undefined}
+          onClick={() => {
+            if (!payments.isFetchingNextPage) void payments.fetchNextPage();
+          }}
+        >
+          {t('loadMore')}
+        </Button>
+      ) : null}
+      {payments.isFetchNextPageError ? <Alert variant="error">{t('loadMoreFailed')}</Alert> : null}
     </section>
   );
 }
