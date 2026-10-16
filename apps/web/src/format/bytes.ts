@@ -58,6 +58,8 @@ export function formatStorage(format: NumberFormatter, bytes: number): string {
       });
     }
   }
+  // Nothing used yet reads «0 МБ» / «0 MB», never «0 byte» (Intl's short unit in English).
+  if (bytes === 0) return format(0, { style: 'unit', unit: 'megabyte' });
   return format(bytes, { style: 'unit', unit: 'byte' });
 }
 

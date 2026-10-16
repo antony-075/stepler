@@ -26,7 +26,7 @@ describe('formatStorage', () => {
     expect(formatStorage(en, 1024 * GIB)).toBe('1 TB');
     expect(formatStorage(en, 3.2 * GIB)).toBe('3.2 GB');
     expect(formatStorage(en, 1.5 * 1024 ** 2)).toBe('1.5 MB');
-    expect(formatStorage(en, 0)).toBe('0 byte');
+    expect(formatStorage(en, 0)).toBe('0 MB');
     expect(formatStorage(uk, 20 * GIB)).toMatch(/^20\s?ГБ$/);
     expect(formatStorage(uk, 3.2 * GIB)).toMatch(/^3,2\s?ГБ$/);
   });
