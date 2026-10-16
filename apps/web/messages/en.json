@@ -157,6 +157,322 @@
     },
     "pricingLink": "Pricing"
   },
+  "home": {
+    "metaTitle": "Stepler — photos and videos from every guest, in one place",
+    "metaDescription": "Create an album for your event and show guests a QR code. They add photos, videos and wishes straight from their phones, with no app and no sign-up. 7 days free.",
+    "skip": "Skip to content",
+    "nav": {
+      "label": "Page sections",
+      "how": "How it works",
+      "templates": "Design",
+      "privacy": "Privacy",
+      "pricing": "Pricing",
+      "faq": "Questions",
+      "login": "Sign in",
+      "register": "Sign up",
+      "trial": "Try it free",
+      "openApp": "Open Stepler",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "menuTitle": "Menu"
+    },
+    "hero": {
+      "title": "Collect every photo and video from your event",
+      "subline": "Guests point their camera at a QR code and add their photos, videos and wishes. No app, no sign-up. You get it all in one place.",
+      "cta": "Try it free for 7 days",
+      "secondary": "How it works",
+      "reassurance": "No card needed, so nothing gets charged by surprise.",
+      "stageLabel": "Guests’ photos come together in one album",
+      "phoneAlt": "The event page on a guest’s phone with an Add button",
+      "framesCount": "{count, plural, one {# photo} other {# photos}}"
+    },
+    "how": {
+      "title": "A few minutes for you, a few seconds for guests",
+      "organizer": {
+        "title": "You",
+        "steps": {
+          "create": {
+            "title": "Create an album",
+            "text": "Type the name of your event and get a QR code for guests."
+          },
+          "share": {
+            "title": "Show guests the QR code",
+            "text": "Print it for the tables, or just send the link to a chat."
+          },
+          "collect": {
+            "title": "See what comes in",
+            "text": "Guests’ photos and videos show up for you right away, no reminders needed."
+          }
+        }
+      },
+      "guest": {
+        "title": "Your guests",
+        "badge": "Nothing to install",
+        "steps": {
+          "scan": {
+            "title": "Point their camera at the QR code",
+            "text": "Your event page opens on their phone."
+          },
+          "add": {
+            "title": "Add photos, videos or a wish",
+            "text": "They can pick lots of shots from their gallery at once."
+          },
+          "done": {
+            "title": "Done",
+            "text": "No passwords, no sign-up. A name only if they like."
+          }
+        }
+      }
+    },
+    "demo": {
+      "title": "See what it looks like",
+      "intro": "Half a minute and it all makes sense: from creating an album to the first photos from guests.",
+      "video": {
+        "title": "Stepler in half a minute",
+        "play": "Play the video “Stepler in half a minute”",
+        "captions": "Captions",
+        "unavailable": "Your browser cannot play this video."
+      },
+      "stepsLabel": "Steps",
+      "steps": {
+        "create": {
+          "title": "Create an album",
+          "text": "A name is enough. The cover and the design can wait.",
+          "alt": "Creating an album in Stepler: the event name field"
+        },
+        "share": {
+          "title": "Share the QR code",
+          "text": "Download it to print, or copy the link and send it to any messenger.",
+          "alt": "The Share window with the QR code and the guest link"
+        },
+        "open": {
+          "title": "Guests open your event page",
+          "text": "They see your title, photo and welcome, and one big Add button.",
+          "alt": "The event page on a guest’s phone"
+        },
+        "add": {
+          "title": "They add their photos and wishes",
+          "text": "They can see how much has uploaded. If the internet drops, nothing gets lost.",
+          "alt": "Photos uploading on a guest’s phone"
+        },
+        "collect": {
+          "title": "You get it all in one place",
+          "text": "Browse, save to your device and remove what you don’t need, whenever you like.",
+          "alt": "An album in Stepler: photos from guests"
+        }
+      }
+    },
+    "templates": {
+      "title": "A guest page in the style of your event",
+      "intro": "It’s the first thing your guests see. Pick a design that fits the mood and add your own photo, welcome and colours.",
+      "tabsLabel": "Guest page designs",
+      "alt": "The “{name}” design on a guest’s phone",
+      "editorAlt": "Guest page settings: options on the left, what guests will see on the right",
+      "editor": {
+        "title": "Make it yours",
+        "items": {
+          "cover": "A cover photo: your own or any from your guests",
+          "welcome": "A short welcome for guests",
+          "background": "A background: a colour, a gradient or a picture",
+          "colour": "Button colours to match your event",
+          "font": "The title font and how the text lines up",
+          "preview": "You see what guests will see as you go. They get the changes when you press Save"
+        }
+      },
+      "items": {
+        "classic": "Light and calm: the photo on top, the title and one clear button. Suits any event.",
+        "fullscreen": "Your photo fills the screen, with the buttons on a dark panel over it.",
+        "journal": "Like a real photo album: warm paper, classic type, the photo in a frame.",
+        "postcard": "Like a postcard: a postmark, a polaroid photo and stamp buttons.",
+        "party": "For parties: a dark page, a big bright title and a round photo.",
+        "minimal": "Nothing extra: lots of space, a big title and one button."
+      }
+    },
+    "benefits": {
+      "lead": {
+        "title": "Every photo from your event, in one place",
+        "text": "No more collecting pictures from chats and asking people to “send it later”. Each guest adds their own, and you get one shared album with every photo, video and wish.",
+        "alt": "An event album on a phone: photos from different guests"
+      },
+      "items": {
+        "original": {
+          "title": "Full quality",
+          "text": "Photos aren’t squeezed like in messengers. Even long videos are fine."
+        },
+        "noApp": {
+          "title": "Guests install nothing",
+          "text": "A phone with a camera is enough. No app, no sign-up, no passwords."
+        },
+        "style": {
+          "title": "A beautiful page for guests",
+          "text": "Ready-made designs, your photo, your welcome and your colours."
+        },
+        "control": {
+          "title": "You decide who sees what",
+          "text": "Guests can see each other’s photos, or only their own. Your call."
+        },
+        "reliable": {
+          "title": "Works even on a weak connection",
+          "text": "If the connection drops, the upload picks up by itself."
+        }
+      }
+    },
+    "cases": {
+      "title": "For any event where everyone takes pictures",
+      "intro": "Weddings are just the start.",
+      "items": {
+        "wedding": {
+          "title": "Weddings",
+          "text": "Guests shoot from every angle: you get the whole evening, not only the photographer’s shots.",
+          "alt": "A couple on the steps while guests throw confetti"
+        },
+        "birthday": {
+          "title": "Birthdays and anniversaries",
+          "text": "Party photos and video greetings in one album for the guest of honour.",
+          "alt": "A birthday cake with candles"
+        },
+        "family": {
+          "title": "Family celebrations",
+          "text": "Christenings, graduations, family reunions: photos from grandparents and grandkids together.",
+          "alt": "A family on a picnic"
+        },
+        "trip": {
+          "title": "Trips and hikes",
+          "text": "Everyone shot their own, and after the trip all the photos are in one place.",
+          "alt": "Friends on top of a hill"
+        },
+        "corporate": {
+          "title": "Company parties",
+          "text": "Gather the evening’s photos from the whole team without a group chat.",
+          "alt": "Colleagues cheering at an office table"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Your photos stay under your control",
+      "intro": "You decide who sees what. Strangers won’t get into your album.",
+      "items": {
+        "visibility": {
+          "title": "A shared album, or just for you",
+          "text": "Guests can browse each other’s photos, or see only their own."
+        },
+        "links": {
+          "title": "Links can be turned off",
+          "text": "Pause it for a while, or close it for good once the event is over."
+        },
+        "server": {
+          "title": "Safe from strangers",
+          "text": "Nobody can find or open someone else’s album by guessing the address."
+        },
+        "location": {
+          "title": "Your address stays private",
+          "text": "We remove the shooting location from photos and videos."
+        },
+        "manage": {
+          "title": "Remove anything",
+          "text": "You can take down any photo. Guests can remove their own if you allow it."
+        },
+        "reports": {
+          "title": "Report a problem",
+          "text": "If someone adds something inappropriate, a guest can report it and we’ll check."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Pricing",
+      "intro": "Start with 7 free days. Then a one-time pack for one event, or a subscription if you have many.",
+      "trial": {
+        "title": "Try it",
+        "price": "0 ₴",
+        "unit": "7 days",
+        "note": "No card needed",
+        "facts": {
+          "days": "<b>7 days</b> to try everything",
+          "collections": "<b>1</b> album",
+          "storage": "<b>1 GB</b>, that’s hundreds of photos",
+          "card": "Nothing gets charged by surprise"
+        },
+        "cta": "Start free"
+      },
+      "once": {
+        "title": "For one event",
+        "text": "Pay once, with no subscription and no automatic charges."
+      },
+      "extras": "Can be added later:",
+      "more": "All about pricing"
+    },
+    "faq": {
+      "title": "Common questions",
+      "intro": "Didn’t find an answer? Try it free: it all becomes clear in a few minutes.",
+      "items": {
+        "noAccount": {
+          "q": "Do guests need to install anything or sign up?",
+          "a": "No. A guest points their camera at the QR code or opens the link, and your event page opens on their phone. A name is optional."
+        },
+        "access": {
+          "q": "How do guests get into the album?",
+          "a": "With the QR code or the link. Both appear as soon as you create the album. Print the QR code, or send the link to any messenger."
+        },
+        "files": {
+          "q": "What can be added?",
+          "a": "Photos and videos from a phone, iPhones included, plus documents and written wishes. One photo can be up to 50 MB and one video up to 2 GB, which is several minutes even in high quality."
+        },
+        "compression": {
+          "q": "Will photos lose quality?",
+          "a": "No. We keep photos and videos just as they were taken, without squeezing them like messengers do."
+        },
+        "visibility": {
+          "q": "Can guests see each other’s photos?",
+          "a": "As you decide. Make it a shared album everyone can browse, or let each guest see only their own photos."
+        },
+        "revoke": {
+          "q": "Can I close access?",
+          "a": "Yes. A link can be paused and turned back on, replaced with a new one or closed for good. After that, the old QR code stops working."
+        },
+        "manage": {
+          "q": "Can I save photos and remove the ones I don’t want?",
+          "a": "Yes. Save any photo or video in full quality and remove what you don’t need, one at a time or several at once. Guests can remove their own photos if you allow it."
+        },
+        "retention": {
+          "q": "How long are photos kept?",
+          "a": "With a pack, guests can add photos for 30 days and everything is kept for a year. Both can be extended. With a subscription, everything is kept while it’s active."
+        },
+        "expired": {
+          "q": "What happens when the paid time ends?",
+          "a": "New photos can’t be added any more, but everything stays: you can still view and save it. After a trial or a subscription we keep photos for 90 more days; with a pack, until the end of the paid period. We always send a reminder by e-mail before anything is deleted."
+        },
+        "trial": {
+          "q": "How does the free period work?",
+          "a": "After you sign up you have 7 days: one album and 1 GB of space. No card needed, and nothing gets charged by surprise. If you like it, choose a pack or a subscription."
+        },
+        "packOrPlan": {
+          "q": "A pack or a subscription?",
+          "a": "A pack if you have one event: pay once and that’s it. A subscription if you organise events often: run several albums at once and cancel any time."
+        },
+        "payment": {
+          "q": "How do I pay?",
+          "a": "By card through LiqPay, in hryvnias. Dollar and euro prices are only there for convenience. We never see or store your card details."
+        },
+        "events": {
+          "q": "Is it only for weddings?",
+          "a": "No. Stepler suits any event where lots of people take pictures: birthdays, anniversaries, family celebrations, trips, parties and company events."
+        }
+      }
+    },
+    "final": {
+      "title": "Gather every photo from your event in one place",
+      "text": "Create an album in a few minutes and show guests the QR code. They’ll do the rest.",
+      "cta": "Create your album",
+      "note": "7 days free, no card needed"
+    },
+    "footer": {
+      "description": "Every photo, video and wish from your event, in one place.",
+      "sections": "Sections",
+      "product": "Stepler",
+      "documents": "Documents",
+      "contact": "Write to us"
+    }
+  },
   "toast": {
     "announcement": "Notification",
     "region": "Notifications",

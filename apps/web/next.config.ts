@@ -11,8 +11,9 @@ const config: NextConfig = {
   poweredByHeader: false,
   // packages/ui and the templates' React entry ship TypeScript sources.
   transpilePackages: ['@stepler/ui', '@stepler/templates'],
-  // The landing's photos (static imports): AVIF first, WebP as the fallback.
-  images: { formats: ['image/avif', 'image/webp'] },
+  // The landing's photos (static imports): AVIF first, WebP as the fallback; 90 for the event
+  // photos (their sources are only 960px wide, so no extra softness on top), 75 by default.
+  images: { formats: ['image/avif', 'image/webp'], qualities: [75, 90] },
   headers() {
     return Promise.resolve([
       {

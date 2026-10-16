@@ -92,7 +92,7 @@ test('the trial ends: view-only for the admin, closed for guests; a free plan li
 
 test('pricing is public: two packs with prices, signing in to buy', async ({ page }) => {
   await page.goto('/pricing');
-  await expect(page.getByRole('heading', { name: 'Тарифи', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ціни', level: 1 })).toBeVisible();
   const start = page.getByTestId('pack-pack-start');
   await expect(start.getByRole('heading', { name: 'Старт' })).toBeVisible();
   await expect(start.getByText(/^499\s₴$/)).toBeVisible();

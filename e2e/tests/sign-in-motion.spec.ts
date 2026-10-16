@@ -3,7 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 type Sample = { overflow: number; drawing: boolean };
 type OverflowProbe = { samples: Sample[]; done: boolean };
 
-// The landing's one handwritten note under the guest's phone has the page's one pencil arrow,
+// The sign-in page's one handwritten note under the guest's phone has the page's one pencil arrow,
 // drawn once on load (DESIGN-SYSTEM.md §8; owner review 2026-10-03: one arrow, not three). The
 // tilted phone and the note must stay inside the page, so a phone never scrolls sideways, and
 // under reduced motion the arrow is simply there.
@@ -19,9 +19,11 @@ test.describe('with motion', () => {
   test.use({ reducedMotion: 'no-preference' });
 
   for (const width of [320, 360, 393]) {
-    test(`/ at ${width}px keeps the steps and the phone inside the viewport`, async ({ page }) => {
+    test(`/login at ${width}px keeps the steps and the phone inside the viewport`, async ({
+      page,
+    }) => {
       await page.setViewportSize({ width, height: 780 });
-      await page.goto('/');
+      await page.goto('/login');
       await expect(arrows(page)).toHaveCount(1);
       // The sign-in form is reachable in the first screen.
       const field = await page.getByLabel('Електронна пошта').boundingBox();

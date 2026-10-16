@@ -288,3 +288,148 @@
   --ops-chrome: #000000;
   --ops-chrome-border: #1c1c20;
 }
+
+/* The marketing landing (src/landing). Its fixed colours are the brand's own, the same in both
+   themes: the logo's blue for the closing block and the lights, its ink for the device outlines.
+   Anchor jumps glide only when motion is welcome. */
+.landing {
+  --brand-blue: #3657ff;
+  --brand-blue-soft: #eef1ff;
+  --brand-ink: #171a21;
+  --device: #171a21;
+  /* The hero's lights and the dark section's glow; quieter in the dark theme. */
+  --landing-light-blue: rgb(54 87 255 / 0.16);
+  --landing-light-warm: rgb(255 170 120 / 0.2);
+  --landing-dots: rgb(24 24 27 / 0.09);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .landing {
+    --landing-light-blue: rgb(72 100 255 / 0.22);
+    --landing-light-warm: rgb(255 150 100 / 0.08);
+    --landing-dots: rgb(244 244 245 / 0.07);
+  }
+}
+:root[data-theme='dark'] .landing {
+  --landing-light-blue: rgb(72 100 255 / 0.22);
+  --landing-light-warm: rgb(255 150 100 / 0.08);
+  --landing-dots: rgb(244 244 245 / 0.07);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.landing) {
+    scroll-behavior: smooth;
+  }
+}
+
+/* The hero's ground (landing/hero.tsx): the page colour, two soft lights behind the collection and
+   a faint grid of dots (the contact sheet) that fades out towards the text. */
+.landing-hero-ground {
+  background:
+    radial-gradient(38rem 26rem at 78% 38%, var(--landing-light-blue), transparent 70%),
+    radial-gradient(26rem 20rem at 92% 88%, var(--landing-light-warm), transparent 70%), var(--card);
+}
+.landing-hero-ground::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--landing-dots) 1.2px, transparent 1.6px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(60rem 36rem at 72% 45%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+
+/* The demo section's ground (landing/product-demo.tsx): ink with one blue glow over the video. */
+.landing-dark-ground {
+  background:
+    radial-gradient(50rem 30rem at 50% 0%, rgb(54 87 255 / 0.28), transparent 70%), #0e1016;
+}
+
+/* The hero's one orchestrated moment: the guests' frames travel in from the phone's side (lower
+   left) and settle into the grid, 70ms apart; the text and the phone rise once. Transform and
+   opacity only; `both` keeps each piece hidden until its turn and in place after. Under reduced
+   motion there is no animation: everything is simply there. */
+@keyframes landing-gather {
+  from {
+    opacity: 0;
+    transform: translate(-48%, 38%) scale(0.55) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-gather {
+    animation: landing-gather 640ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+    animation-delay: calc(280ms + var(--i, 0) * 70ms);
+  }
+  .landing-rise {
+    animation: landing-rise 520ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  }
+  .landing-phone-rise {
+    animation: landing-rise 700ms cubic-bezier(0.2, 0.75, 0.25, 1) 120ms both;
+  }
+}
+
+/* Sections rise into place once as they first come into view (landing/reveal.tsx sets
+   `data-reveal-ready` on the page, then `data-revealed` per block). Without JavaScript, or under
+   reduced motion, nothing is ever hidden. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing[data-reveal-ready] [data-reveal]:not([data-revealed]) {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  .landing[data-reveal-ready] [data-reveal] {
+    transition:
+      opacity 600ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      transform 600ms cubic-bezier(0.2, 0.75, 0.25, 1);
+    transition-delay: calc(var(--reveal-i, 0) * 80ms);
+  }
+}
+
+/* The primary call to action lifts with a soft blue glow under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-cta {
+    transition:
+      transform 160ms ease-out,
+      box-shadow 160ms ease-out,
+      background-color 120ms ease-out;
+  }
+  .landing-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -10px rgb(54 87 255 / 0.65);
+  }
+}
+
+/* The questions open and close smoothly where the browser can animate to `auto`
+   (`::details-content`, Chromium 131+); elsewhere they simply switch. */
+.landing-faq {
+  interpolate-size: allow-keywords;
+}
+.landing-faq::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+}
+.landing-faq[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-faq::details-content {
+    transition:
+      block-size 260ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      opacity 200ms ease-out,
+      content-visibility 260ms allow-discrete;
+  }
+}

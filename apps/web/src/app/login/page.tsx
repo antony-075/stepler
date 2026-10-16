@@ -6,7 +6,7 @@ import { SignInLanding } from './sign-in-landing';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [t, tl] = await Promise.all([getTranslations('login'), getTranslations('landing')]);
-  // The same page as `/`, which is the one to index.
+  // Sign-in: not for the index; the marketing landing at `/` is.
   return {
     title: t('pageTitle'),
     description: tl('metaDescription'),

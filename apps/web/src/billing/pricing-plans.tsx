@@ -15,9 +15,18 @@ import { CurrencySwitch, shownCurrency, useBillingCurrency } from './currency';
 import { offerButtonClass } from './offer-card';
 import { type PlanInterval, planIntervals, subscriptionPlans } from './offers';
 import { IntervalSwitch, SubscriptionPlanCard } from './plan-picker';
-import { SECTION_NOTE, SECTION_TITLE } from './surfaces';
+import { GROUP_NOTE, GROUP_TITLE } from './surfaces';
 
-export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn: boolean }) {
+export function PricingPlans({
+  offers,
+  signedIn,
+  titleAs: Title = 'h2',
+}: {
+  offers: OfferList;
+  signedIn: boolean;
+  /** `h3` inside the landing's «Ціни» section. */
+  titleAs?: 'h2' | 'h3';
+}) {
   const t = useTranslations('billing.plans');
   const [chosen, setCurrency] = useBillingCurrency();
   const currency = shownCurrency(offers, chosen);
@@ -29,10 +38,10 @@ export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn
   return (
     <section aria-labelledby="plans-title" className="grid gap-6">
       <div className="grid gap-1">
-        <h2 id="plans-title" className={SECTION_TITLE}>
+        <Title id="plans-title" className={GROUP_TITLE}>
           {t('title')}
-        </h2>
-        <p className={SECTION_NOTE}>{t('intro')}</p>
+        </Title>
+        <p className={GROUP_NOTE}>{t('intro')}</p>
       </div>
       <div className="flex flex-wrap items-start gap-3">
         <IntervalSwitch

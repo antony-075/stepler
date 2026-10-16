@@ -23,7 +23,7 @@ function callbackError(value: unknown): CallbackError | null {
 }
 
 /**
- * The main page (`/`, `/login`). Owner review 2026-10-03: calm and focused, less text. One
+ * The sign-in page (`/login`; it was also `/` until the marketing landing, src/landing). Owner review 2026-10-03: calm and focused, less text. One
  * headline with a one-line subline, the sign-in panel, «Як це працює» as three short lines, and
  * the owner's picture of the guest page with the one handwritten note and pencil arrow. No
  * benefit list, no facts row.
