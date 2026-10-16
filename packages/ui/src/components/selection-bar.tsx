@@ -8,10 +8,18 @@
 // - `data-toast-avoid` lifts toasts above it; `role="region"` with a label, the count in a polite
 //   live region; `Escape` anywhere outside a dialog clears the selection.
 // - 44px buttons; on phones «Скасувати вибір» is an icon button (named), its label from `sm`.
+// - The bar's own buttons read as buttons on the dark dock (owner remark 2026-10-16: not white
+//   words on black): a visible light edge and a faint fill, brighter on hover; the caller's
+//   secondary actions (e.g. «Вибрати все завантажене») take the same `selectionBarButtonClassName`
+//   with `variant="outline"`; a destructive action keeps its own red.
 import { X } from 'lucide-react';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+
+/** An outline button on the inverse dock: give it `variant="outline"` too. */
+const selectionBarButtonClassName =
+  'border-[color-mix(in_srgb,var(--inverse-foreground)_32%,transparent)] bg-[color-mix(in_srgb,var(--inverse-foreground)_8%,transparent)] text-inverse-foreground shadow-none hover:border-[color-mix(in_srgb,var(--inverse-foreground)_55%,transparent)] hover:bg-inverse-hover hover:text-inverse-foreground active:bg-inverse-hover pointer-coarse:h-11';
 
 type SelectionBarProps = {
   /** How many frames are selected; the bar is the caller's to show only while this is > 0. */
@@ -20,7 +28,7 @@ type SelectionBarProps = {
   countLabel: string;
   /** The region's name, e.g. «Дії з вибраними кадрами». */
   label: string;
-  /** Outline buttons, e.g. «Видалити». */
+  /** Buttons, e.g. «Видалити»; secondary ones with `selectionBarButtonClassName`. */
   actions: ReactNode;
   onClear: () => void;
   /** «Скасувати вибір». */
@@ -93,10 +101,10 @@ function SelectionBar({
         {actions}
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="adaptive"
           onClick={onClear}
-          className="text-inverse-muted hover:bg-inverse-hover hover:text-inverse-foreground active:bg-inverse-hover"
+          className={selectionBarButtonClassName}
         >
           <X aria-hidden="true" className="sm:hidden" />
           <span className="sr-only sm:not-sr-only">{clearLabel}</span>
@@ -106,4 +114,4 @@ function SelectionBar({
   );
 }
 
-export { SelectionBar, type SelectionBarProps };
+export { SelectionBar, selectionBarButtonClassName, type SelectionBarProps };

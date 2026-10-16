@@ -6,7 +6,7 @@ import { samplePhoto } from '../stories/sample-photo';
 import { Button } from './button';
 import { Frame } from './frame';
 import { FrameGrid } from './frame-grid';
-import { SelectionBar } from './selection-bar';
+import { SelectionBar, selectionBarButtonClassName } from './selection-bar';
 import { minTarget } from '../stories/target';
 
 const FRAMES = Array.from({ length: 24 }, (_, index) => index + 1);
@@ -46,10 +46,20 @@ function Demo({ onDelete }: { onDelete: (ids: number[]) => void }) {
           onClear={() => setSelected(new Set())}
           className="-mx-4 lg:mx-0"
           actions={
-            <Button type="button" variant="outline" onClick={() => onDelete([...selected])}>
-              <Trash2 aria-hidden="true" />
-              Видалити
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className={selectionBarButtonClassName}
+                onClick={() => setSelected(new Set(FRAMES))}
+              >
+                Вибрати все
+              </Button>
+              <Button type="button" variant="destructive" onClick={() => onDelete([...selected])}>
+                <Trash2 aria-hidden="true" />
+                Видалити
+              </Button>
+            </>
           }
         />
       ) : null}

@@ -454,7 +454,7 @@
     },
     "previewUnavailable": "No preview",
     "select": {
-      "start": "Select",
+      "check": "Select frame {number}",
       "all": "Select all loaded",
       "count": "{count, number} selected",
       "barLabel": "Actions on the selected frames",

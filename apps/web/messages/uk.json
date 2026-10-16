@@ -454,7 +454,7 @@
     },
     "previewUnavailable": "Прев’ю недоступне",
     "select": {
-      "start": "Вибрати",
+      "check": "Вибрати кадр {number}",
       "all": "Вибрати все завантажене",
       "count": "Вибрано {count, number}",
       "barLabel": "Дії з вибраними кадрами",

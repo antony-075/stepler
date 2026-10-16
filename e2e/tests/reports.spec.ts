@@ -328,9 +328,7 @@ test.describe('guest reports', () => {
     await page.getByRole('button', { name: 'Показати все' }).click();
     await expect(page).not.toHaveURL(/state=/);
     await expect(tiles).toHaveCount(4);
-    // F3: «Вибрати» is icon-only but keeps its name.
-    const select = page.getByRole('button', { name: 'Вибрати', exact: true });
-    await expect(select).toBeVisible();
-    await expect(select).toHaveText('');
+    // No «Вибрати» button any more (owner 2026-10-16): each tile has its own check.
+    await expect(page.getByRole('button', { name: 'Вибрати', exact: true })).toHaveCount(0);
   });
 });

@@ -22,9 +22,11 @@
 //   made it, «Готується прев’ю», swapped in place within about 10 s of it being ready (only the
 //   waiting frames are asked for again, so nothing else moves); if it cannot be made, the type
 //   tile (a photo: «Прев’ю недоступне»; a video: ▶ on grey), and the viewer still downloads it.
-// - Multi-select [C7] (§5.13): «Вибрати» in the toolbar (or `x` on a focused frame, or a 500ms
-//   long-press on touch) turns the frames into toggles with a visible check on each; Shift+click
-//   selects a range; «Вибрати все завантажене» takes every loaded frame. The `SelectionBar` sticks
+// - Multi-select [C7] (§5.13; owner remark 2026-10-16: no «Вибрати» button): each tile's round
+//   check at its top-left (on hover and keyboard focus with a mouse, always on touch screens), `x`
+//   on a focused frame, or a 500ms long-press on touch selects it; while anything is selected the
+//   frames are toggles with a visible check on each; Shift+click selects a range; «Вибрати все
+//   завантажене» in the bar takes every loaded frame. The `SelectionBar` sticks
 //   to the bottom of the grid column («Вибрано 3», «Видалити», «Скасувати вибір»; Escape too),
 //   and «Видалити» asks with the count before one bulk request per 100 frames. Changing the type
 //   or the order clears the selection.
@@ -42,7 +44,6 @@ import type { AdminContentItem, AdminContentPage, Collection } from '@stepler/co
 import { Alert } from '@stepler/ui/components/alert';
 import { Button } from '@stepler/ui/components/button';
 import { ConfirmDialog } from '@stepler/ui/components/confirm-dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@stepler/ui/components/tooltip';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -56,7 +57,7 @@ import { EmptyState } from '@stepler/ui/components/empty-state';
 import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
 import { Panel } from '@stepler/ui/components/panel';
-import { SelectionBar } from '@stepler/ui/components/selection-bar';
+import { SelectionBar, selectionBarButtonClassName } from '@stepler/ui/components/selection-bar';
 import {
   Select,
   SelectContent,
@@ -75,16 +76,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import {
-  CheckSquare,
-  ChevronDown,
-  Download,
-  ImagePlus,
-  ListChecks,
-  RefreshCw,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { ChevronDown, Download, ImagePlus, ListChecks, RefreshCw, Trash2, X } from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
@@ -167,8 +159,9 @@ export function ContentTab({
   // Whether this page pushed `?frame=`: then closing goes Back, so Back never reopens it.
   const openedHere = useRef(false);
   const { toast } = useToast();
-  const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  // Selection mode is having something selected (no «Вибрати» button, owner 2026-10-16).
+  const selecting = selected.size > 0;
   // The frame toggled last: the start of a Shift+click range.
   const [anchor, setAnchor] = useState<string | null>(null);
   const [confirmingBulk, setConfirmingBulk] = useState(false);
@@ -184,7 +177,6 @@ export function ContentTab({
   }
   const grid = useRef<HTMLDivElement>(null);
   const column = useColumnBox(grid, selecting);
-  const selectButton = useRef<HTMLButtonElement>(null);
 
   const list = useInfiniteQuery({
     queryKey: contentListKey(collection.id, kind, sort, states),
@@ -306,7 +298,6 @@ export function ContentTab({
   }
 
   function exitSelection() {
-    setSelecting(false);
     setSelected(new Set());
     setAnchor(null);
   }
@@ -336,7 +327,6 @@ export function ContentTab({
       const frame = target?.closest<HTMLElement>('[data-item]');
       if (frame?.dataset.item === undefined || !grid.current?.contains(frame)) return;
       event.preventDefault();
-      setSelecting(true);
       toggleFrame(frame.dataset.item, event.shiftKey);
     };
     document.addEventListener('keydown', onKeyDown);
@@ -347,7 +337,8 @@ export function ContentTab({
   /**
    * One request per 100 frames; frames already gone count as deleted (idempotent), and so do
    * ids the API no longer finds (deleted elsewhere or purged): none of them stay on screen.
-   * Focus then moves to the frame after the first deleted one (or «Вибрати»), never to the page.
+   * Focus then moves to the frame after the first deleted one (or the first frame left), never to
+   * the page.
    */
   async function removeSelected() {
     const gone = new Set<string>();
@@ -374,16 +365,13 @@ export function ContentTab({
     setTimeout(() => {
       const target =
         next === undefined
-          ? null
+          ? grid.current?.querySelector<HTMLElement>('[data-item] button')
           : grid.current?.querySelector<HTMLElement>(`[data-item="${next}"] button`);
-      (target ?? selectButton.current)?.focus();
+      target?.focus();
     }, 0);
   }
 
-  const longPress = useLongPress((id) => {
-    setSelecting(true);
-    toggleFrame(id, false);
-  });
+  const longPress = useLongPress((id) => toggleFrame(id, false));
 
   if (counts.data?.total === 0 && items.length === 0) {
     return <EmptyCollection collection={collection} />;
@@ -536,26 +524,6 @@ export function ContentTab({
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <span aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border max-sm:hidden" />
-            {/* «Вибрати» turns selection on and off (pressed while on); «Вибрати все
-                завантажене» is in the selection bar (owner 2026-10-06). Icon only on phones. */}
-            {/* Icon only (F3, owner 2026-10-06): the word is its name and its tooltip. */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  ref={selectButton}
-                  variant="outline"
-                  aria-label={t('select.start')}
-                  aria-pressed={selecting}
-                  disabled={items.length === 0 && !selecting}
-                  onClick={() => (selecting ? exitSelection() : setSelecting(true))}
-                  className="h-11 w-11 shrink-0 px-0 md:h-9 md:w-9 pointer-coarse:h-11 pointer-coarse:w-11 aria-pressed:border-[color-mix(in_srgb,var(--ring)_35%,transparent)] aria-pressed:bg-info-soft aria-pressed:text-link"
-                >
-                  <CheckSquare aria-hidden="true" className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('select.start')}</TooltipContent>
-            </Tooltip>
           </div>
         </div>
       </div>
@@ -664,7 +632,10 @@ export function ContentTab({
                           },
                         },
                       }
-                    : {})}
+                    : {
+                        onSelect: (event: MouseEvent<HTMLButtonElement>) =>
+                          toggleFrame(item.id, event.shiftKey),
+                      })}
                 />
               </div>
             ))}
@@ -697,10 +668,11 @@ export function ContentTab({
                 className="pointer-events-auto static lg:mx-0"
                 actions={
                   <>
+                    {/* A real button on the dark bar (owner 2026-10-16), not white words on black. */}
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       onClick={() => setSelected(new Set(items.map((item) => item.id)))}
-                      className="text-inverse-muted hover:bg-inverse-hover hover:text-inverse-foreground"
+                      className={selectionBarButtonClassName}
                     >
                       <ListChecks aria-hidden="true" />
                       <span className="max-sm:sr-only">{t('select.all')}</span>
@@ -775,6 +747,7 @@ function AdminFrame({
   onDownload,
   onDelete,
   selection,
+  onSelect,
 }: {
   item: AdminContentItem;
   collectionId: string;
@@ -783,6 +756,8 @@ function AdminFrame({
   onDelete: () => void;
   /** In selection mode: the frame toggles instead of opening. */
   selection?: { selected: boolean; onToggle: (event: MouseEvent<HTMLButtonElement>) => void };
+  /** Not in selection mode: the tile's own check starts the selection with it. */
+  onSelect?: (event: MouseEvent<HTMLButtonElement>) => void;
 }) {
   const t = useTranslations('content');
   const format = useFormatter();
@@ -804,9 +779,13 @@ function AdminFrame({
     ? t('select.selectedName', { name: baseName })
     : baseName;
   const select =
-    selection === undefined
-      ? {}
-      : { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle };
+    selection !== undefined
+      ? { selectable: true, selected: selection.selected, onToggleSelect: selection.onToggle }
+      : onSelect !== undefined
+        ? {
+            selectCheck: { label: t('select.check', { number: item.frameNo }), onToggle: onSelect },
+          }
+        : {};
   // No number pill on the tile (owner 2026-10-06): the number is in its name and the viewer.
   const ring = moderationRing(marks);
   // Deleted by moderation (slice 9b): greyed, and nothing to download until a restore.
