@@ -79,10 +79,10 @@ export function LoginForm({
   if (unverifiedEmail !== null) {
     return (
       <div className="grid gap-3">
-        <h2 className="flex items-center gap-2.5 type-h2">
+        <h1 className="flex items-center gap-2.5 type-h2">
           <MailCheck aria-hidden="true" className="size-6 shrink-0 text-link" strokeWidth={1.75} />
           {t('login.unverifiedTitle')}
-        </h2>
+        </h1>
         <p className="text-muted-foreground">
           {t('login.unverifiedText', { email: unverifiedEmail })}
         </p>
@@ -105,7 +105,7 @@ export function LoginForm({
   return (
     <div className="grid gap-4">
       <div className="grid justify-items-center gap-2 text-center sm:gap-3">
-        <h2 className="type-h2">{t('login.title')}</h2>
+        <h1 className="type-h2">{t('login.title')}</h1>
         <p className="max-w-[40ch] text-pretty text-muted-foreground">{t('login.lead')}</p>
       </div>
 

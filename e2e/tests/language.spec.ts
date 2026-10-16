@@ -6,7 +6,7 @@ import { mailSubjects } from '../support/mailpit.js';
 test.use({ locale: 'de-DE' });
 
 const EN = {
-  loginTitle: 'Sign in or create an account',
+  loginTitle: 'Sign in to Stepler',
   email: 'Email',
   submit: 'Get sign-in link',
   sent: 'Check your email',

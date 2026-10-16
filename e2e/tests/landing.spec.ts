@@ -168,3 +168,32 @@ for (const width of [320, 390, 768, 1280]) {
     expect(await overflow()).toBeLessThanOrEqual(0);
   });
 }
+
+// Sign-in, registration and the account steps share the landing's look (components/auth-page).
+test.describe('the account pages', () => {
+  for (const path of ['/login', '/register', '/forgot-password', '/auth/verify']) {
+    test(`${path} has one h1 and never scrolls sideways at 320px`, async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 780 });
+      await page.goto(path);
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+      // Polled: the bot check first renders at its full width, then switches to the compact
+      // widget once it has measured the narrow card.
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          ),
+        )
+        .toBeLessThanOrEqual(0);
+    });
+  }
+
+  test('@desktop sign-in and registration link to each other from the header', async ({ page }) => {
+    await page.goto('/login');
+    await page.locator('header').getByRole('link', { name: 'Зареєструватися' }).click();
+    await expect(page).toHaveURL(/\/register$/);
+    await page.locator('header').getByRole('link', { name: 'Увійти' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(page.getByRole('complementary', { name: 'З поверненням!' })).toBeVisible();
+  });
+});

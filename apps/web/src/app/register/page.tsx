@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { fetchAuthMethods, getSessionUser } from '@/api/server';
-import { CenteredPage } from '@/components/centered-page';
-import { LanguageSwitch } from '@/i18n/language-switch';
+import { AuthPage } from '@/components/auth-page';
 import { RegisterForm } from './register-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,7 +18,7 @@ export default async function RegisterPage() {
   }
   const [methods, t] = await Promise.all([fetchAuthMethods(), getTranslations('login')]);
   return (
-    <CenteredPage headerActions={<LanguageSwitch variant="header" />}>
+    <AuthPage variant="register">
       {methods === null ? (
         <p role="alert">{t('unavailable')}</p>
       ) : (
@@ -29,6 +28,6 @@ export default async function RegisterPage() {
           legal={methods.legal}
         />
       )}
-    </CenteredPage>
+    </AuthPage>
   );
 }

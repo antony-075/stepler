@@ -91,7 +91,7 @@ export function PasswordForm() {
         )}
       </div>
       <NewPasswordFields
-        idPrefix="account"
+        idPrefix="account-new"
         passwordLabel={t('accountPassword.new')}
         confirmLabel={t('accountPassword.confirm')}
         password={password}

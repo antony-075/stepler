@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { fetchAuthMethods } from '@/api/server';
-import { CenteredPage } from '@/components/centered-page';
-import { LanguageSwitch } from '@/i18n/language-switch';
+import { AuthPage } from '@/components/auth-page';
 import { ForgotForm } from './forgot-form';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,12 +13,12 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ForgotPasswordPage() {
   const [methods, t] = await Promise.all([fetchAuthMethods(), getTranslations('login')]);
   return (
-    <CenteredPage headerActions={<LanguageSwitch variant="header" />}>
+    <AuthPage>
       {methods === null ? (
         <p role="alert">{t('unavailable')}</p>
       ) : (
         <ForgotForm turnstileSiteKey={methods.turnstileSiteKey} />
       )}
-    </CenteredPage>
+    </AuthPage>
   );
 }

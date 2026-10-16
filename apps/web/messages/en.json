@@ -143,18 +143,6 @@
   "landing": {
     "metaTitle": "Stepler — photos and videos from every guest in one collection",
     "metaDescription": "Create a collection for your event and share a link or QR code. Guests add photos and videos from their phones — no app, no sign-up.",
-    "title": "Collect every photo and video from your event",
-    "subline": "Guests scan a QR code and add photos, videos and wishes. No app, no account.",
-    "how": {
-      "title": "How it works",
-      "steps": {
-        "create": "Create a collection for your event",
-        "share": "Show guests the QR code",
-        "collect": "Guests add photos and wishes"
-      },
-      "note": "What guests see",
-      "phoneAlt": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
-    },
     "pricingLink": "Pricing"
   },
   "home": {
@@ -471,6 +459,27 @@
       "product": "Stepler",
       "documents": "Documents",
       "contact": "Write to us"
+    }
+  },
+  "authPage": {
+    "toRegister": "Sign up",
+    "toLogin": "Sign in",
+    "login": {
+      "title": "Welcome back!",
+      "text": "Photos and videos from your guests are waiting for you."
+    },
+    "register": {
+      "title": "Start for free",
+      "text": "7 days to try everything. No card needed, so nothing gets charged by surprise."
+    },
+    "step": {
+      "title": "Every photo from your event, in one place",
+      "text": "Guests add photos, videos and wishes straight from their phones."
+    },
+    "points": {
+      "noApp": "Guests install nothing",
+      "quality": "Photos and videos in full quality",
+      "control": "You decide who sees what"
     }
   },
   "toast": {

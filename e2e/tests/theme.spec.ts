@@ -234,7 +234,7 @@ test.describe('sign-in card at 360px', () => {
     const submit = page.locator('form button[type="submit"]');
     await expect(submit).toBeVisible();
     const { contentRight, buttonRight } = await submit.evaluate((button) => {
-      const content = button.closest<HTMLElement>('[data-slot="panel-content"]')!;
+      const content = button.closest<HTMLElement>('[data-slot="auth-card"]')!;
       const style = getComputedStyle(content);
       return {
         contentRight: content.getBoundingClientRect().right - parseFloat(style.paddingRight),
