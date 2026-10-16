@@ -21,7 +21,8 @@ We may process:
 - interface language;
 - authentication and provider-account data: for Google sign-in, your Google account identifier, e-mail address and whether Google has verified it;
 - session data and technical identifiers needed for secure sign-in;
-- sign-in link requests: the e-mail address, time, language and a keyed one-way hash of the requesting IP address;
+- your password, if you set one: only its Argon2id hash, never the password itself;
+- e-mail confirmation and password reset requests: the e-mail address, time and a keyed one-way hash of the requesting IP address;
 - the fact and version of acceptance of the Terms of Service and Privacy Policy, with its time and a technical request identifier (no IP address is stored with an acceptance);
 - the collections you create and their settings: titles, descriptions, guest page texts and the images you upload for them (cover, background, collection image);
 - technical logs needed for security, rate limiting, diagnostics and abuse prevention.
@@ -65,14 +66,14 @@ If a collection administrator appeals a moderation decision in the app, we proce
 
 For security, rate limiting and abuse prevention, the Service may temporarily process an IP address and other technical request attributes. An IP address is not used as the identity of a guest or as the ownership mechanism for guest content.
 
-In particular: rate-limit counters keyed by IP address are kept only in server memory, for up to one hour; server request logs contain the IP address, browser user agent, requested address (with access tokens removed), time and a request identifier; and sign-in link requests store a keyed one-way hash of the IP address for abuse investigation. Logs do not contain cookies, passwords, tokens, text messages, guest names or filenames.
+In particular: rate-limit counters keyed by IP address are kept only in server memory, for up to one hour; server request logs contain the IP address, browser user agent, requested address (with access tokens removed), time and a request identifier; and e-mail confirmation and password reset requests store a keyed one-way hash of the IP address for abuse investigation. Logs do not contain cookies, passwords, tokens, text messages, guest names or filenames.
 
 ## 3. How we use data
 
 We use data to:
 
 - create and maintain administrator accounts;
-- send magic links and provide Google OAuth sign-in;
+- provide password sign-in, send e-mail confirmation and password reset messages, and provide Google OAuth sign-in;
 - take payments, keep packs and subscriptions, make refunds, keep accounting and tax records, and send e-mails about the state of payment (a failed charge, view-only mode, deletion warnings);
 - create and manage collections and guest links;
 - receive, store, display, preview, process and delete content;
@@ -144,7 +145,7 @@ Stepler may use:
 - LiqPay (JSC CB PrivatBank, Ukraine) for card payments; LiqPay processes card details under its own terms and Stepler never receives them;
 - Cloudflare Turnstile for bot protection on the e-mail sign-in form;
 - Cloudflare R2 object storage for files and derived objects;
-- an email provider for magic-link delivery: currently Brevo;
+- an email provider for e-mail confirmation and password reset messages: currently Brevo;
 - hosting and other infrastructure providers for the API, web application, database and background processing: currently Render (region Frankfurt, Germany), whose network is fronted by Cloudflare, so requests to the Service pass through Cloudflare.
 
 *Draft note:* the list above describes the current (staging) setup; the production providers must be confirmed before launch [LAWYER TO CONFIRM].
@@ -173,7 +174,7 @@ Security and audit records may be retained longer where reasonably necessary for
 
 - administrator account (e-mail, name, language, linked Google account, acceptances of these documents): until the account is deleted on request;
 - administrator sign-in session: 30 days from sign-in, or until you sign out;
-- sign-in link requests (e-mail, time, hashed IP address): currently kept without a fixed period — [RETENTION PERIOD];
+- e-mail confirmation and password reset requests (e-mail, time, hashed IP address): currently kept without a fixed period — [RETENTION PERIOD];
 - collections and their content, guest names and text messages: until deleted by the administrator, by the guest (where allowed) or together with the collection or account;
 - guest sessions: deleted together with their collection; sessions that never contributed anything are deleted after about 400 days without activity;
 - unfinished uploads: expire after 24 hours and their partial files are deleted;

@@ -18,7 +18,7 @@ Features, limits and availability may change. Some features are paid: collection
 
 ## 3. Administrator accounts
 
-An administrator account is required to create and manage collections. Sign-in may be provided through an email magic link or Google, where available. To create an account you accept these Terms and the Privacy Policy on the sign-in form.
+An administrator account is required to create and manage collections. Sign-in may be provided through an email address and password (the address must be confirmed) or Google, where available. You are responsible for keeping your password secret. To create an account you accept these Terms and the Privacy Policy on the registration form.
 
 *Draft addition — eligibility.* An administrator account may be created only by a person who is at least 18 years old and able to enter into a binding agreement [LAWYER TO CONFIRM]. If you create an account on behalf of an organization, you confirm that you are authorized to accept these Terms for it.
 
