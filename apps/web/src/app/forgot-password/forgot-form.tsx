@@ -50,7 +50,7 @@ export function ForgotForm({ turnstileSiteKey }: { turnstileSiteKey: string }) {
   });
 
   const back = (
-    <Button asChild variant="ghost" className="-ml-3 justify-self-start text-link">
+    <Button asChild variant="ghost" className="justify-self-center text-link">
       <Link href="/login">{t('forgot.back')}</Link>
     </Button>
   );

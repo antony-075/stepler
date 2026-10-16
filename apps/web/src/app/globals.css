@@ -3,26 +3,6 @@
 @import '@stepler/templates/styles.css';
 @source '../../../templates/src';
 
-/* The brand's light and dark files (components/brand-mark.tsx): one shows, by the same rule as
-   the theme (the system setting unless the page chose, then the choice). */
-.brand-on-dark {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .brand-on-light {
-    display: none;
-  }
-  :root:not([data-theme='light']) .brand-on-dark {
-    display: inline;
-  }
-}
-:root[data-theme='dark'] .brand-on-light {
-  display: none;
-}
-:root[data-theme='dark'] .brand-on-dark {
-  display: inline;
-}
-
 /* Loading states (components/brand-loading.tsx, page skeletons): nothing for the first 180ms,
    so a fast load never flashes; then a quiet fade. The loading line slides with transform only.
    Under reduced motion both are still: the state shows at once and the line stands. */
@@ -296,7 +276,12 @@
   --brand-blue: #3657ff;
   --brand-blue-soft: #eef1ff;
   --brand-ink: #171a21;
-  --device: #171a21;
+  /* The phone, as the guest page editor's preview draws it (device-frame.tsx): graphite with a
+     thin light edge, the same in both themes (it is a picture of a device). */
+  --device: #1c1d1f;
+  --device-edge: #45474b;
+  --device-button: #2b2c2f;
+  --landing-night: #0e1016;
   /* The hero's lights and the dark section's glow; quieter in the dark theme. */
   --landing-light-blue: rgb(54 87 255 / 0.16);
   --landing-light-warm: rgb(255 170 120 / 0.2);
@@ -341,7 +326,8 @@
 /* The demo section's ground (landing/product-demo.tsx): ink with one blue glow over the video. */
 .landing-dark-ground {
   background:
-    radial-gradient(50rem 30rem at 50% 0%, rgb(54 87 255 / 0.28), transparent 70%), #0e1016;
+    radial-gradient(50rem 30rem at 50% 0%, rgb(54 87 255 / 0.28), transparent 70%),
+    var(--landing-night);
 }
 
 /* The hero's one orchestrated moment: the guests' frames travel in from the phone's side (lower

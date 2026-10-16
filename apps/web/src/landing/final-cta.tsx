@@ -1,4 +1,4 @@
-import { focusRing } from '@stepler/ui/lib/focus';
+import { buttonVariants } from '@stepler/ui/components/button';
 import { cn } from '@stepler/ui/lib/utils';
 import { Check } from 'lucide-react';
 import Image from 'next/image';
@@ -13,10 +13,10 @@ const DECORATIVE = '';
 const OFFSET = 'translate-y-6';
 
 /**
- * The closing invitation: the one full Stepler-blue block of the page (the logo's colour). The
- * headline, one line, one white button to registration and the trial terms under it; from
- * 1024px a small collection on the right (six events the page has told about, in one grid),
- * echoing the hero's. White on #3657FF is 5.3:1; the line is white at 90%.
+ * The closing invitation on a soft tinted panel (owner 2026-10-16: the full blue was too loud):
+ * the headline in ink, one line, the page's primary button to registration and the trial terms
+ * under it; from 1024px a small collection on the right (six events the page has told about, in
+ * one grid), echoing the hero's.
  */
 export async function FinalCta() {
   const t = await getTranslations('home.final');
@@ -25,7 +25,7 @@ export async function FinalCta() {
       <div className="stepler-container">
         <div
           data-reveal
-          className="grid items-center gap-12 overflow-hidden rounded-[1.75rem] bg-(--brand-blue) px-6 py-14 text-white sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:px-16 lg:py-20"
+          className="grid items-center gap-12 overflow-hidden rounded-[1.75rem] border border-border bg-[linear-gradient(135deg,var(--pencil-soft),var(--card)_70%)] px-6 py-14 text-foreground sm:px-10 sm:py-16 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:px-16 lg:py-20"
         >
           <div className="grid justify-items-start gap-6">
             <h2
@@ -34,21 +34,17 @@ export async function FinalCta() {
             >
               {t('title')}
             </h2>
-            <p className="max-w-[44ch] text-lg leading-relaxed text-pretty text-white/90">
+            <p className="max-w-[44ch] text-lg leading-relaxed text-pretty text-foreground-soft">
               {t('text')}
             </p>
             <Link
               href={ROUTE.register}
-              className={cn(
-                'mt-2 inline-flex h-14 items-center justify-center rounded-control bg-white px-7 text-base font-semibold text-(--brand-ink) no-underline transition-colors duration-(--duration-fast) hover:bg-(--brand-blue-soft) motion-reduce:transition-none',
-                focusRing,
-                'focus-visible:outline-white',
-              )}
+              className={cn(buttonVariants({ size: 'lg' }), 'landing-cta mt-2 h-14 px-7 text-base')}
             >
               {t('cta')}
             </Link>
-            <p className="flex items-center gap-2 text-sm text-white/90">
-              <Check aria-hidden="true" className="size-4" />
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Check aria-hidden="true" className="size-4 text-success" />
               {t('note')}
             </p>
           </div>
@@ -57,7 +53,7 @@ export async function FinalCta() {
               <li
                 key={photo.src}
                 className={cn(
-                  'relative aspect-square overflow-hidden rounded-xl bg-white/10',
+                  'relative aspect-square overflow-hidden rounded-xl bg-muted shadow-card',
                   i % 3 === 1 && OFFSET,
                 )}
               >

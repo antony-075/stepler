@@ -50,7 +50,7 @@ export function useCurrentSection(): NavSection | null {
 
 /**
  * The header's anchors from 1024px. The section being read is marked `aria-current="location"`
- * and drawn as the current place: ink text on the soft accent with a short accent bar under it,
+ * and drawn as the current place: ink text with a short accent bar under it (no fill, owner),
  * so it never relies on colour alone. Without JavaScript the anchors still work, unmarked.
  */
 export function SectionNav({ onLanding = true }: { onLanding?: boolean }) {
@@ -69,7 +69,7 @@ export function SectionNav({ onLanding = true }: { onLanding?: boolean }) {
                 className={cn(
                   'relative inline-flex min-h-9 items-center rounded-full px-3 text-sm font-medium text-foreground-soft no-underline transition-colors duration-(--duration-base) hover:text-foreground motion-reduce:transition-none',
                   'after:absolute after:inset-x-3 after:bottom-1 after:h-0.5 after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity after:duration-(--duration-base)',
-                  'aria-[current=location]:bg-pencil-soft aria-[current=location]:text-foreground aria-[current=location]:after:opacity-100',
+                  'aria-[current=location]:text-foreground aria-[current=location]:after:opacity-100',
                   focusRing,
                 )}
               >

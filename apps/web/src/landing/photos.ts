@@ -4,12 +4,16 @@
 import birthdayBalloons from './photos/birthday-balloons.jpg';
 import birthdayCake from './photos/birthday-cake.jpg';
 import birthdayCandles from './photos/birthday-candles.jpg';
+import birthdayFifteen from './photos/birthday-fifteen.jpg';
 import corporateCheer from './photos/corporate-cheer.jpg';
 import corporateTeam from './photos/corporate-team.jpg';
 import familyHug from './photos/family-hug.jpg';
 import familyKitchen from './photos/family-kitchen.jpg';
 import familyPark from './photos/family-park.jpg';
 import familyPicnic from './photos/family-picnic.jpg';
+import partyDinner from './photos/party-dinner.jpg';
+import partyFriends from './photos/party-friends.jpg';
+import partySparklers from './photos/party-sparklers.jpg';
 import partyToast from './photos/party-toast.jpg';
 import tripHill from './photos/trip-hill.jpg';
 import tripSelfie from './photos/trip-selfie.jpg';
@@ -55,3 +59,14 @@ export const CLOSING_FRAMES = [
   partyToast,
   corporateTeam,
 ] as const;
+
+/**
+ * The sign-in and registration welcome (components/auth-welcome.tsx): the demo birthday whose
+ * guest page the phone shows («День народження Марка», «Вечірка», dark like the panel), as its
+ * guests added it.
+ */
+export const WELCOME_FRAMES = {
+  photos: [partySparklers, birthdayCandles, partyFriends, birthdayCake],
+  video: partyDinner,
+  upload: [partyToast, birthdayBalloons, birthdayFifteen],
+} as const;

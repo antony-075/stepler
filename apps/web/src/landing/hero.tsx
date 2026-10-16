@@ -11,9 +11,6 @@ import { HERO_FRAMES, PHOTO_QUALITY } from './photos';
 import { phoneScreen, type ScreenLocale } from './screens';
 import { ROUTE, SECTION } from './sections';
 
-/** The demo collection's content, as its guests typed it (user content, so Ukrainian in both). */
-const DEMO_TITLE = 'Ювілей Ніни Петрівни';
-const DEMO_WISH = 'Бабусю, з ювілеєм! Дякуємо за найтепліше свято.';
 /** Where the wish sits among the nine tiles (the middle of the second row). */
 const WISH_AT = 4;
 /** The tiles' pictures are decorative: the figure's label says what the picture shows. */
@@ -78,8 +75,8 @@ export async function Hero({ locale }: { locale: ScreenLocale }) {
           {/* The collection: offset right so the phone can overlap its lower-left corner. */}
           <div className="ml-[30%] rounded-[1.5rem] border border-border bg-card/90 p-3 shadow-[0_30px_60px_-30px_rgb(24_24_27/0.35)] backdrop-blur-sm sm:p-4">
             <div className="flex items-baseline justify-between gap-3 px-1 pb-3">
-              <p lang="uk" className="truncate text-sm font-semibold sm:text-base">
-                {DEMO_TITLE}
+              <p className="truncate text-sm font-semibold sm:text-base">
+                {t('demoTitle')}
               </p>
               <p className="shrink-0 type-data text-muted-foreground">
                 {t('framesCount', { count: frames.length })}
@@ -94,12 +91,11 @@ export async function Hero({ locale }: { locale: ScreenLocale }) {
                 >
                   {i === WISH_AT ? (
                     <div
-                      lang="uk"
                       className="flex size-full flex-col gap-1 bg-tint-sand p-2 pb-6 text-tint-sand-ink sm:p-3 sm:pb-8"
                     >
                       <Quote className="size-3.5 shrink-0 opacity-60 sm:size-4" />
                       <p className="line-clamp-3 text-[0.6875rem] leading-snug font-medium sm:text-[0.8125rem] xl:line-clamp-4">
-                        {DEMO_WISH}
+                        {t('demoWish')}
                       </p>
                     </div>
                   ) : (

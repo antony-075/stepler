@@ -30,11 +30,10 @@ const SEGMENT_ON = 'scale-x-100';
 const SEGMENT_OFF = 'scale-x-0';
 const LEVEL_QUIET = 'text-muted-foreground';
 const LEVEL_SHOWN = 'text-foreground';
-const RULE_MET = 'text-foreground';
-const RULE_MISSING = 'text-muted-foreground';
-const MARK_MET = 'bg-success text-card';
-const MARK_PRISTINE = 'border border-input';
-const MARK_MISSING = 'bg-destructive/10 text-destructive';
+/** A rule chip: met (green with a check), still missing after typing, or quiet before it. */
+const CHIP_MET = 'border-transparent bg-success-soft text-success';
+const CHIP_MISSING = 'border-border bg-muted text-foreground-soft';
+const CHIP_PRISTINE = 'border-border bg-transparent text-muted-foreground';
 const MATCH_YES = 'text-success';
 const MATCH_NO = 'text-destructive';
 
@@ -54,8 +53,10 @@ function fill(met: number, total: number): string {
 /**
  * The password meter (owner remark 2026-10-16, ADR 0019; ui-ux-pro-max pass): a row of segments,
  * one per rule, that fill left to right as rules are met and change colour by level; the level in
- * words beside it; the checklist under it, each rule with a check or a cross AND its state in
- * words for screen readers, so nothing relies on colour. A polite live region repeats only the
+ * words beside it; the rules under it as small chips in a wrapping row (owner 2026-10-16: the
+ * same checklist, less loud than a column of circles): a met rule turns green with a check that
+ * pops in, a missing one stays a quiet grey chip with a dot (no red crosses), and each carries
+ * its state in words for screen readers, so nothing relies on colour. A polite live region repeats only the
  * summary («Ще потрібна…»), not every keystroke's list. Segments grow with a short transition
  * that stops under reduced motion.
  */
@@ -114,26 +115,23 @@ function PasswordStrength({
           {levelText}
         </span>
       </div>
-      <ul className="grid gap-1.5 text-sm">
+      <ul className="flex flex-wrap gap-1.5">
         {rules.map((rule) => (
           <li
             key={rule.id}
             className={cn(
-              'flex items-center gap-2 transition-colors duration-(--duration-base) motion-reduce:transition-none',
-              rule.met ? RULE_MET : RULE_MISSING,
+              'inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[0.8125rem] font-medium transition-[background-color,border-color,color] duration-(--duration-base) motion-reduce:transition-none',
+              rule.met ? CHIP_MET : pristine ? CHIP_PRISTINE : CHIP_MISSING,
             )}
           >
-            <span
-              aria-hidden="true"
-              className={cn(
-                'flex size-4.5 shrink-0 items-center justify-center rounded-full transition-colors duration-(--duration-base) motion-reduce:transition-none',
-                rule.met ? MARK_MET : pristine ? MARK_PRISTINE : MARK_MISSING,
-              )}
-            >
+            <span aria-hidden="true" className="grid size-3.5 shrink-0 place-items-center">
               {rule.met ? (
-                <Check className="size-3" strokeWidth={3} />
-              ) : pristine ? null : (
-                <X className="size-3" strokeWidth={3} />
+                <Check
+                  className="size-3.5 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
+                  strokeWidth={3}
+                />
+              ) : (
+                <span className="size-1.5 rounded-full bg-current opacity-60" />
               )}
             </span>
             <span>

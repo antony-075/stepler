@@ -188,12 +188,21 @@ test.describe('the account pages', () => {
     });
   }
 
-  test('@desktop sign-in and registration link to each other from the header', async ({ page }) => {
+  test('@desktop sign-in and registration link to each other; each has its welcome half', async ({
+    page,
+  }) => {
     await page.goto('/login');
-    await page.locator('header').getByRole('link', { name: 'Зареєструватися' }).click();
-    await expect(page).toHaveURL(/\/register$/);
-    await page.locator('header').getByRole('link', { name: 'Увійти' }).click();
-    await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole('complementary', { name: 'З поверненням!' })).toBeVisible();
+    await expect(page.locator('header').getByRole('link', { name: 'Зареєструватися' })).toHaveCount(
+      0,
+    );
+    await page
+      .getByRole('main')
+      .getByRole('link', { name: 'Зареєструватися', exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/register$/);
+    await expect(page.getByRole('complementary', { name: 'Почніть безкоштовно' })).toBeVisible();
+    await page.getByRole('main').getByRole('link', { name: 'Увійти', exact: true }).click();
+    await expect(page).toHaveURL(/\/login$/);
   });
 });

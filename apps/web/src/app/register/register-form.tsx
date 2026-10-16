@@ -114,7 +114,7 @@ export function RegisterForm({
         <ResendVerification email={sentTo} turnstileSiteKey={turnstileSiteKey} />
         <Button
           variant="ghost"
-          className="-ml-3 justify-self-start text-link underline underline-offset-4"
+          className="justify-self-center text-link underline underline-offset-4"
           onClick={() => {
             setSentTo(null);
             register.reset();

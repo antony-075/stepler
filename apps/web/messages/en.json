@@ -147,7 +147,7 @@
   },
   "home": {
     "metaTitle": "Stepler — photos and videos from every guest, in one place",
-    "metaDescription": "Create an album for your event and show guests a QR code. They add photos, videos and wishes straight from their phones, with no app and no sign-up. 7 days free.",
+    "metaDescription": "Create a collection for your event and show guests a QR code. They add photos, videos and wishes straight from their phones, with no app and no sign-up. 7 days free.",
     "skip": "Skip to content",
     "nav": {
       "label": "Page sections",
@@ -170,9 +170,11 @@
       "cta": "Try it free for 7 days",
       "secondary": "How it works",
       "reassurance": "No card needed, so nothing gets charged by surprise.",
-      "stageLabel": "Guests’ photos come together in one album",
+      "stageLabel": "Guests’ photos come together in one collection",
       "phoneAlt": "The event page on a guest’s phone with an Add button",
-      "framesCount": "{count, plural, one {# photo} other {# photos}}"
+      "framesCount": "{count, plural, one {# photo} other {# photos}}",
+      "demoTitle": "Nina’s 70th birthday",
+      "demoWish": "Grandma, we love you so much!"
     },
     "how": {
       "title": "A few minutes for you, a few seconds for guests",
@@ -180,7 +182,7 @@
         "title": "You",
         "steps": {
           "create": {
-            "title": "Create an album",
+            "title": "Create a collection",
             "text": "Type the name of your event and get a QR code for guests."
           },
           "share": {
@@ -214,7 +216,7 @@
     },
     "demo": {
       "title": "See what it looks like",
-      "intro": "Half a minute and it all makes sense: from creating an album to the first photos from guests.",
+      "intro": "Half a minute and it all makes sense: from creating a collection to the first photos from guests.",
       "video": {
         "title": "Stepler in half a minute",
         "play": "Play the video “Stepler in half a minute”",
@@ -224,9 +226,9 @@
       "stepsLabel": "Steps",
       "steps": {
         "create": {
-          "title": "Create an album",
+          "title": "Create a collection",
           "text": "A name is enough. The cover and the design can wait.",
-          "alt": "Creating an album in Stepler: the event name field"
+          "alt": "Creating a collection in Stepler: the event name field"
         },
         "share": {
           "title": "Share the QR code",
@@ -246,7 +248,7 @@
         "collect": {
           "title": "You get it all in one place",
           "text": "Browse, save to your device and remove what you don’t need, whenever you like.",
-          "alt": "An album in Stepler: photos from guests"
+          "alt": "A collection in Stepler: photos from guests"
         }
       }
     },
@@ -279,8 +281,8 @@
     "benefits": {
       "lead": {
         "title": "Every photo from your event, in one place",
-        "text": "No more collecting pictures from chats and asking people to “send it later”. Each guest adds their own, and you get one shared album with every photo, video and wish.",
-        "alt": "An event album on a phone: photos from different guests"
+        "text": "No more collecting pictures from chats and asking people to “send it later”. Each guest adds their own, and you get one shared collection with every photo, video and wish.",
+        "alt": "An event collection on a phone: photos from different guests"
       },
       "items": {
         "original": {
@@ -316,7 +318,7 @@
         },
         "birthday": {
           "title": "Birthdays and anniversaries",
-          "text": "Party photos and video greetings in one album for the guest of honour.",
+          "text": "Party photos and video greetings in one collection for the guest of honour.",
           "alt": "A birthday cake with candles"
         },
         "family": {
@@ -338,10 +340,10 @@
     },
     "privacy": {
       "title": "Your photos stay under your control",
-      "intro": "You decide who sees what. Strangers won’t get into your album.",
+      "intro": "You decide who sees what. Strangers won’t get into your collection.",
       "items": {
         "visibility": {
-          "title": "A shared album, or just for you",
+          "title": "A shared collection, or just for you",
           "text": "Guests can browse each other’s photos, or see only their own."
         },
         "links": {
@@ -350,7 +352,7 @@
         },
         "server": {
           "title": "Safe from strangers",
-          "text": "Nobody can find or open someone else’s album by guessing the address."
+          "text": "Nobody can find or open someone else’s collection by guessing the address."
         },
         "location": {
           "title": "Your address stays private",
@@ -376,7 +378,7 @@
         "note": "No card needed",
         "facts": {
           "days": "<b>7 days</b> to try everything",
-          "collections": "<b>1</b> album",
+          "collections": "<b>1</b> collection",
           "storage": "<b>1 GB</b>, that’s hundreds of photos",
           "card": "Nothing gets charged by surprise"
         },
@@ -398,8 +400,8 @@
           "a": "No. A guest points their camera at the QR code or opens the link, and your event page opens on their phone. A name is optional."
         },
         "access": {
-          "q": "How do guests get into the album?",
-          "a": "With the QR code or the link. Both appear as soon as you create the album. Print the QR code, or send the link to any messenger."
+          "q": "How do guests get into the collection?",
+          "a": "With the QR code or the link. Both appear as soon as you create the collection. Print the QR code, or send the link to any messenger."
         },
         "files": {
           "q": "What can be added?",
@@ -411,7 +413,7 @@
         },
         "visibility": {
           "q": "Can guests see each other’s photos?",
-          "a": "As you decide. Make it a shared album everyone can browse, or let each guest see only their own photos."
+          "a": "As you decide. Make it a shared collection everyone can browse, or let each guest see only their own photos."
         },
         "revoke": {
           "q": "Can I close access?",
@@ -431,11 +433,11 @@
         },
         "trial": {
           "q": "How does the free period work?",
-          "a": "After you sign up you have 7 days: one album and 1 GB of space. No card needed, and nothing gets charged by surprise. If you like it, choose a pack or a subscription."
+          "a": "After you sign up you have 7 days: one collection and 1 GB of space. No card needed, and nothing gets charged by surprise. If you like it, choose a pack or a subscription."
         },
         "packOrPlan": {
           "q": "A pack or a subscription?",
-          "a": "A pack if you have one event: pay once and that’s it. A subscription if you organise events often: run several albums at once and cancel any time."
+          "a": "A pack if you have one event: pay once and that’s it. A subscription if you organise events often: run several collections at once and cancel any time."
         },
         "payment": {
           "q": "How do I pay?",
@@ -449,8 +451,8 @@
     },
     "final": {
       "title": "Gather every photo from your event in one place",
-      "text": "Create an album in a few minutes and show guests the QR code. They’ll do the rest.",
-      "cta": "Create your album",
+      "text": "Create a collection in a few minutes and show guests the QR code. They’ll do the rest.",
+      "cta": "Create your collection",
       "note": "7 days free, no card needed"
     },
     "footer": {
@@ -462,8 +464,6 @@
     }
   },
   "authPage": {
-    "toRegister": "Sign up",
-    "toLogin": "Sign in",
     "login": {
       "title": "Welcome back!",
       "text": "Photos and videos from your guests are waiting for you."
@@ -472,14 +472,24 @@
       "title": "Start for free",
       "text": "7 days to try everything. No card needed, so nothing gets charged by surprise."
     },
-    "step": {
-      "title": "Every photo from your event, in one place",
-      "text": "Guests add photos, videos and wishes straight from their phones."
-    },
     "points": {
       "noApp": "Guests install nothing",
       "quality": "Photos and videos in full quality",
       "control": "You decide who sees what"
+    },
+    "demo": {
+      "uploading": "Uploading {done} of {total}",
+      "video": "Video",
+      "photo": "Photo",
+      "wish": "Wish",
+      "wishText": "Happy birthday, Mark! Best night of the year.",
+      "wishBy": "Iryna",
+      "document": "Party schedule",
+      "documentMeta": "PDF · 1.2 MB",
+      "feedTitle": "New in the collection",
+      "collectionTitle": "Mark’s birthday",
+      "framesCount": "8 frames",
+      "documentSize": "1.2 MB"
     }
   },
   "toast": {

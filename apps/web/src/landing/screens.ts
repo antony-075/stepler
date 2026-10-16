@@ -17,7 +17,25 @@ export interface Screen {
   src: string;
   width: number;
   height: number;
+  /**
+   * A phone screen's system bars: the colour at the top of the page and the text that reads on
+   * it, as Safari tints them (the editor's preview does the same, `--tpl-bg`).
+   */
+  bar?: { background: string; foreground: 'dark' | 'light' };
 }
+
+/** Sampled from the top edge of each phone still (the same in both languages). */
+const BARS: Record<PhoneScreen, NonNullable<Screen['bar']>> = {
+  'guest-classic': { background: '#f1f1f1', foreground: 'dark' },
+  'guest-fullscreen': { background: '#0f0f0f', foreground: 'light' },
+  'guest-journal': { background: '#f0ebdf', foreground: 'dark' },
+  'guest-postcard': { background: '#cad7e9', foreground: 'dark' },
+  'guest-party': { background: '#272c1d', foreground: 'light' },
+  'guest-minimal': { background: '#ffffff', foreground: 'dark' },
+  'guest-frames': { background: '#cad7e9', foreground: 'dark' },
+  'guest-upload': { background: '#747b86', foreground: 'light' },
+  'guest-wish': { background: '#747b86', foreground: 'light' },
+};
 
 const SIZES: Record<string, { width: number; height: number } | undefined> = manifest;
 
@@ -43,7 +61,7 @@ function screen(
 }
 
 export function phoneScreen(locale: ScreenLocale, name: PhoneScreen): Screen {
-  return screen(locale, name, PHONE);
+  return { ...screen(locale, name, PHONE), bar: BARS[name] };
 }
 
 export function desktopScreen(locale: ScreenLocale, name: DesktopScreen): Screen {
