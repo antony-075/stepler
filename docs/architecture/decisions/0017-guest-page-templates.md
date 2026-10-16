@@ -233,3 +233,37 @@ Three things make this more than styling:
   at 70 048 B (only Geologica and Geist Mono load), the document 17 047 → 16 356 B.
 - `apps/web`'s tsconfig allows `.ts` import specifiers (`allowImportingTsExtensions`; it never
   emits), because it type-checks the templates' sources.
+
+## Addendum 2026-10-16: two views on phones and tablets, uploads in a sheet
+
+Status: accepted (owner, billing M4 remarks round).
+
+**Context.** On phones the guest page put the actions, the guest's frames, everyone's frames and
+the upload progress on one long screen; the owner found it overcrowded («перенасичення контенту,
+тексту, кнопок»). On a computer the page looked fine.
+
+**Decision.**
+- The contract gains `model.view: 'add' | 'frames'` (replacing `model.phase`) and `slots.tabs`,
+  the app's «Додати» / «Кадри» switch (`apps/web/src/guest/view-tabs.tsx`; `null` on a view-only
+  link). A template places the tabs under its bar in a `.tpl-view-tabs` wrapper and spreads
+  `viewRegionProps('add')` on its intro (cover, title, welcome, count, actions; a
+  `display: contents` `.tpl-region` wrapper where the intro is several elements) and
+  `viewRegionProps('frames')` on its sections.
+- Below 1024px the shared stylesheet shows one region by `data-view`; from 1024px both show in
+  the template's own layout and the tabs are hidden: the desktop layouts are unchanged.
+- The phone-only «after an upload» modes (T3's compact title and sticky action bar, T4's strip
+  and sticky stamps) are gone: the tabs replace them. T2's glass action bar and action card belong
+  to the intro.
+- Uploads run in the app's own sheet («Завантаження», `upload-sheet.tsx`) on every width, opened
+  by the pick and folded into a pill at the bottom; `actions.note` is no longer used by the app.
+  «Ваші кадри» lists this visit's uploads from the server at once, so a video shows the worker's
+  poster as soon as it exists (the list polls), not a type tile until a reload.
+- The editor's preview gains «Екран» («Додати» / «Кадри») beside «Доступ» and «Вміст»; «Вміст:
+  Завантаження» draws the sheet over the page.
+
+**Alternatives considered.** Tabs at every width (rejected by the owner: the desktop layout was
+fine); a separate route for the frames (a reload and a lost upload state for no gain); keeping one
+screen with the batch moved into a sheet only (the actions and both grids still crowd a phone).
+
+**Consequences.** Six templates gained a few lines each, no new dependency. The guest's own
+frames are no longer hidden while a batch is on screen; the sheet shows the batch instead.

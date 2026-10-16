@@ -316,6 +316,30 @@
   border-color: #2a2140;
 }
 
+[data-template='party'] .pt-tabs {
+  position: relative;
+  padding: 8px 16px 0;
+}
+
+/* Phones and tablets, «Кадри»: the grids start right under the tabs. */
+/* The tabs in Unbounded capitals, the lime bar under the chosen one. */
+[data-template='party'] [data-slot='guest-view-tabs'] {
+  border-bottom-color: rgb(255 255 255 / 0.12);
+}
+
+[data-template='party'] [data-slot='guest-view-tab'] {
+  font-family: var(--tpl-font-heading);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1023.98px) {
+  [data-template='party'][data-view='frames'] .pt-sections {
+    padding-top: 20px;
+  }
+}
+
 @media (min-width: 640px) {
   [data-template='party'] .pt-bar,
   [data-template='party'] .pt-hero,

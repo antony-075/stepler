@@ -10,8 +10,11 @@
 // - The pencil is the guest's main action only: «Додати фото й відео» (or what the link takes),
 //   opening the system picker for many files at once; «Додати ще» after a batch. The wish is the
 //   quieter second action, or the pencil one on a text-only link. A view-only link has none.
-// - Uploads show at the top of «Ваші кадри» (`UploadBatch`); «Не закривайте сторінку…» shows
-//   with the actions while files are on their way.
+// - Two views on phones and tablets, tabs under the template's bar (owner remarks 2026-10-16):
+//   «Додати» (the intro and the actions) and «Кадри» (own frames, everyone's); from 1024px both
+//   show in the template's layout without the tabs. A view-only link has the frames only.
+// - Uploads run in their own sheet (`UploadSheet`), opened by the pick, folded into a pill at the
+//   bottom; «Кадри» lists the frames from the server at once, previews as the worker makes them.
 // - The name is asked once, before the first contribution, with «Пропустити»; «Змінити» later.
 // - Any call that meets a link or collection state switches the whole page to that state; the
 //   loading and state screens are drawn in the link's template when its look is known (the
@@ -19,10 +22,10 @@
 
 import type { GuestContext } from '@stepler/contracts';
 import { useToast } from '@stepler/ui/components/toast';
-import { GuestTemplateRoot, templateSurfaceProps } from '@stepler/templates/react';
+import { type GuestView, GuestTemplateRoot, templateSurfaceProps } from '@stepler/templates/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslations } from 'next-intl';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getContext, submitText, updateName } from './api';
 import { acceptFor, primaryContribution } from './contribute-actions';
 import { type GuestTheme, GuestLoadingScreen, GuestStateScreen } from './guest-screens';
@@ -34,10 +37,10 @@ import { staticSlots } from './static-slots';
 import { AllFramesSection, OwnFramesSection } from './template-slots';
 import { ContributionClosed } from './contribution-closed';
 import { TextComposer } from './text-composer';
-import { hasUnsettled } from './upload/queue';
 import { useUploadQueue } from './upload/use-upload-queue';
-import { UploadBatch } from './uploader';
+import { UploadPill, UploadPillSpacer, UploadSheet } from './upload-sheet';
 import { useGuestSession } from './use-guest-session';
+import { GuestViewTabs } from './view-tabs';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
 
@@ -94,29 +97,36 @@ function GuestCollection({
     null,
   );
   const [composerOpen, setComposerOpen] = useState(false);
-  // Whether «Ваші кадри» has anything: with this visit's uploads, the page's phase.
+  // Whether «Ваші кадри» has anything (a closed collection shows the section only then).
   const [ownHasItems, setOwnHasItems] = useState(false);
   const uploads = useUploadQueue(context, call);
   // The hidden picker, held in state (a callback ref) so the actions can be built during render.
   const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null);
-  const busy = hasUnsettled(uploads.state);
-  const doneIds = useMemo(
-    () =>
-      new Set(
-        uploads.state.items.flatMap((item) => (item.result === undefined ? [] : [item.result.id])),
-      ),
-    [uploads.state.items],
-  );
+  // A link that takes nothing has the frames only.
+  const [chosenView, setView] = useState<GuestView>('add');
+  const view: GuestView = contributes ? chosenView : 'frames';
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pillDismissed, setPillDismissed] = useState(false);
   const addedCount = uploads.summary.added;
+  const pillShown = !sheetOpen && !pillDismissed && uploads.state.items.length > 0;
 
-  // A new frame shows in the shared gallery too; the parent remembers the count for the
-  // link-state page if the link closes mid-batch.
+  // A new frame shows in both lists (the guest's own polls its previews); the parent remembers
+  // the count for the link-state page if the link closes mid-batch.
   useEffect(() => {
     onAdded(addedCount);
     if (addedCount > 0) {
+      void queryClient.invalidateQueries({ queryKey: guestContentKey(collectionId, 'own') });
       void queryClient.invalidateQueries({ queryKey: guestContentKey(collectionId, 'all') });
     }
   }, [addedCount, collectionId, onAdded, queryClient]);
+
+  /** «Переглянути мої кадри»: the frames view, the sheet and the pill put away. */
+  function viewFrames() {
+    setSheetOpen(false);
+    setPillDismissed(true);
+    setView('frames');
+    window.scrollTo({ top: 0 });
+  }
 
   /** The header's counts after the guest deleted a frame; a failure keeps the old line. */
   function refreshContext() {
@@ -184,17 +194,37 @@ function GuestCollection({
     countsLabel: counts === null ? null : t('counts', { count: counts.total }),
     lastAddedLabel:
       counts?.lastAddedAt == null ? null : t('lastAt', { time: time(counts.lastAddedAt) }),
-    contributed: ownHasItems || addedCount > 0,
+    view,
     onCoverError: coverExpired,
   });
   const actions = buildGuestActions(
     permissions,
-    { t: (key) => t(key), batchStarted: uploads.state.items.length > 0 },
+    { t: (key) => t(key) },
     { onFiles: () => contribute('files'), onWrite: () => contribute('text') },
-    busy ? t('upload.keepOpen') : null,
   );
+  const statics = staticSlots();
   const slots = {
-    ...staticSlots(),
+    ...statics,
+    footer: pillShown ? (
+      <>
+        {statics.footer}
+        <UploadPillSpacer />
+      </>
+    ) : (
+      statics.footer
+    ),
+    tabs: contributes ? (
+      <GuestViewTabs
+        view={view}
+        onChange={setView}
+        labels={{
+          list: t('views.label'),
+          add: t('views.add'),
+          frames: t('views.frames'),
+          framesCount: permissions.canViewGallery && counts !== null ? String(counts.total) : null,
+        }}
+      />
+    ) : null,
     ownFrames: !open ? (
       <>
         <ContributionClosed
@@ -209,8 +239,6 @@ function GuestCollection({
               context={context}
               collectionId={collectionId}
               call={call}
-              batch={null}
-              hide={doneIds}
               onRename={() => setNamePrompt({ mode: 'edit', then: null })}
               onDeleted={refreshContext}
               onHasItems={setOwnHasItems}
@@ -223,8 +251,6 @@ function GuestCollection({
         context={context}
         collectionId={collectionId}
         call={call}
-        batch={<UploadBatch uploads={uploads} context={context} />}
-        hide={doneIds}
         onRename={() => setNamePrompt({ mode: 'edit', then: null })}
         onDeleted={refreshContext}
         onHasItems={setOwnHasItems}
@@ -259,8 +285,31 @@ function GuestCollection({
             const files = [...(event.target.files ?? [])];
             // Cleared, so picking the same files again fires `change` again.
             event.target.value = '';
-            if (files.length > 0) uploads.add(files);
+            if (files.length === 0) return;
+            uploads.add(files);
+            setPillDismissed(false);
+            setSheetOpen(true);
           }}
+        />
+      ) : null}
+      {primary === 'files' ? (
+        <UploadSheet
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          uploads={uploads}
+          context={context}
+          surface={surface}
+          onAddMore={() => fileInput?.click()}
+          onViewFrames={viewFrames}
+        />
+      ) : null}
+      {pillShown ? (
+        <UploadPill
+          uploads={uploads}
+          surface={surface}
+          onOpen={() => setSheetOpen(true)}
+          onViewFrames={viewFrames}
+          onDismiss={() => setPillDismissed(true)}
         />
       ) : null}
 

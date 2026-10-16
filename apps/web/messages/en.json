@@ -879,6 +879,21 @@
       "reason": {
         "NETWORK": "the connection dropped",
         "STORAGE_403": "storage refused the file"
+      },
+      "sheet": {
+        "title": "Uploads",
+        "description": "How the chosen files are uploading",
+        "fold": "Minimise",
+        "addMore": "Add more",
+        "viewFrames": "See my frames"
+      },
+      "pill": {
+        "busy": "Uploading: {added} of {total}",
+        "failed": "{count, plural, one {# file could not be added} other {# files could not be added}}",
+        "done": "Added {added} of {total}",
+        "open": "Open",
+        "view": "View",
+        "dismiss": "Hide"
       }
     },
     "viewer": {
@@ -942,6 +957,11 @@
       "readOnlyTitle": "This collection is view-only",
       "readOnlyText": "New photos and wishes can't be added right now.",
       "gallery": "What was already added is below."
+    },
+    "views": {
+      "label": "Collection page",
+      "add": "Add",
+      "frames": "Frames"
     }
   },
   "account": {
@@ -1038,7 +1058,13 @@
           "stopped": "The guest sees only a message"
         }
       },
-      "more": "Preview options"
+      "more": "Preview options",
+      "view": {
+        "label": "Screen",
+        "trigger": "Screen: {name}. Change",
+        "add": "Add",
+        "frames": "Frames"
+      }
     },
     "leave": "Your changes are still being saved. Leave the page?",
     "panelLabel": "Guest page settings",

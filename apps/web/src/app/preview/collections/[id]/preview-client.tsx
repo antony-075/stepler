@@ -10,8 +10,9 @@
 //   page looks with content.
 // - The page state comes from the editor's two controls (owner remarks 77, 92): «Доступ за
 //   посиланням» (everything, only their own, view-only, paused, closed) and «Вміст» (empty, mine,
-//   others', both, uploading). A link that hides the gallery never draws «Усі кадри», as on the
-//   real page. Each state is drawn with the same pieces the guest page uses; the actions carry the default link's real labels
+//   others', both, uploading), and «Екран» (owner remark 2026-10-16: the tabs «Додати» / «Кадри»).
+//   «Завантаження» draws the upload sheet over the page as the guest sees it after a pick. A link
+//   that hides the gallery never draws «Усі кадри», as on the real page. Each state is drawn with the same pieces the guest page uses; the actions carry the default link's real labels
 //   and do nothing; the whole page is `inert`.
 // - Admin endpoints only: no guest session is created and no guest API is called (lint and a
 //   test check the imports).
@@ -23,11 +24,15 @@ import { Frame } from '@stepler/ui/components/frame';
 import { FrameGrid } from '@stepler/ui/components/frame-grid';
 import { UploadFrame } from '@stepler/ui/components/upload-frame';
 import { UploadSummary } from '@stepler/ui/components/upload-summary';
-import { GuestTemplateRoot, type TemplateSlots } from '@stepler/templates/react';
+import {
+  GuestTemplateRoot,
+  type TemplateSlots,
+  templateSurfaceProps,
+} from '@stepler/templates/react';
 import { useQuery } from '@tanstack/react-query';
-import { RefreshCw, UserRound } from 'lucide-react';
+import { RefreshCw, UserRound, X } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { type ReactNode, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { collectionKey, fetchCollection } from '@/api/collections';
 import { formatBytes } from '@/format/bytes';
 import { primaryContribution } from '@/guest/contribute-actions';
@@ -36,6 +41,7 @@ import { GuestStateScreen } from '@/guest/guest-screens';
 import { staticSlots } from '@/guest/static-slots';
 import { fontVariables } from '@/guest/template-fonts';
 import { buildGuestActions } from '@/guest/template-model';
+import { GuestViewTabs } from '@/guest/view-tabs';
 import {
   acceptPreviewMessage,
   type PreviewView,
@@ -160,12 +166,7 @@ function PreviewPage({
   };
   const uploading = shape.own === 'uploading';
   const actions = shape.actions
-    ? buildGuestActions(
-        permissions,
-        { t: (key) => t(key), batchStarted: uploading },
-        { onFiles: noop, onWrite: noop },
-        uploading ? t('upload.keepOpen') : null,
-      )
+    ? buildGuestActions(permissions, { t: (key) => t(key) }, { onFiles: noop, onWrite: noop })
     : null;
 
   const allItems = ITEMS[shape.all];
@@ -176,51 +177,100 @@ function PreviewPage({
 
   const slots: TemplateSlots = {
     ...staticSlots(),
+    tabs: shape.actions ? (
+      <GuestViewTabs
+        view={shape.view}
+        onChange={noop}
+        labels={{
+          list: t('views.label'),
+          add: t('views.add'),
+          frames: t('views.frames'),
+          framesCount: showsCounts ? String(allItems.length) : null,
+        }}
+      />
+    ) : null,
     ownFrames:
       shape.own === 'none' ? null : (
-        <OwnSection
-          hasItems={shape.own !== 'empty'}
-          viewsGallery={permissions.canViewGallery}
-          batch={uploading ? <SampleBatch /> : null}
-        />
+        <OwnSection hasItems={shape.own !== 'empty'} viewsGallery={permissions.canViewGallery} />
       ),
     allFrames: shape.all === 'none' ? null : <AllSection items={allItems} />,
   };
   return (
-    <GuestTemplateRoot
-      templateId={page.templateId}
-      templateVersion={page.templateVersion}
-      settings={page.settings}
-      fontClassName={fontVariables}
-      model={{
-        title: collection.title,
-        description: collection.description,
-        welcomeMessage: page.welcomeMessage,
-        countsLabel: showsCounts ? t('counts', { count: allItems.length }) : null,
-        lastAddedLabel: showsCounts
-          ? t('lastAt', { time: format.dateTime(lastAt, { hour: '2-digit', minute: '2-digit' }) })
-          : null,
-        cover: fromAdminImage(page.cover),
-        background: fromAdminImage(page.background),
-        phase: shape.own === 'items' || uploading ? 'contributed' : 'first-visit',
-      }}
-      actions={actions}
-      slots={slots}
+    <>
+      <GuestTemplateRoot
+        templateId={page.templateId}
+        templateVersion={page.templateVersion}
+        settings={page.settings}
+        fontClassName={fontVariables}
+        model={{
+          title: collection.title,
+          description: collection.description,
+          welcomeMessage: page.welcomeMessage,
+          countsLabel: showsCounts ? t('counts', { count: allItems.length }) : null,
+          lastAddedLabel: showsCounts
+            ? t('lastAt', { time: format.dateTime(lastAt, { hour: '2-digit', minute: '2-digit' }) })
+            : null,
+          cover: fromAdminImage(page.cover),
+          background: fromAdminImage(page.background),
+          view: shape.view,
+        }}
+        actions={actions}
+        slots={slots}
+        inert
+      />
+      {uploading ? <SampleUploadSheet page={page} /> : null}
+    </>
+  );
+}
+
+/**
+ * The upload sheet as the guest sees it after a pick (`UploadSheet`): drawn in place (no dialog),
+ * at the bottom on phones and centred from `sm`, in the page's template; inert like the page.
+ */
+function SampleUploadSheet({ page }: { page: GuestPageVersion }) {
+  const t = useTranslations('guest.upload');
+  const surface = templateSurfaceProps(
+    page.templateId,
+    page.templateVersion,
+    page.settings,
+    fontVariables,
+  );
+  return (
+    <div
       inert
-    />
+      className="fixed inset-0 z-40 flex items-end justify-center bg-overlay sm:items-center"
+    >
+      <section
+        {...surface}
+        aria-label={t('sheet.title')}
+        data-slot="upload-sheet"
+        className={[
+          'flex max-h-[calc(100dvh-3rem)] w-full max-w-[560px] flex-col rounded-t-dialog border bg-popover text-popover-foreground shadow-lg sm:w-[calc(100%-2rem)] sm:rounded-dialog',
+          surface.className ?? '',
+        ].join(' ')}
+      >
+        <div className="flex min-h-14 items-center gap-3 border-b py-1.5 pr-2 pl-4 sm:pl-6">
+          <h2 className="type-h3 flex-1">{t('sheet.title')}</h2>
+          <span className="inline-flex size-11 items-center justify-center text-muted-foreground">
+            <X aria-hidden="true" className="size-4" />
+          </span>
+        </div>
+        <div className="min-h-0 flex-1 overflow-hidden px-4 py-4 sm:px-6">
+          <SampleBatch />
+        </div>
+        <div className="grid gap-3 border-t px-4 py-3 sm:px-6">
+          <p className="text-sm text-muted-foreground">{t('keepOpen')}</p>
+          <div className="flex justify-end">
+            <Button variant="outline">{t('sheet.addMore')}</Button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
 /** «Ваші кадри», as `OwnFramesSection` draws it, with the sample frames. */
-function OwnSection({
-  hasItems,
-  viewsGallery,
-  batch,
-}: {
-  hasItems: boolean;
-  viewsGallery: boolean;
-  batch: ReactNode;
-}) {
+function OwnSection({ hasItems, viewsGallery }: { hasItems: boolean; viewsGallery: boolean }) {
   const t = useTranslations('guest');
   const tSample = useTranslations('guestPage.preview.sample');
   return (
@@ -250,7 +300,6 @@ function OwnSection({
           </p>
         ) : null}
       </div>
-      {batch}
       {hasItems ? (
         <FrameGrid ariaLabel={t('listLabelOwn')}>
           {OWN.map((sample, i) => (

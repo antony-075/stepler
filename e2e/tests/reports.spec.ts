@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { horizontalOverflow } from '../support/collections.js';
-import { openGuestLink, submitTextViaApi } from '../support/guest.js';
+import { openGuestLink, showFrames, submitTextViaApi } from '../support/guest.js';
 import { waitForMail } from '../support/mailpit.js';
 import { uploadViaApi } from '../support/media.js';
 import { OPERATOR_INBOX, signInAsOperator } from '../support/operator.js';
@@ -27,6 +27,7 @@ test.describe('guest reports', () => {
 
     const b = await openGuestLink(browser, linkPath);
     await expect(b.getByRole('heading', { level: 1 })).toBeVisible();
+    await showFrames(b);
     const all = b.getByRole('list', { name: 'Усі кадри колекції' });
     await all.getByRole('button', { name: /^Побажання, / }).click();
     const viewer = b.getByRole('dialog').filter({ hasText: 'Від гостя А' });
@@ -51,6 +52,7 @@ test.describe('guest reports', () => {
     // B's own frame: no «⋯».
     await submitTextViaApi(b, collectionId, 'Від гостя Б');
     await b.reload();
+    await showFrames(b);
     await b
       .getByRole('button', { name: /^Кадр \d+, побажання, / })
       .first()

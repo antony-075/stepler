@@ -1,7 +1,13 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
-import { guestLinks, mainLinkPath, openGuestLink, submitTextViaApi } from '../support/guest.js';
+import {
+  guestLinks,
+  mainLinkPath,
+  openGuestLink,
+  showFrames,
+  submitTextViaApi,
+} from '../support/guest.js';
 import { uploadViaApi, waitForProcessed } from '../support/media.js';
 
 // PR E: the guest's shared gallery and own delete, the admin's multi-select and the
@@ -75,6 +81,7 @@ test.describe('guest gallery and own delete', () => {
     await uploadViaApi(a, id, 'photo.png');
     await waitForProcessed(page, id);
     const b = await asGuest(browser, path);
+    await showFrames(b);
 
     // B: everyone's frames, no numbers, names or delete; the viewer says only time and kind.
     const others = allList(b).getByRole('button');
@@ -91,6 +98,7 @@ test.describe('guest gallery and own delete', () => {
 
     // A: own frames open with «Видалити»; a plain confirm with the number.
     await a.reload();
+    await showFrames(a);
     await ownList(a)
       .getByRole('button', { name: /^Кадр 2,/ })
       .click();
@@ -143,6 +151,7 @@ test.describe('guest gallery and own delete', () => {
     const guest = await asGuest(browser, path);
     await submitTextViaApi(guest, id, 'Моє');
     await guest.reload();
+    await showFrames(guest);
     await ownList(guest).getByRole('button').click();
     await expect(guest.getByRole('dialog')).toContainText('Моє');
     await expect(guest.getByRole('button', { name: 'Видалити' })).toHaveCount(0);
@@ -264,6 +273,7 @@ test.describe('the delete-own switch [C15]', () => {
     ).toBe(false);
 
     await guest.reload();
+    await showFrames(guest);
     await ownList(guest).getByRole('button').click();
     await expect(guest.getByRole('dialog')).toContainText('Моє');
     await expect(guest.getByRole('button', { name: 'Видалити' })).toHaveCount(0);

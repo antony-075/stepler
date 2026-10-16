@@ -41,7 +41,14 @@ import type { UploadQueue } from './upload/use-upload-queue';
  * Safari only, elsewhere the thumbnail fails and the frame keeps its type tile.
  */
 const PREVIEWABLE: Record<FileKind, ReadonlySet<string>> = {
-  PHOTO: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']),
+  PHOTO: new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/heic',
+    'image/heif',
+  ]),
   VIDEO: new Set(['video/mp4', 'video/quicktime', 'video/webm']),
   DOCUMENT: new Set(),
 };

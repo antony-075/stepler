@@ -149,7 +149,6 @@ export function GuestFrames({
   call,
   label,
   empty,
-  hide,
   onDeleted,
   onHasItems,
 }: {
@@ -158,11 +157,9 @@ export function GuestFrames({
   call: <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
   label: string;
   empty: ReactNode;
-  /** Items already shown elsewhere (this page's upload batch). */
-  hide?: ReadonlySet<string>;
   /** After the guest deleted one of their frames (the page refreshes its counts). */
   onDeleted?: () => void;
-  /** Whether the loaded list has any frame, each time that changes (the page's phase). */
+  /** Whether the loaded list has any frame, each time that changes (a closed collection). */
   onHasItems?: (hasItems: boolean) => void;
 }) {
   const t = useTranslations('guest');
@@ -226,10 +223,8 @@ export function GuestFrames({
     );
   }
 
-  const items = query.data.pages
-    .flatMap((page) => page.items)
-    .filter((item) => hide === undefined || !hide.has(item.id));
-  if (items.length === 0) return hide !== undefined && hide.size > 0 ? null : empty;
+  const items = query.data.pages.flatMap((page) => page.items);
+  if (items.length === 0) return empty;
 
   /** Idempotent; a frame the organiser removed meanwhile (404) is gone all the same. */
   async function remove(item: GuestContentItem) {

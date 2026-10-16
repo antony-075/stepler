@@ -133,8 +133,7 @@
 }
 
 [data-template='journal'] .jr-primary,
-[data-template='journal'] .jr-secondary,
-[data-template='journal'] .jr-pencil {
+[data-template='journal'] .jr-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -154,8 +153,7 @@
   font-weight: 600;
 }
 
-[data-template='journal'] .jr-secondary,
-[data-template='journal'] .jr-pencil {
+[data-template='journal'] .jr-secondary {
   min-height: 48px;
   border: 1px solid var(--tpl-accent-text);
   background: transparent;
@@ -164,16 +162,14 @@
 }
 
 [data-template='journal'] .jr-primary svg,
-[data-template='journal'] .jr-secondary svg,
-[data-template='journal'] .jr-pencil svg {
+[data-template='journal'] .jr-secondary svg {
   width: 18px;
   height: 18px;
   flex-shrink: 0;
 }
 
 [data-template='journal'] .jr-primary:focus-visible,
-[data-template='journal'] .jr-secondary:focus-visible,
-[data-template='journal'] .jr-pencil:focus-visible {
+[data-template='journal'] .jr-secondary:focus-visible {
   outline: 2px solid var(--tpl-link);
   outline-offset: 2px;
 }
@@ -192,64 +188,8 @@
   color: var(--tpl-muted);
 }
 
-/* The sticky bar after an upload: the primary and a 52px square pencil, the notice below. */
-[data-template='journal'] .jr-sticky {
-  position: sticky;
-  bottom: 0;
-  z-index: var(--z-dock);
-  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-  border-top: 1px solid #cdbfae;
-  background: color-mix(in srgb, var(--tpl-bg) 94%, transparent);
-}
-
-[data-template='journal'] .jr-actions[data-compact] {
-  grid-template-columns: minmax(0, 1fr) 52px;
-  max-width: 560px;
-  margin-inline: auto;
-}
-
-[data-template='journal'] .jr-actions[data-compact] > :not(button) {
-  grid-column: 1 / -1;
-}
-
-[data-template='journal'] .jr-actions[data-compact] .jr-pencil {
-  min-height: 52px;
-}
-
 [data-template='journal'] .jr-aside-footer {
   display: none;
-}
-
-[data-template='journal'] .jr-compact {
-  display: grid;
-  justify-items: var(--tpl-align);
-  gap: 4px;
-  margin: 0 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #cdbfae;
-  text-align: var(--tpl-align);
-}
-
-[data-template='journal'] .jr-compact-welcome {
-  max-width: 34rem;
-  margin: 0;
-  font-size: 15px;
-  font-style: italic;
-  line-height: 1.5;
-  color: var(--tpl-body);
-  text-wrap: pretty;
-}
-
-[data-template='journal'] .jr-compact-title {
-  display: flex;
-  align-items: center;
-  justify-content: var(--tpl-align);
-  min-height: 48px;
-  margin: 0;
-  font-size: 22px;
-  font-style: italic;
-  font-weight: 500;
-  text-align: var(--tpl-align);
 }
 
 [data-template='journal'] .jr-main {
@@ -305,11 +245,32 @@
   border-color: #cdbfae;
 }
 
-/* After an upload on phones and tablets: the compact bar instead of the hero. */
+[data-template='journal'] .jr-tabs {
+  padding: 0 0 16px;
+}
+
+/* Phones and tablets, «Кадри»: the sections start right under the tabs. */
+/* The tabs as an album's contents line: italic Cormorant, a burgundy rule under the chosen. */
+[data-template='journal'] [data-slot='guest-view-tabs'] {
+  border-bottom-color: #cdbfae;
+}
+
+[data-template='journal'] [data-slot='guest-view-tab'] {
+  font-family: var(--tpl-font-heading);
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 500;
+}
+
+[data-template='journal'] [data-slot='guest-view-tab'][aria-selected='true'] {
+  color: var(--tpl-accent-text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--tpl-accent-text);
+}
+
 @media (max-width: 1023.98px) {
-  [data-template='journal'] .jr-page[data-phase='contributed'] .jr-identity,
-  [data-template='journal'] .jr-page[data-phase='contributed'] .jr-hero-actions {
-    display: none;
+  [data-template='journal'][data-view='frames'] .jr-sections {
+    padding-top: 8px;
   }
 }
 
@@ -440,9 +401,7 @@
     padding-inline: 0;
   }
 
-  [data-template='journal'] .jr-main-footer,
-  [data-template='journal'] .jr-compact,
-  [data-template='journal'] .jr-sticky {
+  [data-template='journal'] .jr-main-footer {
     display: none;
   }
 
@@ -491,8 +450,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   [data-template='journal'] .jr-primary,
-  [data-template='journal'] .jr-secondary,
-  [data-template='journal'] .jr-pencil {
+  [data-template='journal'] .jr-secondary {
     transition: background-color 140ms ease-out;
   }
 }
@@ -502,8 +460,7 @@
     background: var(--pencil-hover);
   }
 
-  [data-template='journal'] .jr-secondary:hover,
-  [data-template='journal'] .jr-pencil:hover {
+  [data-template='journal'] .jr-secondary:hover {
     background: var(--tpl-accent-soft);
   }
 }

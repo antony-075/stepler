@@ -12,21 +12,20 @@ import { cn } from '@stepler/ui/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 import { GuestFrames, guestContentKey } from './own-frames';
 
 type Call = <T>(fn: (collectionId: string) => Promise<T>) => Promise<T>;
 
 /**
- * «Ваші кадри»: this browser's frames, the upload batch above them, and who the guest is to the
- * organiser. Contribution-only links say who will see the frames.
+ * «Ваші кадри»: this browser's frames (this visit's uploads among them, previews as the worker
+ * makes them) and who the guest is to the organiser. Contribution-only links say who will see
+ * the frames.
  */
 export function OwnFramesSection({
   context,
   collectionId,
   call,
-  batch,
-  hide,
   onRename,
   onDeleted,
   onHasItems,
@@ -34,9 +33,6 @@ export function OwnFramesSection({
   context: GuestContext;
   collectionId: string;
   call: Call;
-  /** The upload batch (`UploadBatch`), shown above the frames. */
-  batch: ReactNode;
-  hide: ReadonlySet<string>;
   onRename: () => void;
   onDeleted: () => void;
   onHasItems: (hasItems: boolean) => void;
@@ -56,13 +52,11 @@ export function OwnFramesSection({
         </div>
         {guest.nameAnswered ? <GuestNameLine name={guest.name} onChange={onRename} /> : null}
       </div>
-      {batch}
       <GuestFrames
         collectionId={collectionId}
         scope="own"
         call={call}
         label={t('listLabelOwn')}
-        hide={hide}
         onDeleted={onDeleted}
         onHasItems={onHasItems}
         empty={

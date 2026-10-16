@@ -17,7 +17,7 @@ import {
   waitForContentProcessed,
   waitForImageReady,
 } from '../support/collections.js';
-import { guestLinks, mainLinkPath, openGuestLink } from '../support/guest.js';
+import { guestLinks, mainLinkPath, openGuestLink, showFrames } from '../support/guest.js';
 import { uploadViaApi } from '../support/media.js';
 
 // The guest page editor (plan Task 16, ADR 0017): the «Гостьова сторінка» tab, its live preview,
@@ -223,6 +223,7 @@ test.describe('guest page editor', () => {
     expect(await horizontalOverflow(guest)).toBeLessThanOrEqual(0);
 
     // The guest deletes the frame the cover came from: the cover stays (a copy).
+    await showFrames(guest);
     await guest
       .getByRole('list', { name: 'Ваші кадри' })
       .getByRole('button', { name: /^Кадр 1,/ })
@@ -294,6 +295,13 @@ test.describe('guest page editor', () => {
 
     await openEditor(page, id);
     const frame = preview(page);
+    // The page's two views (owner remarks 2026-10-16): «Екран» picks «Додати» or «Кадри»; the
+    // phone preview shows one at a time.
+    const screen = page.getByRole('combobox', { name: /^Екран/ });
+    await expect(screen).toContainText('Додати');
+    await screen.click();
+    await page.getByRole('option', { name: 'Кадри' }).click();
+    await expect(screen).toContainText('Кадри');
     // Mine + others' by default: generated pictures, no presigned link to a guest's photo.
     await expect(frame.locator('[data-slot="guest-all-frames"] img').first()).toBeVisible();
     const sources = await frame
@@ -303,7 +311,7 @@ test.describe('guest page editor', () => {
     for (const src of sources) expect(src.startsWith('data:image/svg+xml')).toBe(true);
     await expect(frame.locator('[data-slot="guest-own-frames"]')).toBeVisible();
 
-    // Two controls (owner remark 92): the link's access, then the content.
+    // The link's access, then the content (owner remark 92), then the screen.
     const access = page.getByRole('combobox', { name: /^Доступ за посиланням/ });
     const content = page.getByRole('combobox', { name: /^Вміст/ });
     await expect(access).toContainText('Бачать усе');

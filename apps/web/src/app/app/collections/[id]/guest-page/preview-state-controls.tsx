@@ -20,6 +20,7 @@ import {
   CircleDashed,
   Eye,
   Image,
+  ImagePlus,
   Images,
   LayoutGrid,
   Lock,
@@ -34,9 +35,12 @@ import {
   contentRefusal,
   PREVIEW_ACCESS,
   PREVIEW_CONTENT,
+  PREVIEW_VIEWS,
   type PreviewAccess,
   type PreviewContent,
   type PreviewState,
+  type PreviewViewName,
+  viewLocked,
   withAccess,
 } from '@/guest-page/preview-state';
 
@@ -48,6 +52,8 @@ const ACCESS_ICONS: Record<PreviewAccess, LucideIcon> = {
   closed: Lock,
 };
 
+const VIEW_ICONS: Record<PreviewViewName, LucideIcon> = { add: ImagePlus, frames: LayoutGrid };
+
 const CONTENT_ICONS: Record<PreviewContent, LucideIcon> = {
   empty: CircleDashed,
   mine: Image,
@@ -58,8 +64,9 @@ const CONTENT_ICONS: Record<PreviewContent, LucideIcon> = {
 
 /**
  * Which guest page the preview draws (owner remark 92, replacing one long «Стан сторінки» list):
- * two compact selects, each option an icon and a word or two. «Доступ за посиланням» first (what
- * the link lets the guest do), then «Вміст» (what is on the page). A content option that cannot
+ * compact selects, each option an icon and a word or two. «Доступ за посиланням» first (what
+ * the link lets the guest do), then «Вміст» (what is on the page), then «Екран» (the page's tab,
+ * «Додати» or «Кадри»; only «Кадри» on a view-only, paused or closed link). A content option that cannot
  * go with the chosen access stays in the list, disabled, with its reason on a second line; choosing
  * an access keeps the content when it still makes sense, else takes the access's natural one.
  * Selects rather than segmented icons: ten icons at the toolbar's width would need tooltips to be
@@ -148,6 +155,35 @@ export function PreviewStateControls({
           </SelectGroup>
         </SelectContent>
       </Select>
+      <Select
+        value={viewLocked(value.access) ? 'frames' : value.view}
+        disabled={viewLocked(value.access)}
+        onValueChange={(next) => onChange({ ...value, view: next as PreviewViewName })}
+      >
+        <SelectTrigger
+          aria-label={t('view.trigger', { name: t(`view.${value.view}`) })}
+          data-slot="preview-view"
+          className="h-10 w-auto max-w-[15rem] min-w-0 shrink gap-2 bg-background px-3 disabled:opacity-60"
+        >
+          <span className="min-w-0 truncate">
+            <SelectValue />
+          </span>
+        </SelectTrigger>
+        <SelectContent align="start">
+          <SelectGroup>
+            <SelectLabel>{t('view.label')}</SelectLabel>
+            {PREVIEW_VIEWS.map((view) => {
+              const Icon = VIEW_ICONS[view];
+              return (
+                <SelectItem key={view} value={view}>
+                  <Icon aria-hidden="true" />
+                  {t(`view.${view}`)}
+                </SelectItem>
+              );
+            })}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -207,6 +243,22 @@ export function PreviewStateMenuItems({
                   </span>
                 )}
               </span>
+            </DropdownMenuRadioItem>
+          );
+        })}
+      </DropdownMenuRadioGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel>{t('view.label')}</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={viewLocked(value.access) ? 'frames' : value.view}
+        onValueChange={(next) => onChange({ ...value, view: next as PreviewViewName })}
+      >
+        {PREVIEW_VIEWS.map((view) => {
+          const Icon = VIEW_ICONS[view];
+          return (
+            <DropdownMenuRadioItem key={view} value={view} disabled={viewLocked(value.access)}>
+              <Icon aria-hidden="true" />
+              {t(`view.${view}`)}
             </DropdownMenuRadioItem>
           );
         })}

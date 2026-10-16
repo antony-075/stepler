@@ -36,6 +36,10 @@
   min-height: 52px;
 }
 
+[data-template='classic'] .classic-tabs {
+  padding: 4px 0 16px;
+}
+
 [data-template='classic'] .classic-lang-desktop {
   display: none;
 }
@@ -197,6 +201,18 @@
 
 [data-template='classic'] footer {
   background: transparent;
+}
+
+/* Phones and tablets, one view at a time: «Кадри» starts right under the tabs; «Додати» keeps
+   room above the footer. */
+@media (max-width: 1023.98px) {
+  [data-template='classic'][data-view='frames'] .classic-sections {
+    padding-top: 8px;
+  }
+
+  [data-template='classic'][data-view='add'] .classic-aside {
+    padding-bottom: 40px;
+  }
 }
 
 @media (min-width: 640px) {

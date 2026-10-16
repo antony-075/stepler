@@ -99,7 +99,31 @@ export function storyAt(
       await expect(canvasElement.querySelector('h1')).not.toBeNull();
       // The wordmark in the header at every width (owner remark 110).
       await expect(visible(canvasElement.querySelectorAll('a[href="#home"]'))).toHaveLength(1);
-      // The welcome wherever the title is, in every phase (owner remark 109).
+      // Phones and tablets show one view at a time (owner remarks 2026-10-16); from 1024px both,
+      // without the tabs. A region may be a `display: contents` wrapper: its children show.
+      const shows = (region: Element | null) =>
+        region !== null && (region.checkVisibility() || visible(region.children).length > 0);
+      const intro = canvasElement.querySelector('[data-region="intro"]');
+      const frames = canvasElement.querySelector('[data-region="frames"]');
+      await expect(frames).not.toBeNull();
+      const desktop = window.innerWidth >= 1024;
+      // Without tabs (a view-only link) the page shows everything it has at every width.
+      const oneView = !desktop && FIXTURES[fixture].slots.tabs !== null;
+      await expect(visible(canvasElement.querySelectorAll('[role="tablist"]'))).toHaveLength(
+        desktop || FIXTURES[fixture].slots.tabs === null ? 0 : 1,
+      );
+      if (!oneView) {
+        await expect(shows(frames)).toBe(true);
+        if (intro !== null) await expect(shows(intro)).toBe(true);
+      } else if (model.view === 'frames') {
+        await expect(shows(frames)).toBe(true);
+        if (intro !== null) await expect(shows(intro)).toBe(false);
+        return;
+      } else {
+        await expect(shows(intro)).toBe(true);
+        await expect(shows(frames)).toBe(false);
+      }
+      // The welcome wherever the title is (owner remark 109).
       if (model.welcomeMessage !== null) {
         const welcome = visible(canvasElement.querySelectorAll('[data-slot="guest-welcome"]'));
         await expect(welcome).toHaveLength(1);

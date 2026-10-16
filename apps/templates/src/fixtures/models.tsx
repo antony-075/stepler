@@ -8,11 +8,14 @@ import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import type { ReactNode } from 'react';
 import { fn } from 'storybook/test';
-import type {
-  GuestPageModel,
-  TemplateActions,
-  TemplateImage,
-  TemplateSlots,
+import {
+  type GuestPageModel,
+  type GuestView,
+  type TemplateActions,
+  type TemplateImage,
+  type TemplateSlots,
+  VIEW_REGION_ID,
+  VIEW_TAB_ID,
 } from '../react/model.ts';
 import { samplePhoto } from './sample-photo.ts';
 
@@ -29,7 +32,7 @@ const base: GuestPageModel = {
   lastAddedLabel: 'останній о 21:10',
   cover: sampleImage(24),
   background: null,
-  phase: 'first-visit',
+  view: 'add',
 };
 
 /** The click spies, shared by every story; a play function clears them before it clicks. */
@@ -208,8 +211,51 @@ const languageSwitch = (
   </button>
 );
 
-function slots(own: ReactNode | null, all: ReactNode | null = allFrames): TemplateSlots {
-  return { brand, languageSwitch, legalNotice, footer, ownFrames: own, allFrames: all };
+/** A stand-in for the app's «Додати» / «Кадри» switch (`GuestViewTabs`), with its structure. */
+function tabsFor(view: GuestView): ReactNode {
+  const tab = (id: GuestView, label: string) => (
+    <button
+      type="button"
+      role="tab"
+      data-slot="guest-view-tab"
+      id={VIEW_TAB_ID[id]}
+      aria-selected={view === id}
+      aria-controls={VIEW_REGION_ID[id]}
+      className={cn(
+        'inline-flex min-h-11 items-center justify-center px-3 text-sm font-medium',
+        focusRing,
+      )}
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div
+      role="tablist"
+      aria-label="Сторінка"
+      data-slot="guest-view-tabs"
+      className="grid grid-cols-2"
+    >
+      {tab('add', 'Додати')}
+      {tab('frames', 'Кадри')}
+    </div>
+  );
+}
+
+function slots(
+  own: ReactNode | null,
+  all: ReactNode | null = allFrames,
+  view: GuestView | null = 'add',
+): TemplateSlots {
+  return {
+    brand,
+    languageSwitch,
+    legalNotice,
+    footer,
+    tabs: view === null ? null : tabsFor(view),
+    ownFrames: own,
+    allFrames: all,
+  };
 }
 
 export type Fixture = {
@@ -223,12 +269,18 @@ export type Fixture = {
 /** The plan's fixture set (Task 3): every template is checked against each of these. */
 export const FIXTURES = {
   FirstVisit: { model: base, actions: filesActions, slots: slots(ownEmpty) },
+  /** «Кадри» after an upload: the guest's frames and everyone's. */
   Contributed: {
-    model: { ...base, phase: 'contributed' },
-    actions: { ...filesActions, primary: { ...filesActions.primary, label: 'Додати ще' } },
-    slots: slots(ownFull),
+    model: { ...base, view: 'frames' },
+    actions: filesActions,
+    slots: slots(ownFull, allFrames, 'frames'),
   },
-  ViewOnly: { model: base, actions: null, slots: slots(null) },
+  /** One view only, the frames: no tabs, no actions. */
+  ViewOnly: {
+    model: { ...base, view: 'frames' },
+    actions: null,
+    slots: slots(null, allFrames, null),
+  },
   TextOnly: { model: base, actions: textActions, slots: slots(ownEmpty) },
   NoCover: { model: { ...base, cover: null }, actions: filesActions, slots: slots(ownEmpty) },
   LongTitle: {
@@ -267,9 +319,9 @@ export const FIXTURES = {
   },
   /** A busy evening: the guest's own frames and a long shared gallery. */
   ManyFrames: {
-    model: { ...base, phase: 'contributed', countsLabel: '248 кадрів' },
-    actions: { ...filesActions, primary: { ...filesActions.primary, label: 'Додати ще' } },
-    slots: slots(ownFull, allOf(48)),
+    model: { ...base, view: 'frames', countsLabel: '248 кадрів' },
+    actions: filesActions,
+    slots: slots(ownFull, allOf(48), 'frames'),
   },
   ImageBackground: {
     model: { ...base, background: sampleImage(260, 1600, 1200) },

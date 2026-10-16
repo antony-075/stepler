@@ -1,5 +1,5 @@
 import type { GuestContext, GuestLinkPermissions } from '@stepler/contracts';
-import type { GuestPageModel, TemplateActions } from '@stepler/templates/react';
+import type { GuestPageModel, GuestView, TemplateActions } from '@stepler/templates/react';
 import { primaryContribution, uploadLabelKey, type UploadLabelKey } from './contribute-actions';
 import { backgroundImage, coverImage } from './guest-cover';
 
@@ -7,15 +7,15 @@ import { backgroundImage, coverImage } from './guest-cover';
 // translated; the template only places them.
 
 /**
- * The page model from the guest context. `contributed`: the guest has frames here or added some
- * in this visit. `onCoverError` asks for fresh presigned links once the images' expire.
+ * The page model from the guest context. `view`: the tab the guest is on («Додати» / «Кадри»).
+ * `onCoverError` asks for fresh presigned links once the images' expire.
  */
 export function buildGuestPageModel(
   context: GuestContext,
   opts: {
     countsLabel: string | null;
     lastAddedLabel: string | null;
-    contributed: boolean;
+    view: GuestView;
     onCoverError?: () => void;
   },
 ): GuestPageModel {
@@ -29,22 +29,21 @@ export function buildGuestPageModel(
     cover: coverImage(page.cover, opts.onCoverError),
     // Only an image background shows it (GuestTemplateRoot decides from the settings).
     background: backgroundImage(page.background, opts.onCoverError),
-    phase: opts.contributed ? 'contributed' : 'first-visit',
+    view: opts.view,
   };
 }
 
-export type ActionLabelKey = UploadLabelKey | 'addMore' | 'writeWish';
+export type ActionLabelKey = UploadLabelKey | 'writeWish';
 
 /**
  * The guest's actions (DESIGN-SYSTEM.md §6.1): files when the link takes any, with the wish as
  * the quieter second action when it takes texts too; the wish alone on a text-only link;
- * nothing on a view-only one. The file action reads «Додати ще» once a batch has started.
+ * nothing on a view-only one. Uploads speak in their own sheet, so the actions carry no note.
  */
 export function buildGuestActions(
   permissions: GuestLinkPermissions,
-  labels: { t: (key: ActionLabelKey) => string; batchStarted: boolean },
+  labels: { t: (key: ActionLabelKey) => string },
   handlers: { onFiles: () => void; onWrite: () => void },
-  note: string | null,
 ): TemplateActions | null {
   const primary = primaryContribution(permissions);
   if (primary === null) return null;
@@ -53,18 +52,18 @@ export function buildGuestActions(
     return {
       primary: { label: t('writeWish'), icon: 'text', onSelect: handlers.onWrite },
       secondary: null,
-      note,
+      note: null,
     };
   }
   return {
     primary: {
-      label: t(labels.batchStarted ? 'addMore' : uploadLabelKey(permissions)),
+      label: t(uploadLabelKey(permissions)),
       icon: 'files',
       onSelect: handlers.onFiles,
     },
     secondary: permissions.canSubmitText
       ? { label: t('writeWish'), onSelect: handlers.onWrite }
       : null,
-    note,
+    note: null,
   };
 }
