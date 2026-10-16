@@ -14,6 +14,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "e2e": "turbo run e2e",
+    "landing:media": "pnpm --filter @stepler/e2e exec playwright test -c media/playwright.config.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build-storybook": "turbo run build-storybook",
