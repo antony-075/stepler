@@ -64,7 +64,7 @@ export function PricingPlans({ offers, signedIn }: { offers: OfferList; signedIn
   );
 }
 
-/** Signed out: sign in first (magic links carry no return path, slice 9 [P8]). */
+/** Signed out: sign in first (sign-in carries no return path, slice 9 [P8]). */
 function planHref(signedIn: boolean, priceId: string): string {
   return signedIn ? `/app/billing?plan=${encodeURIComponent(priceId)}` : '/login';
 }

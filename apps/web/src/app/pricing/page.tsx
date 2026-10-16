@@ -8,7 +8,7 @@
 //   from the collection page, so no buttons here), then the subscriptions for event businesses
 //   (M3, `PricingPlans`: the monthly/yearly control and the plan cards) and one line about
 //   LiqPay and card data — the trust note sits where the money is;
-// - signed out, the button says «Увійти, щоб купити» and goes to /login (magic links carry no
+// - signed out, the button says «Увійти, щоб купити» and goes to /login (sign-in carries no
 //   return path, slice 9 [P8]); signed in, «Обрати пакет» opens «Тариф і оплата» with the pack;
 // - the API down or nothing on sale is said in one Alert, no empty cards (rule 18: no pay
 //   buttons that cannot work). Amounts are Intl currency from minor units.
@@ -42,7 +42,7 @@ export default async function PricingPage() {
     getTranslations('billing.plans'),
   ]);
   const signedIn = user !== null && user !== 'unavailable';
-  // Signed out: sign in first (magic links carry no return path, slice 9 [P8]).
+  // Signed out: sign in first (sign-in carries no return path, slice 9 [P8]).
   const ctaHref = (code: string) =>
     signedIn ? `/app/billing?pack=${encodeURIComponent(code)}` : SIGN_IN_PATH;
   // Shown in the language's currency (₴ in Ukrainian, a $ reference price otherwise, with what is

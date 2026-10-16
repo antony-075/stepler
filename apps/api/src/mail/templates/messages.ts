@@ -180,18 +180,18 @@ interface AccountBlockedCopy {
   contact: string;
 }
 
-/** Instead of a sign-in link, to a blocked account's own mailbox ([Q3], slice 9). */
+/** Instead of a confirmation or reset mail, to a blocked account's own mailbox ([Q3], slice 9; ADR 0019). */
 export const ACCOUNT_BLOCKED_COPY: Readonly<Record<MailLocale, AccountBlockedCopy>> = {
   uk: {
     subject: 'Stepler: акаунт заблоковано',
     heading: 'Акаунт заблоковано',
-    text: 'Ваш акаунт Stepler заблоковано, тому посилання для входу не надіслано.',
+    text: 'Ваш акаунт Stepler заблоковано: увійти в нього чи відновити пароль зараз не можна.',
     contact: 'Якщо ви не згодні, напишіть на {email}.',
   },
   en: {
     subject: 'Stepler: account blocked',
     heading: 'Account blocked',
-    text: 'Your Stepler account is blocked, so no sign-in link was sent.',
+    text: 'Your Stepler account is blocked: you cannot sign in to it or reset its password.',
     contact: 'If you disagree, write to {email}.',
   },
 };

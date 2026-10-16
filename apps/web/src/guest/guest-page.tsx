@@ -8,8 +8,9 @@
 // page (`context.page`, never a draft); `classic` with its defaults is the guest page as it was
 // before templates (its layout notes are in the template).
 // - The pencil is the guest's main action only: «Додати фото й відео» (or what the link takes),
-//   opening the system picker for many files at once; «Додати ще» after a batch. The wish is the
-//   quieter second action, or the pencil one on a text-only link. A view-only link has none.
+//   opening the system picker for many files at once (the label stays after a batch; «Додати ще»
+//   lives in the upload sheet). The wish is the quieter second action, or the pencil one on a
+//   text-only link. A view-only link has none.
 // - Two views on phones and tablets, tabs under the template's bar (owner remarks 2026-10-16):
 //   «Додати» (the intro and the actions) and «Кадри» (own frames, everyone's); from 1024px both
 //   show in the template's layout without the tabs. A view-only link has the frames only.
