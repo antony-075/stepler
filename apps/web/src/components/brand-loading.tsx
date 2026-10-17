@@ -1,8 +1,9 @@
 import { cn } from '@stepler/ui/lib/utils';
-import { BrandMark } from './brand-mark';
+import { useTranslations } from 'next-intl';
 
 /**
- * The app's loading screen (owner 2026-10-06): the brand «S» over a thin indeterminate line,
+ * The app's loading screen (owner 2026-10-06; the wordmark since 2026-10-16): the logo «stepler»
+ * over a thin indeterminate line,
  * centred on the theme's page colour (the theme is in the server HTML, so no flash of the other
  * one). It fades in only after 180ms, so a fast load shows nothing at all; the line slides
  * (transform only) and stands still under reduced motion. `label` is the status read by screen
@@ -17,13 +18,16 @@ export function BrandLoading({
   message?: string;
   className?: string;
 }) {
+  const tBrand = useTranslations('brand');
   return (
     <div
       role="status"
       aria-busy="true"
       className={cn('loading-delayed grid justify-items-center gap-4 text-center', className)}
     >
-      <BrandMark kind="letter" className="h-11" />
+      <span aria-hidden="true" translate="no" className="font-wordmark text-[1.75rem] lowercase">
+        {tBrand('name')}
+      </span>
       <span
         aria-hidden="true"
         className="relative block h-0.5 w-24 overflow-hidden rounded-full bg-track"

@@ -23,6 +23,13 @@ import { apiRequest, isApiError } from './client';
 export const COLLECTIONS_KEY = ['collections'] as const;
 export const collectionsListKey = (status: CollectionStatus) =>
   ['collections', 'list', status] as const;
+/**
+ * The first page of a list as one query (`listCollections` without paging), for screens that
+ * need only a glance (the pack dialog, «Тариф і оплата»). Its own key: the dashboard keeps the
+ * same list as an infinite query under `collectionsListKey`, a different cache shape.
+ */
+export const collectionsPageKey = (status: CollectionStatus) =>
+  ['collections', 'list', status, 'first-page'] as const;
 export const collectionKey = (id: string) => ['collections', 'detail', id] as const;
 export const USAGE_KEY = ['me', 'usage'] as const;
 

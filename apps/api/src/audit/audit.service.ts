@@ -31,7 +31,30 @@ export type AuditAction =
   | 'content.restore'
   | 'appeal.create'
   | 'appeal.uphold'
-  | 'appeal.reject';
+  | 'appeal.reject'
+  // Billing (ADR 0018).
+  | 'billing.grant'
+  | 'billing.grant_revoke'
+  | 'billing.checkout'
+  | 'billing.payment_succeeded'
+  | 'billing.payment_failed'
+  | 'billing.payment_reversed'
+  | 'billing.subscription_cancel'
+  | 'billing.subscription_change'
+  | 'billing.subscription_end'
+  | 'billing.pack_end'
+  | 'billing.refund'
+  | 'billing.offer_create'
+  | 'billing.offer_update'
+  | 'billing.offer_activate'
+  | 'billing.offer_deactivate'
+  | 'billing.price_set'
+  | 'billing.price_deactivate'
+  // E-mail + password accounts (ADR 0019); the account acts as itself.
+  | 'account.register'
+  | 'account.email_verify'
+  | 'account.password_reset'
+  | 'account.password_change';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';
@@ -40,7 +63,17 @@ export interface AuditEventInput {
   collectionId?: string;
   actor: AuditActor;
   action: AuditAction;
-  targetType: 'collection' | 'guest_link' | 'content' | 'report' | 'user' | 'appeal';
+  targetType:
+    | 'collection'
+    | 'guest_link'
+    | 'content'
+    | 'report'
+    | 'user'
+    | 'appeal'
+    | 'subscription'
+    | 'payment'
+    | 'offer'
+    | 'refund';
   targetId: string;
   /**
    * Ids and states only: never titles, descriptions, labels, texts, names, filenames or other

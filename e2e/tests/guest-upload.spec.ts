@@ -5,7 +5,14 @@ import {
   horizontalOverflow,
   waitForContentProcessed,
 } from '../support/collections.js';
-import { guestLinks, mainLinkPath, openGuestLink, pickFiles } from '../support/guest.js';
+import {
+  guestLinks,
+  mainLinkPath,
+  openGuestLink,
+  pickFiles,
+  showFrames,
+  uploadSheet,
+} from '../support/guest.js';
 import { bigBuffer, pickedFile } from '../support/media.js';
 
 // Guest upload journeys (PR C, Review Focus 2 and 5). They run on all three projects: phones
@@ -56,21 +63,137 @@ test.describe('guest uploads', () => {
     await expect(uploading(guest).getByRole('group', { name: /^Кадр \d+, додано$/ })).toHaveCount(
       3,
     );
-    // The saved own list does not repeat this visit's frames.
-    await expect(ownFrames(guest)).toHaveCount(0);
     expect(await horizontalOverflow(guest)).toBeLessThanOrEqual(0);
 
-    // After a reload the frames are the saved ones: the document with its name, the photo and
-    // video with the worker's thumbnails (never the originals). Reload once the worker is done,
-    // or the page waits for its next 15–20 s poll.
-    await waitForContentProcessed(page, id, 3);
-    await guest.reload();
+    // Uploads run in their own sheet (owner remark 2026-10-16); «Переглянути мої кадри» opens
+    // «Кадри», where the saved frames are at once: the document with its name, the photo and the
+    // video with the worker's thumbnails as they arrive, without a reload (the list polls), and
+    // never the originals.
+    await uploadSheet(guest).getByRole('button', { name: 'Переглянути мої кадри' }).click();
+    await expect(uploadSheet(guest)).toBeHidden();
     await expect(ownFrames(guest).getByRole('listitem')).toHaveCount(3);
     await expect(ownFrames(guest).getByText('doc.pdf')).toBeVisible();
+    // On phones and tablets «Кадри» is its own tab and the actions stay on «Додати»; from
+    // 1024px both show side by side, without tabs.
+    if ((guest.viewportSize()?.width ?? 1280) < 1024) {
+      await expect(guest.getByRole('tab', { name: /^Кадри/ })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+      await expect(guest.getByRole('button', { name: 'Додати фото й відео' })).toBeHidden();
+    }
+    await waitForContentProcessed(page, id, 3);
     await expect(ownFrames(guest).locator('img[src*="/derived/"]')).toHaveCount(2, {
-      timeout: 30_000,
+      timeout: 45_000,
     });
     await expect(ownFrames(guest).locator('img[src*="/uploads/"]')).toHaveCount(0);
+    await guest.context().close();
+  });
+
+  test('ten large photos get small local previews, never the decoded originals', async ({
+    page,
+    browser,
+  }) => {
+    // Owner remark (billing M4 round): picking ~10 photos on an iPhone hung the page; full-size
+    // previews of phone photos took iOS Safari past its memory limit.
+    const { path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    const jpeg = await guest.evaluate(async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2400;
+      canvas.height = 1800;
+      const context = canvas.getContext('2d');
+      if (context === null) throw new Error('no 2d context');
+      const gradient = context.createLinearGradient(0, 0, 2400, 1800);
+      gradient.addColorStop(0, '#e2a76f');
+      gradient.addColorStop(1, '#4f46e5');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, 2400, 1800);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/jpeg', 0.6),
+      );
+      if (blob === null) throw new Error('no jpeg');
+      return [...new Uint8Array(await blob.arrayBuffer())];
+    });
+    const buffer = Buffer.from(jpeg);
+    // The previews come before any transfer: hold every initiation, so nothing reaches storage
+    // and the worker (ten large images per project slowed the other journeys' processing).
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, () => undefined);
+    await pickFiles(
+      guest,
+      Array.from({ length: 10 }, (_, i) => ({
+        name: `IMG_${1000 + i}.jpg`,
+        mimeType: 'image/jpeg',
+        buffer,
+      })),
+    );
+
+    const previews = uploading(guest).locator('img[src^="blob:"]');
+    await expect(previews).toHaveCount(10, { timeout: 30_000 });
+    const sides = await previews.evaluateAll((images) =>
+      images.map((img) => {
+        const image = img as HTMLImageElement;
+        return Math.max(image.naturalWidth, image.naturalHeight);
+      }),
+    );
+    expect(sides.every((side) => side > 0 && side <= 320)).toBe(true);
+    await guest.context().close();
+  });
+
+  test('a video gets a small local frame, so ten clips do not look alike', async ({
+    page,
+    browser,
+  }) => {
+    // Owner remark 2026-10-16: videos showed a «MOV» tile until the page was reloaded.
+    const { path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, () => undefined);
+    await pickFiles(guest, [
+      pickedFile('clip.webm'),
+      pickedFile('clip.mp4'),
+      pickedFile('clip.mov'),
+    ]);
+
+    // Each browser plays some of these (Chromium builds may lack H.264): every clip it can play
+    // shows one frame; the others keep their type tile.
+    const previews = uploading(guest).locator('img[src^="blob:"]');
+    await expect(previews.first()).toBeVisible({ timeout: 30_000 });
+    const sides = await previews.evaluateAll((images) =>
+      images.map((img) => {
+        const image = img as HTMLImageElement;
+        return Math.max(image.naturalWidth, image.naturalHeight);
+      }),
+    );
+    expect(sides.every((side) => side > 0 && side <= 320)).toBe(true);
+    await guest.context().close();
+  });
+
+  test('the upload sheet folds into a pill; the page keeps its tabs and the pill opens it again', async ({
+    page,
+    browser,
+  }) => {
+    const { path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    // Hold the initiation: the batch stays on its way while the sheet is folded.
+    await guest.route(/\/api\/v1\/guest\/collections\/[^/]+\/uploads$/, () => undefined);
+    await pickFiles(guest, [pickedFile('photo.jpg')]);
+    await expect(uploadSheet(guest)).toBeVisible();
+    await expect(uploadSheet(guest).getByText('Не закривайте сторінку')).toBeVisible();
+
+    await uploadSheet(guest).getByRole('button', { name: 'Згорнути' }).click();
+    await expect(uploadSheet(guest)).toBeHidden();
+    const pill = guest.locator('[data-slot="upload-pill"]');
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText('Завантажуємо: 0 з 1');
+    // The pill never covers the footer: the page ends with room for it.
+    await guest.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const footer = await guest.locator('footer').last().boundingBox();
+    const pillBox = await pill.locator(':scope > div').boundingBox();
+    expect(footer!.y + footer!.height).toBeLessThanOrEqual(pillBox!.y + 1);
+
+    await showFrames(guest);
+    await pill.getByRole('button', { name: 'Відкрити' }).click();
+    await expect(uploadSheet(guest)).toBeVisible();
     await guest.context().close();
   });
 

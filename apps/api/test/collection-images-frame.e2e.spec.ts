@@ -26,6 +26,7 @@ import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys } from './support/storage.js';
 import { bigBuffer, fixture, uploadCalls, uploadFile } from './support/uploads.js';
+import { useTestPlanLimits } from './support/billing.js';
 
 const coverKey = (collectionId: string, id: string, role: 'original' | 'thumbnail' | 'preview') =>
   imageKey(collectionId, 'COVER', id, role);
@@ -356,12 +357,12 @@ describe('cover from a frame: quota (Review Focus 4)', () => {
   let q: Started;
 
   beforeAll(async () => {
-    q = await startApp(
-      testEnv({ ...UPLOAD_ENV, LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10 * MB) }),
-    );
+    useTestPlanLimits({ collectionStorageBytes: BigInt(10 * MB) });
+    q = await startApp(testEnv(UPLOAD_ENV));
   });
 
   afterAll(async () => {
+    useTestPlanLimits();
     await q.app.close();
   });
 

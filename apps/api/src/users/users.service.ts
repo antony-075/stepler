@@ -5,7 +5,17 @@ import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { LegalService } from '../legal/legal.service.js';
 
-const ME_FIELDS = { id: true, email: true, displayName: true, locale: true } as const;
+const ME_FIELDS = {
+  id: true,
+  email: true,
+  displayName: true,
+  locale: true,
+  passwordCredential: { select: { userId: true } },
+} as const;
+
+type MeRow = Pick<MeResponse, 'id' | 'email' | 'displayName' | 'locale'> & {
+  passwordCredential: { userId: string } | null;
+};
 
 @Injectable()
 export class UsersService {
@@ -55,11 +65,12 @@ export class UsersService {
 
   private async toMe(
     principal: AccountPrincipal,
-    user: Omit<MeResponse, 'isOperator' | 'legal'>,
+    { passwordCredential, ...user }: MeRow,
   ): Promise<MeResponse> {
     return {
       ...user,
       isOperator: principal.kind === 'operator',
+      hasPassword: passwordCredential !== null,
       legal: await this.legal.statusFor(principal.userId),
     };
   }

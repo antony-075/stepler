@@ -1,7 +1,5 @@
 import { z } from 'zod';
 
-const GIB = 1024n ** 3n;
-
 export const bool = z.stringbool({ truthy: ['true', '1'], falsy: ['false', '0'] });
 export const positiveInt = (fallback: number) =>
   z.coerce.number().int().positive().default(fallback);
@@ -58,6 +56,75 @@ export const mailEnvShape = {
   LEGAL_CONTACT_EMAIL: z.email().optional(),
 };
 
+/**
+ * Payments (ADR 0018): the API builds checkouts and receives callbacks, the worker reconciles
+ * through the provider's `status` API, so both read these. `disabled` (the default) is honest:
+ * checkout answers `503 PAYMENT_PROVIDER_UNAVAILABLE` and nothing is granted (rule 18). The
+ * private key is never logged, returned or put in a job payload.
+ */
+export const billingEnvShape = {
+  BILLING_PROVIDER: z.enum(['liqpay', 'disabled']).default('disabled'),
+  LIQPAY_PUBLIC_KEY: z.string().min(1).optional(),
+  LIQPAY_PRIVATE_KEY: z.string().min(1).optional(),
+  /** Server-to-server calls (`/api/request`); tests point it at a local stub. */
+  LIQPAY_API_BASE: origin.default('https://www.liqpay.ua'),
+  /**
+   * Our public callback URL (`server_url`). Optional outside production: LiqPay cannot reach
+   * localhost, and the return page's `status` refresh settles payments without it [P7].
+   */
+  BILLING_CALLBACK_URL: z.url({ protocol: /^https?$/ }).optional(),
+  /** A checkout stays payable this long (also LiqPay's `expired_date`). */
+  BILLING_PENDING_TTL_MINUTES: positiveInt(30),
+  /**
+   * Days a subscription keeps working after a failed renewal [P12]: LiqPay retries a failed
+   * charge 3 times within 72 hours, so 4 days cover the retries and a late callback.
+   */
+  BILLING_GRACE_DAYS: positiveInt(4),
+  /** An upgrade's prorated charge below this (kopecks; 100 = 1 грн) is waived [P10]. */
+  BILLING_MIN_CHARGE_MINOR: positiveInt(100),
+  /** Fiscal receipts [P14]: `liqpay_rro` adds `rro_info` to every checkout. */
+  BILLING_FISCAL_MODE: z.enum(['none', 'liqpay_rro']).default('none'),
+  /** Set deliberately after the accountant's answer ([Q1]) to run live keys without receipts. */
+  BILLING_FISCAL_WAIVED: bool.default(false),
+};
+
+type BillingEnv = {
+  NODE_ENV: 'development' | 'test' | 'production';
+  BILLING_PROVIDER: 'liqpay' | 'disabled';
+  LIQPAY_PUBLIC_KEY?: string | undefined;
+  LIQPAY_PRIVATE_KEY?: string | undefined;
+  BILLING_CALLBACK_URL?: string | undefined;
+  BILLING_FISCAL_MODE: 'none' | 'liqpay_rro';
+  BILLING_FISCAL_WAIVED: boolean;
+};
+
+/**
+ * Cross-field rules of `billingEnvShape`, shared by the API's and the worker's schema: LiqPay
+ * needs both keys; live keys in production need a fiscal
+ * mode or the deliberate waiver ([P14], [Q1]).
+ */
+export function checkBillingEnv(env: BillingEnv, ctx: z.RefinementCtx): void {
+  if (env.BILLING_PROVIDER !== 'liqpay') return;
+  for (const name of ['LIQPAY_PUBLIC_KEY', 'LIQPAY_PRIVATE_KEY'] as const) {
+    if (env[name] === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: [name],
+        message: 'required with BILLING_PROVIDER=liqpay',
+      });
+    }
+  }
+  if (env.NODE_ENV !== 'production') return;
+  const live = env.LIQPAY_PUBLIC_KEY !== undefined && !env.LIQPAY_PUBLIC_KEY.startsWith('sandbox_');
+  if (live && env.BILLING_FISCAL_MODE === 'none' && !env.BILLING_FISCAL_WAIVED) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['BILLING_FISCAL_MODE'],
+      message: 'live keys need liqpay_rro or BILLING_FISCAL_WAIVED=true',
+    });
+  }
+}
+
 /** Variables the API and the worker (`worker/worker-env.ts`) both read. */
 export const sharedEnvShape = {
   NODE_ENV: z.enum(['development', 'test', 'production']),
@@ -92,11 +159,14 @@ const apiEnvSchema = z
   .object({
     ...sharedEnvShape,
     ...mailEnvShape,
+    ...billingEnvShape,
     API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
 
     COOKIE_SECURE: bool.optional(),
     SESSION_TTL_DAYS: positiveInt(30),
-    MAGIC_LINK_TTL_MINUTES: positiveInt(15),
+    // Mailed account links (ADR 0019): confirming the address, setting a new password.
+    EMAIL_VERIFICATION_TTL_HOURS: positiveInt(24),
+    PASSWORD_RESET_TTL_MINUTES: positiveInt(60),
     API_TRUST_PROXY: trustProxy.default(false),
     APP_SECRET: appSecret,
 
@@ -106,14 +176,18 @@ const apiEnvSchema = z
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
 
-    LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: positiveInt(5),
-    LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: positiveInt(20),
-    LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: positiveInt(60),
-    LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: positiveInt(3),
+    // Account mails (registration, verification again, password reset), ADR 0019.
+    LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: positiveInt(5),
+    LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: positiveInt(20),
+    // Opening or using a mailed link (preview, confirm, reset), per IP.
+    LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR: positiveInt(60),
+    // Sign-in: attempts per IP; failures per address and IP, and per address from anywhere.
+    LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: positiveInt(60),
+    LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN: positiveInt(10),
+    LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR: positiveInt(30),
+    // Active collections, storage and guest links come from entitlements now (ADR 0018); the
+    // creations per day stay here: abuse, not sold.
     LIMIT_COLLECTION_CREATIONS_PER_DAY: positiveInt(10),
-    LIMIT_STORAGE_BYTES_PER_ACCOUNT: byteCount(20n * GIB),
-    LIMIT_STORAGE_BYTES_PER_COLLECTION: byteCount(10n * GIB),
-    LIMIT_GUEST_LINKS_PER_COLLECTION: positiveInt(10),
     LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: positiveInt(120),
     LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: positiveInt(120),
     LIMIT_TEXTS_PER_IP_PER_MINUTE: positiveInt(60),
@@ -151,8 +225,24 @@ const apiEnvSchema = z
     UPLOAD_SESSION_TTL_HOURS: positiveInt(24),
     // Media GET URLs are signed per window of this length and valid for two (spec §10.6).
     MEDIA_URL_WINDOW_SECONDS: positiveInt(3600),
+    // Billing (ADR 0018): the public callback per IP per minute; checkouts per account per hour.
+    LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE: positiveInt(120),
+    LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR: positiveInt(20),
   })
   .superRefine((env, ctx) => {
+    checkBillingEnv(env, ctx);
+    // Only the API hands LiqPay a `server_url`; production must receive callbacks.
+    if (
+      env.BILLING_PROVIDER === 'liqpay' &&
+      env.NODE_ENV === 'production' &&
+      env.BILLING_CALLBACK_URL === undefined
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['BILLING_CALLBACK_URL'],
+        message: 'required in production',
+      });
+    }
     if ((env.GOOGLE_CLIENT_ID === undefined) !== (env.GOOGLE_CLIENT_SECRET === undefined)) {
       for (const name of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']) {
         ctx.addIssue({ code: 'custom', path: [name], message: 'set both or neither' });
@@ -191,4 +281,20 @@ export function parseEnv<S extends z.ZodType>(
 
 export function loadApiEnv(source: Record<string, string | undefined>): ApiEnv {
   return parseEnv(apiEnvSchema, source);
+}
+
+/**
+ * Limits that became entitlements (ADR 0018): their values moved to the seeded trial offer. Still
+ * accepted (ignored) for one release so existing deployments keep starting; `main.ts` warns.
+ */
+export const RETIRED_LIMIT_VARIABLES = [
+  'LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT',
+  'LIMIT_STORAGE_BYTES_PER_ACCOUNT',
+  'LIMIT_STORAGE_BYTES_PER_COLLECTION',
+  'LIMIT_GUEST_LINKS_PER_COLLECTION',
+] as const;
+
+/** The retired variables that are still set: names only, never values. */
+export function retiredVariablesIn(source: Record<string, string | undefined>): string[] {
+  return RETIRED_LIMIT_VARIABLES.filter((name) => source[name] !== undefined);
 }

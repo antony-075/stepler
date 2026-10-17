@@ -11,6 +11,7 @@ const USER = {
   displayName: null,
   locale: 'uk',
   isOperator: false,
+  hasPassword: true,
   legal: legalStatus([]),
 };
 

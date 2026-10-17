@@ -20,6 +20,7 @@ import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { allKeys } from './support/storage.js';
+import { useTestPlanLimits } from './support/billing.js';
 import {
   asSession,
   bigBuffer,
@@ -487,14 +488,16 @@ describe('admin cover upload [A1]', () => {
 });
 
 describe('admin cover upload: quota (Review Focus 4)', () => {
-  const quotaEnv = testEnv({ ...UPLOAD_ENV, LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10 * MB) });
+  const quotaEnv = testEnv(UPLOAD_ENV);
   let q: Awaited<ReturnType<typeof startApp>>;
 
   beforeAll(async () => {
+    useTestPlanLimits({ collectionStorageBytes: BigInt(10 * MB) });
     q = await startApp(quotaEnv);
   });
 
   afterAll(async () => {
+    useTestPlanLimits();
     await q.app.close();
   });
 

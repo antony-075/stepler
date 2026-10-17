@@ -16,6 +16,7 @@ import { TEST_DATABASE_URL, testEnv } from './support/env.js';
 import { joinAsGuest, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 import { asSession, fixture, uploadCalls, uploadFile } from './support/uploads.js';
+import { useTestPlanLimits } from './support/billing.js';
 
 // Review fixes I2 and minors: claimed completion, rate limits, storage deadlines, the link and
 // collection re-checked after storage, duplicate initiation near the quota, log hygiene.
@@ -267,7 +268,8 @@ describe('rate limits on upload calls', () => {
 
 describe('duplicate initiation near the quota', () => {
   test('two concurrent initiations with one clientUploadId: one session, both 201', async () => {
-    const s = await start(testEnv({ LIMIT_STORAGE_BYTES_PER_COLLECTION: '10000000' }));
+    useTestPlanLimits({ collectionStorageBytes: 10_000_000n });
+    const s = await start(testEnv());
     try {
       const g = await s.guest();
       const clientUploadId = randomUUID();
@@ -277,6 +279,7 @@ describe('duplicate initiation near the quota', () => {
       expect(asSession(results[0]?.body).uploadId).toBe(asSession(results[1]?.body).uploadId);
       expect(await prisma.uploadSession.count()).toBe(1);
     } finally {
+      useTestPlanLimits();
       await s.app.close();
     }
   });

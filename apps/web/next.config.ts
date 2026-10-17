@@ -11,13 +11,19 @@ const config: NextConfig = {
   poweredByHeader: false,
   // packages/ui and the templates' React entry ship TypeScript sources.
   transpilePackages: ['@stepler/ui', '@stepler/templates'],
-  // The landing's photos (static imports): AVIF first, WebP as the fallback.
-  images: { formats: ['image/avif', 'image/webp'] },
+  // The landing's photos (static imports): AVIF first, WebP as the fallback; 90 for the event
+  // photos (their sources are only 960px wide, so no extra softness on top), 75 by default.
+  images: { formats: ['image/avif', 'image/webp'], qualities: [75, 90] },
   headers() {
     return Promise.resolve([
       {
-        // The magic-link token is in this page's URL; never leak it as a Referer.
+        // The e-mailed confirmation token is in this page's URL; never leak it as a Referer.
         source: '/auth/verify',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
+        // So is the password reset token (ADR 0019).
+        source: '/reset-password',
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {

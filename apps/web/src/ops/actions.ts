@@ -13,7 +13,18 @@ export type OpsAction =
   | 'unblockAccount'
   // Slice 9b: the decisions on an admin's appeal (the appeal detail's two actions).
   | 'uphold'
-  | 'reject';
+  | 'reject'
+  // Billing (ADR 0018): complimentary plans; the offers editor, ending a plan or a pack (M4).
+  | 'grant'
+  | 'revokeGrant'
+  | 'offerSave'
+  | 'offerCreate'
+  | 'offerActivate'
+  | 'offerDeactivate'
+  | 'priceSet'
+  | 'priceDeactivate'
+  | 'subscriptionEnd'
+  | 'packEnd';
 
 /** The groups the detail page shows its actions in, in this order. */
 export const ACTION_GROUPS = {
@@ -32,6 +43,11 @@ export const DESTRUCTIVE: ReadonlySet<OpsAction> = new Set([
   'quarantine',
   'blockCollection',
   'blockAccount',
+  'revokeGrant',
+  'offerDeactivate',
+  'priceDeactivate',
+  'subscriptionEnd',
+  'packEnd',
 ]);
 
 /**

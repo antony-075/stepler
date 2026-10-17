@@ -9,17 +9,20 @@ import type {
 } from '@stepler/contracts';
 import { type AuditAction, AuditService } from '../audit/audit.service.js';
 import type { AccountPrincipal } from '../auth/principal.js';
+import { EntitlementGate } from '../billing/entitlement-gate.js';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { decodeCursor, encodeCursor } from '../common/cursor.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { Prisma, type Collection as CollectionRow } from '../generated/prisma/client.js';
 import { GuestLinksService } from '../guest-access/guest-links.service.js';
-import { collectionPurgeDelaySeconds } from '../jobs/job-names.js';
 import { JOB_QUEUE, type JobQueue } from '../jobs/job-queue.js';
 import { LimitsService } from '../limits/limits.service.js';
 import { UsageService } from '../limits/usage.service.js';
 import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
 import { ImageUrls } from '../images/image-urls.js';
+import { insertCollection } from './collection-creation.js';
+import { CollectionDeletion } from './collection-deletion.js';
 import {
   type CollectionWithDefaultLink,
   type ContentStats,
@@ -40,6 +43,9 @@ export class CollectionsService {
     private readonly guestLinks: GuestLinksService,
     private readonly images: ImageUrls,
     private readonly pages: GuestPageRepository,
+    private readonly entitlements: EntitlementResolver,
+    private readonly gate: EntitlementGate,
+    private readonly deletion: CollectionDeletion,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
   ) {}
 
@@ -50,9 +56,10 @@ export class CollectionsService {
     requestId?: string,
   ): Promise<Collection> {
     const { userId } = principal;
-    const limits = this.limits.forUser({ id: userId });
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
+      await this.gate.assertAdminCanWrite({ userId }, tx);
+      const limits = await this.limits.forUser(userId, tx);
 
       const now = Date.now();
       const creations = await this.usage.collectionCreationsSince(
@@ -71,28 +78,27 @@ export class CollectionsService {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
 
-      const row = await tx.collection.create({
-        data: { ownerId: userId, title: body.title, description: body.description ?? null },
-      });
-      await this.audit.record(tx, {
-        collectionId: row.id,
-        actor: principal,
-        action: 'collection.create',
-        targetType: 'collection',
-        targetId: row.id,
-        metadata: { toStatus: 'ACTIVE' },
-        ...(requestId === undefined ? {} : { requestId }),
-      });
+      const row = await insertCollection(
+        tx,
+        { audit: this.audit, pages: this.pages },
+        { ownerId: userId, title: body.title, description: body.description ?? null },
+        principal,
+        requestId,
+      );
       // Every collection is created with its default guest link (PRODUCT §5.3), atomically.
       const link = await this.guestLinks.createDefault(tx, row.id, principal, requestId);
-      // And its guest page: the default template with its defaults, published (ADR 0017).
-      await this.pages.ensurePublished(tx, row.id);
-      return toCollectionDto({
-        ...row,
-        guestLinks: [link],
-        guestPageVersions: [{ welcomeMessage: null }],
-        image: null,
-      });
+      return toCollectionDto(
+        {
+          ...row,
+          guestLinks: [link],
+          guestPageVersions: [{ welcomeMessage: null }],
+          image: null,
+          pack: null,
+        },
+        undefined,
+        null,
+        limits.access,
+      );
     });
   }
 
@@ -129,10 +135,23 @@ export class CollectionsService {
     const content = await this.contentStats(items.map((row) => row.id));
     // One signing moment for the page, so every URL falls in the same window.
     const now = new Date();
+    // The account's access once per page; pack collections resolve from their own row.
+    const account = await this.entitlements.forAccount(principal.userId, this.prisma, now);
     return {
       items: await Promise.all(
         items.map(async (row) =>
-          toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image, now)),
+          toCollectionDto(
+            row,
+            content.get(row.id),
+            await this.images.forAdmin(row.image, now),
+            await this.entitlements.forOwnedCollection(
+              principal.userId,
+              row,
+              this.prisma,
+              now,
+              account,
+            ),
+          ),
         ),
       ),
       nextCursor: rows.length > query.limit && last !== undefined ? encodeCursor(last) : null,
@@ -161,6 +180,9 @@ export class CollectionsService {
     body: UpdateCollectionRequest,
   ): Promise<Collection> {
     return this.prisma.$transaction(async (tx) => {
+      // Ownership first (a stranger gets 404), then the access state.
+      await this.findOwned(id, principal.userId, tx);
+      await this.gate.assertAdminCanWrite({ collectionId: id }, tx);
       let row: CollectionWithDefaultLink;
       try {
         row = await tx.collection.update({
@@ -209,12 +231,17 @@ export class CollectionsService {
     requestId?: string,
   ): Promise<Collection> {
     const { userId } = principal;
-    const limits = this.limits.forUser({ id: userId });
     return this.prisma.$transaction(async (tx) => {
       await this.usage.lockOwner(tx, userId);
       const row = await this.findOwned(id, userId, tx);
       if (row.status !== 'ARCHIVED') return this.toDto(row, tx);
-      if ((await this.usage.activeCollections(userId, tx)) >= limits.activeCollections) {
+      await this.gate.assertAdminCanWrite({ collectionId: id }, tx);
+      // A pack collection is not counted against the account's active collections [P1].
+      const limits = await this.limits.forUser(userId, tx);
+      if (
+        row.entitlement === 'ACCOUNT' &&
+        (await this.usage.activeCollections(userId, tx)) >= limits.activeCollections
+      ) {
         throw new AppError('COLLECTION_LIMIT_REACHED', 409);
       }
       const { count } = await tx.collection.updateMany({
@@ -254,27 +281,12 @@ export class CollectionsService {
         FOR UPDATE`;
       if (row === undefined) throw new AppError('NOT_FOUND', 404);
       if (row.status === 'DELETING') return;
-      await tx.collection.update({
-        where: { id: row.id },
-        data: { status: 'DELETING', deletionRequestedAt: new Date(), archivedAt: null },
+      await this.deletion.markDeleting(tx, {
+        collectionId: row.id,
+        fromStatus: row.status,
+        actor: principal,
+        ...(requestId === undefined ? {} : { requestId }),
       });
-      await this.recordTransition(
-        tx,
-        principal,
-        row.id,
-        'collection.delete',
-        row.status,
-        'DELETING',
-        requestId,
-      );
-      await this.jobs.enqueue(
-        tx,
-        'collection.purge',
-        { collectionId: row.id, ...(requestId === undefined ? {} : { requestId }) },
-        {
-          startAfterSeconds: collectionPurgeDelaySeconds(this.limits.uploads().urlTtlSeconds),
-        },
-      );
     });
   }
 
@@ -283,7 +295,12 @@ export class CollectionsService {
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<Collection> {
     const content = await this.contentStats([row.id], tx);
-    return toCollectionDto(row, content.get(row.id), await this.images.forAdmin(row.image));
+    return toCollectionDto(
+      row,
+      content.get(row.id),
+      await this.images.forAdmin(row.image),
+      await this.entitlements.forOwnedCollection(row.ownerId, row, tx),
+    );
   }
 
   /** One grouped query for a whole page, never one per collection (no N+1). */

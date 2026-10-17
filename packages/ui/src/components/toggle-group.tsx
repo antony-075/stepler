@@ -21,13 +21,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tool
 /** Separates the label and the count in the accessible name; flex layout does not render it. */
 const NAME_SPACE = ' ';
 
-type ToggleGroupVariant = 'chips' | 'segmented';
+type ToggleGroupVariant = 'chips' | 'segmented' | 'pill';
 
 type ToggleGroupProps = Omit<ToggleGroupPrimitive.ToggleGroupSingleProps, 'type'> & {
   /**
    * `chips` (default): separate bordered chips, the selected one on the soft accent.
    * `segmented`: equal segments on a grey track with a white thumb that slides to the selected
    * one (CSS only: the thumb moves by its own width, so the segments are equal).
+   * `pill`: a rounded grey track, each item as wide as its words, the selected one a white pill
+   * with a soft shadow (the billing page's «Щомісяця / Щороку» and «₴ / $ / €»).
    */
   variant?: ToggleGroupVariant;
 };
@@ -81,7 +83,9 @@ function ToggleGroup({
         className={cn(
           variant === 'segmented'
             ? 'relative isolate inline-grid w-fit max-w-full auto-cols-fr grid-flow-col rounded-[7px] bg-track p-0.5 shadow-[inset_0_0_0_1px_var(--track-edge)]'
-            : 'inline-flex w-fit max-w-full items-center gap-1.5',
+            : variant === 'pill'
+              ? 'inline-flex w-fit max-w-full items-center gap-1 rounded-full bg-muted p-1 shadow-[inset_0_0_0_1px_var(--track-edge)]'
+              : 'inline-flex w-fit max-w-full items-center gap-1.5',
           className,
         )}
         {...props}
@@ -143,6 +147,23 @@ const segmentClassName = cn(
   "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg]:text-muted-foreground",
 );
 
+/**
+ * A pill: transparent on the track; the selected one is white with a soft shadow. One weight for
+ * every state, so choosing a pill never changes its width.
+ */
+const pillClassName = cn(
+  'group/chip inline-flex h-10 min-w-10 shrink-0 items-center justify-center gap-2 rounded-full px-4.5 text-[0.9375rem] font-medium whitespace-nowrap text-foreground-soft transition-[color,background-color,box-shadow] duration-(--duration-fast) motion-reduce:transition-none',
+  focusRingInset,
+  'hover:text-foreground aria-checked:bg-card aria-checked:text-foreground aria-checked:shadow-[0_1px_3px_rgb(0_0_0/0.12)]',
+  "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+);
+
+const ITEM_CLASS: Record<ToggleGroupVariant, string> = {
+  chips: itemClassName,
+  segmented: segmentClassName,
+  pill: pillClassName,
+};
+
 function ToggleGroupItem({
   className,
   icon,
@@ -181,7 +202,7 @@ function ToggleGroupItem({
   return (
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
-      className={cn(variant === 'segmented' ? segmentClassName : itemClassName, className)}
+      className={cn(ITEM_CLASS[variant], className)}
       {...props}
     >
       {body}

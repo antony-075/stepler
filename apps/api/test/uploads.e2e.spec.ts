@@ -20,6 +20,7 @@ import { queuedJobs, resetDatabase } from './support/database.js';
 import { TEST_DATABASE_URL, testEnv, WORKER_MAIL_ENV } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
+import { useTestPlanLimits } from './support/billing.js';
 import {
   asSession,
   bigBuffer,
@@ -479,20 +480,18 @@ describe('uploads API', () => {
 
 describe('uploads API: quotas', () => {
   const MB = 1_000_000;
-  const quotaEnv = testEnv({
-    ...UPLOAD_ENV,
-    LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10 * MB),
-    LIMIT_STORAGE_BYTES_PER_ACCOUNT: String(10 * MB),
-  });
+  const quotaEnv = testEnv(UPLOAD_ENV);
   let quotaApp: INestApplication;
   let quotaServer: Server;
   let quotaTokens: GuestLinkTokens;
 
   beforeAll(async () => {
+    useTestPlanLimits({ collectionStorageBytes: BigInt(10 * MB), storageBytes: BigInt(10 * MB) });
     ({ app: quotaApp, server: quotaServer, tokens: quotaTokens } = await startApp(quotaEnv));
   });
 
   afterAll(async () => {
+    useTestPlanLimits();
     await quotaApp.close();
   });
 

@@ -1,6 +1,17 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import type { DestinationStream } from 'pino';
 import { AuditService } from '../audit/audit.service.js';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
+import { PackGrants } from '../billing/pack-grants.js';
+import { PaymentEvents } from '../billing/payment-events.service.js';
+import { PaymentTransitions } from '../billing/payment-transitions.js';
+import { PAYMENT_PROVIDERS } from '../billing/provider/provider-factory.js';
+import { ReconciliationService } from '../billing/reconciliation.service.js';
+import { SubscriptionClocks } from '../billing/subscription-clocks.js';
+import { SubscriptionProviderSync } from '../billing/subscription-provider-sync.js';
+import { SubscriptionTransitions } from '../billing/subscription-transitions.js';
+import { GuestPageRepository } from '../guest-page/guest-page.repository.js';
+import { CollectionDeletion } from '../collections/collection-deletion.js';
 import { ConfigModule } from '../config/config.module.js';
 import { ContentDeletion } from '../content/content-deletion.js';
 import { DATABASE_POOL_MAX, PrismaService } from '../database/prisma.service.js';
@@ -27,11 +38,17 @@ import { AppealReceivedMailHandler } from './handlers/appeal-received-mail.handl
 import { ReportDecisionMailHandler } from './handlers/report-decision-mail.handler.js';
 import { ReportReceivedMailHandler } from './handlers/report-received-mail.handler.js';
 import { VideoPosterHandler } from './handlers/video-poster.handler.js';
+import { BillingDeletionWarningMailHandler } from './handlers/billing-deletion-warning-mail.handler.js';
+import { BillingReadOnlyMailHandler } from './handlers/billing-read-only-mail.handler.js';
+import { BillingReconcileHandler } from './handlers/billing-reconcile.handler.js';
+import { BillingRenewalFailedMailHandler } from './handlers/billing-renewal-failed-mail.handler.js';
+import { BillingRetentionHandler } from './handlers/billing-retention.handler.js';
 import { WORKER_ENV } from './job-handler.js';
 import { JobRunner } from './job-runner.js';
 import { DerivativeStore } from './media/derivative-store.js';
 import { MediaSlots } from './media/media-slots.js';
 import { OriginalSanitizer } from './media/original-sanitizer.js';
+import { RefundsService } from '../billing/refunds.service.js';
 import type { WorkerEnv } from './worker-env.js';
 
 /**
@@ -87,6 +104,27 @@ export class WorkerModule {
         ReportReceivedMailHandler,
         ReportDecisionMailHandler,
         AppealReceivedMailHandler,
+        // Billing (ADR 0018): the retention clock deletes the way the admin does.
+        EntitlementResolver,
+        CollectionDeletion,
+        BillingRetentionHandler,
+        // Payment reconciliation (ADR 0018 [P7]): the LiqPay port and the same transitions as the
+        // API. No default-link creator here (no APP_SECRET): a pack's new collection gets its
+        // default link on the owner's first visit (G4).
+        ...PAYMENT_PROVIDERS,
+        GuestPageRepository,
+        PackGrants,
+        SubscriptionTransitions,
+        SubscriptionProviderSync,
+        PaymentTransitions,
+        PaymentEvents,
+        ReconciliationService,
+        RefundsService,
+        SubscriptionClocks,
+        BillingReconcileHandler,
+        BillingReadOnlyMailHandler,
+        BillingDeletionWarningMailHandler,
+        BillingRenewalFailedMailHandler,
         JobRunner,
       ],
     };

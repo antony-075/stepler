@@ -1,11 +1,24 @@
 import { defineConfig, devices } from '@playwright/test';
 import { compose, E2E_DATABASE_URL, E2E_S3_ENDPOINT, E2E_SMTP_URL } from './support/env.js';
+import { E2E_LIQPAY } from './support/billing-env.js';
 import { OPERATOR_EMAILS } from './support/operator.js';
 
 // Dedicated ports so e2e never collides with `pnpm dev` (3000/4000); overridable for a second
 // stack running at the same time (uploads then need that origin in the bucket's CORS).
 const API_PORT = Number(process.env.E2E_API_PORT ?? 4100);
 const WEB_PORT = Number(process.env.E2E_WEB_PORT ?? 3100);
+
+/**
+ * Payments on (ADR 0018) with test-only keys: the real `LiqPayProvider` talks to the local stub
+ * (`support/liqpay-stub.ts`) instead of LiqPay's server API, and the journeys answer the checkout
+ * page with `page.route` (`support/billing.ts`).
+ */
+const BILLING_ENV = {
+  BILLING_PROVIDER: 'liqpay',
+  LIQPAY_PUBLIC_KEY: E2E_LIQPAY.publicKey,
+  LIQPAY_PRIVATE_KEY: E2E_LIQPAY.privateKey,
+  LIQPAY_API_BASE: `http://127.0.0.1:${E2E_LIQPAY.port}`,
+};
 
 export default defineConfig({
   testDir: './tests',
@@ -52,10 +65,11 @@ export default defineConfig({
         S3_SECRET_ACCESS_KEY: compose.S3_SECRET_ACCESS_KEY ?? '',
         S3_FORCE_PATH_STYLE: 'true',
         // All e2e traffic comes from 127.0.0.1; per-IP limits are covered by API tests.
-        LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR: '10000',
         // The operator's few service addresses sign in many times per run (slice 9).
-        LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '10000',
-        LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
+        LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: '10000',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '10000',
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '10000',
         LIMIT_TEXTS_PER_IP_PER_MINUTE: '10000',
@@ -67,6 +81,10 @@ export default defineConfig({
         LIMIT_UPLOAD_CALLS_PER_GUEST_SESSION_PER_MINUTE: '10000',
         LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE: '10000',
         LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE: '10000',
+        ...BILLING_ENV,
+        BILLING_CALLBACK_URL: `http://127.0.0.1:${API_PORT}/api/v1/billing/liqpay/callback`,
+        LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE: '10000',
+        LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR: '10000',
       },
       reuseExistingServer: false,
     },
@@ -91,7 +109,15 @@ export default defineConfig({
         S3_ACCESS_KEY_ID: compose.S3_ACCESS_KEY_ID ?? 'stepler',
         S3_SECRET_ACCESS_KEY: compose.S3_SECRET_ACCESS_KEY ?? '',
         S3_FORCE_PATH_STYLE: 'true',
+        ...BILLING_ENV,
       },
+      reuseExistingServer: false,
+    },
+    // LiqPay's server API, stubbed locally (status answers set by the journeys).
+    {
+      command: 'node support/liqpay-stub.ts',
+      url: `http://127.0.0.1:${E2E_LIQPAY.port}/health`,
+      env: { E2E_LIQPAY_PORT: String(E2E_LIQPAY.port), LIQPAY_PRIVATE_KEY: E2E_LIQPAY.privateKey },
       reuseExistingServer: false,
     },
     {

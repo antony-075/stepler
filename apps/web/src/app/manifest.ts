@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: 'Stepler',
     start_url: '/app',
     display: 'standalone',
-    theme_color: '#3657FF',
+    theme_color: '#FFFFFF',
     background_color: '#FFFFFF',
     icons: [
       { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },

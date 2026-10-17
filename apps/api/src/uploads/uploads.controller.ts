@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { CLOSED_ERRORS } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   createUploadRequestSchema,
@@ -71,7 +72,7 @@ export class UploadsController {
   @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
   @ApiResponse({
     status: 403,
-    description: `FORBIDDEN (the link takes no such files), ${STATE_ERRORS}`,
+    description: `FORBIDDEN (the link takes no such files), ${STATE_ERRORS}, ${CLOSED_ERRORS}`,
   })
   @ApiResponse({
     status: 409,

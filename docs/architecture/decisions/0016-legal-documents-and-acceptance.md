@@ -38,3 +38,11 @@ Before guest contribution can reach production ([C20]), Stepler needs public Ter
 - A stale link signs in but records nothing and lands on the fallback; pre-slice accounts see the fallback once.
 - Tests create accounts with acceptances by default (`signInAs(…, legal = true)`); the e2e helpers tick the card's checkbox and accept on the fallback if it ever appears.
 - Open (legal, spec §21): DSA/GDPR review, whether the IP is ever needed, the real wording of the checkbox and the guest notice (placeholders in `messages/*.json`).
+
+## Addendum 2026-10-16 — e-mail + password (ADR 0019)
+
+The magic-link transport (decision 2, the `MagicLinkToken` columns) is gone with the magic link. The checkbox is now on `/register`, not on the sign-in card:
+
+- `POST /auth/register` requires `legal: {terms, privacy}` (without it `400 VALIDATION_FAILED`, stale `400 LEGAL_VERSION_OUTDATED`, checked before any mail or row) and records the acceptance in the transaction that creates the unverified account. The mailbox owner confirms the address afterwards; the requester is the person who ticks the box, as on the Google path.
+- The Google button on `/register` carries the versions as before. The one on `/login` does not, so a new account created from `/login` meets `/accept-terms` once.
+- The gate (decision 4) and the fallback page (decision 5) are unchanged.

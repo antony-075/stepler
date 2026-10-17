@@ -40,13 +40,18 @@ app's tokens to the template's (`--tpl-*`) so the app's slots follow it.
 The app (apps/web) owns data, state and copy; a template owns only the page around them.
 
 - `model: GuestPageModel`: title, description, welcome, the counts line, the cover and background
-  images (`TemplateImage`), and the phase (`first-visit` or `contributed`).
+  images (`TemplateImage`), and the `view` shown on phones and tablets (`add` or `frames`). A
+  template spreads `viewRegionProps('add')` on its intro and actions and
+  `viewRegionProps('frames')` on the frames sections; below 1024px the root hides the other one,
+  from 1024px both show and the tabs go.
 - `actions: TemplateActions | null`: the primary action (`files` or `text`), the quieter
   secondary one and the «keep the page open» note, as labels and callbacks. The template draws
   its own buttons; `onSelect` runs synchronously inside the click (iOS file picker). `null` on a
   view-only link.
-- `slots: TemplateSlots`: the brand, the language switch, the legal notice, the footer, and the
-  own and shared frames sections. Rules: the legal notice comes directly after the actions,
+- `slots: TemplateSlots`: the brand, the language switch, the legal notice, the footer, the
+  view tabs («Додати» / «Кадри», placed under the bar in `.tpl-view-tabs` and styled by the
+  template through `[data-slot=guest-view-tabs]` and `guest-view-tab`; `null` on a view-only link), and the own and shared frames
+  sections. Rules: the legal notice comes directly after the actions,
   wherever they are drawn (a sticky bar too); the footer always renders and is never covered.
 - `settings` (resolved and valid) and `def` (the definition).
 

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { LegalVersions } from '@stepler/contracts';
+import { EntitlementResolver } from '../../billing/entitlement-resolver.js';
 import { constraintViolation } from '../../database/constraint-violation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AppError } from '../../errors/app-error.js';
@@ -24,18 +25,21 @@ export function displayNameFromGoogle(name: string | undefined): string | undefi
  * Maps a Google identity to a user (ADR 0006). An unverified Google email never creates or
  * links an account: otherwise someone could pre-register a victim's address through Google.
  * The legal versions from the signed OAuth transaction are recorded in the transaction that
- * completes the sign-in (ADR 0016); stale ones record nothing and the gate takes over.
+ * completes the sign-in (ADR 0016); stale or absent ones record nothing and the gate takes over.
+ * Linking to an address that was registered but never confirmed drops its password (ADR 0019):
+ * whoever set it never proved the mailbox; Google just did.
  */
 @Injectable()
 export class GoogleSignInService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly legal: LegalService,
+    private readonly entitlements: EntitlementResolver,
   ) {}
 
   async signIn(
     claims: GoogleClaims,
-    legal: LegalVersions,
+    legal: LegalVersions | null,
     requestId: string | undefined,
   ): Promise<string> {
     const linked = await this.prisma.authAccount.findUnique({
@@ -44,9 +48,11 @@ export class GoogleSignInService {
     });
     if (linked !== null) {
       const userId = this.active(linked.user);
-      await this.prisma.$transaction((tx) =>
-        this.legal.recordAcceptance(tx, userId, legal, requestId),
-      );
+      if (legal !== null) {
+        await this.prisma.$transaction((tx) =>
+          this.legal.recordAcceptance(tx, userId, legal, requestId),
+        );
+      }
       await this.fillDisplayName(userId, claims.name);
       return userId;
     }
@@ -56,14 +62,23 @@ export class GoogleSignInService {
     const user =
       (await this.prisma.user.findUnique({
         where: { email },
-        select: { id: true, status: true },
+        select: { id: true, status: true, emailVerifiedAt: true },
       })) ?? (await this.createUser(email, claims.name));
     const userId = this.active(user);
     await this.prisma.$transaction(async (tx) => {
-      await tx.user.updateMany({
-        where: { id: userId, emailVerifiedAt: null },
-        data: { emailVerifiedAt: new Date() },
-      });
+      if (user.emailVerifiedAt === null) {
+        await tx.passwordCredential.deleteMany({ where: { userId } });
+        const now = new Date();
+        await tx.user.updateMany({
+          where: { id: userId, emailVerifiedAt: null },
+          data: { emailVerifiedAt: now },
+        });
+        // A registration never confirmed has no trial yet ([B7]: it starts now).
+        await tx.user.updateMany({
+          where: { id: userId, trialEndsAt: null },
+          data: { trialEndsAt: await this.entitlements.trialEndsAtFor(now) },
+        });
+      }
       await tx.authAccount.upsert({
         where: {
           provider_providerAccountId: { provider: 'GOOGLE', providerAccountId: claims.sub },
@@ -71,7 +86,7 @@ export class GoogleSignInService {
         create: { userId, provider: 'GOOGLE', providerAccountId: claims.sub },
         update: {},
       });
-      await this.legal.recordAcceptance(tx, userId, legal, requestId);
+      if (legal !== null) await this.legal.recordAcceptance(tx, userId, legal, requestId);
     });
     await this.fillDisplayName(userId, claims.name);
     return userId;
@@ -99,19 +114,24 @@ export class GoogleSignInService {
   private async createUser(email: string, name: string | undefined) {
     const displayName = displayNameFromGoogle(name);
     try {
+      // A new account starts its trial (ADR 0018 [B7]), as at e-mail verification.
+      const createdAt = new Date();
+      const trialEndsAt = await this.entitlements.trialEndsAtFor(createdAt);
       return await this.prisma.user.create({
         data: {
           email,
-          emailVerifiedAt: new Date(),
+          emailVerifiedAt: createdAt,
+          createdAt,
+          trialEndsAt,
           ...(displayName === undefined ? {} : { displayName }),
         },
-        select: { id: true, status: true },
+        select: { id: true, status: true, emailVerifiedAt: true },
       });
     } catch (error) {
       if (constraintViolation(error)?.constraint !== 'User_email_key') throw error;
       return this.prisma.user.findUniqueOrThrow({
         where: { email },
-        select: { id: true, status: true },
+        select: { id: true, status: true, emailVerifiedAt: true },
       });
     }
   }

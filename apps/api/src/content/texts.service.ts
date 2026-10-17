@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Injectable } from '@nestjs/common';
 import type { GuestContentItem } from '@stepler/contracts';
 import type { GuestPrincipal } from '../auth/principal.js';
@@ -20,6 +21,7 @@ export class TextsService {
     private readonly prisma: PrismaService,
     private readonly limits: LimitsService,
     private readonly frames: FrameNumbers,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -40,6 +42,7 @@ export class TextsService {
 
     try {
       const row = await this.prisma.$transaction(async (tx) => {
+        await this.gate.assertGuestCanContribute(p.collectionId, tx);
         const frameNo = await this.frames.next(tx, p.collectionId);
         const session = await tx.guestSession.findUniqueOrThrow({
           where: { id: p.guestSessionId },

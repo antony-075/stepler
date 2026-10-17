@@ -406,6 +406,8 @@ guest session не является полноценной учётной зап
 
 D13. Платежи в первом запуске
 
+> Superseded 2026-10-07 by the owner's billing decisions B1–B12 (ADR 0018): payments ship before the paid launch.
+
 Ответ:
 
 (a) не в первом запуске.

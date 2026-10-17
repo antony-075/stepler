@@ -134,6 +134,13 @@ enum AuthProvider {
   EMAIL
 }
 
+/// What an emailed token does (ADR 0019): confirms the address, or lets the mailbox set a new
+/// password (also how an account without one gets its first).
+enum AuthTokenPurpose {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
 /// Why a guest reported a frame (R1; contracts `REPORT_REASONS`).
 enum ReportReason {
   ILLEGAL
@@ -171,29 +178,113 @@ enum AppealStatus {
 }
 
 /// Legal documents (registry in @stepler/contracts `LEGAL_DOCUMENTS`; ADR 0016).
+/// Billing (ADR 0018).
+enum OfferKind {
+  TRIAL
+  PACK
+  PACK_EXTENSION
+  SUBSCRIPTION
+}
+
+enum PackExtensionKind {
+  WINDOW
+  RETENTION
+  STORAGE
+}
+
+enum BillingInterval {
+  ONE_TIME
+  MONTH
+  YEAR
+}
+
+enum Currency {
+  UAH
+  EUR
+  USD
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum SubscriptionSource {
+  LIQPAY
+  COMPLIMENTARY
+}
+
+/// What a payment buys (plan Task 11). Renewals are separate rows [P9].
+enum PaymentKind {
+  PACK
+  PACK_EXTENSION
+  SUBSCRIPTION
+  SUBSCRIPTION_RENEWAL
+  SUBSCRIPTION_CHANGE
+}
+
+/// Written only by `PaymentTransitions` (and refunds, M4); final states never regress except
+/// SUCCEEDED → REVERSED.
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+  REVERSED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+/// A manual refund from /ops (plan Task 21): PENDING until LiqPay answers (a crash or timeout is
+/// resolved by the reconcile job through `status`).
+enum RefundStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+/// ACCOUNT = the account's plan or trial governs it; PACK = its own pack does (plan [P1]).
+enum CollectionEntitlement {
+  ACCOUNT
+  PACK
+}
+
 enum LegalDocument {
   TERMS
   PRIVACY
 }
 
 model User {
-  id               String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email            String            @unique @db.Citext
-  emailVerifiedAt  DateTime?         @db.Timestamptz(3)
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  email              String            @unique @db.Citext
+  emailVerifiedAt    DateTime?         @db.Timestamptz(3)
   /// At most 80 characters (CHECK "User_displayName_length").
-  displayName      String?
-  locale           Locale            @default(uk)
+  displayName        String?
+  locale             Locale            @default(uk)
   /// BLOCKED if and only if blockedAt is set (CHECK "User_blocked_consistent").
-  status           UserStatus        @default(ACTIVE)
-  blockedAt        DateTime?         @db.Timestamptz(3)
-  blockedReason    String?
-  createdAt        DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime          @updatedAt @db.Timestamptz(3)
-  accounts         AuthAccount[]
-  sessions         AuthSession[]
-  collections      Collection[]
-  uploadSessions   UploadSession[]
-  legalAcceptances LegalAcceptance[]
+  status             UserStatus        @default(ACTIVE)
+  blockedAt          DateTime?         @db.Timestamptz(3)
+  blockedReason      String?
+  /// The trial's end (ADR 0018 [B7]): set once, on account creation; never renewed.
+  trialEndsAt        DateTime?         @db.Timestamptz(3)
+  /// When the «лише перегляд» mail went out for the current read-only episode (plan Task 6);
+  /// cleared by the retention clock when access returns, so a later episode mails again.
+  readOnlyNotifiedAt DateTime?         @db.Timestamptz(3)
+  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
+  subscriptions      Subscription[]
+  payments           Payment[]
+  refundsMade        Refund[]
+  accounts           AuthAccount[]
+  sessions           AuthSession[]
+  passwordCredential PasswordCredential?
+  authEmailTokens    AuthEmailToken[]
+  collections        Collection[]
+  uploadSessions     UploadSession[]
+  legalAcceptances   LegalAcceptance[]
 }
 
 model AuthAccount {
@@ -236,52 +327,67 @@ model LegalAcceptance {
   @@unique([userId, document, version])
 }
 
-model MagicLinkToken {
-  id                  String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  email               String    @db.Citext
-  /// SHA-256 of the emailed token; the raw token is never stored.
-  tokenHash           String    @unique
-  expiresAt           DateTime  @db.Timestamptz(3)
-  consumedAt          DateTime? @db.Timestamptz(3)
-  locale              Locale
-  /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
-  requestIpHash       String?
-  /// Legal versions accepted on the sign-in card (ADR 0016), recorded at verify. NULL on links
-  /// issued before slice 10 (nothing is recorded). CHECK "MagicLinkToken_legal_versions_format".
-  legalTermsVersion   String?
-  legalPrivacyVersion String?
-  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+/// The account's password (ADR 0019): an Argon2id PHC string (`$argon2id$v=19$m=…`), never the
+/// password. One per user; an account from Google may have none.
+model PasswordCredential {
+  userId       String   @id @db.Uuid
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  @@index([email, createdAt])
+/// A single-use, expiring token mailed to the account's address (ADR 0019): only its SHA-256 is
+/// stored. Consumed by one conditional UPDATE, so two clicks cannot both use it.
+model AuthEmailToken {
+  id            String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId        String           @db.Uuid
+  purpose       AuthTokenPurpose
+  tokenHash     String           @unique
+  expiresAt     DateTime         @db.Timestamptz(3)
+  consumedAt    DateTime?        @db.Timestamptz(3)
+  /// HMAC-SHA256 of the requesting IP (HKDF key "ip-hash"); for abuse investigation only.
+  requestIpHash String?
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
 }
 
 model Collection {
-  id                  String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  ownerId             String             @db.Uuid
+  id                  String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  ownerId             String                @db.Uuid
   /// 1 to 100 characters (CHECK "Collection_title_length").
   title               String
   /// 1 to 1000 characters when set (CHECK "Collection_description_length").
   description         String?
   /// ARCHIVED iff archivedAt is set, DELETING iff deletionRequestedAt is set
   /// (CHECKs "Collection_archived_consistent", "Collection_deleting_consistent").
-  status              CollectionStatus   @default(ACTIVE)
-  archivedAt          DateTime?          @db.Timestamptz(3)
-  deletionRequestedAt DateTime?          @db.Timestamptz(3)
+  status              CollectionStatus      @default(ACTIVE)
+  archivedAt          DateTime?             @db.Timestamptz(3)
+  deletionRequestedAt DateTime?             @db.Timestamptz(3)
   /// Blocked by the Stepler operator (R7): closed to guests, the owner cannot unblock it. Both
   /// set or both NULL (CHECK "Collection_blocked_consistent"); the reason is the operator's,
   /// 1 to 500 characters (CHECK "Collection_blocked_reason_length").
-  blockedAt           DateTime?          @db.Timestamptz(3)
+  blockedAt           DateTime?             @db.Timestamptz(3)
   blockedReason       String?
   /// The next frame number (ADR 0015); taken and incremented in the transaction that creates an
   /// item. Gaps are never filled. At least 1 (CHECK "Collection_next_frame_positive").
-  nextFrameNo         Int                @default(1)
+  nextFrameNo         Int                   @default(1)
   /// The highest guest page revision handed out (a new draft and every save take the next one),
   /// so a revision names one draft state for the life of the collection, across publishes and
   /// resets. At least 1 (CHECK "Collection_page_revision_positive").
-  lastPageRevision    Int                @default(1)
-  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
-  owner               User               @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  lastPageRevision    Int                   @default(1)
+  /// Which entitlement governs it (ADR 0018 [P1]); PACK iff it has a CollectionPack.
+  entitlement         CollectionEntitlement @default(ACCOUNT)
+  /// Read-only content is deleted after this (plan [P5]); set and cleared by the worker's
+  /// retention clock. The warning stamps need it (CHECK "Collection_deletion_warnings").
+  deleteAfter         DateTime?             @db.Timestamptz(3)
+  deletionWarnedAt30  DateTime?             @db.Timestamptz(3)
+  deletionWarnedAt7   DateTime?             @db.Timestamptz(3)
+  createdAt           DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime              @updatedAt @db.Timestamptz(3)
+  owner               User                  @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   guestLinks          GuestLink[]
   guestSessions       GuestSession[]
   contentItems        ContentItem[]
@@ -289,10 +395,12 @@ model Collection {
   /// «Картинка колекції»: the owner's own image of the collection (dashboard, share dialog);
   /// never in a guest response. An image of this collection (composite key), NO ACTION so
   /// deleting the collection still cascades in one statement.
-  imageId             String?            @db.Uuid
-  image               CollectionImage?   @relation("CollectionImageOfCollection", fields: [imageId, id], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "Collection_image_same_collection_fkey")
-  images              CollectionImage[]  @relation("CollectionImages")
+  imageId             String?               @db.Uuid
+  image               CollectionImage?      @relation("CollectionImageOfCollection", fields: [imageId, id], references: [id, collectionId], onDelete: NoAction, onUpdate: NoAction, map: "Collection_image_same_collection_fkey")
+  images              CollectionImage[]     @relation("CollectionImages")
   guestPageVersions   GuestPageVersion[]
+  pack                CollectionPack?
+  payments            Payment[]
 
   @@index([ownerId, status, createdAt(sort: Desc), id(sort: Desc)])
 }
@@ -591,28 +699,28 @@ model UploadSession {
 /// "ContentReport_admin_open_idx". Rules live as named CHECKs: "ContentReport_resolved_consistent",
 /// "ContentReport_description_length", "ContentReport_note_length", "ContentReport_email_length".
 model ContentReport {
-  id                     String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  contentId              String        @db.Uuid
-  collectionId           String        @db.Uuid
-  reporterGuestSessionId String        @db.Uuid
+  id                     String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contentId              String       @db.Uuid
+  collectionId           String       @db.Uuid
+  reporterGuestSessionId String       @db.Uuid
   /// The client's `Idempotency-Key`; unique per guest session.
-  idempotencyKey         String        @db.Uuid
+  idempotencyKey         String       @db.Uuid
   reason                 ReportReason
   description            String?
-  reporterEmail          String?       @db.Citext
+  reporterEmail          String?      @db.Citext
   reporterLocale         Locale?
   requestId              String?
-  status                 ReportStatus  @default(OPEN)
+  status                 ReportStatus @default(OPEN)
   /// The operator who decided; set with `resolvedAt` and `resolutionNote`.
-  resolvedByUserId       String?       @db.Uuid
-  resolvedAt             DateTime?     @db.Timestamptz(3)
+  resolvedByUserId       String?      @db.Uuid
+  resolvedAt             DateTime?    @db.Timestamptz(3)
   resolutionNote         String?
   /// The collection admin dismissed it for themselves ([Q1]); the operator still sees it OPEN.
-  adminDismissedAt       DateTime?     @db.Timestamptz(3)
+  adminDismissedAt       DateTime?    @db.Timestamptz(3)
   /// The worker's mail jobs stamp these once sent, so a retried job sends nothing twice.
-  operatorNotifiedAt     DateTime?     @db.Timestamptz(3)
-  reporterNotifiedAt     DateTime?     @db.Timestamptz(3)
-  createdAt              DateTime      @default(now()) @db.Timestamptz(3)
+  operatorNotifiedAt     DateTime?    @db.Timestamptz(3)
+  reporterNotifiedAt     DateTime?    @db.Timestamptz(3)
+  createdAt              DateTime     @default(now()) @db.Timestamptz(3)
 
   @@unique([reporterGuestSessionId, idempotencyKey])
   @@index([status, createdAt(sort: Desc), id(sort: Desc)])
@@ -668,4 +776,238 @@ model AuditEvent {
 
   @@index([collectionId, createdAt])
   @@index([actorId, action, createdAt])
+}
+
+/// A sellable (or trial) offer (ADR 0018 [B10]): edited in /ops, deactivated, never deleted.
+/// Which limits a kind needs: CHECK "BillingOffer_kind_shape". Purchases snapshot the limits.
+model BillingOffer {
+  id                     String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code                   String             @unique
+  kind                   OfferKind
+  /// Set iff kind = PACK_EXTENSION.
+  extension              PackExtensionKind?
+  rank                   Int                @default(0)
+  /// Shown with «Найпопулярніший» on «Тарифи» and /pricing (billing page v4).
+  highlighted            Boolean            @default(false)
+  titleUk                String
+  titleEn                String
+  descriptionUk          String?
+  descriptionEn          String?
+  activeCollections      Int?
+  storageBytes           BigInt?
+  collectionStorageBytes BigInt?
+  guestLinks             Int?
+  windowDays             Int?
+  retentionDays          Int?
+  /// TRIAL only: how long a new account's trial lasts.
+  durationDays           Int?
+  /// Per-plan feature flags (B9), unused by the UI today.
+  features               Json               @default("{}")
+  /// The item id registered for fiscal receipts (plan [P14]); unused until then.
+  rroItemId              String?
+  active                 Boolean            @default(true)
+  createdAt              DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime           @updatedAt @db.Timestamptz(3)
+  prices                 BillingPrice[]
+  subscriptions          Subscription[]     @relation("SubscriptionOffer")
+  pendingSubscriptions   Subscription[]     @relation("SubscriptionPendingOffer")
+  packs                  CollectionPack[]
+  payments               Payment[]
+}
+
+/// A price of one offer in one currency and period, in minor units (B2). One live price per
+/// (offer, interval, currency) (partial unique "BillingPrice_one_active_per_slot").
+model BillingPrice {
+  id                   String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  offerId              String          @db.Uuid
+  interval             BillingInterval
+  currency             Currency
+  /// Positive (CHECK "BillingPrice_amount_positive").
+  amountMinor          Int
+  active               Boolean         @default(true)
+  createdAt            DateTime        @default(now()) @db.Timestamptz(3)
+  offer                BillingOffer    @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  subscriptions        Subscription[]  @relation("SubscriptionPrice")
+  pendingSubscriptions Subscription[]  @relation("SubscriptionPendingPrice")
+  payments             Payment[]
+
+  @@index([offerId])
+}
+
+/// An account-level plan: a paid subscription or an operator's complimentary grant (plan [P1],
+/// [P13]). Limits are a snapshot of the offer at start [B10]. At most one live per user (partial
+/// unique "Subscription_one_live_per_user").
+model Subscription {
+  id                         String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId                     String             @db.Uuid
+  source                     SubscriptionSource
+  status                     SubscriptionStatus
+  offerId                    String             @db.Uuid
+  priceId                    String?            @db.Uuid
+  interval                   BillingInterval?
+  amountMinor                Int?
+  currency                   Currency?
+  activeCollections          Int
+  storageBytes               BigInt
+  collectionStorageBytes     BigInt
+  guestLinks                 Int
+  features                   Json               @default("{}")
+  currentPeriodStart         DateTime?          @db.Timestamptz(3)
+  /// NULL = a grant without an end.
+  currentPeriodEnd           DateTime?          @db.Timestamptz(3)
+  graceEndsAt                DateTime?          @db.Timestamptz(3)
+  cancelAtPeriodEnd          Boolean            @default(false)
+  canceledAt                 DateTime?          @db.Timestamptz(3)
+  endedAt                    DateTime?          @db.Timestamptz(3)
+  pendingOfferId             String?            @db.Uuid
+  pendingPriceId             String?            @db.Uuid
+  providerOrderId            String?            @unique
+  autoRenewConsentAt         DateTime?          @db.Timestamptz(3)
+  consentTermsVersion        String?
+  /// The operator's reason for a grant; shown in /ops only.
+  grantReason                String?
+  grantedByUserId            String?            @db.Uuid
+  /// The last `status` call for this subscription (reconciliation) and whether LiqPay answered.
+  lastRefreshAt              DateTime?          @db.Timestamptz(3)
+  lastRefreshOk              Boolean            @default(false)
+  /// LiqPay confirmed it charges no more (our `unsubscribe`, or the payer at the bank).
+  providerUnsubscribedAt     DateTime?          @db.Timestamptz(3)
+  /// A new price LiqPay has not confirmed yet (`subscribe_update`); the reconcile job retries.
+  pendingProviderAmountMinor Int?
+  /// The period end whose failed renewal was mailed (one mail per period).
+  renewalFailureNotifiedFor  DateTime?          @db.Timestamptz(3)
+  /// The renewal check could not get an answer from LiqPay since then (archive or `status`
+  /// down, or an ambiguous answer): the plan keeps its access and /ops shows «потребує
+  /// перевірки». Cleared by the next answered check.
+  renewalUnverifiedSince     DateTime?          @db.Timestamptz(3)
+  createdAt                  DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime           @updatedAt @db.Timestamptz(3)
+  user                       User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer                      BillingOffer       @relation("SubscriptionOffer", fields: [offerId], references: [id], onDelete: Restrict)
+  price                      BillingPrice?      @relation("SubscriptionPrice", fields: [priceId], references: [id], onDelete: Restrict)
+  pendingOffer               BillingOffer?      @relation("SubscriptionPendingOffer", fields: [pendingOfferId], references: [id], onDelete: Restrict)
+  pendingPrice               BillingPrice?      @relation("SubscriptionPendingPrice", fields: [pendingPriceId], references: [id], onDelete: Restrict)
+  payments                   Payment[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, currentPeriodEnd], map: "Subscription_period_end_idx")
+}
+
+/// A one-time pack bought for one collection (ADR 0018 [B4], [P4]): its limits (snapshot) and
+/// clocks. Deleted with its collection.
+model CollectionPack {
+  id              String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  collectionId    String       @unique @db.Uuid
+  offerId         String       @db.Uuid
+  storageBytes    BigInt
+  guestLinks      Int
+  activatedAt     DateTime     @db.Timestamptz(3)
+  windowEndsAt    DateTime     @db.Timestamptz(3)
+  retentionEndsAt DateTime     @db.Timestamptz(3)
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+  collection      Collection   @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  offer           BillingOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+
+  @@index([offerId])
+}
+
+/// One checkout and its money (ADR 0018, plan Task 11). The id is LiqPay's `order_id` [P8], kept
+/// in `providerOrderId` too. Amount, currency and what was bought are snapshotted at checkout
+/// [B10]; a payment survives its collection's purge (`collectionId` SET NULL). Rules as named
+/// CHECKs: "Payment_amount_positive", "Payment_refund_bounds", "Payment_paid_consistent"; one
+/// pending pack checkout per collection and offer ("Payment_one_pending_per_target").
+model Payment {
+  id                 String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId             String         @db.Uuid
+  kind               PaymentKind
+  status             PaymentStatus  @default(PENDING)
+  offerId            String         @db.Uuid
+  priceId            String?        @db.Uuid
+  collectionId       String?        @db.Uuid
+  subscriptionId     String?        @db.Uuid
+  /// A pack that creates its collection (`collectionId` NULL at checkout): the title to use.
+  newCollectionTitle String?
+  amountMinor        Int
+  currency           Currency
+  /// What was bought: the offer's code, kind, titles and limits at checkout.
+  offerSnapshot      Json
+  providerOrderId    String         @unique
+  providerPaymentId  String?        @unique
+  expiresAt          DateTime       @db.Timestamptz(3)
+  paidAt             DateTime?      @db.Timestamptz(3)
+  failedAt           DateTime?      @db.Timestamptz(3)
+  errCode            String?
+  refundedMinor      Int            @default(0)
+  /// A success that could not be granted as bought (e.g. a second pack): for the operator.
+  needsReview        Boolean        @default(false)
+  /// The provider reported another amount or currency: nothing was granted.
+  mismatch           Boolean        @default(false)
+  /// The last `status` call for this payment (the return page's refresh is throttled by it).
+  lastCheckedAt      DateTime?      @db.Timestamptz(3)
+  /// A subscription payment: the paid period (a renewal's new period, an upgrade's current one).
+  periodStart        DateTime?      @db.Timestamptz(3)
+  periodEnd          DateTime?      @db.Timestamptz(3)
+  createdAt          DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime       @updatedAt @db.Timestamptz(3)
+  user               User           @relation(fields: [userId], references: [id], onDelete: Restrict)
+  offer              BillingOffer   @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  price              BillingPrice?  @relation(fields: [priceId], references: [id], onDelete: Restrict)
+  collection         Collection?    @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  subscription       Subscription?  @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+  events             PaymentEvent[]
+  refunds            Refund[]
+
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([collectionId])
+  @@index([offerId])
+  @@index([priceId])
+  @@index([subscriptionId])
+}
+
+/// A verified provider callback (plan Task 12). Unverified bodies are never stored. `dedupeKey`
+/// is the SHA-256 of the raw `data` string, so a replay is one row; the raw string itself is
+/// discarded. `payload` keeps whitelisted fields only (no names, phone, IP or card data). An
+/// event whose transition failed stays `processedAt` NULL until the reconciliation job reapplies
+/// it (partial index "PaymentEvent_unprocessed_idx").
+model PaymentEvent {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  provider    String    @default("liqpay")
+  dedupeKey   String    @unique
+  verified    Boolean
+  orderId     String?
+  paymentId   String?   @db.Uuid
+  payload     Json
+  /// `applied` | `noop` | `mismatch` | `review` | `unknown_order`.
+  outcome     String?
+  processedAt DateTime? @db.Timestamptz(3)
+  error       String?
+  receivedAt  DateTime  @default(now()) @db.Timestamptz(3)
+  payment     Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  @@index([paymentId])
+}
+
+/// A refund the operator made from /ops (owner decision B11, plan Task 21): full or partial,
+/// with a reason, audited. `Idempotency-Key` per form: one refund per (payment, key). Rules as
+/// named CHECKs: "Refund_amount_positive", "Refund_reason_length", "Refund_completed_consistent";
+/// pending refunds are found through "Refund_pending_idx".
+model Refund {
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  paymentId      String       @db.Uuid
+  amountMinor    Int
+  currency       Currency
+  status         RefundStatus @default(PENDING)
+  reason         String
+  operatorUserId String       @db.Uuid
+  idempotencyKey String       @db.Uuid
+  /// LiqPay's answer (`reversed`, `error`, …); never a card detail.
+  providerStatus String?
+  createdAt      DateTime     @default(now()) @db.Timestamptz(3)
+  completedAt    DateTime?    @db.Timestamptz(3)
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  operator       User         @relation(fields: [operatorUserId], references: [id], onDelete: Restrict)
+
+  @@unique([paymentId, idempotencyKey])
+  @@index([operatorUserId])
 }

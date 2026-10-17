@@ -12,12 +12,19 @@
 //   is decoration (`aria-hidden`); the h1 names the collection.
 // - From 1024px: the hero is `1fr | 380` (the title with the 168px emblem beside it; the aside
 //   with the count, a 64px primary and a 54px ghost, the notice).
+// - Phones and tablets, two views (owner remarks 2026-10-16): the app's tabs under the header;
+//   «Додати» is the hero with its actions, «Кадри» the bento grids. From 1024px both, no tabs.
 // - Dark only, Unbounded over Manrope, lime by default [D5]. Links and focus take the accent's
 //   readable form.
 
 import { ImagePlus, PenLine } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
-import type { TemplateActions, TemplateImage, TemplateLayoutProps } from '../../react/model.ts';
+import {
+  type TemplateActions,
+  type TemplateImage,
+  type TemplateLayoutProps,
+  viewRegionProps,
+} from '../../react/model.ts';
 import { TemplateBackdrop, TemplatePicture } from '../../react/parts.tsx';
 
 const EMBLEM_SIZES = '(min-width: 1024px) 114px, 84px';
@@ -29,6 +36,7 @@ function ringText(title: string): string {
 }
 
 export function PartyLayout({ model, actions, slots }: TemplateLayoutProps) {
+  const tabs = slots.tabs !== null;
   return (
     <div className="pt-page">
       <TemplateBackdrop image={model.background} />
@@ -37,7 +45,8 @@ export function PartyLayout({ model, actions, slots }: TemplateLayoutProps) {
         {slots.brand}
         <div className="pt-lang">{slots.languageSwitch}</div>
       </header>
-      <section className="pt-hero">
+      {tabs ? <div className="tpl-view-tabs pt-tabs">{slots.tabs}</div> : null}
+      <section className="pt-hero" {...viewRegionProps('add')}>
         <div className="pt-identity" data-emblem={model.cover === null ? undefined : ''}>
           {/* Placed beside the welcome, under the title (CSS grid). */}
           {model.cover === null ? null : <PartyEmblem image={model.cover} title={model.title} />}
@@ -66,7 +75,7 @@ export function PartyLayout({ model, actions, slots }: TemplateLayoutProps) {
           )}
         </div>
       </section>
-      <main className="pt-sections">
+      <main className="pt-sections" {...viewRegionProps('frames')}>
         {slots.ownFrames}
         {slots.allFrames}
       </main>

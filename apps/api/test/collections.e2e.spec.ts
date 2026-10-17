@@ -452,12 +452,7 @@ describe('collection creation rate limit', () => {
   const server = (): Server => app.getHttpServer() as Server;
 
   beforeAll(async () => {
-    app = await createApp(
-      testEnv({
-        LIMIT_COLLECTION_CREATIONS_PER_DAY: '2',
-        LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '5',
-      }),
-    );
+    app = await createApp(testEnv({ LIMIT_COLLECTION_CREATIONS_PER_DAY: '2' }));
     await listenOnLoopback(app);
   });
 

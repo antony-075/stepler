@@ -7,7 +7,47 @@ export function createTestPrisma(): PrismaClient {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString: TEST_DATABASE_URL }) });
 }
 
+/**
+ * The offer catalogue is reference data the billing migration seeds (ADR 0018): kept across
+ * resets, so every test sees the seeded offers. Offers a test adds are deleted.
+ */
+const SEEDED_OFFERS = [
+  'trial',
+  'pack-start',
+  'pack-event',
+  'ext-window-30',
+  'ext-retention-365',
+  'ext-storage',
+  'sub-pro',
+  'sub-business',
+];
+
+/** The seeded catalogue as the migration wrote it (made by the global setup, test DB only). */
+export const SEED_COPY = '_TestSeedBillingOffer';
+
+/** What the /ops editor may change; restored from the copy on every reset. */
+const EDITABLE_OFFER_COLUMNS = [
+  'titleUk',
+  'titleEn',
+  'descriptionUk',
+  'descriptionEn',
+  'rank',
+  'highlighted',
+  'activeCollections',
+  'storageBytes',
+  'collectionStorageBytes',
+  'guestLinks',
+  'windowDays',
+  'retentionDays',
+  'durationDays',
+  'features',
+  'rroItemId',
+]
+  .map((column) => `"${column}" = s."${column}"`)
+  .join(', ');
+
 const MODEL_TABLES = Object.values(Prisma.ModelName)
+  .filter((name) => name !== 'BillingOffer')
   .map((name) => `"${name}"`)
   .join(', ');
 
@@ -17,6 +57,17 @@ const MODEL_TABLES = Object.values(Prisma.ModelName)
  */
 export async function resetDatabase(prisma: PrismaClient): Promise<void> {
   await prisma.$executeRawUnsafe(`TRUNCATE ${MODEL_TABLES} RESTART IDENTITY CASCADE`);
+  await prisma.$executeRawUnsafe(
+    `DELETE FROM "BillingOffer" WHERE "code" <> ALL($1::text[])`,
+    SEEDED_OFFERS,
+  );
+  await prisma.$executeRawUnsafe(
+    `DO $$ BEGIN IF to_regclass('"${SEED_COPY}"') IS NOT NULL THEN
+       UPDATE "BillingOffer" o SET ${EDITABLE_OFFER_COLUMNS} FROM "${SEED_COPY}" s WHERE o."code" = s."code";
+     END IF; END $$`,
+  );
+  // As seeded: only the trial is live (a suite may price and activate the others).
+  await prisma.$executeRawUnsafe(`UPDATE "BillingOffer" SET "active" = ("code" = 'trial')`);
   await prisma.$executeRawUnsafe(
     `DO $$ BEGIN IF to_regclass('pgboss.job') IS NOT NULL THEN DELETE FROM pgboss.job; END IF; END $$`,
   );

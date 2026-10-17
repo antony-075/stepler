@@ -21,7 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { isApiError } from '@/api/client';
 import { fetchMe, ME_QUERY_KEY } from '@/api/me';
@@ -30,6 +30,7 @@ import { setLocaleCookie } from '@/i18n/set-locale';
 import { BrandLoading } from '@/components/brand-loading';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { TopbarCrumbsProvider, useTopbarCrumbs } from '@/components/topbar-crumbs';
+import { AccessBanner } from './access-banner';
 import { AccountBlock } from './account-block';
 import { AdminNav } from './admin-nav';
 import { sidebarCookie } from './sidebar-state';
@@ -174,12 +175,29 @@ export function AppShell({
                   </div>
                 </div>
               </header>
-              <div className="flex-1">{children}</div>
+              <div className="flex-1">
+                <ShellAccessBanner />
+                {children}
+              </div>
             </div>
           </div>
         </div>
       </TooltipProvider>
     </TopbarCrumbsProvider>
+  );
+}
+
+/**
+ * The account's access banner (ADR 0018) above the page, in the page column. «Тариф і оплата»
+ * says the same in its own words, so the banner stays off there.
+ */
+function ShellAccessBanner() {
+  const pathname = usePathname();
+  if (pathname === '/app/billing') return null;
+  return (
+    <div className="admin-container pt-3 empty:hidden">
+      <AccessBanner />
+    </div>
   );
 }
 

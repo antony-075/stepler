@@ -1,18 +1,18 @@
 import { expect, type Page, type Request, test } from '@playwright/test';
-import { acceptLegalOnCard, newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
+import { newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
 import { mailSubjects } from '../support/mailpit.js';
 
 // Ukrainian UI to start with (no supported browser language → default locale).
 test.use({ locale: 'de-DE' });
 
 const EN = {
-  loginTitle: 'Sign in or create an account',
+  loginTitle: 'Sign in to Stepler',
   email: 'Email',
   submit: 'Get sign-in link',
   sent: 'Check your email',
   appTitle: 'Collections',
   settings: 'Account',
-  subject: 'Sign in to Stepler',
+  subject: 'A new password for Stepler',
 };
 const UK_APP_TITLE = 'Колекції';
 
@@ -54,13 +54,12 @@ test('a signed-in admin switches to English: it persists and emails follow', asy
   // Signed out, with no locale cookie and a Ukrainian page, the profile still picks the email
   // language.
   await context.clearCookies();
-  await page.goto('/login');
+  await page.goto('/forgot-password');
   await page.getByLabel(SIGN_IN_UK.email).fill(email);
-  await acceptLegalOnCard(page);
-  const submit = page.getByRole('button', { name: SIGN_IN_UK.submit });
+  const submit = page.getByRole('button', { name: 'Надіслати посилання' });
   await expect(submit).toBeEnabled({ timeout: 20_000 });
   await submit.click();
-  await expect(page.getByRole('heading', { name: SIGN_IN_UK.sent })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Перевірте пошту' })).toBeVisible();
   await expect.poll(async () => (await mailSubjects(email)).length).toBe(2);
   expect((await mailSubjects(email))[0]).toBe(EN.subject);
 });

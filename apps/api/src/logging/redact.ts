@@ -1,4 +1,4 @@
-/** Query keys whose values are credentials: magic-link/OAuth/guest-link tokens, S3 signatures. */
+/** Query keys whose values are credentials: mailed account/OAuth/guest-link tokens, S3 signatures. */
 const SECRET_QUERY_KEY = /^(token|code|state|linkToken|x-amz-.*)$/i;
 
 /** A guest link page path, `/g/<token>` (optionally under a locale prefix), e.g. in a Referer. */

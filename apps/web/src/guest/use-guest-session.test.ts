@@ -37,6 +37,7 @@ const context = {
     textMaxChars: 5000,
   },
   counts: null,
+  contribution: 'OPEN',
 };
 const page = { items: [], nextCursor: null };
 const problem = (code: string, status: number) =>

@@ -59,16 +59,19 @@ describe('acceptPreviewMessage', () => {
   it('a valid message gives the page and the state (the default: everything, mine + others’)', () => {
     expect(acceptPreviewMessage(event({}), parent, ORIGIN)).toEqual({
       page,
-      state: { access: 'all', content: 'both' },
+      state: { access: 'all', content: 'both', view: 'add' },
     });
-    const viewOnly = { access: 'view', content: 'others' } as const;
+    const viewOnly = { access: 'view', content: 'others', view: 'frames' } as const;
     expect(
       acceptPreviewMessage(event({ data: previewMessage(page, viewOnly) }), parent, ORIGIN),
     ).toEqual({ page, state: viewOnly });
   });
 
   it('an unknown state is ignored', () => {
-    const bad = { ...previewMessage(page), state: { access: 'admin', content: 'both' } };
+    const bad = {
+      ...previewMessage(page),
+      state: { access: 'admin', content: 'both', view: 'add' },
+    };
     expect(acceptPreviewMessage(event({ data: bad }), parent, ORIGIN)).toBeNull();
   });
 });

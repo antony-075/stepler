@@ -65,6 +65,16 @@ services:
       # the admin's blocked banner with its own LEGAL_CONTACT_EMAIL.
       - key: LEGAL_CONTACT_EMAIL
         sync: false
+      # Payments (ADR 0018, O2): `liqpay` with the sandbox pair on staging; the callback URL is
+      # https://<staging-api-host>/api/v1/billing/liqpay/callback. Live keys never on staging.
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
+        sync: false
+      - key: BILLING_CALLBACK_URL
+        sync: false
       - key: S3_ENDPOINT
         sync: false
       - key: S3_REGION
@@ -124,6 +134,22 @@ services:
       - key: OPERATOR_EMAILS
         sync: false
       - key: LEGAL_CONTACT_EMAIL
+        sync: false
+      # Billing (ADR 0018): read-only content is kept 90 days; the deletion stays off until
+      # the legal texts with retention are published (warnings are sent either way).
+      - key: READ_ONLY_RETENTION_DAYS
+        value: '90'
+      # Deletion after retention (ADR 0018 [P6]): the v3 Terms/Privacy describe it (M4); turn it
+      # on here only after the owner confirms the published texts. Warnings go out either way.
+      - key: BILLING_RETENTION_DELETE_ENABLED
+        value: 'false'
+      # Payments (ADR 0018): reconciliation through LiqPay's status API; the same sandbox keys as
+      # the API (O2). Live keys never on staging.
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
         sync: false
 
   - type: web

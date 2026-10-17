@@ -4,7 +4,8 @@ This file is a concise implementation checklist.
 
 ## Must have
 
-- [ ] Admin authentication
+- [ ] Admin authentication — e-mail + password with a confirmed address, and Google (ADR 0019, 2026-10-16; the magic link of Phase 2 is removed)
+- [ ] Billing (owner decision 2026-10-07, ADR 0018) — built in M1–M4: a 7-day trial, packs, subscriptions through LiqPay in UAH, read-only after an unpaid end with content kept 90 days, the `/ops` billing console
 - [ ] Admin dashboard
 - [ ] Collection CRUD
 - [ ] Default guest link
@@ -26,7 +27,7 @@ This file is a concise implementation checklist.
 - [ ] R2/S3-compatible object storage
 - [ ] Signed upload/download access — built in slice 5 (PR C): presigned part URLs, window-aligned presigned GETs, downloads as attachments
 - [ ] Legal pages (Terms, Privacy, uk/en, versioned) — built in slice 10 (PR F1): `/legal/terms` and `/legal/privacy` from Markdown with a registry of versions, a draft banner on placeholder texts, the contact e-mail from configuration, footer and guest-notice links
-- [ ] Admin acceptance of Terms and Privacy — built in slice 10 (PR F2): a required checkbox on the sign-in card (magic link and Google), recorded when the account is created or the sign-in completes; the API refuses the app until both are accepted; `/accept-terms` for accounts from before it; «Правові документи» on the account page
+- [ ] Admin acceptance of Terms and Privacy — built in slice 10 (PR F2): a required checkbox on the sign-in card (since ADR 0019: the registration card, and Google), recorded when the account is created or the sign-in completes; the API refuses the app until both are accepted; `/accept-terms` for accounts from before it; «Правові документи» on the account page
 - [ ] PostgreSQL + Prisma
 - [ ] REST API
 - [ ] Swagger/OpenAPI
@@ -45,7 +46,7 @@ This file is a concise implementation checklist.
 - Native mobile admin
 - Physical product ordering
 - Advanced analytics
-- Full subscription platform
+- Full subscription platform (beyond ADR 0018: one provider, one charged currency, manual refunds)
 - Complex moderation suite
 - Full DAM features
 - Social features

@@ -8,6 +8,7 @@ import {
 } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { EntitlementResolver } from '../src/billing/entitlement-resolver.js';
 import { createApp } from '../src/create-app.js';
 import { PrismaService } from '../src/database/prisma.service.js';
 import { AppError } from '../src/errors/app-error.js';
@@ -15,18 +16,17 @@ import { GuestLinkTokens } from '../src/guest-access/guest-link-tokens.js';
 import { LimitsService } from '../src/limits/limits.service.js';
 import { UsageService } from '../src/limits/usage.service.js';
 import { listenOnLoopback } from './support/app.js';
+import { useTestPlanLimits } from './support/billing.js';
 import { resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { seedCollection } from './support/guests.js';
 import { signInAs } from './support/sessions.js';
 
 const MB = 1_000_000n;
-const env = testEnv({
-  LIMIT_STORAGE_BYTES_PER_COLLECTION: String(10n * MB),
-  LIMIT_STORAGE_BYTES_PER_ACCOUNT: String(15n * MB),
-});
+const env = testEnv();
 const prisma = new PrismaService(env);
-const usage = new UsageService(prisma, new LimitsService(env));
+const usage = new UsageService(prisma, new LimitsService(env, new EntitlementResolver(prisma)));
+useTestPlanLimits({ collectionStorageBytes: 10n * MB, storageBytes: 15n * MB });
 
 let app: INestApplication;
 let server: Server;

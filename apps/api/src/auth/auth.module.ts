@@ -9,8 +9,11 @@ import { CsrfGuard } from './csrf.guard.js';
 import { GoogleController } from './google/google.controller.js';
 import { googleIdentityProvider } from './google/google-identity.js';
 import { GoogleSignInService } from './google/google-sign-in.service.js';
-import { MagicLinkController } from './magic-link.controller.js';
-import { MagicLinkService } from './magic-link.service.js';
+import { EmailTokens } from './email-tokens.service.js';
+import { LoginFailures } from './login-failures.js';
+import { PasswordAuthController } from './password-auth.controller.js';
+import { PasswordAuthService } from './password-auth.service.js';
+import { PasswordHasher } from './password-hasher.js';
 import { throttlerOptions } from './rate-limit.js';
 import { SessionService } from './session.service.js';
 
@@ -19,10 +22,13 @@ import { SessionService } from './session.service.js';
     LegalModule,
     ThrottlerModule.forRootAsync({ inject: [LimitsService], useFactory: throttlerOptions }),
   ],
-  controllers: [AuthController, MagicLinkController, GoogleController],
+  controllers: [AuthController, PasswordAuthController, GoogleController],
   providers: [
     SessionService,
-    MagicLinkService,
+    PasswordAuthService,
+    PasswordHasher,
+    EmailTokens,
+    LoginFailures,
     GoogleSignInService,
     googleIdentityProvider,
     // Global guards run in registration order: CSRF first, then authentication.

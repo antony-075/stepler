@@ -8,7 +8,7 @@
     "RATE_LIMITED": "Too many attempts. Wait a little and try again.",
     "TURNSTILE_FAILED": "We couldn't verify you're human. Try again.",
     "MAGIC_LINK_INVALID": "This link is invalid or has already been used. Get a new one.",
-    "OAUTH_FAILED": "Signing in with Google didn't work. Try again or use your email.",
+    "OAUTH_FAILED": "Couldn't sign in with Google. Try again or sign in with your password.",
     "ACCOUNT_BLOCKED": "This account is blocked.",
     "UPSTREAM_UNAVAILABLE": "Can't reach the server. Check your connection and try again.",
     "DEPENDENCY_UNAVAILABLE": "The service is temporarily unavailable. Try again in a minute.",
@@ -40,45 +40,66 @@
     "REPORT_RESOLVED": "This report was already decided differently.",
     "APPEAL_NOT_APPLICABLE": "Nothing to appeal here: the moderation measure is already lifted.",
     "APPEAL_OPEN": "An appeal is already filed and under review.",
-    "APPEAL_RESOLVED": "This appeal was already decided differently."
+    "APPEAL_RESOLVED": "This appeal was already decided differently.",
+    "ACCOUNT_READ_ONLY": "Your account is view-only: choose a plan to add and change things again.",
+    "COLLECTION_READ_ONLY": "This collection is view-only.",
+    "COLLECTING_CLOSED": "Collecting has ended for this collection.",
+    "OFFER_UNAVAILABLE": "This plan is not available right now.",
+    "PAYMENT_PENDING": "A previous payment is still being processed. Please wait a few minutes.",
+    "PLAN_DOWNGRADE_BLOCKED": "Your current usage does not fit the chosen plan.",
+    "SUBSCRIPTION_EXISTS": "You already have an active subscription.",
+    "REFUND_EXCEEDS_PAID": "The refund is more than was paid.",
+    "PAYMENT_PROVIDER_UNAVAILABLE": "Payments are temporarily unavailable. Please try again later.",
+    "BILLING_SIGNATURE_INVALID": "The payment service's response could not be verified.",
+    "INVALID_CREDENTIALS": "Wrong e-mail or password.",
+    "EMAIL_NOT_VERIFIED": "Confirm your e-mail first: open the e-mail we sent.",
+    "AUTH_TOKEN_INVALID": "The link is invalid, already used or expired. Get a new one.",
+    "CURRENT_PASSWORD_INVALID": "The current password is wrong."
   },
   "login": {
     "pageTitle": "Sign in",
-    "title": "Sign in or create an account",
+    "title": "Sign in to Stepler",
     "lead": "Manage your collections, their access and everything guests add.",
-    "hint": "We'll email you a sign-in link. No password needed.",
     "emailLabel": "Email",
     "emailPlaceholder": "name@example.com",
     "emailInvalid": "Enter an address like name@example.com",
-    "submit": "Get sign-in link",
+    "submit": "Sign in",
     "sending": "Sending…",
     "or": "or",
-    "google": "Continue with Google",
+    "google": "Sign in with Google",
     "turnstilePending": "One moment, checking…",
-    "sentTitle": "Check your email",
-    "sentText": "We sent a sign-in link to {email}.",
-    "sentHint": "Open the email and press the sign-in button. No email? Check your spam folder.",
-    "useAnother": "Use a different email",
     "unavailable": "Sign-in is temporarily unavailable. Try again later.",
     "turnstileFailed": "The check couldn't load. Check your connection or ad blocker and try again.",
     "turnstileRetry": "Try again",
     "legalCheckbox": "I accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>",
     "legalHint": "Tick the box to continue.",
-    "accountBlockedContact": "This account is blocked. If you disagree, write to {email}."
+    "accountBlockedContact": "This account is blocked. If you disagree, write to {email}.",
+    "passwordLabel": "Password",
+    "forgot": "Forgot password?",
+    "signingIn": "Signing in…",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "noAccount": "No account yet?",
+    "registerLink": "Sign up",
+    "unverifiedTitle": "Confirm your e-mail",
+    "unverifiedText": "We sent an e-mail to {email}. Open it and press «Confirm e-mail».",
+    "resend": "Send the e-mail again",
+    "resending": "Sending…",
+    "resent": "Sent again. Check your spam folder too.",
+    "passwordRequired": "Enter your password"
   },
   "verify": {
-    "pageTitle": "Confirm sign-in",
+    "pageTitle": "Confirm e-mail",
     "checking": "Checking your link…",
-    "title": "Sign in to Stepler",
-    "signInAs": "You're signing in as {email}",
-    "notYou": "Not you? Don't press the button, just close this page.",
-    "legal": "By continuing, you accept the <terms>Terms of Service</terms> and the <privacy>Privacy Policy</privacy>.",
-    "submit": "Sign in",
-    "signingIn": "Signing in…",
-    "backToLogin": "Get a new link",
+    "title": "Confirm your e-mail",
+    "notYou": "Didn't create an account? Don't press the button; close this page.",
+    "submit": "Confirm e-mail",
+    "signingIn": "Confirming…",
+    "backToLogin": "Sign in to get a new e-mail",
     "retry": "Try again",
     "invalidTitle": "This link didn't work",
-    "unavailableTitle": "Couldn't check the link"
+    "unavailableTitle": "Couldn't check the link",
+    "confirmAs": "Confirm {email} and sign in to Stepler."
   },
   "acceptTerms": {
     "pageTitle": "Accept the terms",
@@ -109,7 +130,8 @@
       },
       "account": "Account",
       "collapse": "Collapse the menu",
-      "expand": "Expand the menu"
+      "expand": "Expand the menu",
+      "billing": "Plan and billing"
     },
     "breadcrumbs": "Breadcrumb"
   },
@@ -121,17 +143,353 @@
   "landing": {
     "metaTitle": "Stepler — photos and videos from every guest in one collection",
     "metaDescription": "Create a collection for your event and share a link or QR code. Guests add photos and videos from their phones — no app, no sign-up.",
-    "title": "Collect every photo and video from your event",
-    "subline": "Guests scan a QR code and add photos, videos and wishes. No app, no account.",
+    "pricingLink": "Pricing"
+  },
+  "home": {
+    "metaTitle": "Stepler — photos and videos from every guest, in one place",
+    "metaDescription": "Create a collection for your event and show guests a QR code. They add photos, videos and wishes straight from their phones, with no app and no sign-up. 7 days free.",
+    "skip": "Skip to content",
+    "nav": {
+      "label": "Page sections",
+      "how": "How it works",
+      "templates": "Design",
+      "privacy": "Privacy",
+      "pricing": "Pricing",
+      "faq": "Questions",
+      "login": "Sign in",
+      "register": "Sign up",
+      "trial": "Try it free",
+      "openApp": "Open Stepler",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "menuTitle": "Menu"
+    },
+    "hero": {
+      "title": "Collect every photo and video from your event",
+      "subline": "Guests point their camera at a QR code and add their photos, videos and wishes. No app, no sign-up. You get it all in one place.",
+      "cta": "Try it free for 7 days",
+      "secondary": "How it works",
+      "reassurance": "No card needed, so nothing gets charged by surprise.",
+      "stageLabel": "Guests’ photos come together in one collection",
+      "phoneAlt": "The event page on a guest’s phone with an Add button",
+      "framesCount": "{count, plural, one {# photo} other {# photos}}",
+      "demoTitle": "Nina’s 70th birthday",
+      "demoWish": "Grandma, we love you so much!"
+    },
     "how": {
-      "title": "How it works",
-      "steps": {
-        "create": "Create a collection for your event",
-        "share": "Show guests the QR code",
-        "collect": "Guests add photos and wishes"
+      "title": "A few minutes for you, a few seconds for guests",
+      "organizer": {
+        "title": "You",
+        "steps": {
+          "create": {
+            "title": "Create a collection",
+            "text": "Type the name of your event and get a QR code for guests."
+          },
+          "share": {
+            "title": "Show guests the QR code",
+            "text": "Print it for the tables, or just send the link to a chat."
+          },
+          "collect": {
+            "title": "See what comes in",
+            "text": "Guests’ photos and videos show up for you right away, no reminders needed."
+          }
+        }
       },
-      "note": "What guests see",
-      "phoneAlt": "The guest page on a phone: the event name, an Add photos and videos button, a choice of type (photos, videos, documents, text) and “Your moments” with guests’ photos"
+      "guest": {
+        "title": "Your guests",
+        "badge": "Nothing to install",
+        "steps": {
+          "scan": {
+            "title": "Point their camera at the QR code",
+            "text": "Your event page opens on their phone."
+          },
+          "add": {
+            "title": "Add photos, videos or a wish",
+            "text": "They can pick lots of shots from their gallery at once."
+          },
+          "done": {
+            "title": "Done",
+            "text": "No passwords, no sign-up. A name only if they like."
+          }
+        }
+      }
+    },
+    "demo": {
+      "title": "See what it looks like",
+      "intro": "Half a minute and it all makes sense: from creating a collection to the first photos from guests.",
+      "video": {
+        "title": "Stepler in half a minute",
+        "play": "Play the video “Stepler in half a minute”",
+        "captions": "Captions",
+        "unavailable": "Your browser cannot play this video."
+      },
+      "stepsLabel": "Steps",
+      "steps": {
+        "create": {
+          "title": "Create a collection",
+          "text": "A name is enough. The cover and the design can wait.",
+          "alt": "Creating a collection in Stepler: the event name field"
+        },
+        "share": {
+          "title": "Share the QR code",
+          "text": "Download it to print, or copy the link and send it to any messenger.",
+          "alt": "The Share window with the QR code and the guest link"
+        },
+        "open": {
+          "title": "Guests open your event page",
+          "text": "They see your title, photo and welcome, and one big Add button.",
+          "alt": "The event page on a guest’s phone"
+        },
+        "add": {
+          "title": "They add their photos and wishes",
+          "text": "They can see how much has uploaded. If the internet drops, nothing gets lost.",
+          "alt": "Photos uploading on a guest’s phone"
+        },
+        "collect": {
+          "title": "You get it all in one place",
+          "text": "Browse, save to your device and remove what you don’t need, whenever you like.",
+          "alt": "A collection in Stepler: photos from guests"
+        }
+      }
+    },
+    "templates": {
+      "title": "A guest page in the style of your event",
+      "intro": "It’s the first thing your guests see. Pick a design that fits the mood and add your own photo, welcome and colours.",
+      "tabsLabel": "Guest page designs",
+      "alt": "The “{name}” design on a guest’s phone",
+      "editorAlt": "Guest page settings: options on the left, what guests will see on the right",
+      "editor": {
+        "title": "Make it yours",
+        "items": {
+          "cover": "A cover photo: your own or any from your guests",
+          "welcome": "A short welcome for guests",
+          "background": "A background: a colour, a gradient or a picture",
+          "colour": "Button colours to match your event",
+          "font": "The title font and how the text lines up",
+          "preview": "You see what guests will see as you go. They get the changes when you press Save"
+        }
+      },
+      "items": {
+        "classic": "Light and calm: the photo on top, the title and one clear button. Suits any event.",
+        "fullscreen": "Your photo fills the screen, with the buttons on a dark panel over it.",
+        "journal": "Like a real photo album: warm paper, classic type, the photo in a frame.",
+        "postcard": "Like a postcard: a postmark, a polaroid photo and stamp buttons.",
+        "party": "For parties: a dark page, a big bright title and a round photo.",
+        "minimal": "Nothing extra: lots of space, a big title and one button."
+      }
+    },
+    "benefits": {
+      "lead": {
+        "title": "Every photo from your event, in one place",
+        "text": "No more collecting pictures from chats and asking people to “send it later”. Each guest adds their own, and you get one shared collection with every photo, video and wish.",
+        "alt": "An event collection on a phone: photos from different guests"
+      },
+      "items": {
+        "original": {
+          "title": "Full quality",
+          "text": "Photos aren’t squeezed like in messengers. Even long videos are fine."
+        },
+        "noApp": {
+          "title": "Guests install nothing",
+          "text": "A phone with a camera is enough. No app, no sign-up, no passwords."
+        },
+        "style": {
+          "title": "A beautiful page for guests",
+          "text": "Ready-made designs, your photo, your welcome and your colours."
+        },
+        "control": {
+          "title": "You decide who sees what",
+          "text": "Guests can see each other’s photos, or only their own. Your call."
+        },
+        "reliable": {
+          "title": "Works even on a weak connection",
+          "text": "If the connection drops, the upload picks up by itself."
+        }
+      }
+    },
+    "cases": {
+      "title": "For any event where everyone takes pictures",
+      "intro": "Weddings are just the start.",
+      "items": {
+        "wedding": {
+          "title": "Weddings",
+          "text": "Guests shoot from every angle: you get the whole evening, not only the photographer’s shots.",
+          "alt": "A couple on the steps while guests throw confetti"
+        },
+        "birthday": {
+          "title": "Birthdays and anniversaries",
+          "text": "Party photos and video greetings in one collection for the guest of honour.",
+          "alt": "A birthday cake with candles"
+        },
+        "family": {
+          "title": "Family celebrations",
+          "text": "Christenings, graduations, family reunions: photos from grandparents and grandkids together.",
+          "alt": "A family on a picnic"
+        },
+        "trip": {
+          "title": "Trips and hikes",
+          "text": "Everyone shot their own, and after the trip all the photos are in one place.",
+          "alt": "Friends on top of a hill"
+        },
+        "corporate": {
+          "title": "Company parties",
+          "text": "Gather the evening’s photos from the whole team without a group chat.",
+          "alt": "Colleagues cheering at an office table"
+        }
+      }
+    },
+    "privacy": {
+      "title": "Your photos stay under your control",
+      "intro": "You decide who sees what. Strangers won’t get into your collection.",
+      "items": {
+        "visibility": {
+          "title": "A shared collection, or just for you",
+          "text": "Guests can browse each other’s photos, or see only their own."
+        },
+        "links": {
+          "title": "Links can be turned off",
+          "text": "Pause it for a while, or close it for good once the event is over."
+        },
+        "server": {
+          "title": "Safe from strangers",
+          "text": "Nobody can find or open someone else’s collection by guessing the address."
+        },
+        "location": {
+          "title": "Your address stays private",
+          "text": "We remove the shooting location from photos and videos."
+        },
+        "manage": {
+          "title": "Remove anything",
+          "text": "You can take down any photo. Guests can remove their own if you allow it."
+        },
+        "reports": {
+          "title": "Report a problem",
+          "text": "If someone adds something inappropriate, a guest can report it and we’ll check."
+        }
+      }
+    },
+    "pricing": {
+      "title": "Pricing",
+      "intro": "Start with 7 free days. Then a one-time pack for one event, or a subscription if you have many.",
+      "trial": {
+        "title": "Try it",
+        "price": "0 ₴",
+        "unit": "7 days",
+        "note": "No card needed",
+        "facts": {
+          "days": "<b>7 days</b> to try everything",
+          "collections": "<b>1</b> collection",
+          "storage": "<b>1 GB</b>, that’s hundreds of photos",
+          "card": "Nothing gets charged by surprise"
+        },
+        "cta": "Start free"
+      },
+      "once": {
+        "title": "For one event",
+        "text": "Pay once, with no subscription and no automatic charges."
+      },
+      "extras": "Can be added later:",
+      "more": "All about pricing"
+    },
+    "faq": {
+      "title": "Common questions",
+      "intro": "Didn’t find an answer? Try it free: it all becomes clear in a few minutes.",
+      "items": {
+        "noAccount": {
+          "q": "Do guests need to install anything or sign up?",
+          "a": "No. A guest points their camera at the QR code or opens the link, and your event page opens on their phone. A name is optional."
+        },
+        "access": {
+          "q": "How do guests get into the collection?",
+          "a": "With the QR code or the link. Both appear as soon as you create the collection. Print the QR code, or send the link to any messenger."
+        },
+        "files": {
+          "q": "What can be added?",
+          "a": "Photos and videos from a phone, iPhones included, plus documents and written wishes. One photo can be up to 50 MB and one video up to 2 GB, which is several minutes even in high quality."
+        },
+        "compression": {
+          "q": "Will photos lose quality?",
+          "a": "No. We keep photos and videos just as they were taken, without squeezing them like messengers do."
+        },
+        "visibility": {
+          "q": "Can guests see each other’s photos?",
+          "a": "As you decide. Make it a shared collection everyone can browse, or let each guest see only their own photos."
+        },
+        "revoke": {
+          "q": "Can I close access?",
+          "a": "Yes. A link can be paused and turned back on, replaced with a new one or closed for good. After that, the old QR code stops working."
+        },
+        "manage": {
+          "q": "Can I save photos and remove the ones I don’t want?",
+          "a": "Yes. Save any photo or video in full quality and remove what you don’t need, one at a time or several at once. Guests can remove their own photos if you allow it."
+        },
+        "retention": {
+          "q": "How long are photos kept?",
+          "a": "With a pack, guests can add photos for 30 days and everything is kept for a year. Both can be extended. With a subscription, everything is kept while it’s active."
+        },
+        "expired": {
+          "q": "What happens when the paid time ends?",
+          "a": "New photos can’t be added any more, but everything stays: you can still view and save it. After a trial or a subscription we keep photos for 90 more days; with a pack, until the end of the paid period. We always send a reminder by e-mail before anything is deleted."
+        },
+        "trial": {
+          "q": "How does the free period work?",
+          "a": "After you sign up you have 7 days: one collection and 1 GB of space. No card needed, and nothing gets charged by surprise. If you like it, choose a pack or a subscription."
+        },
+        "packOrPlan": {
+          "q": "A pack or a subscription?",
+          "a": "A pack if you have one event: pay once and that’s it. A subscription if you organise events often: run several collections at once and cancel any time."
+        },
+        "payment": {
+          "q": "How do I pay?",
+          "a": "By card through LiqPay, in hryvnias. Dollar and euro prices are only there for convenience. We never see or store your card details."
+        },
+        "events": {
+          "q": "Is it only for weddings?",
+          "a": "No. Stepler suits any event where lots of people take pictures: birthdays, anniversaries, family celebrations, trips, parties and company events."
+        }
+      }
+    },
+    "final": {
+      "title": "Gather every photo from your event in one place",
+      "text": "Create a collection in a few minutes and show guests the QR code. They’ll do the rest.",
+      "cta": "Create your collection",
+      "note": "7 days free, no card needed"
+    },
+    "footer": {
+      "description": "Every photo, video and wish from your event, in one place.",
+      "sections": "Sections",
+      "product": "Stepler",
+      "documents": "Documents",
+      "contact": "Write to us"
+    }
+  },
+  "authPage": {
+    "login": {
+      "title": "Welcome back!",
+      "text": "Photos and videos from your guests are waiting for you."
+    },
+    "register": {
+      "title": "Start for free",
+      "text": "7 days to try everything. No card needed, so nothing gets charged by surprise."
+    },
+    "points": {
+      "noApp": "Guests install nothing",
+      "quality": "Photos and videos in full quality",
+      "control": "You decide who sees what"
+    },
+    "demo": {
+      "uploading": "Uploading {done} of {total}",
+      "video": "Video",
+      "photo": "Photo",
+      "wish": "Wish",
+      "wishText": "Happy birthday, Mark! Best night of the year.",
+      "wishBy": "Iryna",
+      "document": "Party schedule",
+      "documentMeta": "PDF · 1.2 MB",
+      "feedTitle": "New in the collection",
+      "collectionTitle": "Mark’s birthday",
+      "framesCount": "8 frames",
+      "documentSize": "1.2 MB"
     }
   },
   "toast": {
@@ -341,7 +699,21 @@
     "navCollapse": "Collapse the collection panel",
     "navExpand": "Expand the collection panel",
     "descriptionMore": "Show more",
-    "descriptionLess": "Show less"
+    "descriptionLess": "Show less",
+    "access": {
+      "packClosedTitle": "Collecting has ended",
+      "packClosedText": "Content is kept until {date}; guests can no longer add photos or wishes, but see the gallery if the link allows it",
+      "packReadOnlyTitle": "The keeping period is over",
+      "packReadOnlyText": "The collection is view-only: you can still view, download and delete.",
+      "deleteAfter": "The collection will be deleted on {date} — to keep it, choose a plan or download the content before then",
+      "choosePlan": "Choose a plan",
+      "packClosedTitleDate": "Collecting ended on {date}",
+      "packTitle": "The «{title}» pack",
+      "packWindowOpen": "Guests can add until {date}",
+      "packWindowEnded": "Collecting ended on {date}",
+      "packRetention": "Kept until {date}",
+      "packStorage": "Pack storage used"
+    }
   },
   "content": {
     "filterLabel": "Content type",
@@ -428,7 +800,7 @@
     },
     "previewUnavailable": "No preview",
     "select": {
-      "start": "Select",
+      "check": "Select frame {number}",
       "all": "Select all loaded",
       "count": "{count, number} selected",
       "barLabel": "Actions on the selected frames",
@@ -702,7 +1074,8 @@
     "sheet": {
       "close": "Close"
     },
-    "mainHint": "Every guest gets this one: on invitations, on the tables, in messages."
+    "mainHint": "Every guest gets this one: on invitations, on the tables, in messages.",
+    "readOnlyNotice": "New links can't be created while the collection is view-only."
   },
   "guestLink": {
     "loading": "Opening the collection",
@@ -808,7 +1181,6 @@
     "addPhotos": "Add photos",
     "addVideos": "Add videos",
     "addDocuments": "Add documents",
-    "addMore": "Add more",
     "upload": {
       "keepOpen": "Keep this page open while your frames upload",
       "queued": "Queued",
@@ -852,6 +1224,21 @@
       "reason": {
         "NETWORK": "the connection dropped",
         "STORAGE_403": "storage refused the file"
+      },
+      "sheet": {
+        "title": "Uploads",
+        "description": "How the chosen files are uploading",
+        "fold": "Minimise",
+        "addMore": "Add more",
+        "viewFrames": "See my frames"
+      },
+      "pill": {
+        "busy": "Uploading: {added} of {total}",
+        "failed": "{count, plural, one {# file could not be added} other {# files could not be added}}",
+        "done": "Added {added} of {total}",
+        "open": "Open",
+        "view": "View",
+        "dismiss": "Hide"
       }
     },
     "viewer": {
@@ -908,6 +1295,18 @@
         "gone": "This frame is no longer available.",
         "failed": "Could not send the report. Try again."
       }
+    },
+    "contribution": {
+      "closedTitle": "Collecting has ended",
+      "closedText": "New photos and wishes are no longer accepted.",
+      "readOnlyTitle": "This collection is view-only",
+      "readOnlyText": "New photos and wishes can't be added right now.",
+      "gallery": "What was already added is below."
+    },
+    "views": {
+      "label": "Collection page",
+      "add": "Add",
+      "frames": "Frames"
     }
   },
   "account": {
@@ -1004,7 +1403,13 @@
           "stopped": "The guest sees only a message"
         }
       },
-      "more": "Preview options"
+      "more": "Preview options",
+      "view": {
+        "label": "Screen",
+        "trigger": "Screen: {name}. Change",
+        "add": "Add",
+        "frames": "Frames"
+      }
     },
     "leave": "Your changes are still being saved. Leave the page?",
     "panelLabel": "Guest page settings",
@@ -1262,7 +1667,8 @@
       "redo": "Redo",
       "imageGone": "The previous image is gone — that step is skipped.",
       "failed": "The step could not be undone. Try again."
-    }
+    },
+    "readOnlyAccess": "The guest page can't be changed while the collection is view-only."
   },
   "templates": {
     "classic": {
@@ -1351,7 +1757,8 @@
         "ACTIONED": "No actioned reports yet",
         "DISMISSED": "No dismissed reports yet"
       },
-      "openReportsCount": "Reports on frame: {count}"
+      "openReportsCount": "Reports on frame: {count}",
+      "intro": "Guests’ reports on frames: the newest first; decide on the report’s page."
     },
     "collectionStatuses": {
       "ACTIVE": "Active",
@@ -1493,12 +1900,75 @@
         "description": "The measure stays. The admin sees your note in the app.",
         "confirm": "Reject",
         "done": "Appeal rejected"
+      },
+      "grant": {
+        "button": "Grant plan",
+        "title": "Grant a free plan",
+        "description": "The account gets the plan's limits at once, with nothing to pay. Only operators see the reason.",
+        "confirm": "Grant",
+        "done": "Plan granted"
+      },
+      "revokeGrant": {
+        "button": "Revoke plan",
+        "title": "Revoke the free plan",
+        "description": "The plan ends now. If the trial is over, the account's collections become view-only.",
+        "confirm": "Revoke",
+        "done": "Plan revoked"
+      },
+      "offerSave": {
+        "title": "Save the offer",
+        "description": "Changes apply to new purchases. What was bought does not change.",
+        "confirm": "Save",
+        "done": "Changes saved"
+      },
+      "offerCreate": {
+        "title": "Create the offer",
+        "description": "The offer starts without a price and off sale.",
+        "confirm": "Create",
+        "done": "Offer created"
+      },
+      "offerActivate": {
+        "title": "Start selling",
+        "description": "The offer appears on the pricing page if it has a price.",
+        "confirm": "Start selling",
+        "done": "On sale"
+      },
+      "offerDeactivate": {
+        "title": "Take off sale",
+        "description": "The offer leaves the pricing page and cannot be paid for. Earlier purchases keep working.",
+        "confirm": "Take off sale",
+        "done": "Taken off sale"
+      },
+      "priceSet": {
+        "title": "Change the price",
+        "description": "The new price applies to new purchases. Running subscriptions pay the price they started with.",
+        "confirm": "Change the price",
+        "done": "Price changed"
+      },
+      "subscriptionEnd": {
+        "title": "End the subscription now",
+        "description": "LiqPay stops charging and the account becomes view-only at once. Nothing is refunded automatically.",
+        "confirm": "End",
+        "done": "Subscription ended"
+      },
+      "packEnd": {
+        "title": "End the pack now",
+        "description": "Collecting and keeping end now: the collection becomes view-only and its content is deleted after warnings to the owner.",
+        "confirm": "End the pack",
+        "done": "Pack ended"
+      },
+      "priceDeactivate": {
+        "title": "Stop selling this price",
+        "description": "The offer can no longer be bought in this currency and period. Running subscriptions keep renewing at their own price.",
+        "confirm": "Stop selling",
+        "done": "Price taken off sale"
       }
     },
     "nav": {
       "label": "Console sections",
       "reports": "Guest reports",
-      "appeals": "Admin appeals"
+      "appeals": "Admin appeals",
+      "billing": "Billing"
     },
     "appeals": {
       "title": "Admin appeals",
@@ -1541,7 +2011,351 @@
       "previous": "Earlier appeals ({count})",
       "previousNote": "Decision: {note}",
       "reports": "Reports on this frame ({count})",
-      "resolvedElsewhere": "The appeal was already decided the other way."
+      "resolvedElsewhere": "The appeal was already decided the other way.",
+      "intro": "Admins’ appeals against hidden frames and blocked collections."
+    },
+    "billing": {
+      "title": "Account plans",
+      "intro": "Find an account by its e-mail to grant or revoke a free plan.",
+      "email": "Account e-mail",
+      "find": "Find",
+      "notFound": "There is no account with {email}.",
+      "invalidEmail": "That does not look like an e-mail address.",
+      "failed": "Could not load the account. Try again.",
+      "createdAt": "Account created {date}",
+      "accessTitle": "Access",
+      "states": {
+        "ACTIVE": "Active",
+        "GRACE": "Grace period",
+        "COLLECTING_CLOSED": "Collecting ended",
+        "READ_ONLY": "View only"
+      },
+      "reasons": {
+        "TRIAL": "Trial until {date}",
+        "TRIAL_OPEN": "Trial",
+        "TRIAL_ENDED": "Trial ended, no plan",
+        "COMPLIMENTARY": "Free plan until {date}",
+        "COMPLIMENTARY_OPEN": "Free plan with no end",
+        "SUBSCRIPTION": "Paid subscription until {date}",
+        "SUBSCRIPTION_OPEN": "Paid subscription",
+        "SUBSCRIPTION_PAST_DUE": "Payment failed, grace period until {date}",
+        "SUBSCRIPTION_ENDED": "Plan ended",
+        "NONE": "No plan"
+      },
+      "planTitle": "Current plan",
+      "noPlan": "No plan in force.",
+      "planComplimentary": "Free “{title}”: {collections, plural, one {# collection} other {# collections}}, {storage}, up to {links} links per collection,",
+      "planPaid": "Paid “{title}”: {collections, plural, one {# collection} other {# collections}}, {storage}, up to {links} links per collection,",
+      "until": "until {date}",
+      "noEnd": "with no end",
+      "grantTitle": "Grant a free plan",
+      "replaceTitle": "Replace the free plan",
+      "paidExists": "The account pays for a subscription. A free plan can be granted only after it is cancelled.",
+      "offersFailed": "Could not load the plans. Reload the page.",
+      "offer": "Plan",
+      "offerOption": "{title}: {collections, plural, one {# collection} other {# collections}}, {storage}",
+      "offerDraft": "{offer} (not on sale)",
+      "term": "Term",
+      "termOpen": "No end",
+      "termUntil": "Until a date",
+      "endDate": "Last day of the plan",
+      "endDateError": "Choose a day in the future.",
+      "grant": "Grant plan",
+      "replace": "Replace plan",
+      "planLine": "{what} {when}",
+      "searchLabel": "Find an account"
+    },
+    "billingNav": {
+      "label": "Billing sections",
+      "payments": "Payments",
+      "subscriptions": "Subscriptions",
+      "offers": "Plans and prices",
+      "grants": "Free plans"
+    },
+    "payments": {
+      "title": "Payments",
+      "intro": "Every card payment through LiqPay, newest first. See what needs attention and refund from here.",
+      "filters": {
+        "label": "Payment filters",
+        "status": "Status",
+        "all": "All",
+        "email": "Account e-mail",
+        "needsReview": "Needs review",
+        "mismatch": "LiqPay reported another amount",
+        "apply": "Show",
+        "reset": "Reset"
+      },
+      "columns": {
+        "date": "Date",
+        "account": "Account",
+        "what": "Bought",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "kinds": {
+        "PACK": "Pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "Subscription",
+        "SUBSCRIPTION_RENEWAL": "Subscription renewal",
+        "SUBSCRIPTION_CHANGE": "Plan change charge"
+      },
+      "statuses": {
+        "PENDING": "Awaiting payment",
+        "SUCCEEDED": "Paid",
+        "FAILED": "Failed",
+        "EXPIRED": "Not paid in time",
+        "REVERSED": "Reversed by the bank",
+        "REFUNDED": "Refunded",
+        "PARTIALLY_REFUNDED": "Partly refunded"
+      },
+      "flags": {
+        "needsReview": "Review",
+        "mismatch": "Other amount"
+      },
+      "refunded": "{amount} refunded",
+      "empty": "No payments yet.",
+      "emptyFiltered": "No payments match these filters.",
+      "failed": "Could not load payments. Try again.",
+      "more": "Show more",
+      "loadingMore": "Loading…",
+      "what": "{kind} «{title}»"
+    },
+    "payment": {
+      "back": "Back to payments",
+      "title": "Payment of {amount}",
+      "account": "Account",
+      "what": "Bought",
+      "status": "Status",
+      "createdAt": "Created",
+      "paidAt": "Paid",
+      "orderId": "LiqPay order number",
+      "collection": "Collection",
+      "errCode": "Decline code",
+      "notPaid": "not paid",
+      "needsReview": "Money was taken but the purchase could not be applied as usual (for example, a second pack for the same collection). Check it and refund if needed.",
+      "mismatch": "LiqPay reported another amount or currency, so nothing was granted. Compare the payment in the LiqPay cabinet.",
+      "refundsTitle": "Refunds",
+      "noRefunds": "No refunds yet.",
+      "refundStatuses": {
+        "PENDING": "Waiting for LiqPay",
+        "SUCCEEDED": "Refunded",
+        "FAILED": "Failed"
+      },
+      "refundable": "{amount} can still be refunded.",
+      "nothingRefundable": "Nothing to refund: the payment was not paid or is fully refunded.",
+      "refundButton": "Refund",
+      "afterRefund": "A refund does not cancel the purchase. If access should stop, end it separately.",
+      "endPackButton": "End the pack",
+      "subscriptionLink": "This account’s subscriptions",
+      "eventsTitle": "Messages from LiqPay",
+      "noEvents": "LiqPay sent no messages about this payment; its state was checked through a status request.",
+      "eventOutcomes": {
+        "applied": "applied",
+        "noop": "no change",
+        "mismatch": "other amount",
+        "review": "for review",
+        "unknown_order": "unknown order"
+      },
+      "eventPending": "not processed yet",
+      "notFound": "There is no such payment.",
+      "failed": "Could not load the payment. Try again."
+    },
+    "refund": {
+      "title": "Refund",
+      "description": "LiqPay returns the money to the card that paid. The purchase stays in force until you end it separately.",
+      "amount": "Amount, UAH",
+      "amountHelp": "At most {max}",
+      "amountError": "Enter an amount from 0.01 to {max}",
+      "willReturn": "{amount} will be returned to the buyer’s card.",
+      "confirm": "Refund",
+      "pending": "Refunding…",
+      "done": "Refunded",
+      "sent": "Request sent; LiqPay has not answered yet. The status updates by itself.",
+      "refused": "LiqPay refused the refund. Try later or refund in the LiqPay cabinet.",
+      "exceeds": "That is more than can still be refunded. Reload the page.",
+      "unavailable": "LiqPay is unavailable right now. Try again in a few minutes.",
+      "confirmAmount": "Refund {amount}"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "intro": "Paid subscriptions and free plans, newest first. «Check with LiqPay» picks up charges LiqPay did not report.",
+      "filters": {
+        "label": "Subscription filters",
+        "status": "Status",
+        "all": "All",
+        "source": "Type",
+        "email": "Account e-mail",
+        "needsCheck": "Only those that need a check",
+        "apply": "Show",
+        "reset": "Reset"
+      },
+      "sources": {
+        "LIQPAY": "Paid",
+        "COMPLIMENTARY": "Free"
+      },
+      "statuses": {
+        "PENDING": "Awaiting payment",
+        "ACTIVE": "Active",
+        "PAST_DUE": "Grace period",
+        "CANCELED": "Cancelled",
+        "EXPIRED": "Ended"
+      },
+      "columns": {
+        "account": "Account",
+        "plan": "Plan",
+        "status": "Status",
+        "period": "Paid until",
+        "checked": "Checked with LiqPay"
+      },
+      "intervals": {
+        "MONTH": "monthly",
+        "YEAR": "yearly",
+        "ONE_TIME": "once"
+      },
+      "planLine": "{title}, {price} {interval}",
+      "planFree": "{title}, free",
+      "noEnd": "no end",
+      "never": "not checked yet",
+      "checkedOk": "{date}",
+      "checkedFailed": "{date}, no answer",
+      "needsCheck": "Needs a check",
+      "needsCheckSince": "LiqPay has not confirmed the renewal since {date}. Access is kept.",
+      "stopped": "LiqPay no longer charges",
+      "refresh": "Check with LiqPay",
+      "refreshing": "Checking…",
+      "end": "End now",
+      "refreshResult": {
+        "RENEWED": "A charge for the new period was found; the subscription was renewed.",
+        "FAILED": "The charge failed; the subscription is in its grace period.",
+        "NONE": "LiqPay shows no charge for the period.",
+        "UNAVAILABLE": "LiqPay did not return its payment archive. Access is kept; try later.",
+        "NOT_EXPECTED": "LiqPay: «{status}». No new charges are expected now."
+      },
+      "unknownOrder": "LiqPay does not know this order: it was never paid.",
+      "refreshFailed": "LiqPay did not answer. Try again in a few minutes.",
+      "empty": "No subscriptions yet.",
+      "emptyFiltered": "No subscriptions match these filters.",
+      "failed": "Could not load subscriptions. Try again.",
+      "more": "Show more",
+      "periodLine": "Paid until: {date}",
+      "checkedLine": "Checked with LiqPay: {value}",
+      "endedLine": "Ended: {date}"
+    },
+    "offers": {
+      "title": "Plans and prices",
+      "intro": "Limits and prices for new purchases. What was bought never changes: each purchase keeps the terms it was paid at.",
+      "create": "New offer",
+      "back": "Back to plans and prices",
+      "kinds": {
+        "TRIAL": "Trial",
+        "PACK": "Packs",
+        "PACK_EXTENSION": "Pack extensions",
+        "SUBSCRIPTION": "Subscriptions"
+      },
+      "kindOne": {
+        "PACK": "Pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "Subscription"
+      },
+      "extensions": {
+        "WINDOW": "Longer collecting",
+        "RETENTION": "Longer keeping",
+        "STORAGE": "More storage"
+      },
+      "onSale": "On sale",
+      "offSale": "Not on sale",
+      "highlighted": "Most popular",
+      "noPrice": "no price",
+      "storageDifference": "difference between pack prices",
+      "trialFree": "free",
+      "intervals": {
+        "ONE_TIME": "once",
+        "MONTH": "per month",
+        "YEAR": "per year"
+      },
+      "priceLine": "{amount} {interval}",
+      "columns": {
+        "offer": "Offer",
+        "limits": "Limits",
+        "prices": "Prices",
+        "status": "Sale"
+      },
+      "limits": {
+        "collections": "{count, plural, one {# collection} other {# collections}}",
+        "storage": "{size} per account",
+        "collectionStorage": "{size} per collection",
+        "links": "{count, plural, one {# link} other {# links}}",
+        "window": "collecting {count, plural, one {# day} other {# days}}",
+        "retention": "keeping {count, plural, one {# day} other {# days}}",
+        "duration": "{count, plural, one {# day} other {# days}}"
+      },
+      "failed": "Could not load plans. Try again.",
+      "notFound": "There is no such offer.",
+      "editTitle": "«{title}»",
+      "newTitle": "New offer",
+      "form": {
+        "code": "Code",
+        "codeHelp": "Latin letters, digits and hyphens. It never changes after creation.",
+        "codeError": "2 to 40 characters: a–z, 0–9 and hyphens, starting with a letter or digit",
+        "kind": "Type",
+        "extension": "What it extends",
+        "titleUk": "Title in Ukrainian",
+        "titleEn": "Title in English",
+        "titleError": "1 to 80 characters",
+        "descriptionUk": "Description in Ukrainian",
+        "descriptionEn": "Description in English",
+        "descriptionHelp": "Optional, up to 500 characters",
+        "rank": "Order in the list",
+        "rankHelp": "A smaller number comes first",
+        "highlight": "Mark as «Most popular» on the pricing page",
+        "limitsTitle": "Limits",
+        "limitsHelp": "An empty field means this type of offer has no such limit.",
+        "activeCollections": "Active collections",
+        "storage": "Account storage, GB",
+        "collectionStorage": "Storage per collection, GB",
+        "guestLinks": "Guest links per collection",
+        "windowDays": "Collecting, days",
+        "retentionDays": "Keeping, days",
+        "durationDays": "Length, days",
+        "rroItemId": "Item code for fiscal receipts",
+        "rroHelp": "From the LiqPay cabinet (РРО → Каса → Товари). Needed only when receipts are on.",
+        "numberError": "A whole number or empty",
+        "gbError": "GB, at most one decimal, or empty",
+        "save": "Save changes",
+        "createButton": "Create",
+        "shapeError": "This type of offer needs other limits. Check the empty fields.",
+        "codeTaken": "An offer with this code exists.",
+        "trialNote": "Trial limits apply at once to everyone on a trial now.",
+        "createdNote": "A new offer is created without a price and off sale. Add a price and start the sale on its page.",
+        "title": "Description and limits"
+      },
+      "pricesTitle": "Prices",
+      "pricesHelp": "A round price of its own in each currency. A new price applies to new purchases; the previous one stays in the payment history.",
+      "priceField": "Price {interval}, {currency}",
+      "priceCurrent": "Now {amount}",
+      "priceNone": "No price yet",
+      "priceError": "An amount from 0.01, at most two decimals",
+      "setPrice": "Save price",
+      "noPricesForTrial": "The trial is free.",
+      "noPricesForStorage": "More storage costs the difference between pack prices.",
+      "saleTitle": "Sale",
+      "saleOn": "The offer is on sale.",
+      "saleOff": "The offer is not on sale: it is not on the pricing page and cannot be paid for.",
+      "saleNoPrice": "Without a price buyers do not see the offer even when it is on sale.",
+      "trialAlwaysOn": "The trial cannot be taken off sale: every new account gets it.",
+      "activate": "Start selling",
+      "deactivate": "Take off sale",
+      "deactivatePrice": "Stop selling",
+      "currencies": {
+        "UAH": "Hryvnias",
+        "USD": "US dollars",
+        "EUR": "Euros"
+      },
+      "currencyUnit": {
+        "UAH": "UAH",
+        "USD": "USD",
+        "EUR": "EUR"
+      }
     }
   },
   "notFound": {
@@ -1581,5 +2395,469 @@
       "failed": "Couldn’t send the appeal. Try again."
     },
     "noNote": "no note"
+  },
+  "billing": {
+    "pageTitle": "Plan and billing",
+    "title": "Plan and billing",
+    "tabs": {
+      "label": "“Plan and billing” sections",
+      "overview": "Your plan",
+      "plans": "Plans",
+      "history": "Payment history",
+      "historyShort": "History"
+    },
+    "offerKind": {
+      "title": "What fits you?",
+      "packs": {
+        "title": "A pack for one event",
+        "description": "One collection, paid once"
+      },
+      "subscriptions": {
+        "title": "A subscription for organisers",
+        "description": "Several events, monthly or yearly"
+      }
+    },
+    "states": {
+      "ACTIVE": "Active",
+      "GRACE": "Grace period",
+      "COLLECTING_CLOSED": "Collecting ended",
+      "READ_ONLY": "View only"
+    },
+    "reasons": {
+      "TRIAL": "Trial until {date}",
+      "TRIAL_ENDED": "Your trial has ended",
+      "SUBSCRIPTION": "Subscription until {date}",
+      "SUBSCRIPTION_OPEN": "Subscription",
+      "SUBSCRIPTION_PAST_DUE": "The payment failed; access is kept until {date}",
+      "SUBSCRIPTION_ENDED": "Your plan has ended",
+      "COMPLIMENTARY": "Free plan until {date}",
+      "COMPLIMENTARY_OPEN": "Free plan with no end",
+      "NONE": "No plan in force"
+    },
+    "loadFailed": "Could not load your plan.",
+    "retry": "Try again",
+    "access": {
+      "trial": "Trial: {days, plural, =0 {last day} one {# day left} other {# days left}}",
+      "trialText": "After that, your collections become view-only.",
+      "readOnlyTitle": {
+        "TRIAL_ENDED": "Your trial has ended — collections are view-only",
+        "SUBSCRIPTION_ENDED": "Your plan has ended — collections are view-only",
+        "NONE": "No plan in force — collections are view-only"
+      },
+      "readOnlyText": "Guests cannot add anything. You can still view, download and delete.",
+      "grace": "Your plan payment is not confirmed — pay by {date}, or your collections become view-only",
+      "choosePlan": "Choose a plan",
+      "trialDaysLeft": "Trial: {days, plural, =0 {ends today} one {# day left} other {# days left}}",
+      "readOnlyShort": "View only"
+    },
+    "pack": {
+      "oneTime": "one-time",
+      "links": "Up to {count, plural, one {# additional guest link} other {# additional guest links}}",
+      "buy": "Buy “{title}”",
+      "facts": {
+        "storage": "<b>{size}</b> of storage",
+        "window": "<b>{days, plural, one {# day} other {# days}}</b> of collecting",
+        "retentionYears": "Kept for <b>{years, plural, one {# year} other {# years}}</b>",
+        "retentionDays": "Kept for <b>{days, plural, one {# day} other {# days}}</b>"
+      },
+      "chargeNote": "No automatic charges"
+    },
+    "pricing": {
+      "metaTitle": "Pricing",
+      "metaDescription": "A pack for one event: room for your guests' photos and videos, collecting and keeping. One card payment, no subscription.",
+      "title": "Pricing",
+      "intro": "One pack, one event. You pay once by card: no subscription, no automatic charges.",
+      "trial": "A new account gets a 7-day trial without a card: 1 collection and 1 GB.",
+      "packsTitle": "Packs for an event",
+      "signIn": "Sign in to buy",
+      "choose": "Choose a pack",
+      "extrasTitle": "If you need more",
+      "extrasText": "A pack can be extended or enlarged from the collection's page.",
+      "extraPrice": "{title} — {price}",
+      "storageExtra": "Move to a bigger pack — you pay the price difference",
+      "paymentNote": "Payments go through LiqPay (PrivatBank). Stepler never sees or stores your card details.",
+      "unavailable": "Prices are not available right now. Try reloading the page a little later.",
+      "nav": "Pricing"
+    },
+    "buy": {
+      "title": "The «{title}» pack",
+      "description": "A pack covers one collection. After payment guests add content for {days, plural, one {# day} other {# days}}, and we keep it until the pack's term ends.",
+      "target": "Which collection",
+      "newCollection": "A new collection",
+      "newTitle": "Name of the new collection",
+      "newTitleHint": "The collection is created as soon as the payment goes through.",
+      "noExisting": "Every collection already has a pack: this one will create a new collection.",
+      "total": "To pay",
+      "pay": "Go to payment",
+      "paying": "Going to payment",
+      "cancel": "Cancel",
+      "liqpayNote": "We'll take you to LiqPay's payment page. Card details are entered there, not in Stepler."
+    },
+    "handoff": {
+      "title": "Taking you to LiqPay's payment page…",
+      "text": "Keep this tab open. After paying, LiqPay brings you back to Stepler."
+    },
+    "return": {
+      "pageTitle": "Payment",
+      "loading": "Checking the payment",
+      "pendingTitle": "Waiting for the bank to confirm",
+      "pendingText": "This usually takes a few seconds. The page updates by itself.",
+      "succeededTitle": "Payment received",
+      "succeededText": "«{title}» is active. Paid {amount}.",
+      "openCollection": "Open the collection",
+      "failedTitle": "The payment didn't go through",
+      "failedText": "Nothing was charged. Try again or use another card.",
+      "retry": "Try again",
+      "expiredTitle": "The time to pay ran out",
+      "expiredText": "The payment wasn't completed in time and nothing was charged. Start it again.",
+      "notFound": "Payment not found. Check «Plan and billing».",
+      "loadFailed": "Couldn't check the payment.",
+      "toBilling": "To «Plan and billing»",
+      "unconfirmedTitle": "The payment isn't confirmed yet",
+      "unconfirmedText": "LiqPay hasn't reported the payment yet. If the bank declined it, try again, with another card if you like.",
+      "moneyNote": "No money is taken until LiqPay confirms the payment.",
+      "checkAgain": "Check again"
+    },
+    "history": {
+      "title": "Payment history",
+      "empty": "No payments yet.",
+      "loadFailed": "Couldn't load the payment history.",
+      "date": "Date",
+      "what": "What",
+      "amount": "Amount",
+      "status": "Status",
+      "statuses": {
+        "PENDING": "Pending",
+        "SUCCEEDED": "Paid",
+        "FAILED": "Failed",
+        "EXPIRED": "Not completed",
+        "REVERSED": "Reversed by the bank",
+        "REFUNDED": "Refunded",
+        "PARTIALLY_REFUNDED": "Partly refunded"
+      },
+      "time": "Date and time",
+      "loadMore": "Show more",
+      "loadMoreFailed": "Could not show more payments. Try again.",
+      "kinds": {
+        "PACK": "Event pack",
+        "PACK_EXTENSION": "Pack extension",
+        "SUBSCRIPTION": "New subscription",
+        "SUBSCRIPTION_RENEWAL": "Subscription renewal",
+        "SUBSCRIPTION_CHANGE": "Plan change"
+      },
+      "refunded": "{amount} refunded",
+      "trouble": {
+        "FAILED": "The payment failed: nothing was charged",
+        "REVERSED": "The bank reversed the payment: the money went back to the card"
+      },
+      "groups": {
+        "label": "What to show",
+        "all": "All · {count}",
+        "SUBSCRIPTION": "Subscription · {count}",
+        "PACK": "Packs · {count}"
+      },
+      "year": "In {year}: <b>{amount}</b>"
+    },
+    "packs": {
+      "title": "A pack for one event",
+      "unavailable": "Packs can't be bought right now.",
+      "extensionsTitle": "Already have a pack? Extend it",
+      "extension": {
+        "WINDOW": "guests can keep adding",
+        "RETENTION": "your photos stay"
+      }
+    },
+    "extend": {
+      "storageUse": "{used} of {limit}",
+      "upgrade": "Enlarge to {size}",
+      "confirmText": "To pay: {amount}. We'll take you to LiqPay's payment page.",
+      "confirm": "Go to payment",
+      "pending": "Going to payment",
+      "cancel": "Cancel",
+      "failed": "Couldn't start the payment.",
+      "buyForCollection": "Buy a pack for this collection",
+      "buyForCollectionText": "A pack takes this collection off the account's limits: its own storage, collecting time and keeping term."
+    },
+    "plan": {
+      "title": "Your plan",
+      "names": {
+        "TRIAL": "Trial",
+        "SUBSCRIPTION": "Subscription",
+        "COMPLIMENTARY": "Free plan",
+        "NONE": "No plan"
+      },
+      "until": "Valid until {date}",
+      "open": "No end date",
+      "switchAwaiting": "Confirm the payment for your new plan by {date}",
+      "daysLeft": "{days, plural, =0 {last day} one {# day left} other {# days left}}",
+      "buyPack": "Buy a pack",
+      "accessUntil": "Access until {date}",
+      "payBy": "Pay by {date}",
+      "graceOver": "The grace period is over",
+      "countdown": {
+        "label": "Time left",
+        "days": "days",
+        "hours": "hours",
+        "minutes": "min",
+        "summary": "{days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}}, {minutes, plural, one {# minute} other {# minutes}} left"
+      },
+      "period": {
+        "start": "{date}",
+        "today": "Today · {day} of {days, plural, one {# day} other {# days}}",
+        "renews": "{date} — {price} charged",
+        "ends": "{date} — ends"
+      },
+      "yearly": {
+        "percent": "−{percent}%",
+        "text": "Yearly, {title} costs <b>{year}</b> instead of {twelve} — two months free.",
+        "action": "Switch to yearly"
+      },
+      "priceInline": "{interval, select, YEAR {yearly} other {monthly}} · {price}",
+      "grantInline": {
+        "collections": "{count, plural, one {# collection} other {# collections}}",
+        "granted": "granted by Stepler"
+      }
+    },
+    "usage": {
+      "title": "Account limits",
+      "note": "Collections with a pack have their own limits and are not counted here.",
+      "collections": "Active collections",
+      "storage": "Storage",
+      "of": "{used} of {limit}",
+      "used": "{percent} used",
+      "overCollections": "You’ve exceeded your collection limit.",
+      "overCollectionsText": "Choose a plan to create new collections.",
+      "overStorage": "You’ve exceeded your storage limit.",
+      "overStorageText": "Choose a plan to add new files.",
+      "nearLimit": "Almost used up",
+      "free": "{count, plural, one {# free slot left} other {# free slots left}}",
+      "freeHint": "Archive a finished event to free a place."
+    },
+    "after": {
+      "title": "What happens when it ends?",
+      "readOnlyTitle": "What does “view only” mean?",
+      "guests": "Guests cannot add anything.",
+      "you": "You can view, download and delete content.",
+      "kept": "Content is kept for 90 days after the plan ends, then deleted.",
+      "warned": "We e-mail you 30 and 7 days before deletion."
+    },
+    "yours": {
+      "title": "Your packs"
+    },
+    "plans": {
+      "title": "Subscriptions for event organisers",
+      "intro": "Limits are per account: collections and storage are shared by all your events.",
+      "intervalLabel": "Billing period",
+      "intervals": {
+        "MONTH": "Monthly",
+        "YEAR": "Yearly"
+      },
+      "per": {
+        "MONTH": "{price}/mo",
+        "YEAR": "{price}/yr"
+      },
+      "yearlyBadgeLabel": "{percent}% off when paid yearly",
+      "yearlyPercent": "−{percent}%",
+      "unit": {
+        "MONTH": "/ mo",
+        "YEAR": "/ yr"
+      },
+      "collections": "{count, plural, one {<b>#</b> active collection} other {<b>#</b> active collections}}",
+      "storage": "<b>{size}</b> of storage",
+      "collectionStorage": "Up to <b>{size}</b> per collection",
+      "current": "Your plan",
+      "subscribe": "Choose {title}",
+      "signIn": "Sign in to subscribe",
+      "change": "Switch to this plan",
+      "waitPastDue": "You can change the plan once the current period is paid.",
+      "waitCanceled": "The subscription is cancelled. Resume it on the “Overview” tab, or choose another plan once the paid period ends.",
+      "waitSwitch": "First confirm the payment for your new plan on the “Overview” tab.",
+      "popular": "Most popular",
+      "approx": "≈",
+      "approxPrice": "≈ {price}",
+      "charged": "Paid in hryvnias: {price}",
+      "note": "Pay by card through LiqPay. Cancel any time: the plan lasts to the end of the paid period, then your content is kept view-only for 90 days.",
+      "yearlyTotal": "{price} a year",
+      "savingPill": "Save {saving}",
+      "everyPlan": {
+        "guests": "Unlimited guests, originals uncompressed",
+        "pages": "Guest page templates and QR codes"
+      },
+      "chargeNote": "Renews automatically; cancel any time"
+    },
+    "subscription": {
+      "status": {
+        "active": "Active",
+        "canceled": "Cancelled",
+        "pastDue": "Payment due",
+        "granted": "Granted by Stepler"
+      },
+      "next": "Next charge on {date}",
+      "pastDue": "We could not charge for the new period. Everything works until {date}; pay to keep access.",
+      "pastDueOver": "The grace period is over: collections are view-only. Pay to restore access.",
+      "grantedOpen": "No end date",
+      "grantedUntil": "Granted until {date}",
+      "pending": "From {date}: {title}, {price}",
+      "pendingSwitch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "withdraw": "Cancel the change",
+      "withdrawn": "The plan change is cancelled",
+      "withdrawFailed": "Could not cancel the change. Please try again.",
+      "change": "Change plan",
+      "cancel": "Cancel subscription",
+      "resume": "Resume subscription",
+      "payNow": "Pay now",
+      "pastDueChange": "You can change the plan once it is paid.",
+      "switchChange": "You can change the plan once the new one is paid.",
+      "cancelTitle": "Cancel the subscription?",
+      "cancelText": "Access stays until {date}. After that your collections become view-only.",
+      "cancelConfirm": "Cancel subscription",
+      "cancelKeep": "Keep it",
+      "cancelPending": "Cancelling…",
+      "cancelFailed": "LiqPay did not answer, so nothing changed. Please try again.",
+      "canceledToast": "Subscription cancelled"
+    },
+    "subscribe": {
+      "title": "Subscribe to “{title}”",
+      "resumeTitle": "Resume “{title}”",
+      "payNowTitle": "Pay for “{title}” now",
+      "switchTitle": "Confirm “{title}”",
+      "description": "{price}, renews automatically until cancelled",
+      "continues": "The new period starts on {date}, when the paid one ends, so nothing is lost.",
+      "payNowNote": "We stop the previous charge at LiqPay so you are never charged twice. The new period starts when you pay.",
+      "switchStarts": "The new period starts on {date}, when the current one ends.",
+      "switchNow": "The new period starts with the payment.",
+      "total": "Due now",
+      "liqpayNote": "You pay on LiqPay’s page. Stepler never sees or stores your card details.",
+      "consentRequired": "Tick the automatic renewal consent.",
+      "cancel": "Cancel",
+      "pay": "Continue to payment",
+      "paying": "Opening the payment…"
+    },
+    "consent": {
+      "MONTH": "I agree to an automatic monthly charge of {amount} until I cancel. I can cancel any time in “Plan and billing”.",
+      "YEAR": "I agree to an automatic yearly charge of {amount} until I cancel. I can cancel any time in “Plan and billing”."
+    },
+    "change": {
+      "title": "Switch to “{title}”",
+      "cancel": "Cancel",
+      "close": "Close",
+      "pending": "Please wait…",
+      "previewFailed": "Could not work out the change. Please try again.",
+      "upgradeNow": "Pay now: {charge}, then {price}",
+      "upgradeWaived": "Nothing to pay now, then {price}",
+      "upgradeText": "You pay only for the days left in the current period. The new limits apply at once.",
+      "downgrade": "From {date}: {title}, {price}",
+      "downgradeText": "Your current plan and its limits stay until {date}.",
+      "switch": "From {date} — {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "switchText": "Nothing is charged now. At the end of the period ({date}) the current subscription stops and we ask you to confirm the new one with LiqPay. Until you pay, everything works as during a usual late payment.",
+      "confirmPay": "Continue to payment",
+      "confirmApply": "Switch now",
+      "confirmSchedule": "Schedule the change",
+      "scheduled": "The plan change is scheduled",
+      "applied": "Plan changed",
+      "blockedTitle": "To switch to “{title}”, first:",
+      "blocked": {
+        "activeCollections": "Archive or delete {count, plural, one {# collection} other {# collections}}",
+        "storageBytes": "Free up {size}",
+        "collectionStorageBytes": "Free up {size} in “{title}”",
+        "guestLinks": "Turn off {count, plural, one {# link} other {# links}} in “{title}”"
+      }
+    },
+    "switch": {
+      "title": "Confirm the payment: {title}, {interval, select, YEAR {yearly} other {monthly}}, {amount}",
+      "text": "The previous subscription has stopped. Everything works until {date}; without the payment your collections become view-only.",
+      "textOpen": "The previous subscription has stopped. Without the payment your collections become view-only.",
+      "confirm": "Confirm payment"
+    },
+    "currency": {
+      "label": "Price currency",
+      "names": {
+        "UAH": "Hryvnias",
+        "USD": "US dollars",
+        "EUR": "Euros"
+      },
+      "reference": "Prices in $ and € are for orientation. Payment and the receipt are in hryvnias."
+    }
+  },
+  "register": {
+    "pageTitle": "Sign up",
+    "title": "Create an account",
+    "lead": "Collect your guests' photos and videos in one collection.",
+    "passwordLabel": "Password",
+    "confirmLabel": "Confirm password",
+    "submit": "Create account",
+    "sending": "Creating…",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Sign in",
+    "google": "Sign up with Google",
+    "confirmRequired": "Repeat the password",
+    "passwordWeak": "The password doesn't meet the rules below yet",
+    "sentTitle": "Check your e-mail",
+    "sentText": "We sent an e-mail to {email}. Press «Confirm e-mail» in it and you are signed in.",
+    "sentHint": "No e-mail? Check your spam folder or send it again.",
+    "useAnother": "Use another address"
+  },
+  "password": {
+    "label": "Password strength",
+    "rules": {
+      "length": "8+ characters",
+      "upper": "Uppercase",
+      "lower": "Lowercase",
+      "digit": "Digit",
+      "special": "Symbol: ! ? # $"
+    },
+    "missing": {
+      "length": "at least 8 characters",
+      "upper": "an uppercase letter",
+      "lower": "a lowercase letter",
+      "digit": "a digit",
+      "special": "a special character"
+    },
+    "levels": {
+      "empty": "Empty",
+      "weak": "Weak",
+      "fair": "Fair",
+      "good": "Almost",
+      "strong": "Strong"
+    },
+    "needs": "Still needed: {list}",
+    "ok": "The password meets every rule",
+    "met": "done",
+    "missingState": "still needed",
+    "match": "The passwords match",
+    "mismatch": "The passwords don't match"
+  },
+  "forgot": {
+    "pageTitle": "Reset password",
+    "title": "Forgot your password?",
+    "lead": "We'll e-mail you a link to set a new password. The same link sets a first password if you signed in with Google.",
+    "submit": "Send the link",
+    "sending": "Sending…",
+    "sentTitle": "Check your e-mail",
+    "sentText": "If {email} has a Stepler account, we sent a link there. It works for an hour.",
+    "back": "Back to sign in"
+  },
+  "reset": {
+    "pageTitle": "New password",
+    "title": "Set a new password",
+    "lead": "Saving it signs out every other session of the account.",
+    "passwordLabel": "New password",
+    "confirmLabel": "Confirm new password",
+    "submit": "Save and sign in",
+    "saving": "Saving…",
+    "invalidTitle": "The link didn't work",
+    "newLink": "Get a new link"
+  },
+  "accountPassword": {
+    "title": "Password",
+    "hint": "Sign-in with e-mail and password. Changing it signs out every other session.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Change password",
+    "saving": "Changing…",
+    "saved": "Password changed",
+    "noPassword": "You sign in with Google. To sign in with a password too, set one through an e-mailed link.",
+    "setLink": "Set a password"
   }
 }

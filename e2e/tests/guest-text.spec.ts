@@ -1,7 +1,7 @@
 import { type Browser, expect, type Page, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
-import { guestLinks, mainLinkPath, openGuestLink } from '../support/guest.js';
+import { guestLinks, mainLinkPath, openGuestLink, showAdd, showFrames } from '../support/guest.js';
 
 // Guest journeys run on all three projects (phones first). Ukrainian UI.
 test.use({ locale: 'de-DE' });
@@ -44,6 +44,7 @@ async function extraLink(page: Page, id: string, label: string, permissions: obj
 
 /** The guest writes a wish; the first time the name prompt comes first. */
 async function writeWish(guest: Page, body: string, name: string | null) {
+  await showAdd(guest);
   await guest.getByRole('button', { name: 'Написати побажання' }).click();
   const prompt = guest.getByRole('dialog', { name: 'Як вас звати?' });
   const composer = guest.getByRole('dialog', { name: 'Ваше побажання' });
@@ -85,11 +86,14 @@ test.describe('guest wishes', () => {
     await composer.getByRole('textbox', { name: 'Побажання' }).fill('Вітаємо!');
     await composer.getByRole('button', { name: 'Надіслати' }).click();
     await expect(guest.getByText('Побажання додано', { exact: true })).toBeVisible();
+    // The wish is in «Кадри» (its own tab on phones).
+    await showFrames(guest);
     await expect(
       ownFrames(guest).getByRole('button', { name: /^Кадр 1, побажання/ }),
     ).toBeVisible();
     await expect(ownFrames(guest)).toContainText('#001');
     // Asked once: the next wish goes straight to the composer.
+    await showAdd(guest);
     await guest.getByRole('button', { name: 'Написати побажання' }).click();
     await expect(guest.getByRole('dialog', { name: 'Ваше побажання' })).toBeVisible();
     await guest.keyboard.press('Escape');
@@ -106,6 +110,7 @@ test.describe('guest wishes', () => {
     await expect(frame).toHaveCount(0);
 
     await guest.reload();
+    await showFrames(guest);
     await expect(guest.getByText('Тут з’являться кадри, які ви додасте.')).toBeVisible();
     await guest.context().close();
   });
@@ -119,6 +124,7 @@ test.describe('guest wishes', () => {
     await writeWish(first, 'Перше', null);
     const second = await asGuest(browser, path);
     await writeWish(second, 'Щастя вам!', 'Ірина');
+    await showFrames(second);
     await expect(second.getByText('Ви: Ірина')).toBeVisible();
 
     await page.goto(`/app/collections/${id}`);
@@ -128,6 +134,7 @@ test.describe('guest wishes', () => {
 
     const sharedPath = await extraLink(page, id, 'Гості', CONTRIBUTE_ALL_SEE);
     const third = await asGuest(browser, sharedPath);
+    await showFrames(third);
     const all = third.getByRole('list', { name: 'Усі кадри колекції' });
     await expect(all.getByText('Щастя вам!')).toBeVisible();
     const text = (await third.locator('main').textContent()) ?? '';
@@ -150,6 +157,7 @@ test.describe('guest wishes', () => {
     await expect(viewOnly.getByRole('button', { name: 'Написати побажання' })).toHaveCount(0);
 
     const other = await asGuest(browser, path);
+    await showFrames(other);
     await expect(other.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     await expect(other.getByText('Від першого гостя')).toHaveCount(0);
     for (const guest of [writer, viewOnly, other]) await guest.context().close();
@@ -184,6 +192,7 @@ test.describe('guest wishes', () => {
     const guest = await asGuest(browser, path);
     await writeWish(guest, 'Залишуся', null);
     await guest.reload();
+    await showFrames(guest);
     await expect(ownFrames(guest).getByText('Залишуся')).toBeVisible();
     await expect(guest.getByText('Ви без імені')).toBeVisible();
     await guest.context().close();
@@ -197,6 +206,8 @@ test.describe('guest wishes', () => {
     const { path } = await setUp(page, title);
     const guest = await asGuest(browser, path);
     await writeWish(guest, 'Найкращі побажання! '.repeat(250).slice(0, 5000), null);
+    await guest.setViewportSize({ width: 360, height: 780 });
+    await showFrames(guest);
     for (const width of [360, 390]) {
       await guest.setViewportSize({ width, height: 780 });
       await expect(ownFrames(guest)).toBeVisible();

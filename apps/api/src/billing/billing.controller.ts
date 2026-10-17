@@ -1,0 +1,305 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  type AccountPaymentListQuery,
+  accountPaymentListQuerySchema,
+  type BillingSummary,
+  billingSummarySchema,
+  type PlanChangePreview,
+  type PlanChangePreviewQuery,
+  planChangePreviewQuerySchema,
+  planChangePreviewSchema,
+  type SubscriptionDto,
+  subscriptionDtoSchema,
+  type SubscriptionResume,
+  subscriptionResumeSchema,
+  type CheckoutRequest,
+  checkoutRequestSchema,
+  type CheckoutResponse,
+  checkoutResponseSchema,
+  type OfferList,
+  type OfferListQuery,
+  offerListQuerySchema,
+  offerListSchema,
+  type PaymentDto,
+  paymentDtoSchema,
+  paymentIdParamsSchema,
+  type PaymentList,
+  paymentListSchema,
+  type PaymentTotals,
+  paymentTotalsSchema,
+} from '@stepler/contracts';
+import { CurrentPrincipal } from '../auth/current-principal.decorator.js';
+import type { AccountPrincipal } from '../auth/principal.js';
+import { Public } from '../auth/public.decorator.js';
+import { RateLimit, RateLimitGuard } from '../auth/rate-limit.js';
+import { RequestId } from '../logging/request-id.decorator.js';
+import { SESSION_COOKIE_SCHEME } from '../openapi/openapi.js';
+import { CheckoutService } from './checkout.service.js';
+import { PaymentQueries, toPaymentDto } from './payment-queries.js';
+import { ReconciliationService } from './reconciliation.service.js';
+import { SubscriptionsService } from './subscriptions.service.js';
+
+/**
+ * The account's billing (ADR 0018): the public catalogue, checkouts and the account's own
+ * payments. Every payment read is scoped to the signed-in user; another account's id is `404`.
+ */
+@ApiTags('Billing')
+@ApiCookieAuth(SESSION_COOKIE_SCHEME)
+@UseGuards(RateLimitGuard)
+@Controller({ path: 'billing', version: '1' })
+export class BillingController {
+  constructor(
+    private readonly checkouts: CheckoutService,
+    private readonly queries: PaymentQueries,
+    private readonly reconciliation: ReconciliationService,
+    private readonly subscriptions: SubscriptionsService,
+  ) {}
+
+  /** Public: `/pricing` renders it signed out. Counted per IP like the guests' reads. */
+  @Get('offers')
+  @Public()
+  @RateLimit('guest-read')
+  @ApiResponse({ status: 200, standardSchema: offerListSchema })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
+  offers(@Query({ schema: offerListQuerySchema }) query: OfferListQuery): Promise<OfferList> {
+    return this.queries.offers(query.locale);
+  }
+
+  /**
+   * Prices the target on the server and returns LiqPay's signed checkout form; the browser
+   * posts it to LiqPay. The same request while a checkout is pending returns the same payment.
+   */
+  @Post('checkouts')
+  @RateLimit('billing-checkout')
+  @ApiResponse({
+    status: 201,
+    standardSchema: checkoutResponseSchema,
+    description:
+      "PENDING with LiqPay's form; for a plan change SUCCEEDED (an upgrade whose prorated " +
+      'charge was waived, applied now) or SCHEDULED (a downgrade, or a monthly ↔ yearly switch ' +
+      'that is confirmed by its own checkout at the period end), no form',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED: unknown fields (amounts are never accepted), or a title rule; LEGAL_VERSION_OUTDATED: a subscription consent given to an older Terms version',
+  })
+  @ApiResponse({
+    status: 404,
+    description:
+      'NOT_FOUND: the collection is not yours, unknown, or being deleted; a plan change ' +
+      'without a paid plan',
+  })
+  @ApiResponse({
+    status: 409,
+    description:
+      'OFFER_UNAVAILABLE: inactive price/offer, wrong target (a pack for a pack collection, an ' +
+      'extension for an account collection, a smaller tier, a subscription price that is not ' +
+      'monthly or yearly); SUBSCRIPTION_EXISTS: the account already has a paid plan that ' +
+      'LiqPay still charges; ' +
+      'PAYMENT_PENDING: another offer is waiting for payment for this collection or account, or ' +
+      'a plan change while the renewal or a switched plan is unpaid; PLAN_DOWNGRADE_BLOCKED: the smaller ' +
+      'plan would not hold current usage (`excess`: what to reduce, by how much)',
+  })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server',
+  })
+  create(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Body({ schema: checkoutRequestSchema }) body: CheckoutRequest,
+    @RequestId() requestId: string | undefined,
+  ): Promise<CheckoutResponse> {
+    switch (body.kind) {
+      case 'SUBSCRIPTION':
+        return this.subscriptions.checkout(principal, body, requestId);
+      case 'SUBSCRIPTION_CHANGE':
+        return this.subscriptions.change(principal, body.priceId, requestId);
+      default:
+        return this.checkouts.create(principal, body, requestId);
+    }
+  }
+
+  /**
+   * Pays the same pending order again (after a declined card, LiqPay keeps the order open): a
+   * freshly signed form for it. Not pending or past its time → `409`; start a new checkout.
+   */
+  @Post('payments/:id/checkout')
+  @RateLimit('billing-checkout')
+  @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: not your payment, or unknown' })
+  @ApiResponse({
+    status: 409,
+    description: 'OFFER_UNAVAILABLE: the payment is no longer pending or its time ran out',
+  })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server',
+  })
+  resume(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: paymentIdParamsSchema }) params: { id: string },
+  ): Promise<CheckoutResponse> {
+    return this.checkouts.resume(principal, params.id);
+  }
+
+  /** «Історія платежів»: the count per chip and what was paid this calendar year. */
+  @Get('payments/totals')
+  @ApiResponse({ status: 200, standardSchema: paymentTotalsSchema })
+  totals(@CurrentPrincipal() principal: AccountPrincipal): Promise<PaymentTotals> {
+    return this.queries.totals(principal.userId);
+  }
+
+  @Get('payments')
+  @ApiResponse({ status: 200, standardSchema: paymentListSchema })
+  @ApiResponse({
+    status: 400,
+    description: 'VALIDATION_FAILED: an invalid cursor, limit or group',
+  })
+  async payments(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Query({ schema: accountPaymentListQuerySchema }) query: AccountPaymentListQuery,
+  ): Promise<PaymentList> {
+    const locale = await this.queries.localeOf(principal.userId);
+    return this.queries.list(principal.userId, query, locale);
+  }
+
+  /**
+   * The return page polls this. While the payment is pending it asks LiqPay's `status` API (at
+   * most once per 15 s per payment, from 30 s after checkout) and applies the answer like a
+   * callback [P7]; a provider error leaves the payment as it is. `result_url` parameters are
+   * never trusted.
+   */
+  @Get('payments/:id')
+  @ApiResponse({ status: 200, standardSchema: paymentDtoSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: not your payment, or unknown' })
+  async payment(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: paymentIdParamsSchema }) params: { id: string },
+  ): Promise<PaymentDto> {
+    const own = await this.queries.ownPayment(principal.userId, params.id);
+    const row = await this.reconciliation.refreshPayment(own.id);
+    return toPaymentDto(row, await this.queries.localeOf(principal.userId));
+  }
+
+  /** «Тариф і оплата»: access, the trial, the live plan (with a scheduled change) and usage. */
+  @Get('summary')
+  @ApiResponse({ status: 200, standardSchema: billingSummarySchema })
+  summary(@CurrentPrincipal() principal: AccountPrincipal): Promise<BillingSummary> {
+    return this.subscriptions.summary(principal.userId);
+  }
+
+  /**
+   * What changing the plan to `priceId` would do: the prorated charge now, or the date it takes
+   * effect, and what usage blocks a smaller plan. Nothing is written.
+   */
+  @Get('subscription/change-preview')
+  @ApiResponse({ status: 200, standardSchema: planChangePreviewSchema })
+  @ApiResponse({ status: 400, description: 'VALIDATION_FAILED: priceId is not a uuid' })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'OFFER_UNAVAILABLE: not a live subscription price, the current one, or the plan is ' +
+      'cancelled; PAYMENT_PENDING: the renewal or a switched plan is unpaid',
+  })
+  preview(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Query({ schema: planChangePreviewQuerySchema }) query: PlanChangePreviewQuery,
+  ): Promise<PlanChangePreview> {
+    return this.subscriptions.preview(principal.userId, query.priceId);
+  }
+
+  /**
+   * Cancels the paid plan: LiqPay stops charging first, then the plan is cancelled with access
+   * to the period end. Repeating it changes nothing.
+   */
+  @Post('subscription/cancel')
+  @HttpCode(HttpStatus.OK)
+  @ApiResponse({ status: 200, standardSchema: subscriptionDtoSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 503,
+    description:
+      'PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed; try again)',
+  })
+  cancel(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @RequestId() requestId: string | undefined,
+  ): Promise<SubscriptionDto> {
+    return this.subscriptions.cancel(principal, requestId);
+  }
+
+  /**
+   * A cancelled plan again before it ends: a new LiqPay checkout at its price (the card is
+   * confirmed again), charged now; the new period starts when the cancelled one ends. In grace
+   * it is «Оплатити зараз»: LiqPay's old order is stopped first, then the plan is paid from now.
+   */
+  @Post('subscription/resume')
+  @RateLimit('billing-checkout')
+  @ApiResponse({ status: 201, standardSchema: checkoutResponseSchema })
+  @ApiResponse({
+    status: 400,
+    description:
+      'VALIDATION_FAILED: no auto-renewal consent; LEGAL_VERSION_OUTDATED: an older Terms version',
+  })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: the account has no paid plan' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'SUBSCRIPTION_EXISTS: the plan is neither cancelled nor in grace; OFFER_UNAVAILABLE: its price is no ' +
+      'longer sold (choose a plan); PAYMENT_PENDING: another plan is waiting for payment',
+  })
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: checkouts per account per hour' })
+  @ApiResponse({
+    status: 503,
+    description:
+      'PAYMENT_PROVIDER_UNAVAILABLE: payments are switched off on this server, or (in grace) ' +
+      'LiqPay did not confirm stopping the old order; nothing changed',
+  })
+  resumeSubscription(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Body({ schema: subscriptionResumeSchema }) body: SubscriptionResume,
+    @RequestId() requestId: string | undefined,
+  ): Promise<CheckoutResponse> {
+    return this.subscriptions.resume(principal, body.termsVersion, requestId);
+  }
+
+  /**
+   * Withdraws a scheduled downgrade (LiqPay gets the current price back) or a scheduled monthly
+   * ↔ yearly switch, until the job has stopped the old subscription at the period end.
+   */
+  @Delete('subscription/pending-change')
+  @ApiResponse({ status: 200, standardSchema: subscriptionDtoSchema })
+  @ApiResponse({ status: 404, description: 'NOT_FOUND: no plan change is scheduled' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'PAYMENT_PENDING: the switch is under way (the old subscription has stopped); pay the ' +
+      'new plan with a SUBSCRIPTION checkout of `pendingChange.priceId`',
+  })
+  @ApiResponse({
+    status: 503,
+    description: 'PAYMENT_PROVIDER_UNAVAILABLE: LiqPay could not be told (nothing changed)',
+  })
+  cancelPendingChange(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @RequestId() requestId: string | undefined,
+  ): Promise<SubscriptionDto> {
+    return this.subscriptions.cancelPendingChange(principal, requestId);
+  }
+}

@@ -116,6 +116,10 @@ describe('collectionSchema', () => {
     welcomeMessage: null,
     image: null,
     blocked: null,
+    entitlement: 'ACCOUNT',
+    access: { state: 'ACTIVE', reason: 'TRIAL', endsAt: '2026-10-08T10:00:00.000Z' },
+    pack: null,
+    deleteAfter: null,
   };
 
   test('accepts a collection', () => {
@@ -227,6 +231,7 @@ describe('usageResponseSchema', () => {
     const usage = {
       activeCollections: { used: 1, limit: 3 },
       storage: { usedBytes: 1_200_000_000, limitBytes: 21_474_836_480 },
+      access: { state: 'ACTIVE', reason: 'SUBSCRIPTION', endsAt: null },
     };
     expect(usageResponseSchema.parse(usage)).toEqual(usage);
     expect(usageResponseSchema.safeParse({ ...usage, extra: 1 }).success).toBe(false);

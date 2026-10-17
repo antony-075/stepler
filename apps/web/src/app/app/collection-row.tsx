@@ -7,7 +7,7 @@ import { cn } from '@stepler/ui/lib/utils';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
-import { formatBytes } from '@/format/bytes';
+import { formatStorage } from '@/format/bytes';
 import { PermissionChips } from '@/guest-links/permission-chips';
 import { ARCHIVED_COVER, ARCHIVED_SURFACE, BLOCKED_ACCENT } from './archived-style';
 import { CollectionMark } from './collection-mark';
@@ -169,7 +169,7 @@ export function CollectionRow({ collection }: { collection: Collection }) {
         <Cell name={tColumns('size')} className={cn(FROM_SIZE, NUMBER)}>
           <span data-slot="collection-size">
             {collection.storageBytes > 0
-              ? formatBytes(format.number, collection.storageBytes)
+              ? formatStorage(format.number, collection.storageBytes)
               : t('none')}
           </span>
         </Cell>

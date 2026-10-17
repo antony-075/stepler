@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { UsageResponse } from '@stepler/contracts';
+import { toAccessDto } from '../billing/access-dto.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -25,9 +26,14 @@ export class UsageService {
     await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId}::uuid FOR UPDATE`;
   }
 
-  /** Only `ACTIVE` counts toward the limit; archiving frees a slot (D1). */
+  /**
+   * Only `ACTIVE` counts toward the limit; archiving frees a slot (D1). A pack collection counts
+   * against its pack, not the account (ADR 0018 [P1]).
+   */
   activeCollections(userId: string, tx: Prisma.TransactionClient = this.prisma): Promise<number> {
-    return tx.collection.count({ where: { ownerId: userId, status: 'ACTIVE' } });
+    return tx.collection.count({
+      where: { ownerId: userId, status: 'ACTIVE', entitlement: 'ACCOUNT' },
+    });
   }
 
   /** Counted from audit events, so deleted collections still count. */
@@ -108,7 +114,10 @@ export class UsageService {
     return new Map(rows.map((row) => [row.id, row.bytes]));
   }
 
-  /** The same over every collection of the account that is not being deleted. */
+  /**
+   * The same over every `ACCOUNT` collection of the account that is not being deleted; pack
+   * collections have their own storage (ADR 0018 [P1]).
+   */
   async accountStorageBytes(tx: Prisma.TransactionClient, userId: string): Promise<bigint> {
     const [row] = await tx.$queryRaw<[{ bytes: bigint }]>`
       SELECT
@@ -116,49 +125,47 @@ export class UsageService {
           SELECT SUM(m."sizeBytes") FROM "MediaObject" m
           JOIN "ContentItem" c ON c."id" = m."contentItemId"
           JOIN "Collection" k ON k."id" = c."collectionId"
-          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
+          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING' AND k."entitlement" = 'ACCOUNT'
             AND c."deletedAt" IS NULL AND c."quarantinedAt" IS NULL
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(v."originalSizeBytes" + v."derivedSizeBytes") FROM "CollectionImage" v
           JOIN "Collection" k ON k."id" = v."collectionId"
-          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
+          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING' AND k."entitlement" = 'ACCOUNT'
         ), 0)::bigint
         + COALESCE((
           SELECT SUM(u."declaredSizeBytes") FROM "UploadSession" u
           JOIN "Collection" k ON k."id" = u."collectionId"
-          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING'
+          WHERE k."ownerId" = ${userId}::uuid AND k."status" <> 'DELETING' AND k."entitlement" = 'ACCOUNT'
             AND u."status" IN ('INITIATED', 'COMPLETING')
         ), 0)::bigint AS "bytes"`;
     return row.bytes;
   }
 
   /**
-   * Refuses a reservation of `bytes` that would take the collection or the account over its
-   * limit: one code for both, so a guest learns nothing about the owner's other collections.
-   * Call it after `lockOwner` in the transaction that inserts the reservation, so concurrent
-   * reservations are checked one after another.
+   * Refuses a reservation of `bytes` that would take the collection, or for an `ACCOUNT`
+   * collection the account, over its limit: one code for both, so a guest learns nothing about
+   * the owner's other collections. Call it after `lockOwner` in the transaction that inserts the
+   * reservation, so concurrent reservations are checked one after another.
    */
   async assertCanReserve(
     tx: Prisma.TransactionClient,
     request: { userId: string; collectionId: string; bytes: bigint },
   ): Promise<void> {
-    const collectionLimit = this.limits.forCollection({ id: request.collectionId }).storageBytes;
-    const accountLimit = this.limits.forUser({ id: request.userId }).storageBytes;
-    const [collectionBytes, accountBytes] = [
-      await this.collectionStorageBytes(tx, request.collectionId),
-      await this.accountStorageBytes(tx, request.userId),
-    ];
-    if (
-      collectionBytes + request.bytes > collectionLimit ||
-      accountBytes + request.bytes > accountLimit
-    ) {
+    const limits = await this.limits.forCollection(request.collectionId, tx);
+    const collectionBytes = await this.collectionStorageBytes(tx, request.collectionId);
+    if (collectionBytes + request.bytes > limits.storageBytes) {
       throw new AppError('QUOTA_EXCEEDED', 409);
     }
+    if (limits.entitlement === 'PACK') return;
+    // An account collection's access is the account's, limits included.
+    const accountLimit = limits.access.limits.storageBytes ?? 0n;
+    const accountBytes = await this.accountStorageBytes(tx, request.userId);
+    if (accountBytes + request.bytes > accountLimit) throw new AppError('QUOTA_EXCEEDED', 409);
   }
 
   async forUser(userId: string): Promise<UsageResponse> {
-    const limits = this.limits.forUser({ id: userId });
+    const limits = await this.limits.forUser(userId);
     return {
       activeCollections: {
         used: await this.activeCollections(userId),
@@ -168,6 +175,7 @@ export class UsageService {
         usedBytes: Number(await this.accountStorageBytes(this.prisma, userId)),
         limitBytes: Number(limits.storageBytes),
       },
+      access: toAccessDto(limits.access),
     };
   }
 
@@ -175,7 +183,7 @@ export class UsageService {
   async forCollection(collectionId: string, tx: Prisma.TransactionClient = this.prisma) {
     return {
       usedBytes: Number(await this.collectionStorageBytes(tx, collectionId)),
-      limitBytes: Number(this.limits.forCollection({ id: collectionId }).storageBytes),
+      limitBytes: Number((await this.limits.forCollection(collectionId, tx)).storageBytes),
     };
   }
 }

@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Injectable } from '@nestjs/common';
 import type {
   CreateGuestLinkRequest,
@@ -49,6 +50,7 @@ export class GuestLinksService {
     private readonly tokens: GuestLinkTokens,
     private readonly audit: AuditService,
     private readonly limits: LimitsService,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /** Inserts a collection's default link inside the caller's transaction, and audits it. */
@@ -101,10 +103,11 @@ export class GuestLinksService {
   ): Promise<GuestLink> {
     const row = await this.prisma.$transaction(async (tx) => {
       await this.lockOwnedCollection(tx, principal, collectionId);
+      await this.gate.assertAdminCanWrite({ collectionId }, tx);
       const live = await tx.guestLink.count({
         where: { collectionId, isDefault: false, status: { not: 'REVOKED' } },
       });
-      if (live >= this.limits.forCollection({ id: collectionId }).guestLinks) {
+      if (live >= (await this.limits.forCollection(collectionId, tx)).guestLinks) {
         throw new AppError('GUEST_LINK_LIMIT_REACHED', 409);
       }
       const created = await this.insert(tx, collectionId, {
@@ -135,6 +138,7 @@ export class GuestLinksService {
     const row = await this.prisma.$transaction(async (tx) => {
       const before = await this.findOwnedLink(tx, principal, linkId);
       if (before.status === 'REVOKED') throw new AppError('LINK_REVOKED', 409);
+      await this.gate.assertAdminCanWrite({ collectionId: before.collectionId }, tx);
       if (before.isDefault && body.label !== undefined) {
         throw new AppError('VALIDATION_FAILED', 400, {
           errors: [{ path: ['label'], message: 'The default link has no label' }],
@@ -377,6 +381,10 @@ export class GuestLinksService {
     const row = await this.prisma.$transaction(async (tx) => {
       const link = await this.findOwnedLink(tx, principal, linkId);
       if (link.status === 'REVOKED') throw new AppError('LINK_REVOKED', 409);
+      // Resuming a link reopens it to guests: not while read-only. Pausing always works.
+      if (to === 'ACTIVE') {
+        await this.gate.assertAdminCanWrite({ collectionId: link.collectionId }, tx);
+      }
       const { count } = await tx.guestLink.updateMany({
         where: { id: linkId, status: from },
         data: { status: to },

@@ -2,7 +2,7 @@
 
 /*
  * Design pass (ADR 0016 fallback; DESIGN-SYSTEM §6.0 single-step frame, §9 forms):
- * - One step on the CenteredPage panel, like /auth/verify: h1 sized as a section heading, a
+ * - One step on the AuthPage card, like /auth/verify: h1 sized as a section heading, a
  *   one-sentence reason, then the two documents as a short list (title link in a new tab, the
  *   version and effective date muted underneath), the checkbox row, the primary action, and a
  *   ghost «Вийти» for someone who does not agree.

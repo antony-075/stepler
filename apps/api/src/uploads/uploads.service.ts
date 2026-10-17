@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   type CreateUploadRequest,
@@ -82,6 +83,7 @@ export class UploadsService {
     private readonly usage: UsageService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -109,6 +111,8 @@ export class UploadsService {
     });
     if (existing !== null) return this.replay(existing, body);
 
+    // Before the storage call, so a closed collection costs none; re-checked under the lock.
+    await this.gate.assertGuestCanContribute(p.collectionId);
     await this.assertWithinSessionLimits(p);
 
     const settings = this.limits.uploads();
@@ -127,6 +131,7 @@ export class UploadsService {
           select: { ownerId: true },
         });
         await this.usage.lockOwner(tx, ownerId);
+        await this.gate.assertGuestCanContribute(p.collectionId, tx);
         await this.usage.assertCanReserve(tx, {
           userId: ownerId,
           collectionId: p.collectionId,

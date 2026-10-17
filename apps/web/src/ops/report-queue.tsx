@@ -2,8 +2,8 @@
 
 // Design pass (slice 9, Task 10; frontend-design, ui-ux-pro-max, web-design-guidelines,
 // responsive-design): a work queue read top to bottom, newest first. Decisions:
-// - the three statuses are the V1 segmented tabs (full width on phones, their own width from
-//   `md`), driven by `?status=` so a tab is a link the operator can reload or share;
+// - the three statuses are the console's tabs (`OpsTabs`, owner remark 2026-10-16), links to
+//   `?status=` so a tab is a URL the operator can reload or share;
 // - from `md` a dense table (rows 56px, 14px text, numbers and times in Geist Mono), each row one
 //   link (the frame cell's link stretches over the row) so keyboard users tab once per report;
 //   below `md` the same fields as stacked cards, never a horizontally scrolling table;
@@ -18,17 +18,15 @@ import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { EmptyState, formatFrameNumber } from '@stepler/ui/components/empty-state';
 import { Skeleton } from '@stepler/ui/components/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { fetchReports, opsKeys } from './api/operator';
 import { ContentKindIcon } from './content-kind-icon';
+import { OpsPageHeader, OpsTabs } from './ops-page';
 import { paramOfStatus, REPORT_TABS, STATE_BADGE } from './report-labels';
 
 export function ReportQueue({ status }: { status: ReportStatus }) {
   const t = useTranslations('ops');
-  const router = useRouter();
   const query = useInfiniteQuery({
     queryKey: opsKeys.reports(status),
     queryFn: ({ pageParam, signal }) => fetchReports({ status, cursor: pageParam }, signal),
@@ -39,25 +37,17 @@ export function ReportQueue({ status }: { status: ReportStatus }) {
 
   return (
     <section aria-labelledby="ops-queue-title" className="grid gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 id="ops-queue-title" className="type-h1">
-          {t('queue.title')}
-        </h1>
-      </div>
-      <Tabs
-        value={status}
-        onValueChange={(value) =>
-          router.replace(`/ops/reports?status=${paramOfStatus(value as ReportStatus)}`)
-        }
-      >
-        <TabsList variant="segmented" aria-label={t('queue.tabsLabel')}>
-          {REPORT_TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
-              {t(`statuses.${tab}`)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <OpsPageHeader id="ops-queue-title" title={t('queue.title')} description={t('queue.intro')} />
+      <OpsTabs
+        replace
+        label={t('queue.tabsLabel')}
+        tabs={REPORT_TABS.map((tab) => ({
+          key: tab,
+          href: `/ops/reports?status=${paramOfStatus(tab)}`,
+          label: t(`statuses.${tab}`),
+          current: tab === status,
+        }))}
+      />
 
       {query.isPending ? (
         <QueueSkeleton />
@@ -202,14 +192,14 @@ function QueueCards({ rows }: { rows: OperatorReportRow[] }) {
   const t = useTranslations('ops');
   const text = useRowText();
   return (
-    <ul className="grid gap-2 md:hidden">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 md:hidden">
       {rows.map((row) => {
         const received = text.received(row);
         return (
           <li key={row.id}>
             <Link
               href={`/ops/reports/${row.id}`}
-              className="grid min-h-11 gap-2 rounded-sheet border bg-card p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="grid min-h-11 min-w-0 gap-2 rounded-sheet border bg-card p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="flex items-start justify-between gap-3">
                 <span className="font-medium [overflow-wrap:anywhere]">
@@ -217,9 +207,12 @@ function QueueCards({ rows }: { rows: OperatorReportRow[] }) {
                 </span>
                 <StateBadge row={row} />
               </span>
-              <span className="flex items-center gap-2 text-[0.875rem]">
+              <span className="flex min-w-0 items-center gap-2 text-[0.875rem]">
                 {row.content === null ? null : <ContentKindIcon kind={row.content.kind} />}
-                <ContentLabel row={row} />
+                {/* The frame stays whole; the collection's title gives way. */}
+                <span className="shrink-0">
+                  <ContentLabel row={row} />
+                </span>
                 <span className="min-w-0 truncate text-foreground-soft">
                   {text.collection(row)}
                 </span>

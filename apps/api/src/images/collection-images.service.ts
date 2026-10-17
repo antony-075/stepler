@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { mediaOf, WITH_MEDIA } from '../content/media-urls.js';
@@ -50,6 +51,7 @@ export class CollectionImagesService {
     private readonly pages: GuestPageRepository,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -82,6 +84,8 @@ export class CollectionImagesService {
     if (item === null) throw new AppError('NOT_FOUND', 404);
     // Before the copy, so an archived collection costs no storage call; re-checked under the lock.
     if (item.collection.status === 'ARCHIVED') throw new AppError('COLLECTION_ARCHIVED', 409);
+    // Also before the copy (a read-only collection costs no storage call); re-checked under the lock.
+    await this.gate.assertAdminCanWrite({ collectionId: item.collection.id });
     const original = mediaOf(item, 'ORIGINAL');
     // A hidden frame is no source either (slice 9): it would put it back in front of guests.
     if (
@@ -109,6 +113,7 @@ export class CollectionImagesService {
       await this.prisma.$transaction(async (tx) => {
         await this.usage.lockOwner(tx, item.collection.ownerId);
         const locked = await this.lockMutable(tx, a, item.collection.id);
+        await this.gate.assertAdminCanWrite({ collectionId: locked.id }, tx);
         // Deleted while the original was copied: no image from it. The share lock keeps a
         // concurrent delete waiting until this transaction ends.
         const live = await tx.$queryRaw<{ id: string }[]>`
@@ -156,6 +161,7 @@ export class CollectionImagesService {
     await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
       const locked = await this.lockMutable(tx, a, collectionId);
+      await this.gate.assertAdminCanWrite({ collectionId: locked.id }, tx);
       const image = await tx.collectionImage.findFirst({
         where: { id: imageId, collectionId: locked.id, slot: target.slot },
         select: { id: true },

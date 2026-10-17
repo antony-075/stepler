@@ -76,12 +76,14 @@ Every tool or process a developer starts has a root `package.json` script and a 
 | `pnpm mailpit`                                  | Start Mailpit alone (if not running) and open its inbox, http://127.0.0.1:8025 |
 | `pnpm storage:bootstrap`                        | Create the local buckets and CORS; safe to rerun              |
 | `pnpm dev`                                      | Build workspace packages, then run api (4000), web (3000) and contracts in watch mode |
+| `pnpm dev:tunnel`                               | `pnpm dev` behind a temporary Cloudflare quick tunnel (needs `brew install cloudflared`); passes the tunnel's address to the API as `BILLING_CALLBACK_URL`, so LiqPay sandbox callbacks reach your machine. Stop it when done: the local API is public while it runs |
 | `pnpm worker:dev`                               | Background worker in watch mode (purges, sweeps; ADR 0009), built into `apps/api/dist-worker` so it never touches the API's `dist`. Reads `apps/api/.env`; run it next to `pnpm dev` |
 | `pnpm release:check`                            | Full pre-release check before a manual staging deploy: format, lint, typecheck, tests, builds, Storybook, three-browser e2e, Docker image checks (needs `pnpm infra:up`) |
 | `pnpm build`                                    | Build all packages and apps                                   |
 | `pnpm lint` / `pnpm typecheck` / `pnpm test`    | Quality checks (Turborepo, cached). In `@stepler/ui`, `test` runs the Storybook stories in headless Chromium in two Vitest projects: `storybook` (all stories except those tagged `reduced-motion`) and `storybook-reduced-motion` (only those, with `prefers-reduced-motion: reduce` emulated; see `docs/ux/design-system.md` → Motion). In `@stepler/templates`, `test` runs the core's unit tests in Node and every template story (each fixture at 360/390/768/1440, with axe) in headless Chromium |
 | `pnpm e2e`                                      | Build, start production servers on 3100/4100 and the worker, migrate and empty `stepler_e2e`, run Playwright. Needs `pnpm infra:up`, `storage:bootstrap` and network (Turnstile's test key loads Cloudflare's script). Safe while `pnpm dev` runs: the API is built into `apps/api/dist-e2e` (`build:e2e`), and `next build` keeps `next dev`'s `.next/dev` |
 | `pnpm e2e -- --shard=1/2`                       | Run one half of the Playwright tests (CI runs shards `1/2` and `2/2` in parallel); any Playwright flag works after `--`, e.g. `-- --grep @desktop` |
+| `pnpm landing:media`                           | The landing page's product screens and walkthrough film from the running local app (`pnpm dev` + `pnpm worker:dev`, needs `ffmpeg`): a demo account, six collections, phone and desktop stills and the film into `apps/web/public/landing/`; steps and options in `e2e/media/README.md` |
 | `pnpm build-storybook`                          | Static Storybook build                                        |
 | `pnpm storybook`         | Storybook dev server on 6006                                  |
 | `pnpm templates:dev`     | The guest page templates gallery (`apps/templates` Storybook) on 6007: every template against fixture models at 360/390/768/1440 |
@@ -140,12 +142,13 @@ These are names only; real values never go into the repository. Staging and prod
 | `NODE_ENV` | api | yes | `development`, `test` or `production` |
 | `API_PORT` | api | no | Listen port, default `4000` |
 | `LOG_LEVEL` | api | no | `fatal`…`trace`, default `info` |
-| `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Magic links, the OAuth redirect URI and the CSRF `Origin` check use it |
+| `APP_ORIGIN` | api | yes | Public web origin (`https://host`, no path). Mailed confirmation/reset links, the OAuth redirect URI and the CSRF `Origin` check use it |
 | `DATABASE_URL` | api | yes | PostgreSQL connection URL |
 | `SHADOW_DATABASE_URL` | api (CLI) | for `db:check` / `db:migrate` | Disposable database Prisma resets (`stepler_shadow`); never the dev or test database |
 | `COOKIE_SECURE` | api | no | Adds `Secure` to cookies; default `true` in production, else `false` |
 | `SESSION_TTL_DAYS` | api | no | Admin session lifetime, default `30` |
-| `MAGIC_LINK_TTL_MINUTES` | api | no | Magic link lifetime, default `15` |
+| `EMAIL_VERIFICATION_TTL_HOURS` | api | no | Lifetime of the e-mail confirmation link (ADR 0019), default `24` |
+| `PASSWORD_RESET_TTL_MINUTES` | api | no | Lifetime of the password reset link, default `60` |
 | `OPERATOR_EMAILS` | api, worker | no | Comma-separated operator e-mails (ADR 0013): a dedicated service mailbox such as `moderation@<domain>`, never a personal account. The API grants the operator role (the `/ops` console); the worker sends each new report there. Default empty |
 | `API_TRUST_PROXY` | api | no | Express `trust proxy`: `false` (default), a hop count, or a trust string such as `loopback`. `true` is rejected (it would trust any client's `X-Forwarded-For`) |
 | `APP_SECRET` | api | yes | Base64 of ≥ 32 random bytes; root key for HKDF-derived keys. Distinct per environment |
@@ -162,14 +165,15 @@ These are names only; real values never go into the repository. Staging and prod
 | `S3_SECRET_ACCESS_KEY` | api | yes | Bucket-scoped secret key |
 | `S3_FORCE_PATH_STYLE` | api | no | `true` for the emulator; default `false` |
 | `STORAGE_CORS_ORIGINS` | `storage:bootstrap` | no | Dev/CI only: comma-separated browser origins for the local buckets' CORS rule; default `http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:3100`. `E2E_WEB_PORT`, when set, adds `http://127.0.0.1:<port>` |
-| `LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR` | api | no | Default `5` |
-| `LIMIT_MAGIC_LINK_PER_IP_PER_HOUR` | api | no | Default `20` |
-| `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR` | api | no | Default `60` |
-| `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT` | api | no | Default `3` |
+| `LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR` | api | no | Confirmation/reset mails per address per hour (counted from token rows); default `5` |
+| `LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR` | api | no | Registration, resend and forgot-password requests per IP per hour, counted after Turnstile; default `20` |
+| `LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR` | api | no | Link preview/confirm/reset calls per IP per hour; default `60` |
+| `LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR` | api | no | `POST /auth/login` per IP per hour; default `60` |
+| `LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN` | api | no | Wrong passwords per address + IP in 15 minutes before `429`; default `10` |
+| `LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR` | api | no | Wrong passwords per address (any IP) per hour before `429`; default `30` |
+| `LIMIT_MAGIC_LINK_*` | api | no | **Removed** (ADR 0019); unset them on Render |
+| `LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_ACCOUNT`, `LIMIT_STORAGE_BYTES_PER_COLLECTION`, `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | **Retired** (ADR 0018): active collections, storage and guest links come from the account's trial, plan or grant, or the collection's pack (`BillingOffer` rows, edited in `/ops`). Still accepted and ignored for one release; the API warns at startup when one is set |
 | `LIMIT_COLLECTION_CREATIONS_PER_DAY` | api | no | Collections an account may create per rolling 24 hours, counted from audit events; default `10` |
-| `LIMIT_STORAGE_BYTES_PER_ACCOUNT` | api | no | Bytes, default 20 GiB |
-| `LIMIT_STORAGE_BYTES_PER_COLLECTION` | api | no | Bytes, default 10 GiB |
-| `LIMIT_GUEST_LINKS_PER_COLLECTION` | api | no | Non-revoked additional guest links per collection (the default link does not count); default `10` |
 | `LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE` | api | no | Public guest link resolves per client IP per minute; default `120` (guests on one venue Wi-Fi share an IP) |
 | `LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE` | api | no | Guest session exchanges (opening a guest link) per client IP per minute; default `120` (venue NAT, as above) |
 | `LIMIT_FILE_BYTES_PHOTO` | api | no | Largest photo in bytes (decimal); default `50000000` (50 MB) |
@@ -200,6 +204,18 @@ These are names only; real values never go into the repository. Staging and prod
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
 | `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
+| `READ_ONLY_RETENTION_DAYS` | worker | no | Billing (ADR 0018): read-only content of an account is kept this many days after its trial or plan ended, then deleted after warnings 30 and 7 days before; default `90` |
+| `BILLING_RETENTION_DELETE_ENABLED` | worker | no | `true` lets the daily `billing.retention` job delete due collections; default `false` until the legal texts describe retention (warnings go out either way) |
+| `BILLING_PROVIDER` | api, worker | no | Payments (ADR 0018): `liqpay` or `disabled` (default; checkout then answers 503). With `liqpay` both keys are required |
+| `LIQPAY_PUBLIC_KEY`, `LIQPAY_PRIVATE_KEY` | api, worker | with `liqpay` | The LiqPay key pair: the **sandbox** pair locally and on staging, live keys only on production; secrets, never committed or logged |
+| `LIQPAY_API_BASE` | api, worker | no | LiqPay's server API origin; default `https://www.liqpay.ua` (tests use a local stub) |
+| `BILLING_CALLBACK_URL` | api | in production | Our public `server_url` (`https://<api-host>/api/v1/billing/liqpay/callback`); unset locally, where payments settle through LiqPay's status API (`pnpm dev:tunnel` sets it) |
+| `BILLING_PENDING_TTL_MINUTES` | api, worker | no | How long a checkout stays payable; default `30` |
+| `BILLING_FISCAL_MODE`, `BILLING_FISCAL_WAIVED` | api, worker | no | Fiscal receipts: `none` (default) or `liqpay_rro`; production with live keys refuses `none` unless the waiver is `true` (accountant's decision, [Q1]) |
+| `BILLING_GRACE_DAYS` | api, worker | no | Days a subscription keeps working after a missed renewal or an unpaid monthly ↔ yearly switch (ADR 0018); default `4` |
+| `BILLING_MIN_CHARGE_MINOR` | api | no | An upgrade's prorated charge below this many kopecks is waived; default `100` |
+| `LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE` | api | no | LiqPay callbacks per client IP per minute; default `120` |
+| `LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR` | api | no | Checkouts per account per hour; default `20` |
 | `API_INTERNAL_URL` | web | yes | http(s) origin the web server forwards `/api/*` to; read at runtime |
 | `API_INTERNAL_HOSTPORT` | web | instead of `API_INTERNAL_URL` | `host:port` of a private API service as a platform exposes it (Render `hostport`); becomes `http://host:port` |
 | `CLIENT_IP_HEADER` | web | no | Header in which the edge sets the client IP and overwrites client-sent values (Render: `cf-connecting-ip`). The web forwards only that IP to the API; all other forwarding headers are always dropped. `x-forwarded-for`, `forwarded` and `x-real-ip` are rejected (client-controlled). Unset: no client IP is forwarded. Replaces `TRUST_PROXY_HEADERS`, which is now ignored |

@@ -6,6 +6,11 @@ describe('currentSection', () => {
     expect(currentSection('/app/account')).toBe('account');
   });
 
+  it('marks «Тариф і оплата» on its pages', () => {
+    expect(currentSection('/app/billing')).toBe('billing');
+    expect(currentSection('/app/billingx')).toBe('collections');
+  });
+
   it('keeps every collection page, its own settings too, under the collections', () => {
     for (const path of [
       '/app',

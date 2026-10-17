@@ -53,6 +53,8 @@ export function GuestTemplateRoot({
     <div
       data-template={def.id}
       data-scheme={def.scheme}
+      // Only a page with tabs shows one view at a time; a view-only link shows all it has.
+      data-view={slots.tabs === null ? undefined : model.view}
       style={style}
       className={fontClassName(settings.headingFont, def.bodyFont) || undefined}
       inert={inert}

@@ -3,26 +3,6 @@
 @import '@stepler/templates/styles.css';
 @source '../../../templates/src';
 
-/* The brand's light and dark files (components/brand-mark.tsx): one shows, by the same rule as
-   the theme (the system setting unless the page chose, then the choice). */
-.brand-on-dark {
-  display: none;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .brand-on-light {
-    display: none;
-  }
-  :root:not([data-theme='light']) .brand-on-dark {
-    display: inline;
-  }
-}
-:root[data-theme='dark'] .brand-on-light {
-  display: none;
-}
-:root[data-theme='dark'] .brand-on-dark {
-  display: inline;
-}
-
 /* Loading states (components/brand-loading.tsx, page skeletons): nothing for the first 180ms,
    so a fast load never flashes; then a quiet fade. The loading line slides with transform only.
    Under reduced motion both are still: the state shows at once and the line stands. */
@@ -193,5 +173,249 @@
     & a[href^='http']::after {
       content: ' (' attr(href) ')';
     }
+  }
+}
+
+/*
+ * The operator console (owner remark 2026-10-16: «чуть темнее с черным акцентом»; DESIGN-SYSTEM
+ * §6.12): its own surface over the V1 tokens, so it is never mistaken for the user app. A
+ * darker page under white panels; black (white in the dark theme) for primary actions, the
+ * current place, links and focus instead of the indigo; a near-black chrome (`--ops-chrome-*`)
+ * for the sidebar. Set on the console's root and, while it is open, on <html>, so dialogs and
+ * menus in portals follow it. Text pairs keep 4.5:1 (muted 7.2:1 on white, chrome muted 7.9:1).
+ */
+[data-surface='ops'] {
+  --background: #e8e8eb;
+  --subtle: #f4f4f5;
+  --border: #dcdce0;
+  --border-strong: #c6c6cc;
+  --muted-foreground: #52525b;
+  --track: #dcdce0;
+  --primary: #18181b;
+  --primary-hover: #27272a;
+  --primary-active: #3f3f46;
+  --primary-foreground: #ffffff;
+  --pencil: #18181b;
+  --pencil-hover: #27272a;
+  --pencil-active: #3f3f46;
+  --pencil-foreground: #ffffff;
+  --pencil-soft: #f1f1f3;
+  --link: #18181b;
+  --link-hover: #000000;
+  --info-soft: #f1f1f3;
+  --ring: #18181b;
+  --ops-chrome: #0b0b0d;
+  --ops-chrome-foreground: #fafafa;
+  --ops-chrome-muted: #a1a1aa;
+  --ops-chrome-hover: #1c1c20;
+  --ops-chrome-current: #2a2a2f;
+  --ops-chrome-border: #232328;
+  --ops-chrome-ring: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light'])[data-surface='ops'],
+  :root:not([data-theme='light']) [data-surface='ops'] {
+    --background: #060607;
+    --card: #131316;
+    --popover: #131316;
+    --subtle: #18181b;
+    --border: #26262b;
+    --border-strong: #34343a;
+    --muted-foreground: #a1a1aa;
+    --track: #26262b;
+    --primary: #fafafa;
+    --primary-hover: #e4e4e7;
+    --primary-active: #d4d4d8;
+    --primary-foreground: #0b0b0d;
+    --pencil: #fafafa;
+    --pencil-hover: #e4e4e7;
+    --pencil-active: #d4d4d8;
+    --pencil-foreground: #0b0b0d;
+    --pencil-soft: #222226;
+    --link: #fafafa;
+    --link-hover: #ffffff;
+    --info-soft: #222226;
+    --ring: #fafafa;
+    --ops-chrome: #000000;
+    --ops-chrome-border: #1c1c20;
+  }
+}
+
+:root[data-theme='dark'][data-surface='ops'],
+:root[data-theme='dark'] [data-surface='ops'] {
+  --background: #060607;
+  --card: #131316;
+  --popover: #131316;
+  --subtle: #18181b;
+  --border: #26262b;
+  --border-strong: #34343a;
+  --muted-foreground: #a1a1aa;
+  --track: #26262b;
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-active: #d4d4d8;
+  --primary-foreground: #0b0b0d;
+  --pencil: #fafafa;
+  --pencil-hover: #e4e4e7;
+  --pencil-active: #d4d4d8;
+  --pencil-foreground: #0b0b0d;
+  --pencil-soft: #222226;
+  --link: #fafafa;
+  --link-hover: #ffffff;
+  --info-soft: #222226;
+  --ring: #fafafa;
+  --ops-chrome: #000000;
+  --ops-chrome-border: #1c1c20;
+}
+
+/* The marketing landing (src/landing). Its fixed colours are the brand's own, the same in both
+   themes: the logo's blue for the closing block and the lights, its ink for the device outlines.
+   Anchor jumps glide only when motion is welcome. */
+.landing {
+  --brand-blue: #3657ff;
+  --brand-blue-soft: #eef1ff;
+  --brand-ink: #171a21;
+  /* The phone, as the guest page editor's preview draws it (device-frame.tsx): graphite with a
+     thin light edge, the same in both themes (it is a picture of a device). */
+  --device: #1c1d1f;
+  --device-edge: #45474b;
+  --device-button: #2b2c2f;
+  --landing-night: #0e1016;
+  /* The hero's lights and the dark section's glow; quieter in the dark theme. */
+  --landing-light-blue: rgb(54 87 255 / 0.16);
+  --landing-light-warm: rgb(255 170 120 / 0.2);
+  --landing-dots: rgb(24 24 27 / 0.09);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .landing {
+    --landing-light-blue: rgb(72 100 255 / 0.22);
+    --landing-light-warm: rgb(255 150 100 / 0.08);
+    --landing-dots: rgb(244 244 245 / 0.07);
+  }
+}
+:root[data-theme='dark'] .landing {
+  --landing-light-blue: rgb(72 100 255 / 0.22);
+  --landing-light-warm: rgb(255 150 100 / 0.08);
+  --landing-dots: rgb(244 244 245 / 0.07);
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.landing) {
+    scroll-behavior: smooth;
+  }
+}
+
+/* The hero's ground (landing/hero.tsx): the page colour, two soft lights behind the collection and
+   a faint grid of dots (the contact sheet) that fades out towards the text. */
+.landing-hero-ground {
+  background:
+    radial-gradient(38rem 26rem at 78% 38%, var(--landing-light-blue), transparent 70%),
+    radial-gradient(26rem 20rem at 92% 88%, var(--landing-light-warm), transparent 70%), var(--card);
+}
+.landing-hero-ground::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(var(--landing-dots) 1.2px, transparent 1.6px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(60rem 36rem at 72% 45%, #000 20%, transparent 75%);
+  pointer-events: none;
+}
+
+/* The demo section's ground (landing/product-demo.tsx): ink with one blue glow over the video. */
+.landing-dark-ground {
+  background:
+    radial-gradient(50rem 30rem at 50% 0%, rgb(54 87 255 / 0.28), transparent 70%),
+    var(--landing-night);
+}
+
+/* The hero's one orchestrated moment: the guests' frames travel in from the phone's side (lower
+   left) and settle into the grid, 70ms apart; the text and the phone rise once. Transform and
+   opacity only; `both` keeps each piece hidden until its turn and in place after. Under reduced
+   motion there is no animation: everything is simply there. */
+@keyframes landing-gather {
+  from {
+    opacity: 0;
+    transform: translate(-48%, 38%) scale(0.55) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-gather {
+    animation: landing-gather 640ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+    animation-delay: calc(280ms + var(--i, 0) * 70ms);
+  }
+  .landing-rise {
+    animation: landing-rise 520ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  }
+  .landing-phone-rise {
+    animation: landing-rise 700ms cubic-bezier(0.2, 0.75, 0.25, 1) 120ms both;
+  }
+}
+
+/* Sections rise into place once as they first come into view (landing/reveal.tsx sets
+   `data-reveal-ready` on the page, then `data-revealed` per block). Without JavaScript, or under
+   reduced motion, nothing is ever hidden. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing[data-reveal-ready] [data-reveal]:not([data-revealed]) {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  .landing[data-reveal-ready] [data-reveal] {
+    transition:
+      opacity 600ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      transform 600ms cubic-bezier(0.2, 0.75, 0.25, 1);
+    transition-delay: calc(var(--reveal-i, 0) * 80ms);
+  }
+}
+
+/* The primary call to action lifts with a soft blue glow under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-cta {
+    transition:
+      transform 160ms ease-out,
+      box-shadow 160ms ease-out,
+      background-color 120ms ease-out;
+  }
+  .landing-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -10px rgb(54 87 255 / 0.65);
+  }
+}
+
+/* The questions open and close smoothly where the browser can animate to `auto`
+   (`::details-content`, Chromium 131+); elsewhere they simply switch. */
+.landing-faq {
+  interpolate-size: allow-keywords;
+}
+.landing-faq::details-content {
+  block-size: 0;
+  overflow: clip;
+  opacity: 0;
+}
+.landing-faq[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-faq::details-content {
+    transition:
+      block-size 260ms cubic-bezier(0.2, 0.75, 0.25, 1),
+      opacity 200ms ease-out,
+      content-visibility 260ms allow-discrete;
   }
 }

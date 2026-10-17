@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { newEmail, signIn } from '../support/auth.js';
 import { horizontalOverflow } from '../support/collections.js';
-import { openGuestLink, submitTextViaApi } from '../support/guest.js';
+import { openGuestLink, showFrames, submitTextViaApi } from '../support/guest.js';
 import { waitForMail } from '../support/mailpit.js';
 import { uploadViaApi } from '../support/media.js';
 import { OPERATOR_INBOX, signInAsOperator } from '../support/operator.js';
@@ -27,6 +27,7 @@ test.describe('guest reports', () => {
 
     const b = await openGuestLink(browser, linkPath);
     await expect(b.getByRole('heading', { level: 1 })).toBeVisible();
+    await showFrames(b);
     const all = b.getByRole('list', { name: 'Усі кадри колекції' });
     await all.getByRole('button', { name: /^Побажання, / }).click();
     const viewer = b.getByRole('dialog').filter({ hasText: 'Від гостя А' });
@@ -51,6 +52,7 @@ test.describe('guest reports', () => {
     // B's own frame: no «⋯».
     await submitTextViaApi(b, collectionId, 'Від гостя Б');
     await b.reload();
+    await showFrames(b);
     await b
       .getByRole('button', { name: /^Кадр \d+, побажання, / })
       .first()
@@ -326,9 +328,7 @@ test.describe('guest reports', () => {
     await page.getByRole('button', { name: 'Показати все' }).click();
     await expect(page).not.toHaveURL(/state=/);
     await expect(tiles).toHaveCount(4);
-    // F3: «Вибрати» is icon-only but keeps its name.
-    const select = page.getByRole('button', { name: 'Вибрати', exact: true });
-    await expect(select).toBeVisible();
-    await expect(select).toHaveText('');
+    // No «Вибрати» button any more (owner 2026-10-16): each tile has its own check.
+    await expect(page.getByRole('button', { name: 'Вибрати', exact: true })).toHaveCount(0);
   });
 });

@@ -13,6 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { CLOSED_ERRORS } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiHeader, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   createTextRequestSchema,
@@ -134,7 +135,7 @@ export class GuestContentController {
   @ApiResponse({ status: 401, description: 'GUEST_SESSION_REQUIRED' })
   @ApiResponse({
     status: 403,
-    description: 'FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE',
+    description: `FORBIDDEN (the link takes no texts), COLLECTION_ARCHIVED or LINK_INACTIVE, ${CLOSED_ERRORS}`,
   })
   @ApiResponse({
     status: 404,

@@ -1,3 +1,4 @@
+import { freshTrialEnd, grantTestPlan } from './billing.js';
 import { setPublishedPage } from './guest-page.js';
 import type { Server } from 'node:http';
 import type { GuestLinkPermissions } from '@stepler/contracts';
@@ -57,9 +58,15 @@ export async function seedCollection(
   tokens: GuestLinkTokens,
   options: { ownerId?: string; permissions?: GuestLinkPermissions; title?: string } = {},
 ): Promise<{ ownerId: string; collectionId: string; link: SeededLink }> {
-  const ownerId =
-    options.ownerId ??
-    (await prisma.user.create({ data: { email: `owner${++sequence}@example.com` } })).id;
+  // A new owner gets the test plan (`signInAs`'s default); a given owner keeps what they have.
+  let ownerId = options.ownerId;
+  if (ownerId === undefined) {
+    const owner = await prisma.user.create({
+      data: { email: `owner${++sequence}@example.com`, trialEndsAt: freshTrialEnd() },
+    });
+    await grantTestPlan(prisma, owner.id);
+    ownerId = owner.id;
+  }
   const collection = await prisma.collection.create({
     data: { ownerId, title: options.title ?? 'Весілля', description: 'Опис' },
   });

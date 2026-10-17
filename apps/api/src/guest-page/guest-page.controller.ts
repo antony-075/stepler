@@ -10,6 +10,7 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
+import { ApiAdminReadOnlyResponse } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -92,6 +93,7 @@ export class GuestPageController {
 
   /** Saves the working copy (template, settings, welcome); creates the draft if there is none. */
   @Put('draft')
+  @ApiAdminReadOnlyResponse()
   @ApiResponse({ status: 200, standardSchema: guestPageEditorSchema })
   @ApiResponse({
     status: 400,
@@ -128,6 +130,7 @@ export class GuestPageController {
 
   /** «Зберегти»: guests see the draft from now on. No draft: `200` as is. */
   @Post('publish')
+  @ApiAdminReadOnlyResponse()
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: guestPageEditorSchema })
   @ApiResponse({ status: 404, description: NOT_FOUND })
@@ -145,6 +148,7 @@ export class GuestPageController {
 
   /** Copies a guest photo's original into the draft's cover or background. */
   @Post('draft/:slot/from-frame')
+  @ApiAdminReadOnlyResponse()
   @RateLimit('admin-cover', 'admin-cover-user')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: guestPageEditorSchema })
@@ -172,6 +176,7 @@ export class GuestPageController {
 
   /** Points the draft's cover or background back at an image the collection still has (undo). */
   @Post('draft/:slot/restore')
+  @ApiAdminReadOnlyResponse()
   @RateLimit('admin-cover', 'admin-cover-user')
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: guestPageEditorSchema })
@@ -208,6 +213,7 @@ export class GuestPageController {
 
   /** Opens an upload for the draft's cover or background (photos only); idempotent per file. */
   @Post('draft/:slot/uploads')
+  @ApiAdminReadOnlyResponse()
   @RateLimit('admin-cover', 'admin-cover-user')
   @HttpCode(HttpStatus.CREATED)
   @ApiResponse({ status: 201, standardSchema: uploadSessionResponseSchema })

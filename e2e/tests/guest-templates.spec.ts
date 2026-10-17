@@ -11,7 +11,7 @@ import {
   waitForContentProcessed,
   waitForImageReady,
 } from '../support/collections.js';
-import { guestLinks, mainLinkPath } from '../support/guest.js';
+import { guestLinks, mainLinkPath, showAdd, showFrames } from '../support/guest.js';
 import { uploadViaApi } from '../support/media.js';
 
 // The template matrix (plan Task 23): each of the six templates published with its defaults
@@ -107,10 +107,12 @@ async function publish(
   await waitForImageReady(adminPage, id, 'published');
   await guest.reload();
   await expect(guest.locator(`[data-template="${templateId}"]`)).toBeVisible();
-  // The guest's own frame has loaded: the page is in its contributed phase and stays there.
+  // The guest's own frame has loaded («Кадри» on phones), then back to «Додати» with the actions.
+  await showFrames(guest);
   await expect(
     shown(guest.locator('[data-slot="guest-own-frames"] [data-slot="frame"]')),
   ).toBeVisible();
+  await showAdd(guest);
 }
 
 /** The checks every template passes at every width. */
@@ -181,16 +183,20 @@ test.describe('guest page templates at 390px, gallery hidden', () => {
       await publish(owner.page, guest, owner.id, templateId);
       await expect(guest.locator('[data-slot="guest-all-frames"]')).toHaveCount(0);
       await expect(guest.getByRole('heading', { name: 'Усі кадри' })).toHaveCount(0);
+      // In both views the footer ends at or below the window's bottom edge: no empty band.
+      const gap = () =>
+        guest.evaluate(() => {
+          const footers = [...document.querySelectorAll('[data-template] footer')].filter(
+            (footer) => (footer as HTMLElement).offsetParent !== null,
+          );
+          const bottom = Math.max(...footers.map((f) => f.getBoundingClientRect().bottom));
+          return window.innerHeight - (bottom + window.scrollY);
+        });
+      expect(await gap()).toBeLessThanOrEqual(1);
+      await showFrames(guest);
       await expect(shown(guest.getByText('Ваші кадри побачить лише організатор'))).toBeVisible();
-      // The footer ends at or below the window's bottom edge: no empty band under it.
-      const gap = await guest.evaluate(() => {
-        const footers = [...document.querySelectorAll('[data-template] footer')].filter(
-          (footer) => (footer as HTMLElement).offsetParent !== null,
-        );
-        const bottom = Math.max(...footers.map((f) => f.getBoundingClientRect().bottom));
-        return window.innerHeight - (bottom + window.scrollY);
-      });
-      expect(gap).toBeLessThanOrEqual(1);
+      expect(await gap()).toBeLessThanOrEqual(1);
+      await showAdd(guest);
       await checkPage(guest);
       await owner.done();
     });

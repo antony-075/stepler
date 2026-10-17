@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { newEmail, requestLink, signIn } from '../support/auth.js';
+import { E2E_PASSWORD, newEmail, SIGN_IN_UK, signIn } from '../support/auth.js';
 import { openGuestLink } from '../support/guest.js';
 import { signInAsOperator } from '../support/operator.js';
 import { seedReport } from '../support/reports.js';
@@ -65,24 +65,22 @@ test.describe('blocking', () => {
     await expect(guest.getByRole('heading', { name: 'Колекція недоступна' })).toHaveCount(0);
     await expect(guest.getByRole('heading', { name: seeded.title })).toBeVisible();
 
-    // A sign-in link the owner asked for before the account is blocked.
-    const login = await (await browser.newContext({ locale: 'de-DE' })).newPage();
-    const pending = await requestLink(login, owner);
-
     await act(ops, seeded.reportId, 'Заблокувати акаунт', 'Заблокувати', 'Систематичні порушення');
 
     // The owner's open tab: the next navigation goes to sign-in.
     await page.goto('/app');
     await expect(page).toHaveURL(/\/login$/);
-    // The link from before the block: the blocked message with the contact.
-    await login.goto(pending);
-    const blockedMessage = login.getByText(
-      'Цей акаунт заблоковано. Якщо ви не згодні, напишіть на privacy@stepler.test.',
-    );
-    const signInButton = login.getByRole('button', { name: 'Увійти' });
-    await expect(blockedMessage.or(signInButton)).toBeVisible();
-    if (await signInButton.isVisible()) await signInButton.click();
-    await expect(blockedMessage).toBeVisible();
+    // The right password now gets the blocked message with the contact.
+    const login = await (await browser.newContext({ locale: 'de-DE' })).newPage();
+    await login.goto('/login');
+    await login.getByLabel(SIGN_IN_UK.email).fill(owner);
+    await login.getByLabel(SIGN_IN_UK.password, { exact: true }).fill(E2E_PASSWORD);
+    await login.getByRole('button', { name: SIGN_IN_UK.submit, exact: true }).click();
+    await expect(
+      login.getByText(
+        'Цей акаунт заблоковано. Якщо ви не згодні, напишіть на privacy@stepler.test.',
+      ),
+    ).toBeVisible();
     // Guests: unavailable again.
     await guest.reload();
     await expect(guest.getByRole('heading', { name: 'Колекція недоступна' })).toBeVisible();

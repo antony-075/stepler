@@ -22,7 +22,7 @@ Guest endpoints must be reviewed specifically for capability leakage and IDOR/BO
 
 ## Conventions and resource map
 
-See ADR 0004 and `docs/architecture/mvp-architecture-spec.md` §8–§9 (status: accepted).
+See ADR 0004 and `docs/architecture/mvp-architecture-spec.md` §8–§9 (status: accepted); the endpoint list there covers every area, billing and the operator included.
 
 ## Implemented in Phase 2
 
@@ -47,21 +47,32 @@ Every error is RFC 9457 `application/problem+json`:
 | `CSRF_ORIGIN_MISMATCH` | 403 | Unsafe method without `Origin: APP_ORIGIN` |
 | `RATE_LIMITED` | 429 | Per-IP limit hit; `Retry-After` is set |
 | `TURNSTILE_FAILED` | 400 | Turnstile token rejected |
-| `MAGIC_LINK_INVALID` | 400 | Link unknown, expired or already used |
+| `MAGIC_LINK_INVALID` | 400 | Retired with the magic link (ADR 0019); no longer returned |
+| `AUTH_TOKEN_INVALID` | 400 | Confirmation or reset link unknown, expired or already used |
+| `INVALID_CREDENTIALS` | 401 | Unknown address or wrong password (one answer for both) |
+| `EMAIL_NOT_VERIFIED` | 403 | Right password, address not confirmed yet |
+| `CURRENT_PASSWORD_INVALID` | 400 | Password change: the current password is wrong, or the account has none |
 | `OAUTH_FAILED` | redirect | Google sign-in failed (`/login?error=OAUTH_FAILED`) |
 | `ACCOUNT_BLOCKED` | 403 / redirect | The account is blocked |
 | `UPSTREAM_UNAVAILABLE` | — | Web client only: the API could not be reached or answered outside the contract |
 | `DEPENDENCY_UNAVAILABLE` | 503 | A provider (e.g. Turnstile) did not answer; retryable |
 | `INTERNAL` | 500 | Unexpected error |
 
+The table lists the cross-cutting codes from Phase 2 and auth. Domain codes (collections, links, uploads, legal, moderation, billing) are the full list in `packages/contracts/src/errors.ts`; each endpoint's OpenAPI description names the ones it returns.
+
 ### Auth and profile
 
 | Method and path | Auth | Notes |
 | --- | --- | --- |
-| `GET /api/v1/auth/methods` | public | `{ magicLink, google, turnstileSiteKey }` |
-| `POST /api/v1/auth/magic-link` | public; per-IP limit counted after Turnstile passes | `{ email, turnstileToken, locale? }` → `202 { status: "sent" }` for every address |
-| `POST /api/v1/auth/magic-link/preview` | public, per-IP limit (own bucket) | `{ token }` → `{ email }`; does not consume |
-| `POST /api/v1/auth/magic-link/verify` | public, per-IP limit (own bucket) | `{ token }` → `{ status: "signed-in" }` + `st_session` cookie |
+| `GET /api/v1/auth/methods` | public | `{ password, google, turnstileSiteKey, legal }` |
+| `POST /api/v1/auth/register` | public; per-IP limit counted after Turnstile passes | `{ email, password, turnstileToken, locale?, legal }` → `202 { status: "sent" }` for every address (ADR 0019) |
+| `POST /api/v1/auth/login` | public; per-IP limit, failure windows per address | `{ email, password }` → `{ status: "signed-in" }` + `st_session`; `401 INVALID_CREDENTIALS`, `403 EMAIL_NOT_VERIFIED` / `ACCOUNT_BLOCKED`, `429` |
+| `POST /api/v1/auth/verification` | public; Turnstile, per-IP limit | `{ email, turnstileToken, locale? }` → `202`; resends the confirmation |
+| `POST /api/v1/auth/verification/preview` | public, per-IP limit (own bucket) | `{ token }` → `{ email }`; does not consume |
+| `POST /api/v1/auth/verification/confirm` | public, per-IP limit (own bucket) | `{ token }` → `{ status: "signed-in" }` + `st_session` cookie |
+| `POST /api/v1/auth/password/forgot` | public; Turnstile, per-IP limit | `{ email, turnstileToken, locale? }` → `202` for every address |
+| `POST /api/v1/auth/password/reset` | public, per-IP limit (own bucket) | `{ token, password }` → ends every session; `{ status: "signed-in" }` + `st_session` |
+| `POST /api/v1/auth/password` | session | `{ currentPassword, newPassword }` → `204`; ends the other sessions |
 | `GET /api/v1/auth/google/start` | public | 302 to Google; 404 when Google is not configured |
 | `GET /api/v1/auth/google/callback` | public | 302 to `returnTo` (an `/app` path) or `/login?error=…` |
 | `POST /api/v1/auth/logout` | public | 204, clears the cookie, idempotent |
