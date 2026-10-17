@@ -49,7 +49,8 @@ test('priceSetSchema takes money for one slot and a reason', () => {
   expect(priceSetSchema.parse(body)).toEqual(body);
   expect(priceSetSchema.safeParse({ ...body, amountMinor: 0 }).success).toBe(false);
   expect(priceSetSchema.safeParse({ ...body, amountMinor: 1_000_000_001 }).success).toBe(false);
-  const { reason: _reason, ...noReason } = body;
+  const noReason: Partial<typeof body> = { ...body };
+  delete noReason.reason;
   expect(priceSetSchema.safeParse(noReason).success).toBe(false);
 });
 
@@ -85,7 +86,10 @@ describe('offerCreateSchema', () => {
   });
 
   test('the update body takes no code or kind', () => {
-    const { code: _c, kind: _k, extension: _e, ...update } = offer;
+    const update: Partial<typeof offer> = { ...offer };
+    delete update.code;
+    delete update.kind;
+    delete update.extension;
     expect(offerUpsertSchema.parse(update)).toEqual(update);
     expect(offerUpsertSchema.safeParse({ ...update, code: 'x1' }).success).toBe(false);
   });

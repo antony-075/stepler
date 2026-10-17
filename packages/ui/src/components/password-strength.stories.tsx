@@ -82,9 +82,7 @@ export const Typing: Story = {
   play: async ({ canvas, userEvent }) => {
     await userEvent.type(canvas.getByLabelText('Пароль'), 'abc1');
     await expect(canvas.getByRole('meter')).toHaveAttribute('aria-valuenow', '2');
-    await expect(
-      canvas.getByText(/Ще потрібно: щонайменше 8 символів, велика літера/),
-    ).toBeInTheDocument();
+    await expect(canvas.getByText(/Ще потрібно: 8\+ символів, велика літера/)).toBeInTheDocument();
     await userEvent.click(canvas.getAllByRole('button', { name: 'Показати пароль' })[0]!);
     await expect(canvas.getByLabelText('Пароль')).toHaveAttribute('type', 'text');
   },

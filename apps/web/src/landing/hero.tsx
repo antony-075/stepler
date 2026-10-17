@@ -75,9 +75,7 @@ export async function Hero({ locale }: { locale: ScreenLocale }) {
           {/* The collection: offset right so the phone can overlap its lower-left corner. */}
           <div className="ml-[30%] rounded-[1.5rem] border border-border bg-card/90 p-3 shadow-[0_30px_60px_-30px_rgb(24_24_27/0.35)] backdrop-blur-sm sm:p-4">
             <div className="flex items-baseline justify-between gap-3 px-1 pb-3">
-              <p className="truncate text-sm font-semibold sm:text-base">
-                {t('demoTitle')}
-              </p>
+              <p className="truncate text-sm font-semibold sm:text-base">{t('demoTitle')}</p>
               <p className="shrink-0 type-data text-muted-foreground">
                 {t('framesCount', { count: frames.length })}
               </p>
@@ -90,9 +88,7 @@ export async function Hero({ locale }: { locale: ScreenLocale }) {
                   style={{ '--i': i } as CSSProperties}
                 >
                   {i === WISH_AT ? (
-                    <div
-                      className="flex size-full flex-col gap-1 bg-tint-sand p-2 pb-6 text-tint-sand-ink sm:p-3 sm:pb-8"
-                    >
+                    <div className="flex size-full flex-col gap-1 bg-tint-sand p-2 pb-6 text-tint-sand-ink sm:p-3 sm:pb-8">
                       <Quote className="size-3.5 shrink-0 opacity-60 sm:size-4" />
                       <p className="line-clamp-3 text-[0.6875rem] leading-snug font-medium sm:text-[0.8125rem] xl:line-clamp-4">
                         {t('demoWish')}

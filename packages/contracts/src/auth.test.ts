@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest';
 import {
   authMethodsResponseSchema,
   currentLegalVersions,
-  displayNameSchema,
   legalStatus,
   changePasswordRequestSchema,
   ERROR_CODES,
