@@ -86,8 +86,10 @@ test('the operator prices a new offer; it stays off sale until started @desktop'
   await expect(page.getByRole('heading', { name: '«Випускний»', level: 1 })).toBeVisible();
   await expect(page.getByText('Не продається', { exact: true })).toBeVisible();
 
-  await page.getByLabel('Ціна разово, грн').fill('749,50');
-  await page.getByRole('button', { name: 'Зберегти ціну' }).click();
+  // One price group per currency (UAH charged, USD/EUR for reference); this sets the hryvnias.
+  const uah = page.getByRole('group', { name: 'Гривні' });
+  await uah.getByLabel('Ціна разово, грн').fill('749,50');
+  await uah.getByRole('button', { name: 'Зберегти ціну' }).click();
   const price = page.getByRole('dialog', { name: 'Змінити ціну' });
   await price.getByLabel('Причина').fill('Перша ціна');
   await price.getByRole('button', { name: 'Змінити ціну' }).click();
