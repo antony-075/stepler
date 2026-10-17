@@ -47,6 +47,10 @@ function httpOptions(env: Pick<ApiEnv, 'LOG_LEVEL'>, pretty: boolean): Options {
         // Untrusted when invalid; the effective id is logged as `req.id`.
         'req.headers["x-request-id"]',
         'res.headers["set-cookie"]',
+        // Billing (ADR 0018): never a key or a signed payload, even if one reached a log object.
+        '*.LIQPAY_PRIVATE_KEY',
+        '*.privateKey',
+        '*.signature',
       ],
       censor: REDACTED,
     },
@@ -56,7 +60,7 @@ function httpOptions(env: Pick<ApiEnv, 'LOG_LEVEL'>, pretty: boolean): Options {
         const serialized: SerializedRequest = { ...req };
         delete serialized.query;
         if (serialized.url !== undefined) serialized.url = redactUrl(serialized.url);
-        // The verify page's URL carries the magic-link token; browsers may send it as Referer.
+        // The verify and reset pages' URLs carry mailed tokens; browsers may send them as Referer.
         const referer = serialized.headers?.referer;
         if (typeof referer === 'string') {
           serialized.headers = { ...serialized.headers, referer: redactUrl(referer) };

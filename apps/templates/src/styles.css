@@ -220,6 +220,82 @@
 
 /* The footer ends above the home indicator (item 96); fixed and sticky bars add the inset
    themselves. */
+/*
+ * The page's two views on phones and tablets (owner remarks 2026-10-16: the actions, the frames
+ * and the uploads crowded one screen there; on a computer the page looked fine). Below 1024px a
+ * template marks its intro (cover, title, welcome, count, actions) and its frames sections with
+ * `data-region`, and the root's `data-view` shows one of them; the bar with the tabs and the
+ * footer show in both. From 1024px both show in the template's own layout and the tabs go.
+ * `!important`: a template's own sheet sets `display` on these elements at every width.
+ */
+/*
+ * The app's «Додати» / «Кадри» tabs in the template's look (owner remarks 2026-10-16: «у тому ж
+ * стилі, що й шаблон», across the full width of the template's column): a bar as wide as the
+ * column, whatever its alignment, a hairline under it, the chosen tab in the text
+ * colour with a 3px accent bar under it, the other muted; the template's body font. Each
+ * template's sheet restyles it (`[data-slot='guest-view-tab']`, `[aria-selected='true']`). The
+ * defaults sit at zero specificity.
+ */
+[data-template] .tpl-view-tabs {
+  align-self: stretch;
+  box-sizing: border-box;
+}
+
+:where([data-template]) [data-slot='guest-view-tabs'] {
+  border-bottom: 1px solid color-mix(in srgb, var(--tpl-text) 14%, transparent);
+  font-family: var(--tpl-font-body);
+}
+
+:where([data-template]) [data-slot='guest-view-tab'] {
+  min-height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--tpl-muted);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+:where([data-template]) [data-slot='guest-view-tab'][aria-selected='true'] {
+  color: var(--tpl-text);
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 var(--tpl-accent);
+}
+
+:where([data-template]) [data-slot='guest-view-tab-count'] {
+  color: var(--tpl-muted);
+  font-weight: 400;
+}
+
+@media (hover: hover) {
+  :where([data-template]) [data-slot='guest-view-tab']:hover {
+    color: var(--tpl-text);
+  }
+}
+
+/* A region wrapper that adds no box: the template's own layout stays as it was. */
+[data-template] .tpl-region {
+  display: contents;
+}
+
+@media (max-width: 1023.98px) {
+  /* The hidden sections took the room left in the column (item 95: the footer ends at the
+     window's bottom); on «Додати» the footer takes it up itself. */
+  [data-template][data-view='add'] footer {
+    margin-top: auto;
+  }
+
+  [data-template][data-view='add'] [data-region='frames'],
+  [data-template][data-view='frames'] [data-region='intro'] {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-template] .tpl-view-tabs {
+    display: none !important;
+  }
+}
+
 [data-template] footer {
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }

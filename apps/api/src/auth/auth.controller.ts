@@ -31,10 +31,10 @@ export class AuthController {
   @ApiResponse({ status: 200, standardSchema: authMethodsResponseSchema })
   methods(): AuthMethodsResponse {
     return {
-      magicLink: true,
+      password: true,
       google: this.google !== null,
       turnstileSiteKey: this.env.TURNSTILE_SITE_KEY,
-      // The versions the sign-in card's checkbox accepts and sends back (ADR 0016).
+      // The versions the registration form's checkbox accepts and sends back (ADR 0016).
       legal: currentLegalVersions(),
     };
   }

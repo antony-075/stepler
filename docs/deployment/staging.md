@@ -113,14 +113,16 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
 
 - **Legal acceptance (slice 10, PR F2, ADR 0016).** From this release `GET /auth/methods` returns `legal`, `POST /auth/magic-link` requires it and `GET /auth/google/start` requires `terms`/`privacy`. Render deploys `stepler-staging` (web) and `stepler-staging-api` independently, and both sides read `/auth/methods` with a strict schema, so **in either order** the sign-in card shows «Вхід тимчасово недоступний. Спробуйте пізніше.» until both services run the new version (old web: the new `legal` field is unknown; new web: the field is missing). Nothing is written in that window. Deploy them back to back (Render → each service → Manual Deploy if needed) and check `/login` afterwards; on staging the short window is acceptable. Accounts created before this release see `/accept-terms` once after signing in.
 
+- **E-mail + password (ADR 0019).** The migration `20261016150000_password_auth` drops `MagicLinkToken` (open links stop working) and adds `PasswordCredential` and `AuthEmailToken`. `GET /auth/methods` now returns `password` instead of `magicLink`, so, as with the legal release above, `/login` says «Вхід тимчасово недоступний» until web and API both run the new version: deploy them back to back. Remove the `LIMIT_MAGIC_LINK_*` and `MAGIC_LINK_TTL_MINUTES` variables. Existing accounts have no password: they sign in with Google or set one through «Забули пароль?», which also applies to the operator's service mailbox.
+
 ## 7. Verify staging
 
 - `https://<staging-host>/healthz` returns `{"status":"ok"}`, and `/api/v1/health/ready` returns `ok` for both database and storage.
-- Magic link sign-in: the email arrives through Brevo, the verify page shows the address, and sign-in lands on `/app`.
+- Registration (ADR 0019): `/register` → the confirmation mail arrives through Brevo → «Підтвердити пошту» lands on `/app`; then sign out and sign in with the password. «Забули пароль?» mails a reset link that works once.
 - Google sign-in with a test user.
-- **Client IP check** (ADR 0014): temporarily set `LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR=3` on the API and redeploy.
+- **Client IP check** (ADR 0014): temporarily set `LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR=3` on the API and redeploy.
   1. Send 4 preview requests from one machine, each with a different spoofed header:
-     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -H 'CF-Connecting-IP: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/magic-link/preview`
+     `curl -X POST -H 'Origin: https://<staging-host>' -H 'Content-Type: application/json' -H 'X-Forwarded-For: 198.51.100.<n>' -H 'CF-Connecting-IP: 198.51.100.<n>' -d '{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}' https://<staging-host>/api/v1/auth/verification/preview`
   2. The 4th request must return 429: spoofing does not create new buckets. (A client-sent `CF-Connecting-IP` is rejected by Cloudflare with 403, error 1000.)
   3. The same test from another network must still get 400, not 429: clients do not share one bucket. On a phone on mobile data, opening `https://<staging-host>/auth/verify?token=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` must show "link invalid", not "too many attempts".
   4. Remove the override afterwards.
@@ -171,7 +173,7 @@ Browsers upload straight to the bucket with short-lived signed URLs (ADR 0003, 0
 
 Guests report frames; the Stepler operator decides in the console at `/ops` (ADR 0013). The operator is a **dedicated service account**, not your personal account.
 
-1. **O1.** Create a mailbox that can receive mail, e.g. `moderation@<domain>`. Sign in to staging with it once (magic link) and accept the documents.
+1. **O1.** Create a mailbox that can receive mail, e.g. `moderation@<domain>`. Register on staging with it once (`/register`, confirm the mail) and accept the documents.
 2. **O2.** In Render, set on **both** `stepler-staging-api` and `stepler-staging-worker`: `OPERATOR_EMAILS=<service address>`. Remove your personal address if it was there. On the worker also set, copied from the API: `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, and optionally `LEGAL_CONTACT_EMAIL` (the appeal address in the reporter's decision mail). The worker refuses to start without the first three, so do this **before** the deploy that contains slice 9.
 3. **O3.** After the deploy: `GET /api/v1/operator/session` signed in as the service account → `200` with its address; as your own account → `404`.
 

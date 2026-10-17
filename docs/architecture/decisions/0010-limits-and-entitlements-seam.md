@@ -1,6 +1,6 @@
 # ADR 0010 — Configurable Limits and Entitlements Seam
 
-Status: Accepted (values accepted in discovery D2, F1)
+Status: Accepted (values accepted in discovery D2, F1); partly superseded by ADR 0018 (plan/entitlement tables: active collections, storage and guest links now come from entitlements, 2026-10-07)
 Date: 2026-09-29
 
 ## Context

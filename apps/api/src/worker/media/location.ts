@@ -97,10 +97,16 @@ function firstRecord(out: Buffer): Record<string, unknown> {
   return first;
 }
 
-/** Fails closed when exiftool says it did not read the whole file (`ExifTool:Warning`). */
+/**
+ * exiftool's warnings, grouped by where it met them: `ExifTool:Warning`, or with `-G1` the track
+ * (`Track4:Warning` in an iPhone MOV: "The ExtractEmbedded option may find more tags…").
+ */
+const isWarning = (key: string): boolean => /(^|:)Warning$/.test(key);
+
+/** Fails closed when exiftool says it did not read the whole file (any `…:Warning`). */
 export function assertCompleteRead(record: Record<string, unknown>): void {
   const warnings = Object.entries(record)
-    .filter(([key]) => key.startsWith('ExifTool:Warning'))
+    .filter(([key]) => isWarning(key))
     .flatMap(([, value]): unknown[] => (Array.isArray(value) ? (value as unknown[]) : [value]))
     .map(String);
   const incomplete = warnings.find((warning) => INCOMPLETE_READ.test(warning));
@@ -117,8 +123,15 @@ export async function exiftoolLocationTags(path: string): Promise<Record<string,
   );
   const record = firstRecord(out);
   assertCompleteRead(record);
+  return locationTagsOf(record);
+}
+
+/** The tags of an exiftool record, without its file name, own fields and warnings. */
+export function locationTagsOf(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(record).filter(([key]) => key !== 'SourceFile' && !key.startsWith('ExifTool:')),
+    Object.entries(record).filter(
+      ([key]) => key !== 'SourceFile' && !key.startsWith('ExifTool:') && !isWarning(key),
+    ),
   );
 }
 

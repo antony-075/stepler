@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { EnvValidationError, loadApiEnv } from './env.js';
+import { EnvValidationError, loadApiEnv, retiredVariablesIn } from './env.js';
 
 const SECRET_32 = Buffer.alloc(32, 7).toString('base64');
 
@@ -29,17 +29,18 @@ describe('loadApiEnv', () => {
       APP_ORIGIN: 'http://localhost:3000',
       COOKIE_SECURE: false,
       SESSION_TTL_DAYS: 30,
-      MAGIC_LINK_TTL_MINUTES: 15,
+      EMAIL_VERIFICATION_TTL_HOURS: 24,
+      PASSWORD_RESET_TTL_MINUTES: 60,
       OPERATOR_EMAILS: [],
       API_TRUST_PROXY: false,
       S3_FORCE_PATH_STYLE: false,
-      LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: 5,
-      LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: 20,
-      LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: 60,
-      LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: 3,
+      LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: 5,
+      LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: 20,
+      LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR: 60,
+      LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: 60,
+      LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN: 10,
+      LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR: 30,
       LIMIT_COLLECTION_CREATIONS_PER_DAY: 10,
-      LIMIT_STORAGE_BYTES_PER_ACCOUNT: 20n * 1024n ** 3n,
-      LIMIT_STORAGE_BYTES_PER_COLLECTION: 10n * 1024n ** 3n,
       LIMIT_REPORTS_PER_IP_PER_HOUR: 60,
       LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR: 10,
       LIMIT_APPEALS_PER_ACCOUNT_PER_DAY: 20,
@@ -48,6 +49,20 @@ describe('loadApiEnv', () => {
     expect(env.APP_SECRET).toHaveLength(32);
     expect(env.GOOGLE_CLIENT_ID).toBeUndefined();
     expect(env.S3_ENDPOINT).toBeUndefined();
+  });
+
+  test('the limits that became entitlements are accepted, ignored and named for a warning', () => {
+    const source = {
+      ...base,
+      LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '3',
+      LIMIT_GUEST_LINKS_PER_COLLECTION: 'x',
+    };
+    expect(loadApiEnv(source)).not.toHaveProperty('LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT');
+    expect(retiredVariablesIn(source)).toEqual([
+      'LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT',
+      'LIMIT_GUEST_LINKS_PER_COLLECTION',
+    ]);
+    expect(retiredVariablesIn(base)).toEqual([]);
   });
 
   test('coerces API_PORT', () => {
@@ -121,5 +136,63 @@ describe('loadApiEnv', () => {
     expect(() => loadApiEnv({ ...base, DATABASE_URL: `mysql://u:${secret}` })).not.toThrow(
       /s3cr3t/,
     );
+  });
+
+  describe('billing (ADR 0018)', () => {
+    const liqpay = {
+      BILLING_PROVIDER: 'liqpay',
+      LIQPAY_PUBLIC_KEY: 'sandbox_i00000000',
+      LIQPAY_PRIVATE_KEY: 'sandbox_test-private',
+    };
+    const production = {
+      ...base,
+      NODE_ENV: 'production',
+      BILLING_CALLBACK_URL: 'https://api.stepler.test/api/v1/billing/liqpay/callback',
+    };
+
+    test('payments are disabled by default and the keys are optional then', () => {
+      const env = loadApiEnv(base);
+      expect(env).toMatchObject({
+        BILLING_PROVIDER: 'disabled',
+        LIQPAY_API_BASE: 'https://www.liqpay.ua',
+        BILLING_PENDING_TTL_MINUTES: 30,
+        BILLING_FISCAL_MODE: 'none',
+        BILLING_FISCAL_WAIVED: false,
+        LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE: 120,
+        LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR: 20,
+      });
+      expect(env.BILLING_CALLBACK_URL).toBeUndefined();
+    });
+
+    test('BILLING_PROVIDER=liqpay without both keys fails naming them', () => {
+      expect(() => loadApiEnv({ ...base, BILLING_PROVIDER: 'liqpay' })).toThrow(
+        /LIQPAY_PUBLIC_KEY.*LIQPAY_PRIVATE_KEY/s,
+      );
+      expect(loadApiEnv({ ...base, ...liqpay }).BILLING_PROVIDER).toBe('liqpay');
+    });
+
+    test('production needs the callback URL', () => {
+      expect(() => loadApiEnv({ ...production, ...liqpay, BILLING_CALLBACK_URL: '' })).toThrow(
+        /BILLING_CALLBACK_URL/,
+      );
+      expect(loadApiEnv({ ...production, ...liqpay }).BILLING_PROVIDER).toBe('liqpay');
+    });
+
+    test('live keys in production need a fiscal mode or the deliberate waiver [P14]', () => {
+      const live = { ...production, ...liqpay, LIQPAY_PUBLIC_KEY: 'i12345678' };
+      expect(() => loadApiEnv(live)).toThrow(/BILLING_FISCAL_MODE/);
+      expect(loadApiEnv({ ...live, BILLING_FISCAL_MODE: 'liqpay_rro' }).BILLING_FISCAL_MODE).toBe(
+        'liqpay_rro',
+      );
+      expect(loadApiEnv({ ...live, BILLING_FISCAL_WAIVED: 'true' }).BILLING_FISCAL_WAIVED).toBe(
+        true,
+      );
+    });
+
+    test('a key never appears in the error', () => {
+      expect(() =>
+        loadApiEnv({ ...base, BILLING_PROVIDER: 'liqpay', LIQPAY_PRIVATE_KEY: 'top-secret-key' }),
+      ).not.toThrow(/top-secret-key/);
+    });
   });
 });

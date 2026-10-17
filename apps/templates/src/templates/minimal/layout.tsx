@@ -10,11 +10,17 @@
 // - From 1024px: a 576px left column that stays in view (title 64/1.02, so long words fit it
 //   whole; welcome 19, the ruled actions, the footer at its bottom) and the frames on the right (padding 104/80, 3 columns
 //   with 28px gaps, 88px between sections).
+// - Phones and tablets, two views (owner remarks 2026-10-16): the app's tabs under the header;
+//   «Додати» is the identity with its actions, «Кадри» the sections. From 1024px both, no tabs.
 // - A solid background only (locked); light only [D5]. Links are the text colour, underlined.
 
 import { Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { TemplateActions, TemplateLayoutProps } from '../../react/model.ts';
+import {
+  type TemplateActions,
+  type TemplateLayoutProps,
+  viewRegionProps,
+} from '../../react/model.ts';
 import { TemplatePicture } from '../../react/parts.tsx';
 
 const COVER_SIZES = {
@@ -23,6 +29,7 @@ const COVER_SIZES = {
 } as const;
 
 export function MinimalLayout({ model, actions, slots, settings }: TemplateLayoutProps) {
+  const tabs = slots.tabs !== null;
   const placement = settings.coverPlacement === 'side' ? 'side' : 'top';
   return (
     <div className="mn-page">
@@ -31,37 +38,43 @@ export function MinimalLayout({ model, actions, slots, settings }: TemplateLayou
           {slots.brand}
           {slots.languageSwitch}
         </header>
-        <div className="mn-identity" data-placement={model.cover === null ? undefined : placement}>
-          {model.cover === null ? null : (
-            <div data-slot="guest-cover" className="mn-cover">
-              <TemplatePicture image={model.cover} sizes={COVER_SIZES[placement]} eager />
+        {tabs ? <div className="tpl-view-tabs mn-tabs">{slots.tabs}</div> : null}
+        <div className="tpl-region" {...viewRegionProps('add')}>
+          <div
+            className="mn-identity"
+            data-placement={model.cover === null ? undefined : placement}
+          >
+            {model.cover === null ? null : (
+              <div data-slot="guest-cover" className="mn-cover">
+                <TemplatePicture image={model.cover} sizes={COVER_SIZES[placement]} eager />
+              </div>
+            )}
+            <div className="mn-text">
+              <h1 className="mn-title">{model.title}</h1>
+              {model.description === null ? null : (
+                <p className="mn-description">{model.description}</p>
+              )}
+              {model.welcomeMessage === null ? null : (
+                <p data-slot="guest-welcome" className="mn-welcome">
+                  {model.welcomeMessage}
+                </p>
+              )}
+              {model.countsLabel === null ? null : (
+                <p className="mn-count">
+                  <span>{model.countsLabel}</span>
+                  {model.lastAddedLabel === null ? null : <span>{model.lastAddedLabel}</span>}
+                </p>
+              )}
             </div>
-          )}
-          <div className="mn-text">
-            <h1 className="mn-title">{model.title}</h1>
-            {model.description === null ? null : (
-              <p className="mn-description">{model.description}</p>
-            )}
-            {model.welcomeMessage === null ? null : (
-              <p data-slot="guest-welcome" className="mn-welcome">
-                {model.welcomeMessage}
-              </p>
-            )}
-            {model.countsLabel === null ? null : (
-              <p className="mn-count">
-                <span>{model.countsLabel}</span>
-                {model.lastAddedLabel === null ? null : <span>{model.lastAddedLabel}</span>}
-              </p>
-            )}
           </div>
+          {actions === null ? null : (
+            <MinimalActions actions={actions} legalNotice={slots.legalNotice} />
+          )}
         </div>
-        {actions === null ? null : (
-          <MinimalActions actions={actions} legalNotice={slots.legalNotice} />
-        )}
         <div className="mn-aside-footer">{slots.footer}</div>
       </aside>
       <div className="mn-main">
-        <main className="mn-sections">
+        <main className="mn-sections" {...viewRegionProps('frames')}>
           {slots.ownFrames}
           {slots.allFrames}
         </main>

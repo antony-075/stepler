@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { guestContributionSchema } from './access.js';
 import { guestNameSchema } from './content.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
 import { guestPageSchema } from './guest-page.js';
@@ -43,6 +44,12 @@ export const guestContextSchema = z
       .object({ total: count, lastAddedAt: z.iso.datetime().nullable() })
       .strict()
       .nullable(),
+    /**
+     * Whether guests may still add anything (ADR 0018 [P2]): `OPEN` = the link's permissions
+     * apply; `COLLECTING_CLOSED` / `READ_ONLY` = the page shows the gallery (if the link allows
+     * it) and a closed state instead of the upload and text entry. Never says why.
+     */
+    contribution: guestContributionSchema,
   })
   .strict();
 export type GuestContext = z.infer<typeof guestContextSchema>;

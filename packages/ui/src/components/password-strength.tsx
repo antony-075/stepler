@@ -1,0 +1,181 @@
+import { Check, X } from 'lucide-react';
+import { cn } from '../lib/utils';
+
+type StrengthRule = {
+  id: string;
+  /** What the rule asks, in the page's language («8+ символів»). */
+  label: string;
+  met: boolean;
+};
+
+type PasswordStrengthProps = {
+  /** The rules in display order; the meter has one segment per rule. */
+  rules: readonly StrengthRule[];
+  /** The meter's accessible name («Надійність пароля»). */
+  label: string;
+  /** The level in words for the current count («Слабкий», «Майже», «Надійний»). */
+  levelText: string;
+  /** One polite sentence for screen readers, e.g. «Ще потрібна велика літера і цифра». */
+  summary: string;
+  /** The words a met / missing rule carries for screen readers («виконано», «ще потрібно»). */
+  metText: string;
+  missingText: string;
+  /** Before any typing the rules are a quiet list, not a row of red crosses. */
+  pristine?: boolean;
+  id?: string;
+  className?: string;
+};
+
+const SEGMENT_ON = 'scale-x-100';
+const SEGMENT_OFF = 'scale-x-0';
+const LEVEL_QUIET = 'text-muted-foreground';
+const LEVEL_SHOWN = 'text-foreground';
+/** A rule chip: met (green with a check), still missing after typing, or quiet before it. */
+const CHIP_MET = 'border-transparent bg-success-soft text-success';
+const CHIP_MISSING = 'border-border bg-muted text-foreground-soft';
+const CHIP_PRISTINE = 'border-border bg-transparent text-muted-foreground';
+const MATCH_YES = 'text-success';
+const MATCH_NO = 'text-destructive';
+
+/** A rule's state for screen readers, after its label. */
+function stateText(state: string): string {
+  return `: ${state}`;
+}
+
+/** The fill per number of met rules: red, amber, then indigo, green when every rule holds. */
+function fill(met: number, total: number): string {
+  if (met >= total) return 'bg-success';
+  if (met >= total - 1) return 'bg-primary';
+  if (met >= 2) return 'bg-warning';
+  return 'bg-destructive';
+}
+
+/**
+ * The password meter (owner remark 2026-10-16, ADR 0019; ui-ux-pro-max pass): a row of segments,
+ * one per rule, that fill left to right as rules are met and change colour by level; the level in
+ * words beside it; the rules under it as small chips in a wrapping row (owner 2026-10-16: the
+ * same checklist, less loud than a column of circles): a met rule turns green with a check that
+ * pops in, a missing one stays a quiet grey chip (no red crosses); the labels are short so the five
+ * fit two rows, and each carries
+ * its state in words for screen readers, so nothing relies on colour. A polite live region repeats only the
+ * summary («Ще потрібна…»), not every keystroke's list. Segments grow with a short transition
+ * that stops under reduced motion.
+ */
+function PasswordStrength({
+  rules,
+  label,
+  levelText,
+  summary,
+  metText,
+  missingText,
+  pristine = false,
+  id,
+  className,
+}: PasswordStrengthProps) {
+  const met = rules.filter((rule) => rule.met).length;
+  const tone = fill(met, rules.length);
+  const valueText = `${levelText}: ${met} / ${rules.length}`;
+  const columns = { gridTemplateColumns: `repeat(${rules.length}, minmax(0, 1fr))` };
+  return (
+    <div id={id} data-slot="password-strength" className={cn('grid gap-2.5', className)}>
+      <div className="flex items-center gap-3">
+        <div
+          role="meter"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={rules.length}
+          aria-valuenow={met}
+          aria-valuetext={valueText}
+          className="grid flex-1 gap-1"
+          style={columns}
+        >
+          {rules.map((rule, index) => (
+            <span
+              key={rule.id}
+              aria-hidden="true"
+              className="relative h-1.5 overflow-hidden rounded-full bg-muted"
+            >
+              <span
+                className={cn(
+                  'absolute inset-0 origin-left rounded-full transition-[transform,background-color] duration-(--duration-develop) ease-out motion-reduce:transition-none',
+                  tone,
+                  index < met ? SEGMENT_ON : SEGMENT_OFF,
+                )}
+                style={{ transitionDelay: `${index * 40}ms` }}
+              />
+            </span>
+          ))}
+        </div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'min-w-[5.5rem] text-right text-sm font-medium tabular-nums',
+            pristine ? LEVEL_QUIET : LEVEL_SHOWN,
+          )}
+        >
+          {levelText}
+        </span>
+      </div>
+      <ul className="flex flex-wrap gap-1">
+        {rules.map((rule) => (
+          <li
+            key={rule.id}
+            className={cn(
+              'inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-[0.8125rem] font-medium transition-[background-color,border-color,color] duration-(--duration-base) motion-reduce:transition-none',
+              rule.met ? CHIP_MET : pristine ? CHIP_PRISTINE : CHIP_MISSING,
+            )}
+          >
+            {rule.met ? (
+              <Check
+                aria-hidden="true"
+                className="size-3.5 shrink-0 motion-safe:animate-in motion-safe:zoom-in-50 motion-safe:duration-200"
+                strokeWidth={3}
+              />
+            ) : null}
+            <span>
+              {rule.label}
+              <span className="sr-only">{stateText(rule.met ? metText : missingText)}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p aria-live="polite" className="sr-only">
+        {pristine ? null : summary}
+      </p>
+    </div>
+  );
+}
+
+type PasswordMatchProps = {
+  /** `null` until the second field has text. */
+  matches: boolean | null;
+  matchText: string;
+  mismatchText: string;
+  id?: string;
+};
+
+/** Under «Підтвердіть пароль»: a check and «Паролі збігаються», or a cross and the mismatch. */
+function PasswordMatch({ matches, matchText, mismatchText, id }: PasswordMatchProps) {
+  return (
+    <p id={id} aria-live="polite" className="min-h-5 text-sm">
+      {matches === null ? null : (
+        <span className={cn('inline-flex items-center gap-1.5', matches ? MATCH_YES : MATCH_NO)}>
+          {matches ? (
+            <Check aria-hidden="true" className="size-4" strokeWidth={2.5} />
+          ) : (
+            <X aria-hidden="true" className="size-4" strokeWidth={2.5} />
+          )}
+          {matches ? matchText : mismatchText}
+        </span>
+      )}
+    </p>
+  );
+}
+
+export {
+  PasswordMatch,
+  type PasswordMatchProps,
+  PasswordStrength,
+  type PasswordStrengthProps,
+  type StrengthRule,
+};

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { BillingPaymentsModule } from '../billing/billing-payments.module.js';
 import { ModerationModule } from '../moderation/moderation.module.js';
 import { OperatorAppealQueries } from './operator-appeal-queries.js';
 import { OperatorAppealsController } from './operator-appeals.controller.js';
+import { OperatorBillingController } from './operator-billing.controller.js';
 import { OperatorActionsController } from './operator-actions.controller.js';
 import { OperatorActions } from './operator-actions.service.js';
 import { OperatorQueries } from './operator-queries.js';
@@ -15,8 +17,14 @@ import { OperatorScope } from './operator-scope.js';
  * moved (plan "Console architecture").
  */
 @Module({
-  imports: [ModerationModule],
-  controllers: [OperatorReportsController, OperatorActionsController, OperatorAppealsController],
+  imports: [ModerationModule, BillingPaymentsModule],
+  controllers: [
+    OperatorReportsController,
+    OperatorActionsController,
+    OperatorAppealsController,
+    // Billing use cases come from the global BillingModule (ADR 0018).
+    OperatorBillingController,
+  ],
   providers: [OperatorScope, OperatorQueries, OperatorActions, OperatorAppealQueries],
 })
 export class OperatorModule {}

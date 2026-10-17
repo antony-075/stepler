@@ -38,6 +38,7 @@ import {
   TITLE_MAX,
   toCollectionRequest,
 } from '../../../collection-form';
+import { writeLock } from '../../../access-model';
 import { useArchiveToggle } from '../../use-archive';
 import { SectionCard } from '../section-card';
 import { CollectionImageCard } from './collection-image-card';
@@ -103,7 +104,9 @@ function DetailsCard({ collection }: { collection: Collection }) {
   const { errors, isDirty, isValid } = form.formState;
   const descriptionLength = useWatch({ control: form.control, name: 'description' }).length;
   const failure = isApiError(save.error) ? save.error.code : save.error ? 'INTERNAL' : null;
-  const canSave = isDirty && isValid && !save.isPending;
+  // Read-only (ADR 0018): the form stays readable, saving is off and says why.
+  const lock = writeLock(collection);
+  const canSave = isDirty && isValid && !save.isPending && !lock.locked;
 
   return (
     <SectionCard id="collection-details" title={t('detailsTitle')} hint={t('detailsHint')}>
@@ -174,7 +177,11 @@ function DetailsCard({ collection }: { collection: Collection }) {
           >
             {t('cancel')}
           </Button>
-          <Button type="submit" aria-disabled={!canSave || undefined}>
+          <Button
+            type="submit"
+            aria-disabled={!canSave || undefined}
+            aria-describedby={lock.describedBy}
+          >
             {save.isPending ? t('saving') : t('save')}
           </Button>
         </div>

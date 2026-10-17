@@ -1,6 +1,6 @@
 # ADR 0006 — Admin Authentication
 
-Status: Accepted (implementation: in-house, decided by spike S1)
+Status: Accepted (implementation: in-house, decided by spike S1). The magic link is superseded by ADR 0019 (e-mail + password, 2026-10-16); sessions, CSRF, the account model and Google stay.
 Date: 2026-09-29
 
 ## Context

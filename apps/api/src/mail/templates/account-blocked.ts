@@ -2,8 +2,9 @@ import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { ACCOUNT_BLOCKED_COPY, type MailLocale } from './messages.js';
 
 /**
- * A blocked account asked for a sign-in link ([Q3]): it learns why none comes. The answer to the
- * request stays the same `202` as for everyone, so nothing is disclosed to whoever asked.
+ * A blocked account's address was used to register, resend the confirmation or reset the
+ * password ([Q3], ADR 0019): its mailbox learns why no link comes. The answer to the request stays
+ * the same `202` as for everyone, so nothing is disclosed to whoever asked.
  */
 export function renderAccountBlockedEmail({
   locale,

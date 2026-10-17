@@ -16,13 +16,15 @@
 //   `aria-pressed`), named by the caller ("Кадр 86, фото, 21:10, Ірина"); the picture is
 //   aria-hidden. Actions (e.g. «Повторити») sit below it, never inside the button.
 // - Selection is never colour alone (V1): the picture steps back to 90% on the soft accent, an
-//   accent disc with ✓ pops in at the top-right (an empty white circle on every tile while
-//   selecting), and `aria-pressed`.
+//   accent disc with ✓ pops in at the top-left (an empty white circle on every tile while
+//   selecting), and `aria-pressed`. With `selectCheck` (owner remark 2026-10-16: no «Вибрати»
+//   button) the empty circle is a checkbox of its own at the top-left, shown on hover and keyboard
+//   focus with a mouse and always on touch screens; checking it starts the selection.
 //   Focus is the violet ring outside the tile. Hover lifts the picture slightly (scale 1.03),
 //   not under reduced motion.
 // - Long content never widens the tile: text clamps, titles break anywhere.
 // - Moderation marks (slice 9): `marks` are the caller's Badges («Скарга», «Приховано»), at the
-//   top-left over the picture (the top-right belongs to the selection check and the quick
+//   top-left over the picture, after the selection check (the top-right belongs to the quick
 //   actions). They are visual only: the caller puts the same words into `accessibleName`.
 // - A marked tile also gets a 2px inner ring in its mark's colour (`ring`, owner F2): amber for a
 //   report, muted for the admin's hide, red for the operator's. An inset box-shadow overlay on the
@@ -63,6 +65,13 @@ type FrameProps = {
   onOpen?: () => void;
   /** Gets the click, so the caller can read Shift for a range. */
   onToggleSelect?: (event: MouseEvent<HTMLButtonElement>) => void;
+  /**
+   * A checkbox of its own over the top-left corner while not `selectable` («Вибрати кадр 86»):
+   * hover and keyboard focus with a mouse, always on touch screens; a 44px target around a 22px
+   * circle. Checking it is how the selection starts (the caller then makes every tile
+   * `selectable`).
+   */
+  selectCheck?: { label: string; onToggle: (event: MouseEvent<HTMLButtonElement>) => void };
   /** Below the frame's button, e.g. «Повторити» (a full-width 44px button). */
   actions?: ReactNode;
   /**
@@ -99,7 +108,7 @@ const RING: Record<FrameRing, string> = {
 
 /** The dark pill over a picture: white mono text, legible on any photo in both themes. */
 const PILL =
-  'inline-flex h-5 items-center gap-1 rounded-[4px] bg-[rgb(24_24_27/0.66)] px-1.5 type-data text-[0.75rem] leading-none font-medium text-[#FFFFFF]';
+  'inline-flex h-5 shrink-0 items-center gap-1 rounded-[4px] bg-[rgb(24_24_27/0.66)] px-1.5 type-data text-[0.75rem] leading-none font-medium whitespace-nowrap text-[#FFFFFF]';
 
 /** The number with its "new" underline, in the pill or on a card. */
 function FrameNumber({
@@ -137,7 +146,9 @@ function Pills({
 }) {
   if (number === undefined && !duration) return null;
   return (
-    <span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-0.75rem)] gap-1">
+    // A narrow tile (a polaroid at 360px) has no room for both side by side: the duration then
+    // goes on its own line above the number, never breaking inside a pill («0:1 / 2»).
+    <span className="absolute bottom-1.5 left-1.5 flex max-w-[calc(100%-0.75rem)] flex-wrap-reverse gap-1">
       {number === undefined ? null : (
         <span className={PILL}>
           <FrameNumber number={number} isNew={isNew} />
@@ -225,11 +236,22 @@ function FrameFace({
       );
     case 'text':
       return (
-        // The words on a sand card; type grows with the square (container = the card): 13px and
-        // 4 lines in a phone tile, 15px from 128px, 16px with 5 lines from 168px.
+        // The words on a sand card; type grows with the square (container = the card): 13px in a
+        // phone tile, 15px from 128px, 16px from 168px. The clamp is as many whole lines as the
+        // square holds under the quote mark (and the number line, when there is one), so a line
+        // is never cut through the middle in a narrow tile (a polaroid at 360px is ~92px). The
+        // widths (the card's content box) come from the line heights: 17.9px (13px), 20.6px
+        // (15px), 22.4px (16px).
         <div className="@container flex size-full flex-col gap-1 bg-tint-sand p-2 @min-[168px]:gap-1.5 @min-[168px]:p-3">
           <Quote aria-hidden="true" className="size-3.5 shrink-0 text-tint-sand-ink" />
-          <p className="line-clamp-4 min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:text-[0.9375rem] @min-[168px]:line-clamp-5 @min-[168px]:text-base @min-[168px]:leading-[1.4]">
+          <p
+            className={cn(
+              'min-h-0 overflow-hidden text-[0.8125rem] leading-snug text-pretty whitespace-pre-line [overflow-wrap:anywhere] text-foreground @min-[128px]:text-[0.9375rem] @min-[168px]:text-base @min-[168px]:leading-[1.4]',
+              number === undefined && !name
+                ? 'line-clamp-3 @min-[94px]:line-clamp-4 @min-[112px]:line-clamp-5'
+                : 'line-clamp-2 @min-[92px]:line-clamp-3 @min-[110px]:line-clamp-4 @min-[146px]:line-clamp-5',
+            )}
+          >
             {text}
           </p>
           {number === undefined && !name ? null : (
@@ -261,6 +283,14 @@ function FrameFace({
   }
 }
 
+/** The marks at the corner, or after the selection check when the tile has one. */
+const MARKS_ALONE = 'left-1.5 max-w-[calc(100%-2.75rem)]';
+const MARKS_AFTER_CHECK = 'left-9 max-w-[calc(100%-4.75rem)]';
+
+/** The empty selection circle: white at 85% with a dark edge, readable on any picture. */
+const EMPTY_CHECK =
+  'size-[1.375rem] rounded-full border-[1.5px] border-[rgb(24_24_27/0.45)] bg-[rgb(255_255_255/0.85)] shadow-[0_1px_3px_rgb(0_0_0/0.25)]';
+
 /**
  * One tile of the photo grid (DESIGN-SYSTEM.md §5.9): a square with the picture (or a wish or
  * document card) and its number on it. A button when it opens (`onOpen`) or toggles
@@ -283,6 +313,7 @@ function Frame({
   accessibleName,
   onOpen,
   onToggleSelect,
+  selectCheck,
   actions,
   overlay,
   outlined = false,
@@ -344,20 +375,23 @@ function Frame({
       {marks ? (
         <span
           data-slot="frame-marks"
-          className="absolute top-1.5 left-1.5 z-(--z-frame-mark) flex max-w-[calc(100%-2.75rem)] flex-wrap gap-1"
+          className={cn(
+            'absolute top-1.5 z-(--z-frame-mark) flex flex-wrap gap-1',
+            selectCheck === undefined && !selectable ? MARKS_ALONE : MARKS_AFTER_CHECK,
+          )}
         >
           {marks}
         </span>
       ) : null}
       {selected ? (
-        <span className="absolute top-1.5 right-1.5 z-(--z-frame-mark) grid size-[1.375rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_0_2px_#FFFFFF] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:animation-duration-[var(--duration-fast)]">
+        <span className="absolute top-1.5 left-1.5 z-(--z-frame-mark) grid size-[1.375rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_0_0_2px_#FFFFFF] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:animation-duration-[var(--duration-fast)]">
           <Check className="size-3.5" strokeWidth={3} />
         </span>
       ) : selectable ? (
         // In selection mode every tile shows its empty check (never hover-only, §5.13).
         <span
           data-slot="frame-check"
-          className="absolute top-1.5 right-1.5 z-(--z-frame-mark) size-[1.375rem] rounded-full border-[1.5px] border-[rgb(24_24_27/0.45)] bg-[rgb(255_255_255/0.85)]"
+          className={cn('absolute top-1.5 left-1.5 z-(--z-frame-mark)', EMPTY_CHECK)}
         />
       ) : null}
     </div>
@@ -388,6 +422,24 @@ function Frame({
           {tile}
         </div>
       )}
+      {selectCheck && !selectable ? (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={selectCheck.label}
+          data-slot="frame-select"
+          onClick={selectCheck.onToggle}
+          className={cn(
+            'invisible absolute top-0 left-0 z-(--z-frame-mark) grid size-11 cursor-pointer touch-manipulation place-items-start rounded-frame p-1.5 opacity-0 transition-[opacity,visibility] duration-(--duration-fast) motion-reduce:transition-none',
+            'group-focus-within/frame:visible group-focus-within/frame:opacity-100 group-hover/frame:visible group-hover/frame:opacity-100 pointer-coarse:visible pointer-coarse:opacity-100',
+            'hover:[&>span]:border-white hover:[&>span]:bg-white',
+            focusRing,
+          )}
+        >
+          <span aria-hidden="true" className={cn('block', EMPTY_CHECK)} />
+        </button>
+      ) : null}
       {overlay && !selectable ? (
         <div
           data-slot="frame-overlay"

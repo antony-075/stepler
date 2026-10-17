@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { accessSchema, collectionEntitlementSchema, collectionPackSchema } from './access.js';
 import { adminImageSchema } from './cover.js';
 import { storageUsageSchema } from './usage.js';
 import { guestLinkPermissionsSchema } from './guest-links.js';
@@ -67,6 +68,14 @@ export const collectionSchema = z
      * `null` = not blocked. The owner cannot unblock it.
      */
     blocked: z.object({ at: z.iso.datetime(), reason: z.string() }).strict().nullable(),
+    /** Whether the account's plan or the collection's own pack governs it (ADR 0018 [P1]). */
+    entitlement: collectionEntitlementSchema,
+    /** Its effective access: the pack's for a pack collection, else the account's [P2]. */
+    access: accessSchema,
+    /** `null` unless `entitlement` is `PACK`. */
+    pack: collectionPackSchema.nullable(),
+    /** When read-only content is due for deletion (after warnings, [P5]); `null` = not scheduled. */
+    deleteAfter: z.iso.datetime().nullable(),
   })
   .strict();
 export type Collection = z.infer<typeof collectionSchema>;

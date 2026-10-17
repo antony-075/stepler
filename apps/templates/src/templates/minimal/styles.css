@@ -260,6 +260,38 @@
   border-color: var(--mn-rule);
 }
 
+[data-template='minimal'] .mn-tabs {
+  padding-bottom: 16px;
+}
+
+/* Phones and tablets, «Кадри»: the sections start right under the tabs. */
+/* The tabs: a thin blue line under the chosen one, nothing else. */
+[data-template='minimal'] [data-slot='guest-view-tab'][aria-selected='true'] {
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 var(--tpl-accent);
+}
+
+@media (max-width: 1023.98px) {
+  /* Under the tabs the identity starts closer: the 72px lead was for the bare first screen
+     (audit 2026-10-16); the notice keeps room above the footer. */
+  [data-template='minimal'][data-view='add'] .mn-identity:not([data-placement]) {
+    padding-top: 32px;
+  }
+
+  [data-template='minimal'][data-view='add'] .mn-aside {
+    padding-bottom: 40px;
+  }
+
+  /* «Додати»: the footer's wrapper ends at the window's bottom (item 95). */
+  [data-template='minimal'][data-view='add'] .mn-main-footer {
+    margin-top: auto;
+  }
+
+  [data-template='minimal'][data-view='frames'] .mn-sections {
+    padding-top: 8px;
+  }
+}
+
 @media (min-width: 640px) {
   [data-template='minimal'] .mn-title {
     font-size: 60px;

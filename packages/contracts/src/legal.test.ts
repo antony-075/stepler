@@ -31,19 +31,20 @@ describe('LEGAL_DOCUMENTS', () => {
     }
   });
 
-  test('v2 (slice 9): both documents, everyone accepts again (R8)', () => {
+  test('v3 (billing): both documents, drafts, everyone accepts again ([Q7])', () => {
     for (const entry of LEGAL_DOCUMENTS) {
-      expect(entry).toMatchObject({ version: 'v2', draft: true, requireReacceptance: true });
+      expect(entry).toMatchObject({ version: 'v3', draft: true, requireReacceptance: true });
     }
   });
 
-  test('an account that accepted v1 must accept v2', () => {
+  test('an account that accepted v2 must accept v3', () => {
     const at = '2026-10-04T10:00:00.000Z';
     const status = legalStatus([
-      { document: 'TERMS', version: 'v1', acceptedAt: at },
-      { document: 'PRIVACY', version: 'v1', acceptedAt: at },
+      { document: 'TERMS', version: 'v2', acceptedAt: at },
+      { document: 'PRIVACY', version: 'v2', acceptedAt: at },
     ]);
     expect(status.accepted).toBe(false);
+    expect(status.documents.map((doc) => doc.requiredVersion)).toEqual(['v3', 'v3']);
   });
 
   test('LEGAL_VERSION_PATTERN accepts v1…v9999 only', () => {

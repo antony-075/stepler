@@ -9,6 +9,7 @@ import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { signInAs } from './support/sessions.js';
+import { useTestPlanLimits } from './support/billing.js';
 
 const ORIGIN = 'http://localhost:3000';
 const OPERATOR = 'op@stepler.test';
@@ -54,14 +55,14 @@ describe('guest link management', () => {
   const server = (): Server => app.getHttpServer() as Server;
 
   beforeAll(async () => {
-    app = await createApp(
-      testEnv({ OPERATOR_EMAILS: OPERATOR, LIMIT_GUEST_LINKS_PER_COLLECTION: '2' }),
-    );
+    useTestPlanLimits({ guestLinks: 2 });
+    app = await createApp(testEnv({ OPERATOR_EMAILS: OPERATOR }));
     await listenOnLoopback(app);
     await resetDatabase(prisma);
   });
 
   afterAll(async () => {
+    useTestPlanLimits();
     // Review Focus 3: no audit metadata, from any flow in this file, holds a token.
     const metadata = JSON.stringify(
       (await prisma.auditEvent.findMany({ select: { metadata: true } })).map((e) => e.metadata),

@@ -1,11 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import {
-  currentLegalVersions,
-  operatorReportDetailSchema,
-  operatorReportPageSchema,
-} from '@stepler/contracts';
+import { operatorReportDetailSchema, operatorReportPageSchema } from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
@@ -14,8 +10,7 @@ import { listenOnLoopback } from './support/app.js';
 import { createTestPrisma, queuedJobs, resetDatabase } from './support/database.js';
 import { testEnv } from './support/env.js';
 import { joinAsGuest, ORIGIN, seedCollection, SHARED_GALLERY } from './support/guests.js';
-import { magicLinkToken, messagesAfter, waitForMessages } from './support/mailpit.js';
-import { signInAs } from './support/sessions.js';
+import { givePassword, signInAs } from './support/sessions.js';
 
 // Slice 9 plan, Task 7 (Review Focus 3 and 4): the operator console's API — who gets in, the
 // reported scope, the queue and detail, the decision, content actions and blocking.
@@ -33,8 +28,8 @@ describe('operator API', () => {
     app = await createApp(
       testEnv({
         OPERATOR_EMAILS: OPERATOR,
-        LIMIT_MAGIC_LINK_PER_IP_PER_HOUR: '10000',
-        LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR: '10000',
+        LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR: '10000',
+        LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR: '10000',
       }),
     );
     await listenOnLoopback(app);
@@ -438,20 +433,14 @@ describe('operator API', () => {
     const ownerEmail = `owner-${randomUUID()}@stepler.test`;
     const sc = await scene(ownerEmail);
     const op = as(sc.operator.cookie);
-    const requestLink = () =>
+    const PASSWORD = 'Pa55word!';
+    await givePassword(app, prisma, sc.ownerId, PASSWORD);
+    const login = () =>
       request(server())
-        .post('/api/v1/auth/magic-link')
+        .post('/api/v1/auth/login')
         .set('Origin', ORIGIN)
-        .send({ email: ownerEmail, turnstileToken: 'pass', legal: currentLegalVersions() })
-        .expect(202);
-    const verify = (token: string) =>
-      request(server())
-        .post('/api/v1/auth/magic-link/verify')
-        .set('Origin', ORIGIN)
-        .send({ token });
-    await requestLink();
-    const [message] = await waitForMessages(ownerEmail);
-    const pending = await magicLinkToken(message?.ID ?? '');
+        .send({ email: ownerEmail, password: PASSWORD });
+    await login().expect(200);
 
     await op
       .send('post', `/users/${sc.ownerId}/block`, { reason: 'Систематичні порушення' })
@@ -459,7 +448,7 @@ describe('operator API', () => {
     await op.send('post', `/users/${sc.ownerId}/block`, { reason: 'Ще раз' }).expect(204);
     expect(await prisma.authSession.count({ where: { userId: sc.ownerId } })).toBe(0);
     await request(server()).get('/api/v1/collections').set('Cookie', sc.owner.cookie).expect(401);
-    expect((await verify(pending).expect(403)).body).toMatchObject({ code: 'ACCOUNT_BLOCKED' });
+    expect((await login().expect(403)).body).toMatchObject({ code: 'ACCOUNT_BLOCKED' });
     const resolve = await request(server())
       .post('/api/v1/guest/links/resolve')
       .set('Origin', ORIGIN)
@@ -474,10 +463,7 @@ describe('operator API', () => {
     await op
       .send('post', `/users/${sc.ownerId}/unblock`, { reason: 'Оскарження прийнято' })
       .expect(204);
-    const before = (await messagesAfter(ownerEmail, 0)).length;
-    await requestLink();
-    const [fresh] = await waitForMessages(ownerEmail, before + 1);
-    await verify(await magicLinkToken(fresh?.ID ?? '')).expect(200);
+    await login().expect(200);
     expect(
       (
         await prisma.auditEvent.findMany({

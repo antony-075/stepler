@@ -30,19 +30,22 @@ export interface LegalDocumentVersion {
 
 /** Exactly one entry per document: its current version. */
 export const LEGAL_DOCUMENTS: readonly LegalDocumentVersion[] = [
-  // v2 (slice 9): in-app reports, the reporter's optional e-mail, the operator's moderation.
-  // Everyone accepts again (R8).
+  // v3 (billing M4, plan Task 22): payments, the trial, auto-renewal, cancellation, refunds by
+  // the operator, view-only mode, retention and deletion after the paid period. Material
+  // changes, so everyone accepts again ([Q7]). The effective date is a placeholder until the
+  // texts are final (they are drafts; production refuses to start on a draft).
+  // History: v1 (slice 7), v2 (slice 9: reports, moderation; 9b: appeals, quarantine).
   {
     document: 'TERMS',
-    version: 'v2',
-    effectiveDate: '2026-10-06',
+    version: 'v3',
+    effectiveDate: '2026-10-15',
     draft: true,
     requireReacceptance: true,
   },
   {
     document: 'PRIVACY',
-    version: 'v2',
-    effectiveDate: '2026-10-06',
+    version: 'v3',
+    effectiveDate: '2026-10-15',
     draft: true,
     requireReacceptance: true,
   },
@@ -56,8 +59,8 @@ export function currentLegalVersion(document: LegalDocumentKey): LegalDocumentVe
 }
 
 /**
- * The versions a person accepted on the sign-in card (owner decision L1): sent with the
- * magic-link request and with the Google start, recorded when the sign-in completes. The API
+ * The versions a person accepted on the registration card (owner decision L1): sent with the
+ * registration (ADR 0019) and with the Google start, recorded with the account. The API
  * only ever stores the registry's current versions; the pattern keeps arbitrary strings out.
  */
 export const legalVersionsSchema = z

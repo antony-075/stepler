@@ -41,6 +41,7 @@ const context = {
     textMaxChars: 5000,
   },
   counts: { total: 86, lastAddedAt: '2026-10-03T21:10:00.000Z' },
+  contribution: 'OPEN',
 };
 
 describe('guestContextSchema', () => {

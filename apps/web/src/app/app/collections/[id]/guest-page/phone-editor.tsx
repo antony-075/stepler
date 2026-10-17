@@ -45,7 +45,10 @@ const CHIP = {
   draft: 'bg-[#B83E26]',
 } as const;
 
-export function PhoneEditor(props: SectionProps) {
+export function PhoneEditor({
+  readOnlyNotice,
+  ...props
+}: SectionProps & { readOnlyNotice: string | null }) {
   const t = useTranslations('guestPage');
   const { editor, readOnly, collectionId } = props;
   const [open, setOpen] = useState(false);
@@ -108,9 +111,9 @@ export function PhoneEditor(props: SectionProps) {
             </span>
           </SheetHeader>
           <SheetBody>
-            {readOnly ? (
+            {readOnly && readOnlyNotice !== null ? (
               <div className="px-5 pt-4">
-                <Alert variant="info">{t('archived')}</Alert>
+                <Alert variant="info">{readOnlyNotice}</Alert>
               </div>
             ) : null}
             <div role="region" aria-label={t('phone.sectionsLabel')}>

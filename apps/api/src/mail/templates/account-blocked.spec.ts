@@ -4,7 +4,7 @@ import { renderAccountBlockedEmail } from './account-blocked.js';
 test('the blocked notice: no link, the contact when set, escaped', () => {
   const uk = renderAccountBlockedEmail({ locale: 'uk', contactEmail: 'legal@stepler.test' });
   expect(uk.subject).toBe('Stepler: акаунт заблоковано');
-  expect(uk.text).toContain('посилання для входу не надіслано');
+  expect(uk.text).toContain('відновити пароль зараз не можна');
   expect(uk.text).toContain('legal@stepler.test');
   expect(uk.text).not.toContain('http');
   const en = renderAccountBlockedEmail({ locale: 'en' });

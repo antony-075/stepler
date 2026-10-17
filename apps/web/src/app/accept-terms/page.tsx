@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { getSessionUser } from '@/api/server';
-import { CenteredPage } from '@/components/centered-page';
-import { LanguageSwitch } from '@/i18n/language-switch';
+import { AuthPage } from '@/components/auth-page';
 import { AcceptTermsPanel } from './accept-terms-panel';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,8 +20,8 @@ export default async function AcceptTermsPage() {
   if (user === null) redirect('/login');
   if (user !== 'unavailable' && user.legal.accepted) redirect('/app');
   return (
-    <CenteredPage headerActions={<LanguageSwitch variant="header" />}>
+    <AuthPage>
       <AcceptTermsPanel />
-    </CenteredPage>
+    </AuthPage>
   );
 }

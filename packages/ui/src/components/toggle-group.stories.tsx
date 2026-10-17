@@ -347,3 +347,38 @@ export const SegmentedDark: Story = {
   ...Segmented,
   globals: { theme: 'dark' },
 };
+
+/**
+ * The billing page's pill switch («Щомісяця / Щороку −17%», «₴ / $ / €»): a rounded grey track,
+ * each item as wide as its words, the chosen one a white pill; 40px high.
+ */
+export const Pill: Story = {
+  args: { defaultValue: 'month', 'aria-label': 'Billing period' },
+  render: (args) => (
+    <ToggleGroup {...args} variant="pill">
+      <ToggleGroupItem value="month">Monthly</ToggleGroupItem>
+      <ToggleGroupItem value="year">
+        Yearly
+        <span className="inline-flex h-6.5 items-center rounded-full bg-success-soft px-2.5 text-[0.8125rem] font-semibold text-success">
+          −17%
+        </span>
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ),
+  play: async ({ canvas }) => {
+    const [month, year] = canvas.getAllByRole('radio') as [HTMLElement, HTMLElement];
+    await expect(month).toHaveAttribute('aria-checked', 'true');
+    await userEvent.click(year);
+    await waitFor(() => expect(year).toHaveAttribute('aria-checked', 'true'));
+    // As wide as the words: the item with the badge is the wider one.
+    await expect(year.getBoundingClientRect().width).toBeGreaterThan(
+      month.getBoundingClientRect().width,
+    );
+    await expect(year.getBoundingClientRect().height).toBeGreaterThanOrEqual(40);
+  },
+};
+
+export const PillDark: Story = {
+  ...Pill,
+  globals: { theme: 'dark' },
+};

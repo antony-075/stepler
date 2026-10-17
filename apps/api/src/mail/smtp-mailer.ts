@@ -28,7 +28,7 @@ export function smtpOptions(smtpUrl: string): SMTPTransportOptions {
 }
 
 /**
- * SMTP adapter (Mailpit locally). Message bodies contain sign-in links and addresses: never log
+ * SMTP adapter (Mailpit locally). Message bodies contain confirmation and reset links and addresses: never log
  * them.
  */
 @Injectable()

@@ -35,14 +35,20 @@ describe('contentRefusal', () => {
 
 describe('withAccess', () => {
   it('keeps the content that still makes sense, else falls back', () => {
-    expect(withAccess({ access: 'all', content: 'mine' }, 'own')).toEqual({
+    expect(withAccess({ access: 'all', content: 'mine', view: 'frames' }, 'own')).toEqual({
       access: 'own',
       content: 'mine',
+      view: 'frames',
     });
-    expect(withAccess(DEFAULT_PREVIEW_STATE, 'own')).toEqual({ access: 'own', content: 'mine' });
+    expect(withAccess(DEFAULT_PREVIEW_STATE, 'own')).toEqual({
+      access: 'own',
+      content: 'mine',
+      view: 'add',
+    });
     expect(withAccess(DEFAULT_PREVIEW_STATE, 'view')).toEqual({
       access: 'view',
       content: 'others',
+      view: 'add',
     });
   });
 });
@@ -54,27 +60,32 @@ describe('previewShape', () => {
       own: 'items',
       all: 'both',
       actions: true,
+      view: 'add',
+    });
+    expect(previewShape({ ...DEFAULT_PREVIEW_STATE, view: 'frames' })).toMatchObject({
+      view: 'frames',
     });
   });
 
   it('«Лише своє» never draws «Усі кадри» (owner remark 91)', () => {
     for (const content of PREVIEW_CONTENT) {
-      const shape = previewShape({ access: 'own', content });
+      const shape = previewShape({ access: 'own', content, view: 'add' });
       expect(shape.kind === 'page' && shape.all).toBe('none');
     }
   });
 
-  it('view-only: no actions and no own frames', () => {
-    expect(previewShape({ access: 'view', content: 'others' })).toEqual({
+  it('view-only: no actions, no own frames, and only «Кадри»', () => {
+    expect(previewShape({ access: 'view', content: 'others', view: 'add' })).toEqual({
       kind: 'page',
       own: 'none',
       all: 'others',
       actions: false,
+      view: 'frames',
     });
   });
 
   it('paused and closed are the link state pages', () => {
-    expect(previewShape({ access: 'paused', content: 'both' })).toEqual({
+    expect(previewShape({ access: 'paused', content: 'both', view: 'add' })).toEqual({
       kind: 'link-state',
       state: 'paused',
     });

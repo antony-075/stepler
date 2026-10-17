@@ -47,7 +47,7 @@ describe('apiRequest', () => {
         { status: 429, headers: { 'content-type': 'application/problem+json' } },
       ),
     );
-    const error = await apiRequest('/auth/magic-link', { method: 'POST' }).catch((e: unknown) => e);
+    const error = await apiRequest('/auth/login', { method: 'POST' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ code: 'RATE_LIMITED', status: 429, requestId: 'req-12345678' });
   });

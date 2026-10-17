@@ -110,7 +110,7 @@ describe('Google sign-in', () => {
   test('/auth/methods reflects the configuration', async () => {
     const res = await request(server()).get('/api/v1/auth/methods').expect(200);
     expect(authMethodsResponseSchema.parse(res.body)).toEqual({
-      magicLink: true,
+      password: true,
       google: true,
       turnstileSiteKey: '1x00000000000000000000AA',
       legal: currentLegalVersions(),
@@ -128,12 +128,8 @@ describe('Google sign-in', () => {
   });
 
   describe('legal acceptance at sign-in (ADR 0016)', () => {
-    test('Review Focus 2 (a): /start without versions → back to /login, no st_oauth cookie', async () => {
-      for (const query of [
-        {},
-        { terms: LEGAL_QUERY.terms },
-        { terms: '<script>', privacy: 'v1' },
-      ]) {
+    test('Review Focus 2 (a): /start with incomplete or malformed versions → back to /login, no st_oauth cookie', async () => {
+      for (const query of [{ terms: LEGAL_QUERY.terms }, { terms: '<script>', privacy: 'v1' }]) {
         const res = await request(server())
           .get('/api/v1/auth/google/start')
           .query(query)
@@ -141,6 +137,33 @@ describe('Google sign-in', () => {
         expect(res.headers.location).toBe(`${ORIGIN}/login?error=LEGAL_ACCEPTANCE_REQUIRED`);
         expect(setCookies(res).some((c) => c.startsWith('st_oauth='))).toBe(false);
       }
+    });
+
+    test('from the sign-in form /start carries no versions: Google is asked, nothing is recorded (ADR 0019)', async () => {
+      const start = await request(server()).get('/api/v1/auth/google/start').expect(302);
+      expect(start.headers.location).toMatch(/^https:\/\/accounts\.example\/auth\?state=/);
+      const state = new URL(start.headers.location ?? '').searchParams.get('state') ?? '';
+      const callback = await request(server())
+        .get('/api/v1/auth/google/callback')
+        .query({ code: 'good-code', state })
+        .set('Cookie', `st_oauth=${cookieValue(start, 'st_oauth') ?? ''}`)
+        .expect(302);
+      expect(callback.headers.location).toBe(`${ORIGIN}/app`);
+      expect(await prisma.legalAcceptance.count()).toBe(0);
+    });
+
+    test('a registered but unconfirmed address: Google confirms it and drops the unproven password', async () => {
+      const pending = await prisma.user.create({
+        data: {
+          email: google.claims.email,
+          passwordCredential: { create: { passwordHash: '$argon2id$v=19$m=19456,t=2,p=1$x$y' } },
+        },
+      });
+      await signIn();
+      expect(await prisma.passwordCredential.count({ where: { userId: pending.id } })).toBe(0);
+      const user = await prisma.user.findUniqueOrThrow({ where: { id: pending.id } });
+      expect(user.emailVerifiedAt).not.toBeNull();
+      expect(user.trialEndsAt).not.toBeNull();
     });
 
     test('Review Focus 2 (a): /start with a version that is not current → LEGAL_VERSION_OUTDATED', async () => {
@@ -252,6 +275,8 @@ describe('Google sign-in', () => {
     expect(me.body).toMatchObject({ email: google.claims.email });
     const user = await prisma.user.findUniqueOrThrow({ where: { email: google.claims.email } });
     expect(user.emailVerifiedAt).not.toBeNull();
+    // A new account starts its 7-day trial (ADR 0018).
+    expect(user.trialEndsAt?.getTime()).toBe(user.createdAt.getTime() + 7 * 24 * 3600_000);
   });
 
   test('the same Google account signs in to the same user again', async () => {
@@ -274,7 +299,7 @@ describe('Google sign-in', () => {
   });
 
   test('the Google name fills an empty display name once and never overwrites one', async () => {
-    // A magic-link user without a name signs in with Google: the verified name is taken.
+    // An e-mail user without a name signs in with Google: the verified name is taken.
     const plain = await prisma.user.create({
       data: { email: 'olia@stepler.test', emailVerifiedAt: new Date() },
     });

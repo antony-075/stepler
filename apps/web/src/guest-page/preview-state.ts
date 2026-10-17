@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
-// Which guest page the editor's preview draws (owner remarks 77, 92): two separate questions,
-// each a short list. «Доступ за посиланням» is what the link lets the guest do; «Вміст» is what
-// is on the page. Some pairs cannot happen (others' frames on a link that hides them, a guest's
+// Which guest page the editor's preview draws (owner remarks 77, 92): separate questions, each a
+// short list. «Доступ за посиланням» is what the link lets the guest do; «Вміст» is what is on
+// the page; «Екран» is the page's view, «Додати» or «Кадри» (owner remark 2026-10-16: the guest
+// page has two tabs; a view-only link has «Кадри» only). Some pairs cannot happen (others' frames on a link that hides them, a guest's
 // own uploads on a view-only link, any content on a paused or closed link): those content
 // options are refused with a reason, and a refused pair is never drawn.
 
@@ -12,13 +13,23 @@ export type PreviewAccess = (typeof PREVIEW_ACCESS)[number];
 export const PREVIEW_CONTENT = ['empty', 'mine', 'others', 'both', 'uploading'] as const;
 export type PreviewContent = (typeof PREVIEW_CONTENT)[number];
 
+export const PREVIEW_VIEWS = ['add', 'frames'] as const;
+export type PreviewViewName = (typeof PREVIEW_VIEWS)[number];
+
 export const previewStateSchema = z
-  .object({ access: z.enum(PREVIEW_ACCESS), content: z.enum(PREVIEW_CONTENT) })
+  .object({
+    access: z.enum(PREVIEW_ACCESS),
+    content: z.enum(PREVIEW_CONTENT),
+    view: z.enum(PREVIEW_VIEWS),
+  })
   .strict();
 export type PreviewState = z.infer<typeof previewStateSchema>;
 
-/** «Бачать усе» + «Мої й чужі». */
-export const DEFAULT_PREVIEW_STATE: PreviewState = { access: 'all', content: 'both' };
+/** «Бачать усе» + «Мої й чужі», on «Додати». */
+export const DEFAULT_PREVIEW_STATE: PreviewState = { access: 'all', content: 'both', view: 'add' };
+
+/** A view-only link, paused or closed: the page has no «Додати» to show. */
+export const viewLocked = (access: PreviewAccess): boolean => access !== 'all' && access !== 'own';
 
 /** Why a content option cannot go with an access, or `null` when it can. */
 export type ContentRefusal = 'hidden-gallery' | 'view-only' | 'stopped';
@@ -51,6 +62,7 @@ export function withAccess(state: PreviewState, access: PreviewAccess): PreviewS
   return {
     access,
     content: contentRefusal(access, state.content) === null ? state.content : FALLBACK[access],
+    view: state.view,
   };
 }
 
@@ -62,6 +74,7 @@ export type PreviewShape =
       own: 'none' | 'empty' | 'items' | 'uploading';
       all: 'none' | 'empty' | 'own' | 'others' | 'both';
       actions: boolean;
+      view: PreviewViewName;
     };
 
 export function previewShape(state: PreviewState): PreviewShape {
@@ -86,5 +99,11 @@ export function previewShape(state: PreviewState): PreviewShape {
           : content === 'others'
             ? 'others'
             : 'both';
-  return { kind: 'page', own, all, actions: access !== 'view' };
+  return {
+    kind: 'page',
+    own,
+    all,
+    actions: access !== 'view',
+    view: viewLocked(access) ? 'frames' : state.view,
+  };
 }

@@ -16,7 +16,6 @@ const LABELS: Record<ActionLabelKey, string> = {
   addPhotos: 'Додати фото',
   addVideos: 'Додати відео',
   addDocuments: 'Додати документи',
-  addMore: 'Додати ще',
   writeWish: 'Написати побажання',
 };
 const t = (key: ActionLabelKey) => LABELS[key];
@@ -25,24 +24,12 @@ const handlers = () => ({ onFiles: vi.fn(), onWrite: vi.fn() });
 
 describe('buildGuestActions', () => {
   it('a view-only link has no actions', () => {
-    expect(
-      buildGuestActions(
-        { ...none, canViewGallery: true },
-        { t, batchStarted: false },
-        handlers(),
-        null,
-      ),
-    ).toBeNull();
+    expect(buildGuestActions({ ...none, canViewGallery: true }, { t }, handlers())).toBeNull();
   });
 
   it('a text-only link makes the wish the primary action, with no secondary', () => {
     const h = handlers();
-    const actions = buildGuestActions(
-      { ...none, canSubmitText: true },
-      { t, batchStarted: false },
-      h,
-      null,
-    );
+    const actions = buildGuestActions({ ...none, canSubmitText: true }, { t }, h);
     expect(actions).toEqual({
       primary: { label: 'Написати побажання', icon: 'text', onSelect: h.onWrite },
       secondary: null,
@@ -54,36 +41,20 @@ describe('buildGuestActions', () => {
     const h = handlers();
     const actions = buildGuestActions(
       { ...none, canUploadPhotos: true, canUploadVideos: true, canSubmitText: true },
-      { t, batchStarted: false },
+      { t },
       h,
-      'Не закривайте сторінку',
     );
     expect(actions).toEqual({
       primary: { label: 'Додати фото й відео', icon: 'files', onSelect: h.onFiles },
       secondary: { label: 'Написати побажання', onSelect: h.onWrite },
-      note: 'Не закривайте сторінку',
+      note: null,
     });
   });
 
   it('files without text: no secondary; the label follows the kinds the link takes', () => {
-    const actions = buildGuestActions(
-      { ...none, canUploadDocuments: true },
-      { t, batchStarted: false },
-      handlers(),
-      null,
-    );
+    const actions = buildGuestActions({ ...none, canUploadDocuments: true }, { t }, handlers());
     expect(actions?.primary.label).toBe('Додати документи');
     expect(actions?.secondary).toBeNull();
-  });
-
-  it('after a batch the file action reads «Додати ще»', () => {
-    const actions = buildGuestActions(
-      { ...none, canUploadPhotos: true },
-      { t, batchStarted: true },
-      handlers(),
-      null,
-    );
-    expect(actions?.primary.label).toBe('Додати ще');
   });
 });
 
@@ -129,14 +100,15 @@ function context({ welcomeMessage = null, cover = null, ...collection }: Fields)
       textMaxChars: 1,
     },
     counts: null,
+    contribution: 'OPEN',
   };
 }
 
 describe('buildGuestPageModel', () => {
-  it('maps the collection, the counts line and the phase', () => {
+  it('maps the collection, the counts line and the view', () => {
     const model = buildGuestPageModel(
       context({ description: 'Субота, 14 червня.', welcomeMessage: 'Вітаємо!' }),
-      { countsLabel: '86 кадрів', lastAddedLabel: 'останній о 21:10', contributed: true },
+      { countsLabel: '86 кадрів', lastAddedLabel: 'останній о 21:10', view: 'frames' },
     );
     expect(model).toEqual({
       title: 'Весілля Олі та Тараса',
@@ -146,15 +118,12 @@ describe('buildGuestPageModel', () => {
       lastAddedLabel: 'останній о 21:10',
       cover: null,
       background: null,
-      phase: 'contributed',
+      view: 'frames',
     });
     expect(
-      buildGuestPageModel(context({}), {
-        countsLabel: null,
-        lastAddedLabel: null,
-        contributed: false,
-      }).phase,
-    ).toBe('first-visit');
+      buildGuestPageModel(context({}), { countsLabel: null, lastAddedLabel: null, view: 'add' })
+        .view,
+    ).toBe('add');
   });
 
   it('the cover: the preview as src, both renditions by width, the source dimensions', () => {
@@ -162,7 +131,7 @@ describe('buildGuestPageModel', () => {
     const model = buildGuestPageModel(context({ cover: COVER }), {
       countsLabel: null,
       lastAddedLabel: null,
-      contributed: false,
+      view: 'add',
       onCoverError: onError,
     });
     expect(model.cover).toEqual({
@@ -181,7 +150,7 @@ describe('buildGuestPageModel', () => {
       {
         countsLabel: null,
         lastAddedLabel: null,
-        contributed: false,
+        view: 'add',
       },
     ).cover;
     expect(portrait?.srcSet).toBe(`${COVER.thumbnailUrl} 360w, ${COVER.previewUrl} 1200w`);
@@ -189,7 +158,7 @@ describe('buildGuestPageModel', () => {
     const small = buildGuestPageModel(context({ cover: { ...COVER, width: 400, height: 300 } }), {
       countsLabel: null,
       lastAddedLabel: null,
-      contributed: false,
+      view: 'add',
     }).cover;
     expect(small?.srcSet).toBe(`${COVER.previewUrl} 400w`);
   });
@@ -200,7 +169,7 @@ describe('buildGuestPageModel', () => {
       const ctx = context({});
       return buildGuestPageModel(
         { ...ctx, page: { ...ctx.page, background: { ...COVER, largeUrl } } },
-        { countsLabel: null, lastAddedLabel: null, contributed: false },
+        { countsLabel: null, lastAddedLabel: null, view: 'add' },
       ).background;
     };
     expect(withBackground(LARGE)?.srcSet).toBe(

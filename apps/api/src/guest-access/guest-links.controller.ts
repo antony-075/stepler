@@ -9,6 +9,7 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { ApiAdminReadOnlyResponse } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -58,6 +59,7 @@ export class GuestLinksController {
   }
 
   @Post('collections/:id/guest-links')
+  @ApiAdminReadOnlyResponse()
   @ApiResponse({ status: 201, standardSchema: guestLinkSchema })
   @ApiResponse({ status: 404, description: 'NOT_FOUND: not one of your collections' })
   @ApiResponse({
@@ -91,6 +93,7 @@ export class GuestLinksController {
   }
 
   @Patch('guest-links/:id')
+  @ApiAdminReadOnlyResponse()
   @ApiResponse({ status: 200, standardSchema: guestLinkSchema })
   @ApiResponse({
     status: 400,
@@ -121,6 +124,7 @@ export class GuestLinksController {
   }
 
   @Post('guest-links/:id/activate')
+  @ApiAdminReadOnlyResponse()
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: guestLinkSchema, description: 'Resumed' })
   @ApiResponse(NOT_FOUND)

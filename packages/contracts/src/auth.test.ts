@@ -2,11 +2,16 @@ import { describe, expect, test } from 'vitest';
 import {
   authMethodsResponseSchema,
   currentLegalVersions,
-  displayNameSchema,
   legalStatus,
-  magicLinkRequestSchema,
-  magicLinkVerifyRequestSchema,
+  changePasswordRequestSchema,
+  ERROR_CODES,
+  loginRequestSchema,
   meResponseSchema,
+  missingPasswordRules,
+  newPasswordSchema,
+  passwordChecks,
+  registerRequestSchema,
+  resetPasswordRequestSchema,
   updateMeRequestSchema,
 } from './index.js';
 
@@ -34,6 +39,7 @@ describe('meResponseSchema', () => {
       displayName: null,
       locale: 'uk',
       isOperator: false,
+      hasPassword: true,
       legal: legalStatus([]),
     };
     expect(meResponseSchema.parse(me)).toEqual(me);
@@ -52,7 +58,7 @@ describe('meResponseSchema', () => {
 });
 
 describe('authMethodsResponseSchema', () => {
-  const methods = { magicLink: true, google: false, turnstileSiteKey: 'k' };
+  const methods = { password: true, google: false, turnstileSiteKey: 'k' };
 
   test('carries the current legal versions', () => {
     const body = { ...methods, legal: currentLegalVersions() };
@@ -61,59 +67,85 @@ describe('authMethodsResponseSchema', () => {
   });
 });
 
-describe('magicLinkRequestSchema', () => {
-  const legal = { terms: 'v1', privacy: 'v1' };
-
-  test('normalizes the email', () => {
-    expect(
-      magicLinkRequestSchema.parse({ email: ' Anton@Example.COM ', turnstileToken: 't', legal })
-        .email,
-    ).toBe('anton@example.com');
+describe('the password rules (ADR 0019)', () => {
+  test('each rule on its own', () => {
+    expect(passwordChecks('')).toEqual({
+      length: false,
+      upper: false,
+      lower: false,
+      digit: false,
+      special: false,
+    });
+    expect(passwordChecks('Abcdefg1!')).toEqual({
+      length: true,
+      upper: true,
+      lower: true,
+      digit: true,
+      special: true,
+    });
+    // Any alphabet's letters count; a space is not a special character.
+    expect(passwordChecks('Пароль 1')).toMatchObject({ upper: true, lower: true, special: false });
   });
 
-  test('requires a Turnstile token and rejects extra keys', () => {
+  test('the missing rules come in the meter’s order', () => {
+    expect(missingPasswordRules('abc')).toEqual(['length', 'upper', 'digit', 'special']);
+    expect(missingPasswordRules('Abcdefg1!')).toEqual([]);
+  });
+
+  test('a new password meets every rule, 128 characters at most, no control characters', () => {
+    expect(newPasswordSchema.safeParse('Abcdefg1!').success).toBe(true);
+    expect(newPasswordSchema.safeParse('abcdefg1!').success).toBe(false);
+    expect(newPasswordSchema.safeParse(`Aa1!${'x'.repeat(125)}`).success).toBe(false);
+    expect(newPasswordSchema.safeParse('Abcdefg1!\n').success).toBe(false);
+  });
+});
+
+describe('registration and sign-in requests', () => {
+  const legal = currentLegalVersions();
+
+  test('registration normalizes the address and needs the rules, Turnstile and the legal box', () => {
     expect(
-      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: '', legal }).success,
+      registerRequestSchema.parse({
+        email: ' Anton@Example.COM ',
+        password: 'Abcdefg1!',
+        turnstileToken: 't',
+        legal,
+      }).email,
+    ).toBe('anton@example.com');
+    const base = { email: 'a@b.io', password: 'Abcdefg1!', turnstileToken: 't', legal };
+    expect(registerRequestSchema.safeParse({ ...base, password: 'short' }).success).toBe(false);
+    expect(registerRequestSchema.safeParse({ ...base, turnstileToken: '' }).success).toBe(false);
+    const withoutLegal: Record<string, unknown> = { ...base };
+    delete withoutLegal.legal;
+    expect(registerRequestSchema.safeParse(withoutLegal).success).toBe(false);
+    expect(registerRequestSchema.safeParse({ ...base, confirm: 'x' }).success).toBe(false);
+  });
+
+  test('login takes any typed password: older ones need not meet today’s rules', () => {
+    expect(loginRequestSchema.safeParse({ email: 'a@b.io', password: 'old' }).success).toBe(true);
+    expect(loginRequestSchema.safeParse({ email: 'a@b.io', password: '' }).success).toBe(false);
+  });
+
+  test('reset and change need a rule-abiding new password', () => {
+    const token = 'a'.repeat(43);
+    expect(resetPasswordRequestSchema.safeParse({ token, password: 'Abcdefg1!' }).success).toBe(
+      true,
+    );
+    expect(
+      resetPasswordRequestSchema.safeParse({ token: 'x', password: 'Abcdefg1!' }).success,
     ).toBe(false);
     expect(
-      magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't', legal, x: 1 })
+      changePasswordRequestSchema.safeParse({ currentPassword: 'old', newPassword: 'weak' })
         .success,
     ).toBe(false);
   });
 
-  test('requires well-formed legal versions (the sign-in checkbox, server side)', () => {
-    expect(magicLinkRequestSchema.safeParse({ email: 'a@b.io', turnstileToken: 't' }).success).toBe(
-      false,
-    );
-    expect(
-      magicLinkRequestSchema.safeParse({
-        email: 'a@b.io',
-        turnstileToken: 't',
-        legal: { terms: '<script>', privacy: 'v1' },
-      }).success,
-    ).toBe(false);
-  });
-});
-
-describe('magicLinkVerifyRequestSchema', () => {
-  test('accepts only 43-character base64url tokens', () => {
-    expect(magicLinkVerifyRequestSchema.safeParse({ token: 'A'.repeat(43) }).success).toBe(true);
-    expect(magicLinkVerifyRequestSchema.safeParse({ token: 'A'.repeat(42) }).success).toBe(false);
-    expect(magicLinkVerifyRequestSchema.safeParse({ token: `${'A'.repeat(42)}=` }).success).toBe(
-      false,
-    );
-  });
-});
-
-describe('displayNameSchema', () => {
-  test('trims and accepts 1–80 characters on one line', () => {
-    expect(displayNameSchema.parse('  Оля Коваль ')).toBe('Оля Коваль');
-    expect(displayNameSchema.safeParse('я'.repeat(80)).success).toBe(true);
-  });
-
-  test('rejects blank, too long and control characters', () => {
-    for (const value of ['   ', 'я'.repeat(81), 'Оля\nКоваль', 'A\u0000']) {
-      expect(displayNameSchema.safeParse(value).success).toBe(false);
-    }
+  test('the sign-in error codes are appended', () => {
+    expect(ERROR_CODES.slice(-4)).toEqual([
+      'INVALID_CREDENTIALS',
+      'EMAIL_NOT_VERIFIED',
+      'AUTH_TOKEN_INVALID',
+      'CURRENT_PASSWORD_INVALID',
+    ]);
   });
 });

@@ -23,6 +23,7 @@ import { errorMessageKey } from '@/errors/error-message';
 import { PermissionSummary } from '@/guest-links/permission-summary';
 import { CreateLinkDialog } from './create-link-dialog';
 import { LinkListRow } from './link-list-row';
+import { writeLock } from '../../../access-model';
 
 const SHORT_DATE = { day: '2-digit', month: '2-digit', year: 'numeric' } as const;
 
@@ -46,10 +47,13 @@ export function LinksList({
   const main = items.find((link) => link.isDefault && link.status !== 'REVOKED');
   const extra = items.filter((link) => !link.isDefault && link.status !== 'REVOKED');
   const revoked = items.filter((link) => !link.isDefault && link.status === 'REVOKED');
+  const lock = writeLock(collection);
   return (
     <div className="grid gap-10">
       {collection.status === 'ARCHIVED' ? (
         <Alert variant="info">{t('archivedNotice')}</Alert>
+      ) : lock.locked ? (
+        <Alert variant="info">{t('readOnlyNotice')}</Alert>
       ) : null}
       {main === undefined ? null : (
         <section aria-labelledby="main-link" className="grid gap-3">
@@ -66,7 +70,7 @@ export function LinksList({
           </ul>
         </section>
       )}
-      <ExtraLinks collectionId={collection.id} count={extra.length}>
+      <ExtraLinks collectionId={collection.id} count={extra.length} lock={lock}>
         <ul className="divide-y rounded-sheet border bg-card shadow-card">
           {extra.map((link) => (
             <LinkListRow
@@ -86,16 +90,25 @@ export function LinksList({
 function ExtraLinks({
   collectionId,
   count,
+  lock,
   children,
 }: {
   collectionId: string;
   count: number;
+  /** Read-only (ADR 0018): «Нове посилання» is off and says why. */
+  lock: ReturnType<typeof writeLock>;
   children: ReactNode;
 }) {
   const t = useTranslations('links.extra');
   const [creating, setCreating] = useState(false);
   const create = (
-    <Button variant="outline" className="w-full sm:w-auto" onClick={() => setCreating(true)}>
+    <Button
+      variant="outline"
+      className="w-full sm:w-auto"
+      disabled={lock.locked}
+      aria-describedby={lock.describedBy}
+      onClick={() => setCreating(true)}
+    >
       <Plus aria-hidden="true" />
       {t('new')}
     </Button>

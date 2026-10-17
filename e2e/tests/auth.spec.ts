@@ -1,6 +1,18 @@
 import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
-import { newEmail, requestLink, SIGN_IN_UK, signIn } from '../support/auth.js';
+import {
+  confirmEmail,
+  E2E_PASSWORD,
+  fillRegistration,
+  logInWithPassword,
+  newEmail,
+  register,
+  REGISTER_UK,
+  SIGN_IN_UK,
+  signIn,
+  VERIFY_UK,
+} from '../support/auth.js';
+import { latestAuthLink, messageIds } from '../support/mailpit.js';
 
 // Ukrainian UI (no supported browser language → default locale).
 test.use({ locale: 'de-DE' });
@@ -11,28 +23,121 @@ const T = {
   appTitle: 'Колекції',
   settings: 'Акаунт',
   back: 'До колекцій',
-  invalid: 'Посилання недійсне або вже використане. Отримайте нове.',
-  invalidTitle: 'Посилання не спрацювало',
-  newLink: 'Отримати нове посилання',
+  invalid: VERIFY_UK.invalid,
+  invalidTitle: VERIFY_UK.invalidTitle,
+  newLink: 'Увійти й отримати новий лист',
 };
 
-test('magic link: prefetching the link does not use it up (Review Focus 1)', async ({ page }) => {
+const NEW_PASSWORD = 'Nov1y-parol!';
+
+test('register → confirm: opening the link twice does not use it up; then password sign-in', async ({
+  page,
+}) => {
   const email = newEmail();
-  const link = await requestLink(page, email);
+  const link = await register(page, email);
+
+  // Not confirmed yet: the right password asks to confirm the address.
+  await page.goto('/login');
+  await page.getByLabel(T.email).fill(email);
+  await page.getByLabel(T.password, { exact: true }).fill(E2E_PASSWORD);
+  await page.getByRole('button', { name: T.submit, exact: true }).click();
+  await expect(page.getByRole('heading', { name: VERIFY_UK.title })).toBeVisible();
 
   // A mail scanner (or the user) opening the link twice must not consume it.
   await page.goto(link);
   await expect(page.getByText(email)).toBeVisible();
-  await page.goto(link);
-  await expect(page.getByText(`Ви входите як ${email}`)).toBeVisible();
-
-  await page.getByRole('button', { name: T.signIn }).click();
+  await confirmEmail(page, link);
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText(email)).toBeVisible();
 
   // Used once, the same link is now invalid.
   await page.goto(link);
   await expect(page.getByText(T.invalid)).toBeVisible();
+
+  // Signed out, the password signs in; a wrong one gets the one answer for both mistakes.
+  await page.context().clearCookies();
+  await page.goto('/login');
+  await page.getByLabel(T.email).fill(email);
+  await page.getByLabel(T.password, { exact: true }).fill(NEW_PASSWORD);
+  await page.getByRole('button', { name: T.submit, exact: true }).click();
+  await expect(page.getByText(T.invalidCredentials)).toBeVisible();
+  await logInWithPassword(page, email);
+  await expect(page).toHaveURL(/\/app$/);
+});
+
+test('the meter says what is missing; «Створити акаунт» needs the rules and the match', async ({
+  page,
+}) => {
+  await page.goto('/register');
+  await expect(page.getByRole('heading', { name: REGISTER_UK.title })).toBeVisible();
+  const password = page.getByLabel(REGISTER_UK.password, { exact: true });
+  const meter = page.getByRole('meter');
+  await password.fill('abc');
+  // Not colour alone: the checklist names every rule and its state.
+  await expect(meter).toHaveAttribute('aria-valuenow', '1');
+  await expect(page.getByText('8+ символів').first()).toBeVisible();
+  await password.fill('Abcdefg1!');
+  await expect(meter).toHaveAttribute('aria-valuenow', '5');
+  await page.getByLabel(REGISTER_UK.confirm).fill('Abcdefg1?');
+  await page.getByLabel(REGISTER_UK.email).click();
+  await expect(page.getByText('Паролі не збігаються')).toBeVisible();
+});
+
+test('«Забули пароль?» → the mailed link sets a new password, ends the other session, works once', async ({
+  page,
+  browser,
+}) => {
+  const email = newEmail();
+  await signIn(page, email);
+  const other = await (await browser.newContext({ locale: 'de-DE' })).newPage();
+  const seen = await messageIds(email);
+  await other.goto('/login');
+  await other.getByRole('link', { name: T.forgot }).click();
+  await expect(other).toHaveURL(/\/forgot-password$/);
+  await other.getByLabel(T.email).fill(email);
+  const send = other.getByRole('button', { name: 'Надіслати посилання' });
+  await expect(send).toBeEnabled({ timeout: 20_000 });
+  await send.click();
+  await expect(other.getByRole('heading', { name: 'Перевірте пошту' })).toBeVisible();
+  const link = await latestAuthLink(email, 'reset', 15_000, seen);
+
+  await other.goto(link);
+  await other.getByLabel('Новий пароль', { exact: true }).fill(NEW_PASSWORD);
+  await other.getByLabel('Підтвердіть новий пароль').fill(NEW_PASSWORD);
+  await other.getByRole('button', { name: 'Зберегти й увійти' }).click();
+  await expect(other).toHaveURL(/\/app$/);
+
+  // The first browser's session ended with the reset.
+  await page.goto('/app');
+  await expect(page).toHaveURL(/\/login$/);
+  await logInWithPassword(page, email, NEW_PASSWORD);
+  await expect(page).toHaveURL(/\/app$/);
+  // The link is single-use.
+  await other.goto(link);
+  await other.getByLabel('Новий пароль', { exact: true }).fill(E2E_PASSWORD);
+  await other.getByLabel('Підтвердіть новий пароль').fill(E2E_PASSWORD);
+  await other.getByRole('button', { name: 'Зберегти й увійти' }).click();
+  await expect(other.getByText(T.invalid)).toBeVisible();
+  await other.context().close();
+});
+
+test('«Акаунт» → «Пароль»: the current one is required, then the new one signs in', async ({
+  page,
+}) => {
+  const email = newEmail();
+  await signIn(page, email);
+  await page.goto('/app/account');
+  await page.getByLabel('Поточний пароль').fill(NEW_PASSWORD);
+  await page.getByLabel('Новий пароль', { exact: true }).fill(NEW_PASSWORD);
+  await page.getByLabel('Підтвердіть новий пароль').fill(NEW_PASSWORD);
+  await page.getByRole('button', { name: 'Змінити пароль' }).click();
+  await expect(page.getByText('Поточний пароль невірний.')).toBeVisible();
+  await page.getByLabel('Поточний пароль').fill(E2E_PASSWORD);
+  await page.getByRole('button', { name: 'Змінити пароль' }).click();
+  await expect(page.locator('[data-slot="toast-title"]')).toHaveText('Пароль змінено');
+  await page.context().clearCookies();
+  await logInWithPassword(page, email, NEW_PASSWORD);
+  await expect(page).toHaveURL(/\/app$/);
 });
 
 test('logout ends the session and /app sends you back to /login', async ({ page }) => {
@@ -94,29 +199,32 @@ test('/login and /app fit the viewport without horizontal scroll', async ({ page
 test('the sign-in form works with the keyboard only', async ({ page, isMobile }) => {
   test.skip(isMobile, 'keyboard navigation is a desktop concern');
   const email = newEmail();
+  await confirmEmail(page, await register(page, email));
+  await page.context().clearCookies();
   await page.goto('/login');
   const field = page.getByLabel(T.email);
-  const submit = page.getByRole('button', { name: T.submit });
-  const legal = page.getByRole('checkbox', { name: T.legal });
+  const password = page.getByLabel(T.password, { exact: true });
   const focused = (locator: typeof field) =>
     locator.evaluate((el) => el === document.activeElement);
-  // Unticked, the submit stays disabled whatever Turnstile does (ADR 0016).
-  await expect(submit).toBeDisabled();
   // Tab from the start of the page to the email field.
   for (let i = 0; i < 10 && !(await focused(field)); i++) await page.keyboard.press('Tab');
   await expect(field).toBeFocused();
   await page.keyboard.type(email);
-  // Tab on to the checkbox, which comes before the submit.
-  for (let i = 0; i < 6 && !(await focused(legal)); i++) await page.keyboard.press('Tab');
-  await expect(legal).toBeFocused();
-  await page.keyboard.press('Space');
-  await expect(legal).toBeChecked();
-  await expect(submit).toBeEnabled({ timeout: 20_000 });
-  // Past the sentence's two document links to the submit.
-  for (let i = 0; i < 4 && !(await focused(submit)); i++) await page.keyboard.press('Tab');
-  await expect(submit).toBeFocused();
+  // On past «Забули пароль?» to the password.
+  for (let i = 0; i < 4 && !(await focused(password)); i++) await page.keyboard.press('Tab');
+  await expect(password).toBeFocused();
+  await page.keyboard.type(E2E_PASSWORD);
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: T.sent })).toBeVisible();
+  await expect(page).toHaveURL(/\/app$/);
+});
+
+test('the registration form works with the keyboard only', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'keyboard navigation is a desktop concern');
+  await fillRegistration(page, newEmail());
+  const submit = page.getByRole('button', { name: REGISTER_UK.submit });
+  await submit.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: REGISTER_UK.sent })).toBeVisible();
 });
 
 test('«Вийти» works with the keyboard only', async ({ page, isMobile }) => {

@@ -3,7 +3,8 @@
 // Design pass (slice 9b, Task 7; frontend-design, ui-ux-pro-max, web-design-guidelines,
 // responsive-design): the admins' appeals, the report queue's twin so the operator reads both
 // the same way. Decisions:
-// - three statuses as the V1 segmented tabs (Нові / Задоволені / Відхилені), driven by `?status=`;
+// - three statuses as the console's tabs (`OpsTabs`: Нові / Задоволені / Відхилені), links to
+//   `?status=`;
 // - from `md` a dense table: received, what it is about («Фото #086» or «Колекція»), the measure
 //   as it stands now (a badge in words: Приховано / У карантині / Заблоковано / Знято), the
 //   collection; each row one link. Below `md` the same fields as stacked cards;
@@ -15,18 +16,16 @@ import { Badge } from '@stepler/ui/components/badge';
 import { Button } from '@stepler/ui/components/button';
 import { EmptyState, formatFrameNumber } from '@stepler/ui/components/empty-state';
 import { Skeleton } from '@stepler/ui/components/skeleton';
-import { Tabs, TabsList, TabsTrigger } from '@stepler/ui/components/tabs';
 import { FolderOpen } from 'lucide-react';
 import { useFormatter, useNow, useTranslations } from 'next-intl';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { APPEAL_TABS, MEASURE_BADGE, paramOfAppealStatus } from './appeal-labels';
 import { fetchAppeals, opsKeys } from './api/operator';
 import { ContentKindIcon } from './content-kind-icon';
+import { OpsPageHeader, OpsTabs } from './ops-page';
 
 export function AppealQueue({ status }: { status: AppealStatus }) {
   const t = useTranslations('ops');
-  const router = useRouter();
   const query = useInfiniteQuery({
     queryKey: opsKeys.appeals(status),
     queryFn: ({ pageParam, signal }) => fetchAppeals({ status, cursor: pageParam }, signal),
@@ -37,23 +36,21 @@ export function AppealQueue({ status }: { status: AppealStatus }) {
 
   return (
     <section aria-labelledby="ops-appeals-title" className="grid gap-5">
-      <h1 id="ops-appeals-title" className="type-h1">
-        {t('appeals.title')}
-      </h1>
-      <Tabs
-        value={status}
-        onValueChange={(value) =>
-          router.replace(`/ops/appeals?status=${paramOfAppealStatus(value as AppealStatus)}`)
-        }
-      >
-        <TabsList variant="segmented" aria-label={t('appeals.tabsLabel')}>
-          {APPEAL_TABS.map((tab) => (
-            <TabsTrigger key={tab} value={tab}>
-              {t(`appeals.statuses.${tab}`)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <OpsPageHeader
+        id="ops-appeals-title"
+        title={t('appeals.title')}
+        description={t('appeals.intro')}
+      />
+      <OpsTabs
+        replace
+        label={t('appeals.tabsLabel')}
+        tabs={APPEAL_TABS.map((tab) => ({
+          key: tab,
+          href: `/ops/appeals?status=${paramOfAppealStatus(tab)}`,
+          label: t(`appeals.statuses.${tab}`),
+          current: tab === status,
+        }))}
+      />
 
       {query.isPending ? (
         <QueueSkeleton />
@@ -197,14 +194,14 @@ function AppealCards({ rows }: { rows: OperatorAppealRow[] }) {
   const t = useTranslations('ops');
   const received = useReceived();
   return (
-    <ul className="grid gap-2 md:hidden">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 md:hidden">
       {rows.map((row) => {
         const at = received(row);
         return (
           <li key={row.id}>
             <Link
               href={`/ops/appeals/${row.id}`}
-              className="grid min-h-11 gap-2 rounded-sheet border bg-card p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="grid min-h-11 min-w-0 gap-2 rounded-sheet border bg-card p-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0 font-medium">

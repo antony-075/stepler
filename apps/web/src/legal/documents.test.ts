@@ -85,8 +85,8 @@ describe('slugs', () => {
   });
 
   test('file names carry slug, locale and version', () => {
-    expect(legalDocumentFile('TERMS', 'uk')).toMatch(/content\/legal\/terms\.uk\.v2\.md$/);
-    expect(legalDocumentFile('PRIVACY', 'en')).toMatch(/content\/legal\/privacy\.en\.v2\.md$/);
+    expect(legalDocumentFile('TERMS', 'uk')).toMatch(/content\/legal\/terms\.uk\.v3\.md$/);
+    expect(legalDocumentFile('PRIVACY', 'en')).toMatch(/content\/legal\/privacy\.en\.v3\.md$/);
   });
 });
 
@@ -119,5 +119,71 @@ describe('v2 drafts', () => {
     expect(en).toContain('90 days');
     const privacy = readFileSync(legalDocumentFile('PRIVACY', 'uk'), 'utf8');
     expect(privacy).toContain('карантині');
+  });
+});
+
+// v3 (billing, plan Task 22): the sections the payment flows rely on; unknowns stay marked.
+describe('v3 payment sections', () => {
+  const read = (file: string) =>
+    readFileSync(new URL(`../../content/legal/${file}`, import.meta.url), 'utf8');
+
+  test.each([
+    [
+      'terms.uk.v3.md',
+      [
+        'Оплата і тарифи',
+        'Автоматичне продовження підписки',
+        'Скасування',
+        'Повернення коштів',
+        'Пробний період',
+        'Режим лише для перегляду і зберігання даних',
+        'Видалення даних після закінчення оплаченого періоду',
+      ],
+    ],
+    [
+      'terms.en.v3.md',
+      [
+        'Payment and plans',
+        'Automatic renewal of a subscription',
+        'Cancellation',
+        'Refunds',
+        'Trial',
+        'View-only mode and keeping data',
+        'Deleting data after the paid period',
+      ],
+    ],
+  ])('%s has the payment sections', (file, headings) => {
+    const sections = read(file)
+      .split('\n')
+      .filter((line) => line.startsWith('## '))
+      .map((line) => line.replace(/^## \d+\. /, ''));
+    for (const heading of headings) expect(sections).toContain(heading);
+  });
+
+  test.each([
+    ['terms.uk.v3.md', 'ПЛЕЙСХОЛДЕР'],
+    ['terms.en.v3.md', 'PLACEHOLDER'],
+  ])('%s keeps every unknown as a marked placeholder', (file, mark) => {
+    const text = read(file);
+    for (const topic of [
+      /ціни|prices/,
+      /ЄДРПОУ/,
+      /адреса|address/,
+      /чеки|receipts/,
+      /повернен|refund/,
+    ]) {
+      const marked = [...text.matchAll(new RegExp(`\\[${mark}: [^\\]]+\\]`, 'g'))].map((m) => m[0]);
+      expect(marked.some((m) => topic.test(m))).toBe(true);
+    }
+  });
+
+  test.each([
+    ['privacy.uk.v3.md', 'Платіжні дані', 'лише для перегляду 90 днів'],
+    ['privacy.en.v3.md', 'Payment data', 'view-only for 90 days'],
+  ])('%s describes payment data and the 90-day view-only retention', (file, heading, retention) => {
+    const text = read(file);
+    expect(text).toContain(`### ${heading}`);
+    expect(text).toContain('LiqPay');
+    expect(text).toContain(retention);
   });
 });

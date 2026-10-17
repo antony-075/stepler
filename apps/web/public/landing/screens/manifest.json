@@ -1,0 +1,154 @@
+{
+  "en/admin-collection.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "en/admin-collection@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "en/admin-dashboard.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "en/admin-dashboard@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "en/admin-editor.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "en/admin-editor@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "en/admin-new.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "en/admin-new@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "en/admin-share.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "en/admin-share@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "en/guest-classic.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-frames.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-fullscreen.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-journal.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-minimal.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-party.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-postcard.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-upload.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "en/guest-wish.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/admin-collection.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "uk/admin-collection@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "uk/admin-dashboard.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "uk/admin-dashboard@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "uk/admin-editor.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "uk/admin-editor@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "uk/admin-new.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "uk/admin-new@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "uk/admin-share.webp": {
+    "width": 1440,
+    "height": 900
+  },
+  "uk/admin-share@2x.webp": {
+    "width": 2880,
+    "height": 1800
+  },
+  "uk/guest-classic.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-frames.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-fullscreen.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-journal.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-minimal.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-party.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-postcard.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-upload.webp": {
+    "width": 780,
+    "height": 1688
+  },
+  "uk/guest-wish.webp": {
+    "width": 780,
+    "height": 1688
+  }
+}

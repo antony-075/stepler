@@ -1,23 +1,45 @@
 import { z } from 'zod';
-import { mailEnvShape, parseEnv, positiveInt, sharedEnvShape } from '../config/env.js';
+import {
+  billingEnvShape,
+  bool,
+  checkBillingEnv,
+  mailEnvShape,
+  parseEnv,
+  positiveInt,
+  sharedEnvShape,
+} from '../config/env.js';
 
 /**
  * The worker's environment: database, storage, mail and its own tuning. It sends the report
  * mail (slice 9, [P1]), so it needs SMTP, `APP_ORIGIN` (the console links) and
  * `OPERATOR_EMAILS`, like the API. No Turnstile or APP_SECRET: it handles no tokens.
  */
-const workerEnvSchema = z.object({
-  ...sharedEnvShape,
-  ...mailEnvShape,
-  /** Media jobs run at once in one worker (sharp/ffmpeg memory, spike S5). */
-  WORKER_MEDIA_CONCURRENCY: positiveInt(1),
-  /** Objects deleted per storage call and rows per sweep step (S3 allows ≤ 1000 per call). */
-  WORKER_PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(500),
-  /** Guest sessions idle this long with no content are deleted (the cookie's Max-Age is 400 days). */
-  GUEST_SESSION_IDLE_DAYS: positiveInt(400),
-  /** A reporter's address is deleted this long after the report at the latest ([Q6]). */
-  REPORT_EMAIL_RETENTION_DAYS: positiveInt(90),
-});
+const workerEnvSchema = z
+  .object({
+    ...sharedEnvShape,
+    ...mailEnvShape,
+    /** Reconciliation through the provider's `status` API (plan Task 13). */
+    ...billingEnvShape,
+    /** Media jobs run at once in one worker (sharp/ffmpeg memory, spike S5). */
+    WORKER_MEDIA_CONCURRENCY: positiveInt(1),
+    /** Objects deleted per storage call and rows per sweep step (S3 allows ≤ 1000 per call). */
+    WORKER_PURGE_BATCH_SIZE: z.coerce.number().int().min(1).max(1000).default(500),
+    /** Guest sessions idle this long with no content are deleted (the cookie's Max-Age is 400 days). */
+    GUEST_SESSION_IDLE_DAYS: positiveInt(400),
+    /** A reporter's address is deleted this long after the report at the latest ([Q6]). */
+    REPORT_EMAIL_RETENTION_DAYS: positiveInt(90),
+    /**
+     * Billing (ADR 0018 [B8]): read-only content of an account is kept this many days after its
+     * trial or plan ended, then deleted (owner 2026-10-15: 90 days, was 12 months).
+     */
+    READ_ONLY_RETENTION_DAYS: positiveInt(90),
+    /**
+     * The retention clock deletes due collections only when `true` (plan [P6]): off until the
+     * legal texts that describe retention are published. Warnings go out either way.
+     */
+    BILLING_RETENTION_DELETE_ENABLED: bool.default(false),
+  })
+  .superRefine(checkBillingEnv);
 
 export type WorkerEnv = z.infer<typeof workerEnvSchema>;
 

@@ -457,6 +457,11 @@ describe('JobRunner', () => {
       noop('mail.report-received') as never,
       noop('mail.report-decision') as never,
       noop('mail.appeal-received') as never,
+      noop('billing.retention') as never,
+      noop('mail.billing-read-only') as never,
+      noop('mail.billing-deletion-warning') as never,
+      noop('billing.reconcile') as never,
+      noop('mail.billing-renewal-failed') as never,
     );
   }
   const job = (retryCount: number) =>

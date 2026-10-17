@@ -690,7 +690,7 @@ test.describe('dashboard card and settings layout (owner review 2026-10-02)', ()
 });
 
 test.describe('admin navigation (owner decisions 2026-10-02)', () => {
-  test('the sidebar has the two sections only; breadcrumbs say where you are', async ({
+  test('the sidebar has its three sections only; breadcrumbs say where you are', async ({
     page,
     isMobile,
   }) => {
@@ -698,7 +698,7 @@ test.describe('admin navigation (owner decisions 2026-10-02)', () => {
     await signIn(page, newEmail());
     const { id } = await createCollectionViaApi(page, 'Ювілей');
     const nav = page.getByRole('navigation', { name: 'Розділи' });
-    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт']);
+    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт', 'Тариф і оплата']);
     await expect(nav.getByRole('link', { name: 'Колекції' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -710,7 +710,7 @@ test.describe('admin navigation (owner decisions 2026-10-02)', () => {
       'aria-current',
       'true',
     );
-    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт']);
+    await expect(nav.getByRole('link')).toHaveText(['Колекції', 'Акаунт', 'Тариф і оплата']);
     await expect(
       page.getByRole('navigation', { name: 'Де ви зараз' }).getByRole('listitem'),
     ).toHaveText(['Колекції', 'Ювілей']);
@@ -883,7 +883,8 @@ test('keyboard only: create a collection from the dashboard', async ({ page, isM
   const newButton = page.getByRole('button', { name: T.newCollection });
   for (
     let i = 0;
-    i < 10 && !(await newButton.evaluate((el) => el === document.activeElement));
+    // The sidebar's three sections and the trial line («Пробний період: ще …») come first.
+    i < 14 && !(await newButton.evaluate((el) => el === document.activeElement));
     i++
   ) {
     await page.keyboard.press('Tab');

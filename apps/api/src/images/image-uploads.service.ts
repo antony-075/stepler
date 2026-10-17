@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
   type CreateUploadRequest,
@@ -73,6 +74,7 @@ export class ImageUploadsService {
     private readonly inspector: UploadInspector,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -108,6 +110,8 @@ export class ImageUploadsService {
       }
       return this.replay(existing, body);
     }
+    // Before the storage call, so a read-only collection costs none; re-checked under the lock.
+    await this.gate.assertAdminCanWrite({ collectionId: collection.id });
     const open = await this.prisma.uploadSession.count({
       where: {
         collectionId: collection.id,
@@ -134,6 +138,7 @@ export class ImageUploadsService {
       row = await this.prisma.$transaction(async (tx) => {
         await this.usage.lockOwner(tx, collection.ownerId);
         const locked = await this.images.lockMutable(tx, a, collection.id);
+        await this.gate.assertAdminCanWrite({ collectionId: locked.id }, tx);
         await this.usage.assertCanReserve(tx, {
           userId: locked.ownerId,
           collectionId: locked.id,

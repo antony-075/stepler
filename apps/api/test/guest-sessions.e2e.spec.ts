@@ -109,6 +109,8 @@ describe('guest sessions [C3]', () => {
       },
       // Contribution-only: no counts (DESIGN-SYSTEM §11.3).
       counts: null,
+      // The owner's plan is live (ADR 0018).
+      contribution: 'OPEN',
     });
     // The session id never leaves the cookie.
     expect(JSON.stringify(res.body)).not.toContain(sessions[0]?.id);

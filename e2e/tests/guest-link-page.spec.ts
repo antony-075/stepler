@@ -5,6 +5,7 @@ import {
   createCollectionViaApi,
   horizontalOverflow,
 } from '../support/collections.js';
+import { showFrames } from '../support/guest.js';
 
 // Ukrainian UI (no supported browser language → default locale).
 test.use({ locale: 'de-DE' });
@@ -43,19 +44,21 @@ test.describe('guest link page', () => {
     expect(res?.headers()['x-robots-tag']).toBe('noindex');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Весілля Олі та Тараса');
     await expect(page.getByText('Субота, 14 червня.')).toBeVisible();
-    // The main link is contribution-only: the guest learns who sees what they add.
-    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     // Never the token or the title in the tab title.
     await expect(page).toHaveTitle('Stepler');
     // Files are the main action (PR C); the wish is the second one.
     await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Додати фото й відео' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Написати побажання' }).first()).toBeVisible();
+    // The main link is contribution-only: in «Кадри» the guest learns who sees what they add.
+    await showFrames(page);
+    await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
   });
 
   test('the header language select switches the guest page to English', async ({ page }) => {
     const { url } = await setUp(page, 'Весілля Олі та Тараса');
     await page.goto(url);
+    await showFrames(page);
     await expect(page.getByText('Ваші кадри побачить лише організатор')).toBeVisible();
     await page.getByRole('combobox', { name: 'Мова' }).click();
     await page.getByRole('option', { name: 'English', exact: true }).click();

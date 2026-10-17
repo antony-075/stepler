@@ -41,13 +41,62 @@ export async function submitTextViaApi(
   return (await res.json()) as { id: string; frameNo: number };
 }
 
-/** The pencil action; the first time the name prompt comes first («Пропустити» opens the picker). */
+/** The upload sheet (owner remark 2026-10-16: uploads run in their own sheet). */
+export const uploadSheet = (guest: Page) => guest.getByRole('dialog', { name: 'Завантаження' });
+
+/** One of the page's two tabs («Додати» / «Кадри»). */
+const viewTab = (guest: Page, name: 'Додати' | 'Кадри') =>
+  guest.getByRole('tab', { name: new RegExp(`^${name}`) });
+
+/** Folds the upload sheet when it is open. */
+async function foldSheet(guest: Page): Promise<void> {
+  if (await uploadSheet(guest).isVisible()) {
+    await uploadSheet(guest).getByRole('button', { name: 'Згорнути' }).click();
+    await expect(uploadSheet(guest)).toBeHidden();
+  }
+}
+
+/**
+ * Switches to a view on phones and tablets. From 1024px both views show and the tabs are
+ * hidden; a view-only link has none. Right after a load the page may not be drawn yet, so the
+ * template root and then the tab are awaited.
+ */
+async function showView(guest: Page, name: 'Додати' | 'Кадри'): Promise<void> {
+  await foldSheet(guest);
+  if ((guest.viewportSize()?.width ?? 1280) >= 1024) return;
+  await guest.locator('[data-template]').first().waitFor();
+  const tab = viewTab(guest, name);
+  // A view-only link has no tabs: a short wait for them, then nothing to switch.
+  const present = await tab.waitFor({ state: 'visible', timeout: 3000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!present) return;
+  await tab.click();
+  await expect(tab).toHaveAttribute('aria-selected', 'true');
+}
+
+/** The guest's frames: the sheet folded, then «Кадри» on phones and tablets. */
+export const showFrames = (guest: Page) => showView(guest, 'Кадри');
+
+/** The «Додати» view, where the actions are (the sheet folded first). */
+export const showAdd = (guest: Page) => showView(guest, 'Додати');
+
+/**
+ * The pencil action, or «Додати ще» in the open upload sheet; the first time the name prompt
+ * comes first («Пропустити» opens the picker). The sheet opens with the picked files.
+ */
 export async function pickFiles(guest: Page, files: Parameters<Page['setInputFiles']>[1]) {
   const chooser = guest.waitForEvent('filechooser');
-  await guest
-    .getByRole('button', { name: /^Додати (фото й відео|ще)$/ })
-    .first()
-    .click();
+  if (await uploadSheet(guest).isVisible()) {
+    await uploadSheet(guest).getByRole('button', { name: 'Додати ще' }).click();
+  } else {
+    await showAdd(guest);
+    await guest
+      .getByRole('button', { name: /^Додати (фото й відео|фото|відео|документи)$/ })
+      .first()
+      .click();
+  }
   // Before the first contribution the name prompt comes first; «Пропустити» opens the picker.
   const prompt = guest.getByRole('dialog', { name: 'Як вас звати?' });
   const first = await Promise.race([

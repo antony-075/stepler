@@ -1,23 +1,22 @@
 import { describe, expect, test } from 'vitest';
 import { testEnv } from '../../test/support/env.js';
+import type { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { LimitsService } from './limits.service.js';
+
+// Entitlement-backed limits (`forUser`, `forCollection`) are integration-tested against the
+// database (test/entitlements.e2e.spec.ts); these are the config-backed ones.
+const noEntitlements = {} as EntitlementResolver;
 
 describe('LimitsService', () => {
   test('returns config defaults', () => {
-    const limits = new LimitsService(testEnv());
-    expect(limits.magicLink()).toEqual({
-      perEmailPerHour: 5,
-      perIpPerHour: 20,
-      previewPerIpPerHour: 60,
-    });
-    expect(limits.forUser({ id: 'u1' })).toEqual({
-      activeCollections: 3,
-      collectionCreationsPerDay: 10,
-      storageBytes: 20n * 1024n ** 3n,
-    });
-    expect(limits.forCollection({ id: 'c1' })).toEqual({
-      storageBytes: 10n * 1024n ** 3n,
-      guestLinks: 10,
+    const limits = new LimitsService(testEnv(), noEntitlements);
+    expect(limits.auth()).toEqual({
+      emailsPerAddressPerHour: 5,
+      emailsPerIpPerHour: 20,
+      tokenChecksPerIpPerHour: 60,
+      loginAttemptsPerIpPerHour: 60,
+      loginFailuresPerAddressIpPer15Min: 10,
+      loginFailuresPerAddressPerHour: 30,
     });
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(120);
     expect(limits.guestSessionCreatePerIpPerMinute()).toBe(120);
@@ -40,25 +39,16 @@ describe('LimitsService', () => {
   test('applies env overrides', () => {
     const limits = new LimitsService(
       testEnv({
-        LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR: '2',
-        LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT: '7',
-        LIMIT_STORAGE_BYTES_PER_ACCOUNT: '1000',
-        LIMIT_COLLECTION_CREATIONS_PER_DAY: '4',
-        LIMIT_GUEST_LINKS_PER_COLLECTION: '2',
+        LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR: '2',
         LIMIT_GUEST_LINK_RESOLVE_PER_IP_PER_MINUTE: '30',
         LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE: '40',
         LIMIT_FILE_BYTES_VIDEO: '3000000000',
       }),
+      noEntitlements,
     );
     expect(limits.guestSessionCreatePerIpPerMinute()).toBe(40);
     expect(limits.fileRules().fileBytes.VIDEO).toBe(3_000_000_000n);
     expect(limits.guestLinkResolvePerIpPerMinute()).toBe(30);
-    expect(limits.forCollection({ id: 'c1' }).guestLinks).toBe(2);
-    expect(limits.magicLink().perEmailPerHour).toBe(2);
-    expect(limits.forUser({ id: 'u1' })).toEqual({
-      activeCollections: 7,
-      collectionCreationsPerDay: 4,
-      storageBytes: 1000n,
-    });
+    expect(limits.auth().emailsPerAddressPerHour).toBe(2);
   });
 });

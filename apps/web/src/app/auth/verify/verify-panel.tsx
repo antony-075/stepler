@@ -1,9 +1,9 @@
 'use client';
 
 import {
-  magicLinkPreviewResponseSchema,
-  magicLinkVerifyResponseSchema,
   meResponseSchema,
+  signedInResponseSchema,
+  verificationPreviewResponseSchema,
 } from '@stepler/contracts';
 import { Button } from '@stepler/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,12 +13,13 @@ import { useRouter } from 'next/navigation';
 import { apiRequest, isApiError } from '@/api/client';
 import { ME_QUERY_KEY } from '@/api/me';
 import { signInErrorMessage } from '@/errors/error-message';
-import { LegalDocumentLink } from '@/legal/legal-consent';
 import { BrandLoading } from '@/components/brand-loading';
 
 /**
- * Loading this page only previews the link (read-only), so email scanners that open it do
- * not use it up. The link is consumed only when the person presses Sign in (Review Focus 1).
+ * The e-mail confirmation link (ADR 0019). Loading this page only previews the link (read-only),
+ * so e-mail scanners that open it do not use it up; it is used only when the person presses
+ * «Підтвердити пошту», which also signs them in. The page shows whose address it confirms, so
+ * someone sent another account's link sees a foreign address before pressing.
  */
 export function VerifyPanel({
   token,
@@ -33,21 +34,21 @@ export function VerifyPanel({
   const queryClient = useQueryClient();
 
   const preview = useQuery({
-    queryKey: ['magic-link-preview', token],
+    queryKey: ['verification-preview', token],
     enabled: token !== null,
     queryFn: () =>
-      apiRequest('/auth/magic-link/preview', {
+      apiRequest('/auth/verification/preview', {
         method: 'POST',
         body: { token },
-        schema: magicLinkPreviewResponseSchema,
+        schema: verificationPreviewResponseSchema,
       }),
   });
   const verify = useMutation({
     mutationFn: () =>
-      apiRequest('/auth/magic-link/verify', {
+      apiRequest('/auth/verification/confirm', {
         method: 'POST',
         body: { token },
-        schema: magicLinkVerifyResponseSchema,
+        schema: signedInResponseSchema,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ME_QUERY_KEY });
@@ -75,7 +76,7 @@ export function VerifyPanel({
   }
 
   const failure =
-    token === null ? 'MAGIC_LINK_INVALID' : failureCode(preview.error ?? verify.error);
+    token === null ? 'AUTH_TOKEN_INVALID' : failureCode(preview.error ?? verify.error);
   if (failure !== null) {
     const retryable = failure === 'UPSTREAM_UNAVAILABLE' || failure === 'DEPENDENCY_UNAVAILABLE';
     const message = signInErrorMessage(t, failure, contactEmail);
@@ -116,16 +117,8 @@ export function VerifyPanel({
   return (
     <div className="grid gap-4">
       <h1 className={TITLE}>{t('verify.title')}</h1>
-      <p>{t('verify.signInAs', { email: preview.data.email })}</p>
+      <p>{t('verify.confirmAs', { email: preview.data.email })}</p>
       <p className="text-sm text-muted-foreground">{t('verify.notYou')}</p>
-      {/* ADR 0016: the card's tick was the requester's; the mailbox owner accepts here, by
-          signing in (recorded at verify). Placeholder copy the lawyer replaces (`verify.legal`). */}
-      <p className="text-sm text-pretty text-muted-foreground">
-        {t.rich('verify.legal', {
-          terms: (chunks) => <LegalDocumentLink document="TERMS">{chunks}</LegalDocumentLink>,
-          privacy: (chunks) => <LegalDocumentLink document="PRIVACY">{chunks}</LegalDocumentLink>,
-        })}
-      </p>
       <Button size="lg" disabled={verify.isPending} onClick={() => verify.mutate()}>
         {verify.isPending ? t('verify.signingIn') : t('verify.submit')}
       </Button>

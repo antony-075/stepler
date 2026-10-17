@@ -10,6 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiAdminReadOnlyResponse } from '../billing/api-responses.js';
 import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   collectionIdParamsSchema,
@@ -53,6 +54,7 @@ export class CollectionsController {
   }
 
   @Post()
+  @ApiAdminReadOnlyResponse()
   @ApiResponse({ status: 201, standardSchema: collectionSchema })
   @ApiResponse({
     status: 409,
@@ -77,6 +79,7 @@ export class CollectionsController {
   }
 
   @Patch(':id')
+  @ApiAdminReadOnlyResponse()
   @ApiResponse({ status: 200, standardSchema: collectionSchema })
   update(
     @CurrentPrincipal() principal: AccountPrincipal,
@@ -98,6 +101,7 @@ export class CollectionsController {
   }
 
   @Post(':id/unarchive')
+  @ApiAdminReadOnlyResponse()
   @HttpCode(HttpStatus.OK)
   @ApiResponse({ status: 200, standardSchema: collectionSchema })
   @ApiResponse({

@@ -3,13 +3,15 @@ import { expect, type Page, test } from '@playwright/test';
 import {
   ACCEPT_TERMS_UK,
   acceptLegalOnCard,
+  confirmEmail,
+  E2E_PASSWORD,
   newEmail,
-  SIGN_IN_UK,
+  REGISTER_UK,
   signIn,
 } from '../support/auth.js';
 import { createCollectionViaApi, horizontalOverflow } from '../support/collections.js';
 import { dropLegalAcceptances } from '../support/database.js';
-import { latestMagicLink } from '../support/mailpit.js';
+import { latestAuthLink } from '../support/mailpit.js';
 
 // Ukrainian UI (no supported browser language → default locale).
 test.use({ locale: 'de-DE' });
@@ -200,7 +202,7 @@ test.describe('legal pages', () => {
 });
 
 test.describe('acceptance at sign-in (ADR 0016)', () => {
-  test('the card: buttons wait for the box, the documents open in new tabs, the first sign-in lands on /app', async ({
+  test('registration: the submit waits for the box, the documents open in new tabs, the first sign-in lands on /app', async ({
     page,
     context,
   }) => {
@@ -209,9 +211,11 @@ test.describe('acceptance at sign-in (ADR 0016)', () => {
       if (frame === page.mainFrame()) visited.push(new URL(frame.url()).pathname);
     });
     const email = newEmail();
-    await page.goto('/login');
-    await page.getByLabel(SIGN_IN_UK.email).fill(email);
-    const submit = page.getByRole('button', { name: SIGN_IN_UK.submit });
+    await page.goto('/register');
+    await page.getByLabel(REGISTER_UK.email).fill(email);
+    await page.getByLabel(REGISTER_UK.password, { exact: true }).fill(E2E_PASSWORD);
+    await page.getByLabel(REGISTER_UK.confirm).fill(E2E_PASSWORD);
+    const submit = page.getByRole('button', { name: REGISTER_UK.submit });
     await expect(submit).toBeDisabled();
     await expect(submit).toHaveAccessibleDescription('Поставте позначку, щоб продовжити.');
 
@@ -225,33 +229,15 @@ test.describe('acceptance at sign-in (ADR 0016)', () => {
     expect(terms.url()).toMatch(/\/legal\/terms$/);
     expect(await terms.evaluate(() => window.opener === null)).toBe(true);
     await terms.close();
-    await expect(page.getByLabel(SIGN_IN_UK.email)).toHaveValue(email);
-    await expect(page.getByRole('checkbox', { name: SIGN_IN_UK.legal })).not.toBeChecked();
+    await expect(page.getByLabel(REGISTER_UK.email)).toHaveValue(email);
+    await expect(page.getByRole('checkbox', { name: REGISTER_UK.legal })).not.toBeChecked();
 
     await acceptLegalOnCard(page);
     await expect(submit).toBeEnabled({ timeout: 20_000 });
     await submit.click();
-    await expect(page.getByRole('heading', { name: SIGN_IN_UK.sent })).toBeVisible();
-    await page.goto(await latestMagicLink(email));
-    // The mailbox owner accepts here, by signing in (ADR 0016): the line names both documents.
-    const line = page.getByText(/^Продовжуючи, ви приймаєте/);
-    await expect(line).toBeVisible();
-    for (const [name, path] of [
-      [TITLES.terms, '/legal/terms'],
-      ['Політику конфіденційності', '/legal/privacy'],
-    ] as const) {
-      const docLink = line.getByRole('link', { name });
-      await expect(docLink).toHaveAttribute('href', path);
-      await expect(docLink).toHaveAttribute('target', '_blank');
-    }
-    const [privacy] = await Promise.all([
-      context.waitForEvent('page'),
-      line.getByRole('link', { name: 'Політику конфіденційності' }).click(),
-    ]);
-    await privacy.waitForLoadState();
-    await expect(privacy.getByRole('heading', { level: 1 })).toHaveText(TITLES.privacy);
-    await privacy.close();
-    await page.getByRole('button', { name: SIGN_IN_UK.signIn }).click();
+    await expect(page.getByRole('heading', { name: REGISTER_UK.sent })).toBeVisible();
+    // The acceptance was recorded with the registration (ADR 0016, ADR 0019).
+    await confirmEmail(page, await latestAuthLink(email));
     await expect(page).toHaveURL(/\/app$/);
     expect(visited).not.toContain('/accept-terms');
     const me = (await (await page.request.get('/api/v1/me')).json()) as {

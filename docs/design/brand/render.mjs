@@ -7,11 +7,14 @@ const require = createRequire(new URL('../../../apps/api/package.json', import.m
 const sharp = require('sharp');
 const HERE = new URL('.', import.meta.url).pathname;
 const OUT = `${HERE}out`;
-const OPTIONS = { a: 'A · Pinned photo', b: 'B · Stapler', c: 'C · Pin' };
+const OPTIONS = { a: 'A · Pinned photo', b: 'B · Stapler', c: 'C · Pin', w: 'W · Wordmark only' };
 
 /** An SVG file as a PNG of `size` px (square), rendered sharp at that size. */
 const png = (file, width, height = width) =>
-  sharp(readFileSync(file), { density: Math.min(2400, Math.max(72, (width / 64) * 72 * 3)) })
+  sharp(readFileSync(file), {
+    density: Math.min(2400, Math.max(72, (width / 64) * 72 * 3)),
+    limitInputPixels: false,
+  })
     .resize(width, height, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toBuffer();

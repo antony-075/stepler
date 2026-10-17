@@ -75,11 +75,11 @@ export const Error: Story = {
   args: {
     variant: 'error',
     title: undefined,
-    children: 'This sign-in link has expired. Request a new one.',
+    children: 'This confirmation link has expired. Request a new one.',
   },
   play: async ({ canvas }) => {
     await expect(canvas.getByRole('alert')).toHaveTextContent(
-      'This sign-in link has expired. Request a new one.',
+      'This confirmation link has expired. Request a new one.',
     );
     await expect(canvas.queryByRole('status')).toBeNull();
   },

@@ -64,12 +64,12 @@ export const ContentOnly: Story = {
   render: () => (
     <Panel>
       <PanelContent>
-        <p>Check your inbox: we sent a sign-in link.</p>
+        <p>Check your inbox: we sent a confirmation link.</p>
       </PanelContent>
     </Panel>
   ),
   play: async ({ canvas }) => {
-    await expect(canvas.getByText('Check your inbox: we sent a sign-in link.')).toBeVisible();
+    await expect(canvas.getByText('Check your inbox: we sent a confirmation link.')).toBeVisible();
   },
 };
 

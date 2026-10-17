@@ -43,6 +43,7 @@ import { Skeleton } from '@stepler/ui/components/skeleton';
 import { TintTile } from '@stepler/ui/components/tint-tile';
 import { ToggleGroup, ToggleGroupItem } from '@stepler/ui/components/toggle-group';
 import { FRAME_TINT_CLASSES, type FrameTint } from '@stepler/ui/lib/frame-tints';
+import { focusRing } from '@stepler/ui/lib/focus';
 import { cn } from '@stepler/ui/lib/utils';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import {
@@ -56,7 +57,8 @@ import {
   SearchX,
   X,
 } from 'lucide-react';
-import { useFormatter, useLocale, useTranslations } from 'next-intl';
+import { useFormatter, useLocale, useNow, useTranslations } from 'next-intl';
+import NextLink from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   type ReactNode,
@@ -68,7 +70,7 @@ import {
 } from 'react';
 import { collectionsListKey, fetchUsage, listCollections, USAGE_KEY } from '@/api/collections';
 import { useMediaQuery } from '@/components/use-media-query';
-import { formatBytes } from '@/format/bytes';
+import { formatStorage } from '@/format/bytes';
 import { CollectionCard } from './collection-card';
 import { CollectionRow, CollectionTableHeader, TABLE_COLUMNS } from './collection-row';
 import {
@@ -88,7 +90,8 @@ import {
   visibleCollections,
 } from './collection-filters';
 import { CreateCollectionDialog } from './create-collection-dialog';
-import { meterPercent } from './usage-meter';
+import { ACCOUNT_ACCESS_REASON_ID, daysLeft } from './access-model';
+import { UsageBar } from './usage-bar';
 
 // The view this tab chose, so a storage that cannot keep it (private windows) still switches.
 let chosenView: DashboardView | null = null;
@@ -158,6 +161,19 @@ export function CollectionsDashboard() {
   const archived = useCollectionList('ARCHIVED');
 
   const slots = usage.data?.activeCollections;
+  // The account's access in the usage line (ADR 0018): the trial's days, or «Лише перегляд».
+  const tAccess = useTranslations('billing.access');
+  const now = useNow({ updateInterval: 3600_000 });
+  const access = usage.data?.access;
+  const readOnly = access?.state === 'READ_ONLY';
+  const planLabel =
+    access === undefined
+      ? null
+      : readOnly
+        ? tAccess('readOnlyShort')
+        : access.reason === 'TRIAL' && access.endsAt !== null
+          ? tAccess('trialDaysLeft', { days: daysLeft(access.endsAt, now) })
+          : null;
   const activeItems = itemsOf(active);
   const archivedItems = itemsOf(archived);
   const loading = active.isPending || archived.isPending;
@@ -219,11 +235,12 @@ export function CollectionsDashboard() {
             </span>
           ) : (
             <UsageLine
+              plan={planLabel}
               collections={t('usage', { used: slots.used, limit: slots.limit })}
               slots={slots}
               storage={t('storageUsage', {
-                used: formatBytes(format.number, usage.data.storage.usedBytes),
-                limit: formatBytes(format.number, usage.data.storage.limitBytes),
+                used: formatStorage(format.number, usage.data.storage.usedBytes),
+                limit: formatStorage(format.number, usage.data.storage.limitBytes),
               })}
               bytes={{
                 used: usage.data.storage.usedBytes,
@@ -235,7 +252,12 @@ export function CollectionsDashboard() {
         actions={
           // Empty, the invitation below holds the only "New collection"; loading, neither is known yet.
           loading || empty ? null : (
-            <Button onClick={openCreate} className="w-full sm:w-auto">
+            <Button
+              onClick={openCreate}
+              className="w-full sm:w-auto"
+              disabled={readOnly}
+              aria-describedby={readOnly ? ACCOUNT_ACCESS_REASON_ID : undefined}
+            >
               <Plus aria-hidden="true" />
               {t('new')}
             </Button>
@@ -634,28 +656,19 @@ function monoDigits(text: string): ReactNode[] {
   );
 }
 
-/** A thin decorative meter beside a usage figure: the share used, in the accent. */
-function Meter({ used, limit }: { used: number; limit: number }) {
-  return (
-    <span aria-hidden="true" className="h-1 w-14 overflow-hidden rounded-full bg-track">
-      <span
-        className="block h-full rounded-full bg-primary"
-        style={{ width: `${meterPercent(used, limit)}%` }}
-      />
-    </span>
-  );
-}
-
 /**
  * «2 з 3 активних колекцій ▬ | 3,2 ГБ з 20 ГБ ▬»: the limits as one quiet line, the numbers in
  * mono, each with a meter. The sentence is the information; the meters only show it.
  */
 function UsageLine({
+  plan,
   collections,
   storage,
   slots,
   bytes,
 }: {
+  /** The trial's days left or «Лише перегляд», linking to «Тариф і оплата»; `null` = a plan. */
+  plan: string | null;
   collections: string;
   storage: string;
   slots: { used: number; limit: number };
@@ -663,14 +676,25 @@ function UsageLine({
 }) {
   return (
     <span className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[0.875rem]">
+      {plan === null ? null : (
+        <>
+          <NextLink
+            href="/app/billing"
+            className={cn('rounded-[3px] text-link underline-offset-2 hover:underline', focusRing)}
+          >
+            {monoDigits(plan)}
+          </NextLink>
+          <span aria-hidden="true" className="h-3 w-px bg-border-strong max-sm:hidden" />
+        </>
+      )}
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(collections)}</span>
-        <Meter {...slots} />
+        <UsageBar {...slots} />
       </span>
       <span aria-hidden="true" className="h-3 w-px bg-border-strong max-sm:hidden" />
       <span className="inline-flex items-center gap-2">
         <span>{monoDigits(storage)}</span>
-        <Meter {...bytes} />
+        <UsageBar {...bytes} />
       </span>
     </span>
   );

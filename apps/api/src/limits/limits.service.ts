@@ -1,24 +1,41 @@
 import { Inject, Injectable } from '@nestjs/common';
+import type { AccessResult } from '../billing/domain/access.js';
+import { EntitlementResolver } from '../billing/entitlement-resolver.js';
 import { API_ENV } from '../config/config.module.js';
 import type { ApiEnv } from '../config/env.js';
+import type { Prisma } from '../generated/prisma/client.js';
 
-export interface MagicLinkLimits {
-  perEmailPerHour: number;
-  perIpPerHour: number;
-  previewPerIpPerHour: number;
+/** Account mails and sign-in attempts (ADR 0019). */
+export interface AuthLimits {
+  emailsPerAddressPerHour: number;
+  emailsPerIpPerHour: number;
+  tokenChecksPerIpPerHour: number;
+  loginAttemptsPerIpPerHour: number;
+  loginFailuresPerAddressIpPer15Min: number;
+  loginFailuresPerAddressPerHour: number;
 }
 
+/**
+ * The account's entitlement (ADR 0018): its trial, plan or grant, or the one that ended (whose
+ * limits still describe what the account had). Bounds `ACCOUNT` collections only; a pack
+ * collection has its own (`CollectionLimits`). No source at all = zero.
+ */
 export interface UserLimits {
   activeCollections: number;
-  /** Creations per rolling 24 hours; deleting a collection does not give one back. */
+  /** Creations per rolling 24 hours; deleting a collection does not give one back (abuse, env). */
   collectionCreationsPerDay: number;
   storageBytes: bigint;
+  access: AccessResult;
 }
 
 export interface CollectionLimits {
   storageBytes: bigint;
   /** Non-revoked additional guest links; the default link does not count [G8]. */
   guestLinks: number;
+  /** `PACK` = counted against its pack only, not the account [P1]. */
+  entitlement: 'ACCOUNT' | 'PACK';
+  ownerId: string;
+  access: AccessResult;
 }
 
 /** Per-file maxima by kind and the files a guest may pick at once (D2). */
@@ -46,18 +63,24 @@ export interface UploadSettings {
 }
 
 /**
- * Single source of limits. Values are config-backed today; plans and entitlements plug in
- * behind `forUser` later without changing callers (ADR 0010).
+ * Single source of limits (ADR 0010). What an account or collection may hold comes from its
+ * entitlement (ADR 0018, `forUser` / `forCollection`); abuse and rate limits stay in config.
  */
 @Injectable()
 export class LimitsService {
-  constructor(@Inject(API_ENV) private readonly env: ApiEnv) {}
+  constructor(
+    @Inject(API_ENV) private readonly env: ApiEnv,
+    private readonly entitlements: EntitlementResolver,
+  ) {}
 
-  magicLink(): MagicLinkLimits {
+  auth(): AuthLimits {
     return {
-      perEmailPerHour: this.env.LIMIT_MAGIC_LINK_PER_EMAIL_PER_HOUR,
-      perIpPerHour: this.env.LIMIT_MAGIC_LINK_PER_IP_PER_HOUR,
-      previewPerIpPerHour: this.env.LIMIT_MAGIC_LINK_PREVIEW_PER_IP_PER_HOUR,
+      emailsPerAddressPerHour: this.env.LIMIT_AUTH_EMAILS_PER_ADDRESS_PER_HOUR,
+      emailsPerIpPerHour: this.env.LIMIT_AUTH_EMAILS_PER_IP_PER_HOUR,
+      tokenChecksPerIpPerHour: this.env.LIMIT_AUTH_TOKEN_CHECKS_PER_IP_PER_HOUR,
+      loginAttemptsPerIpPerHour: this.env.LIMIT_LOGIN_ATTEMPTS_PER_IP_PER_HOUR,
+      loginFailuresPerAddressIpPer15Min: this.env.LIMIT_LOGIN_FAILURES_PER_ADDRESS_IP_PER_15_MIN,
+      loginFailuresPerAddressPerHour: this.env.LIMIT_LOGIN_FAILURES_PER_ADDRESS_PER_HOUR,
     };
   }
 
@@ -131,6 +154,16 @@ export class LimitsService {
     return this.env.LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE;
   }
 
+  /** LiqPay callbacks per client IP per minute (ADR 0018): load, not authentication. */
+  billingCallbacksPerIpPerMinute(): number {
+    return this.env.LIMIT_BILLING_CALLBACKS_PER_IP_PER_MINUTE;
+  }
+
+  /** Checkouts per signed-in account per hour. */
+  billingCheckoutsPerUserPerHour(): number {
+    return this.env.LIMIT_BILLING_CHECKOUTS_PER_USER_PER_HOUR;
+  }
+
   fileRules(): FileRules {
     return {
       fileBytes: {
@@ -151,18 +184,28 @@ export class LimitsService {
     };
   }
 
-  forCollection(_collection: { id: string }): CollectionLimits {
+  /** Pass the transaction that holds the owner's lock, so the limit and the usage agree. */
+  async forCollection(
+    collectionId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CollectionLimits> {
+    const access = await this.entitlements.forCollection(collectionId, tx);
     return {
-      storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_COLLECTION,
-      guestLinks: this.env.LIMIT_GUEST_LINKS_PER_COLLECTION,
+      storageBytes: access.limits.collectionStorageBytes ?? 0n,
+      guestLinks: access.limits.guestLinks ?? 0,
+      entitlement: access.collection.entitlement,
+      ownerId: access.collection.ownerId,
+      access,
     };
   }
 
-  forUser(_user: { id: string }): UserLimits {
+  async forUser(userId: string, tx?: Prisma.TransactionClient): Promise<UserLimits> {
+    const access = await this.entitlements.forAccount(userId, tx);
     return {
-      activeCollections: this.env.LIMIT_ACTIVE_COLLECTIONS_PER_ACCOUNT,
+      activeCollections: access.limits.activeCollections ?? 0,
       collectionCreationsPerDay: this.env.LIMIT_COLLECTION_CREATIONS_PER_DAY,
-      storageBytes: this.env.LIMIT_STORAGE_BYTES_PER_ACCOUNT,
+      storageBytes: access.limits.storageBytes ?? 0n,
+      access,
     };
   }
 }

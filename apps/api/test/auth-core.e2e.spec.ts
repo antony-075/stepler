@@ -59,6 +59,7 @@ describe('auth core', () => {
       displayName: null,
       locale: 'uk',
       isOperator: false,
+      hasPassword: false,
       legal: expect.objectContaining({ accepted: true }) as unknown,
     });
     const body = meResponseSchema.parse(res.body);

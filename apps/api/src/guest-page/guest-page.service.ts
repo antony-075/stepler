@@ -1,3 +1,4 @@
+import { EntitlementGate } from '../billing/entitlement-gate.js';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   GuestPageEditor,
@@ -48,6 +49,7 @@ export class GuestPageService {
     private readonly pages: GuestPageRepository,
     private readonly urls: ImageUrls,
     @Inject(JOB_QUEUE) private readonly jobs: JobQueue,
+    private readonly gate: EntitlementGate,
   ) {}
 
   /**
@@ -129,6 +131,7 @@ export class GuestPageService {
     }
     await this.prisma.$transaction(async (tx) => {
       const locked = await this.images.lockMutable(tx, a, collectionId);
+      await this.gate.assertAdminCanWrite({ collectionId: locked.id }, tx);
       let draft = await this.pages.lockDraft(tx, locked.id);
       // A draft made by this save already has a revision of its own (the next one).
       let fresh = false;
@@ -175,6 +178,7 @@ export class GuestPageService {
     await this.jobs.ready();
     await this.prisma.$transaction(async (tx) => {
       const locked = await this.images.lockMutable(tx, a, collectionId);
+      await this.gate.assertAdminCanWrite({ collectionId: locked.id }, tx);
       const draft = await this.pages.lockDraft(tx, locked.id);
       const published = await this.pages.ensurePublished(tx, locked.id);
       if (draft === null) {

@@ -13,8 +13,11 @@ const transactionSchema = z.object({
   state: z.string().min(1),
   codeVerifier: z.string().min(1),
   returnTo: z.string(),
-  /** The legal versions accepted on the sign-in card (ADR 0016), recorded at the callback. */
-  legal: legalVersionsSchema,
+  /**
+   * The legal versions accepted on the registration form (ADR 0016), recorded at the callback;
+   * `null` from the sign-in form, which has no checkbox (a new account then meets the gate).
+   */
+  legal: legalVersionsSchema.nullable(),
 });
 export type OAuthTransaction = z.infer<typeof transactionSchema>;
 
