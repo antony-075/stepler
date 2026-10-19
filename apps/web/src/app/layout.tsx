@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { QueryProvider } from '@/api/query-provider';
+import { getWebEnv } from '@/env';
 import { THEME_COOKIE, parseTheme, themeAttribute } from '@/theme/theme';
 import { ThemeProvider } from '@/theme/theme-provider';
 import { geistMono, geologica, golosText } from './fonts';
@@ -23,6 +24,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: { default: t('name'), template: `%s · ${t('name')}` },
     description: t('tagline'),
+    // Only production sets SEARCH_INDEXING=on; staging and local servers are never indexed.
+    // Pages that set their own `robots` are noindex already.
+    ...(getWebEnv().SEARCH_INDEXING ? {} : { robots: { index: false, follow: false } }),
     // The brand's icons (public/brand, refined from the owner's assets 2026-10-06): the SVG for
     // browsers that take it, PNG sizes for the rest, the 180px tile for iOS home screens.
     icons: {

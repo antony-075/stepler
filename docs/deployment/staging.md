@@ -45,7 +45,7 @@ While the app is in Testing mode, only the listed test users can sign in.
    | `S3_ENDPOINT` | `https://<account-id>.eu.r2.cloudflarestorage.com` |
    | `S3_BUCKET` | `stepler-staging` |
    | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | from step 1 |
-   | `LEGAL_CONTACT_EMAIL` | the privacy/abuse contact shown on `/legal/*`; a placeholder such as `privacy@example.com` is fine on staging (owner action E1 of the slice 10 plan). `LEGAL_ALLOW_DRAFT=true` comes from `render.yaml`: staging may run on the placeholder legal texts, production never does |
+   | `LEGAL_CONTACT_EMAIL` | the privacy/abuse contact shown on `/legal/*`; a placeholder such as `privacy@example.com` is fine on staging (owner action E1 of the slice 10 plan). `LEGAL_ALLOW_DRAFT=true` comes from `render.yaml`: staging may run on the placeholder legal texts, production never does. `SEARCH_INDEXING=off` also comes from `render.yaml`: every staging page is `noindex, nofollow` |
 
    If Render assigns a different host than expected, update `APP_ORIGIN`, the Turnstile hostname and the Google redirect URI to the real one.
 3. Apply. The first deploy builds both images, runs the migrations (the API's pre-deploy command) and starts the services.

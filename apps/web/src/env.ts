@@ -26,6 +26,14 @@ const webEnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  /**
+   * `on` lets search engines index the public pages (production only). Anything else, and the
+   * default, marks every page `noindex, nofollow`: staging and local servers stay out of search.
+   */
+  SEARCH_INDEXING: z
+    .enum(['on', 'off'])
+    .default('off')
+    .transform((value) => value === 'on'),
 });
 
 export type WebEnv = z.infer<typeof webEnvSchema>;
