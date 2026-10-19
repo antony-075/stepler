@@ -45,7 +45,7 @@ While the app is in Testing mode, only the listed test users can sign in.
    | `S3_ENDPOINT` | `https://<account-id>.eu.r2.cloudflarestorage.com` |
    | `S3_BUCKET` | `stepler-staging` |
    | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | from step 1 |
-   | `LEGAL_CONTACT_EMAIL` | the privacy/abuse contact shown on `/legal/*`; a placeholder such as `privacy@example.com` is fine on staging (owner action E1 of the slice 10 plan). `LEGAL_ALLOW_DRAFT=true` comes from `render.yaml`: staging may run on the placeholder legal texts, production never does |
+   | `LEGAL_CONTACT_EMAIL` | the privacy/abuse contact shown on `/legal/*`; a placeholder such as `privacy@example.com` is fine on staging (owner action E1 of the slice 10 plan). `LEGAL_ALLOW_DRAFT=true` comes from `render.yaml`: staging may run on the placeholder legal texts, production never does. `SEARCH_INDEXING=off` also comes from `render.yaml`: every staging page is `noindex, nofollow` |
 
    If Render assigns a different host than expected, update `APP_ORIGIN`, the Turnstile hostname and the Google redirect URI to the real one.
 3. Apply. The first deploy builds both images, runs the migrations (the API's pre-deploy command) and starts the services.
@@ -56,11 +56,14 @@ Staging deploys are **manual** (owner decision 2026-10-05: GitHub Actions minute
 
 1. Before the release, run the full check locally on the release commit: `pnpm release:check` (format, lint, typecheck, unit and integration tests, builds, Storybook, the three-browser e2e, the Docker image checks; needs `pnpm infra:up`). The release PR `dev` → `stage` lists its result. If CI minutes are available, CI on the release PR runs the same full matrix.
 2. Merge the release PR into `stage`.
-3. Render → **Manual Deploy → Deploy latest commit**, in this order:
-   1. `stepler-staging-api` — its pre-deploy command applies the database migrations;
-   2. `stepler-staging-worker`;
-   3. `stepler-staging` (web).
-   Deploy them back to back; the web and API share contracts.
+3. Deploy, API first, then the worker, then the web. Either:
+   - **`pnpm deploy:staging`** from the repository root (since 2026-10-17): it deploys the tip of `origin/stage` to the three services through the Render API in that order, waits for each to be live before the next, and stops at the first failure (its log link is printed; the later services keep their release). Needs a Render API key (Account Settings → API Keys) as `RENDER_API_KEY` in `apps/api/.env` (git-ignored) or the shell; `--dry-run` shows the plan. A release that needs a manual step between services (below: suspend the worker, a migration check) runs it with `--only`, e.g. `--only api`, the step by hand, then `--only worker,web`; or
+   - Render → **Manual Deploy → Deploy latest commit**, in this order:
+     1. `stepler-staging-api` — its pre-deploy command applies the database migrations;
+     2. `stepler-staging-worker`;
+     3. `stepler-staging` (web).
+
+     Deploy them back to back; the web and API share contracts.
 4. Verify (section 7): `/healthz`, `/api/v1/health/ready`, sign-in, and the release's own checks.
 
 ### Release notes

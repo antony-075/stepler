@@ -8,6 +8,13 @@ import type { TemplateKey } from './templates';
 
 export type ScreenLocale = 'uk' | 'en';
 
+/**
+ * next/image quality for the product screens: resized to the size they are shown at (they were
+ * served full size, ~100 KB a phone screen even as a 120px tile), at 90 so their small text
+ * stays sharp.
+ */
+export const SCREEN_QUALITY = 90;
+
 export type PhoneScreen = `guest-${TemplateKey}` | 'guest-frames' | 'guest-upload' | 'guest-wish';
 
 export type DesktopScreen =

@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import {
   BILLING_RENEWAL_FAILED_COPY,
   BILLING_SWITCH_CONFIRM_COPY,
@@ -31,7 +31,7 @@ export function renderBillingRenewalFailedEmail(
   const text = copy.text.replace('{plan}', input.plan);
   const grace = copy.grace.replace('{date}', formatMailDate(input.locale, input.graceEndsAt));
   const [before = '', after = ''] = copy.act.split('{url}');
-  const link = `<a href="${escapeHtml(input.url)}" style="color:#111">${escapeHtml(input.url)}</a>`;
+  const link = mailLink(escapeHtml(input.url), escapeHtml(input.url));
   return {
     subject: copy.subject,
     text: [text, grace, copy.act.replace('{url}', input.url), ''].join('\n\n'),

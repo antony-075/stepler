@@ -18,8 +18,9 @@ const NAV_LINK = cn(
  * The landing's header: sticky (56px, a hairline under it), so the anchors and the trial stay a
  * tap away; sections keep `scroll-mt-20`, so a jump never hides a heading under it.
  * Slightly translucent with a blur, so the page shows through as it scrolls under it.
- * - From 1024px: the logo, the five anchors (the one being read marked), then «Мова», «Увійти» and
- *   the trial button; signed in (on /pricing), one «Відкрити Stepler» instead.
+ * - From 1280px: the logo, the five anchors (the one being read marked), then «Мова», «Увійти»
+ *   and the trial button; signed in (on /pricing), one «Відкрити Stepler» instead. At 1024px
+ *   they do not fit in one row, so the menu stays until 1280px.
  * - Below: the logo, the trial button from 640px, and «Меню» (the anchors, sign-in, the trial and
  *   the language in a sheet).
  * `onLanding: false` (/pricing): the anchors lead back to the landing's sections.
@@ -47,7 +48,7 @@ export function LandingHeader({
         <SiteWordmark />
         <SectionNav onLanding={onLanding} />
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden lg:block">
+          <div className="hidden xl:block">
             <LanguageSwitch variant="header" />
           </div>
           {signedIn ? (
@@ -56,7 +57,7 @@ export function LandingHeader({
             </Link>
           ) : (
             <>
-              <Link href={ROUTE.login} className={cn(NAV_LINK, 'hidden lg:inline-flex')}>
+              <Link href={ROUTE.login} className={cn(NAV_LINK, 'hidden xl:inline-flex')}>
                 {t('nav.login')}
               </Link>
               <Link

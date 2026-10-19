@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { REPORT_REASON_LABELS, REPORT_RECEIVED_COPY } from './messages.js';
 
 export interface ReportReceivedEmailInput {
@@ -19,7 +19,7 @@ export function renderReportReceivedEmail({
   const label = REPORT_REASON_LABELS.uk[reason];
   const reasonLine = copy.reason.replace('{label}', label);
   const text = [copy.intro, reasonLine, copy.open.replace('{url}', url), ''].join('\n');
-  const link = `<a href="${escapeHtml(url)}" style="color:#111">${escapeHtml(url)}</a>`;
+  const link = mailLink(escapeHtml(url), escapeHtml(url));
   const [openBefore = '', openAfter = ''] = copy.open.split('{url}');
   return {
     subject: copy.subject.replace('{label}', label),
