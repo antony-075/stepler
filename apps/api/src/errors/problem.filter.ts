@@ -8,6 +8,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { ErrorCode, ProblemDetails } from '@stepler/contracts';
+import { isDatabaseBusy } from '../database/database-busy.js';
 import { redactUrl } from '../logging/redact.js';
 import { AppError } from './app-error.js';
 import { ERROR_REPORTER, type ErrorReporter } from './error-reporter.js';
@@ -47,6 +48,9 @@ function clientErrorStatus(exception: unknown): number | undefined {
   return undefined;
 }
 
+/** How long a client waits before retrying a busy database (the guest page honours it). */
+const DATABASE_BUSY_RETRY_AFTER_SECONDS = 2;
+
 /**
  * Renders every error as RFC 9457 problem+json. Unexpected errors become a generic 500 and
  * are reported; their message never reaches the client.
@@ -57,7 +61,15 @@ export class ProblemFilter implements ExceptionFilter {
 
   constructor(@Inject(ERROR_REPORTER) private readonly reporter: ErrorReporter) {}
 
-  catch(exception: unknown, host: ArgumentsHost): void {
+  catch(thrown: unknown, host: ArgumentsHost): void {
+    // A busy database is not a bug: a retryable 503, so guest uploads try again on their own.
+    const exception = isDatabaseBusy(thrown)
+      ? new AppError('DEPENDENCY_UNAVAILABLE', 503, {
+          retryable: true,
+          retryAfterSeconds: DATABASE_BUSY_RETRY_AFTER_SECONDS,
+          cause: thrown,
+        })
+      : thrown;
     const http = host.switchToHttp();
     const req = http.getRequest<RequestWithId>();
     const res = http.getResponse<ServerResponse>();
