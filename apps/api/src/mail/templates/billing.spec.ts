@@ -15,7 +15,7 @@ describe('billing mails', () => {
       url,
     });
     // 21:30 UTC is already 8 October in Kyiv.
-    expect(mail.subject).toBe('Stepler: колекцію «Весілля <Олени>» буде видалено 8 жовтня 2027 р.');
+    expect(mail.subject).toBe('Stepler: колекцію «Весілля <Олени>» буде видалено 8 жовтня 2027');
     expect(mail.text).toContain(url);
     expect(mail.html).toContain('Весілля &lt;Олени&gt;');
     expect(mail.html).not.toContain('<Олени>');
@@ -36,7 +36,8 @@ describe('billing mails', () => {
     expect(failed.subject).toBe('Stepler: не вдалося списати оплату за тариф');
     expect(switched.subject).toBe('Stepler: підтвердіть новий спосіб оплати тарифу');
     expect(switched.text).toContain('«Pro»');
-    expect(switched.text).toContain('8 жовтня 2027');
+    expect(switched.text).toContain('8 жовтня 2027.');
+    expect(switched.text).not.toContain('р..');
     expect(switched.html).toContain(`href="${url}"`);
   });
 });

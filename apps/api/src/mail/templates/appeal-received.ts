@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { APPEAL_RECEIVED_COPY } from './messages.js';
 
 export interface AppealReceivedEmailInput {
@@ -19,7 +19,7 @@ export function renderAppealReceivedEmail({
   const label = copy.targets[targetType];
   const targetLine = copy.target.replace('{label}', label);
   const text = [copy.intro, targetLine, copy.open.replace('{url}', url), ''].join('\n');
-  const link = `<a href="${escapeHtml(url)}" style="color:#111">${escapeHtml(url)}</a>`;
+  const link = mailLink(escapeHtml(url), escapeHtml(url));
   const [openBefore = '', openAfter = ''] = copy.open.split('{url}');
   return {
     subject: copy.subject.replace('{label}', label),

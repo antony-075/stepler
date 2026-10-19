@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { BILLING_DELETION_WARNING_COPY, formatMailDate, type MailLocale } from './messages.js';
 
 export interface BillingDeletionWarningEmailInput {
@@ -18,7 +18,7 @@ export function renderBillingDeletionWarningEmail(
   const date = formatMailDate(input.locale, input.deleteAfter);
   const fill = (text: string) => text.replace('{title}', input.title).replace('{date}', date);
   const [before = '', after = ''] = copy.keep.split('{url}');
-  const link = `<a href="${escapeHtml(input.url)}" style="color:#111">${escapeHtml(input.url)}</a>`;
+  const link = mailLink(escapeHtml(input.url), escapeHtml(input.url));
   return {
     // One line: a title cannot add headers (CR/LF are not allowed in titles, and are stripped).
     subject: fill(copy.subject).replace(/[\r\n]+/g, ' '),

@@ -284,7 +284,7 @@ describe('mails', () => {
     });
     const [message] = await waitForMessages(email);
     expect(message?.Subject).toBe(
-      'Stepler: колекцію «Весілля Олени» буде видалено 15 липня 2027 р.',
+      'Stepler: колекцію «Весілля Олени» буде видалено 15 липня 2027',
     );
     const text = await messageText(message?.ID ?? '');
     expect(text).toContain('http://localhost:3000/app/billing');

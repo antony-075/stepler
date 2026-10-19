@@ -48,3 +48,17 @@ describe('renderAuthMail', () => {
     expect(email.html).toContain('&quot;&gt;&lt;script&gt;');
   });
 });
+
+describe('the brand frame', () => {
+  test('every account mail carries the wordmark and one dark button', () => {
+    const email = renderAuthMail({
+      kind: 'reset',
+      url: 'https://stepler.test/reset-password?token=t',
+      locale: 'en',
+      duration: '1 hour',
+    });
+    expect(email.html).toContain('>stepler</td>');
+    expect(email.html).toContain('background:#171a21');
+    expect(email.html).toContain('max-width:560px');
+  });
+});

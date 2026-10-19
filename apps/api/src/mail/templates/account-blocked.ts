@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { ACCOUNT_BLOCKED_COPY, type MailLocale } from './messages.js';
 
 /**
@@ -20,9 +20,7 @@ export function renderAccountBlockedEmail({
     lines.push(copy.contact.replace('{email}', contactEmail));
     const [before = '', after = ''] = copy.contact.split('{email}');
     const address = escapeHtml(contactEmail);
-    html.push(
-      `${escapeHtml(before)}<a href="mailto:${address}" style="color:#111">${address}</a>${escapeHtml(after)}`,
-    );
+    html.push(`${escapeHtml(before)}${mailLink(`mailto:${address}`, address)}${escapeHtml(after)}`);
   }
   return {
     subject: copy.subject,
