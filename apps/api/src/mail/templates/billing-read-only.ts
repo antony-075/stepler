@@ -1,4 +1,4 @@
-import { escapeHtml, type RenderedEmail, simpleEmailHtml } from './html.js';
+import { escapeHtml, mailLink, type RenderedEmail, simpleEmailHtml } from './html.js';
 import { BILLING_READ_ONLY_COPY, formatMailDate, type MailLocale } from './messages.js';
 
 export interface BillingReadOnlyEmailInput {
@@ -16,7 +16,7 @@ export function renderBillingReadOnlyEmail(input: BillingReadOnlyEmailInput): Re
   const reason = copy.reasons[input.reason];
   const keep = copy.keep.replace('{date}', formatMailDate(input.locale, input.deleteAfter));
   const [before = '', after = ''] = copy.choose.split('{url}');
-  const link = `<a href="${escapeHtml(input.url)}" style="color:#111">${escapeHtml(input.url)}</a>`;
+  const link = mailLink(escapeHtml(input.url), escapeHtml(input.url));
   return {
     subject: copy.subject,
     text: [reason, copy.effect, keep, copy.choose.replace('{url}', input.url), ''].join('\n\n'),

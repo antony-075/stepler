@@ -176,6 +176,9 @@ services:
       # never sets this (the server refuses to start on drafts, [C20]).
       - key: LEGAL_ALLOW_DRAFT
         value: 'true'
+      # Staging stays out of search engines (every page noindex); production sets `on`.
+      - key: SEARCH_INDEXING
+        value: 'off'
       # The privacy/abuse contact shown on /legal/*; a placeholder address is fine on staging.
       - key: LEGAL_CONTACT_EMAIL
         sync: false

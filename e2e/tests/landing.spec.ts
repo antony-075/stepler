@@ -155,7 +155,7 @@ test.describe('under reduced motion', () => {
   });
 });
 
-for (const width of [320, 390, 768, 1280]) {
+for (const width of [320, 390, 768, 1024, 1280, 1440]) {
   test(`at ${width}px nothing scrolls sideways`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');

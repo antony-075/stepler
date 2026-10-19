@@ -316,10 +316,12 @@ export const BILLING_SWITCH_CONFIRM_COPY: Readonly<Record<MailLocale, BillingRen
 
 /** A date as the reader says it, in Kyiv time (billing mails). */
 export function formatMailDate(locale: MailLocale, date: Date): string {
-  return new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', {
+  // uk-UA ends with « р.»; dropped, so a date at the end of a sentence does not end in «р..».
+  const formatted = new Intl.DateTimeFormat(locale === 'uk' ? 'uk-UA' : 'en-GB', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
     timeZone: 'Europe/Kyiv',
   }).format(date);
+  return formatted.replace(/\s*р\.$/u, '');
 }

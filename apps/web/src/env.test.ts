@@ -5,6 +5,7 @@ test('loadWebEnv accepts a URL', () => {
   expect(loadWebEnv({ API_INTERNAL_URL: 'http://localhost:4000' })).toEqual({
     API_INTERNAL_URL: 'http://localhost:4000',
     LEGAL_ALLOW_DRAFT: false,
+    SEARCH_INDEXING: false,
   });
 });
 
@@ -32,6 +33,7 @@ test('CLIENT_IP_HEADER is a lowercased header name; the old TRUST_PROXY_HEADERS 
   expect(loadWebEnv({ API_INTERNAL_URL: 'http://a', TRUST_PROXY_HEADERS: 'true' })).toEqual({
     API_INTERNAL_URL: 'http://a',
     LEGAL_ALLOW_DRAFT: false,
+    SEARCH_INDEXING: false,
   });
 });
 
@@ -46,4 +48,14 @@ test('API_INTERNAL_HOSTPORT (a platform private address) stands in for API_INTER
     /API_INTERNAL_URL/,
   );
   expect(() => loadWebEnv({})).toThrow(/API_INTERNAL_URL/);
+});
+
+test('SEARCH_INDEXING is off unless set to on', () => {
+  expect(loadWebEnv({ API_INTERNAL_URL: 'http://a' }).SEARCH_INDEXING).toBe(false);
+  expect(loadWebEnv({ API_INTERNAL_URL: 'http://a', SEARCH_INDEXING: 'on' }).SEARCH_INDEXING).toBe(
+    true,
+  );
+  expect(() => loadWebEnv({ API_INTERNAL_URL: 'http://a', SEARCH_INDEXING: 'yes' })).toThrow(
+    /SEARCH_INDEXING/,
+  );
 });
