@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { type ReactNode, useState } from 'react';
 import { PhoneFrame } from './phone-frame';
-import { phoneScreen, type ScreenLocale } from './screens';
+import { phoneScreen, SCREEN_QUALITY, type ScreenLocale } from './screens';
 import { TEMPLATE_KEYS, type TemplateKey } from './templates';
 
 /** The thumbnails are decorative: each tab is named by its design. */
@@ -74,7 +74,8 @@ export function TemplateShowcase({
                   src={phoneScreen(locale, `guest-${key}`).src}
                   alt={DECORATIVE}
                   fill
-                  unoptimized
+                  quality={SCREEN_QUALITY}
+                  sizes="9rem"
                   className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none"
                 />
               </span>

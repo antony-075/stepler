@@ -1,6 +1,6 @@
 import { cn } from '@stepler/ui/lib/utils';
 import Image from 'next/image';
-import type { Screen } from './screens';
+import { SCREEN_QUALITY, type Screen } from './screens';
 
 type ScreenFrameProps = {
   screen: Screen;
@@ -100,8 +100,11 @@ export function PhoneFrame({
             width={screen.width}
             height={screen.height}
             alt={alt}
-            unoptimized
+            quality={SCREEN_QUALITY}
+            sizes="(min-width: 640px) 320px, 72vw"
             loading={eager ? 'eager' : 'lazy'}
+            // The hero's phone is the first screen's largest picture (its LCP on phones).
+            fetchPriority={eager ? 'high' : 'auto'}
             className="block min-h-0 w-full flex-1 object-cover object-top"
           />
           <div aria-hidden="true" className="relative h-[8.25cqw] shrink-0">
@@ -140,7 +143,8 @@ export function WindowFrame({ screen, alt, eager = false, className }: ScreenFra
         width={screen.width}
         height={screen.height}
         alt={alt}
-        unoptimized
+        quality={SCREEN_QUALITY}
+        sizes="(min-width: 1280px) 760px, (min-width: 1024px) 60vw, 94vw"
         loading={eager ? 'eager' : 'lazy'}
         className="block h-auto w-full"
       />

@@ -6,7 +6,7 @@ import { Play } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
-import type { ScreenLocale } from './screens';
+import { SCREEN_QUALITY, type ScreenLocale } from './screens';
 
 /** The rendered walkthrough (`pnpm landing:media`): 1920×1080, about half a minute, no sound. */
 const VIDEO = { width: 1920, height: 1080 } as const;
@@ -74,7 +74,8 @@ export function WalkthroughVideo({ locale }: { locale: ScreenLocale }) {
             src={videoPath(locale, '-poster.webp')}
             alt={DECORATIVE}
             fill
-            unoptimized
+            quality={SCREEN_QUALITY}
+            sizes="(min-width: 1024px) 960px, 100vw"
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02] motion-reduce:transition-none"
           />
           <span
