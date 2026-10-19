@@ -9,6 +9,7 @@ import { AppModule } from '../src/app.module.js';
 import { Public } from '../src/auth/public.decorator.js';
 import { configureApp } from '../src/create-app.js';
 import { AppError } from '../src/errors/app-error.js';
+import { Prisma } from '../src/generated/prisma/client.js';
 import { ERROR_REPORTER, type ErrorReporter } from '../src/errors/error-reporter.js';
 import { listenOnLoopback } from './support/app.js';
 import { testEnv } from './support/env.js';
@@ -34,6 +35,14 @@ class TestErrorsController {
   @Get('crash')
   crash(): never {
     throw new Error('db password=hunter2 at host');
+  }
+
+  @Get('db-busy')
+  dbBusy(): never {
+    throw new Prisma.PrismaClientKnownRequestError(
+      'Transaction API error: Unable to start a transaction in the given time.',
+      { code: 'P2028', clientVersion: 'test' },
+    );
   }
 
   @Get('throttled')
@@ -132,6 +141,16 @@ describe('problem+json errors', () => {
 
   test('unknown route → 404 NOT_FOUND', async () => {
     expectProblem(await request(server()).get('/api/v1/nope'), 404, 'NOT_FOUND');
+  });
+
+  test('a busy database → 503 DEPENDENCY_UNAVAILABLE, retryable, with Retry-After', async () => {
+    reporter.calls = [];
+    const res = await request(server()).get('/api/v1/test-errors/db-busy');
+    expect(res.status).toBe(503);
+    expect(res.headers['retry-after']).toBe('2');
+    expect(res.body).toMatchObject({ code: 'DEPENDENCY_UNAVAILABLE', retryable: true });
+    expect(JSON.stringify(res.body)).not.toContain('transaction');
+    expect(reporter.calls).toHaveLength(0);
   });
 
   test('AppError keeps its code, status and detail', async () => {
