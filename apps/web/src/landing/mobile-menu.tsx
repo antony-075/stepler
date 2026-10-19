@@ -19,7 +19,7 @@ import { CURRENT_SECTION, useCurrentSection } from './section-nav';
 import { NAV_SECTIONS, ROUTE, sectionHref } from './sections';
 
 /**
- * The header's menu below 1024px: a sheet from the top over the page (Radix Dialog: focus moves
+ * The header's menu below 1280px: a sheet from the top over the page (Radix Dialog: focus moves
  * in and stays, Escape and the close button close it, focus returns to «Меню»). The anchors close
  * it as they jump, so the section is not hidden behind it; sign-in, the trial and the language
  * live here on phones, where the header keeps only the logo.
@@ -38,7 +38,7 @@ export function MobileMenu({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'lg:hidden')}
+        className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'xl:hidden')}
         aria-label={t('openMenu')}
       >
         <Menu aria-hidden="true" className="size-5" />

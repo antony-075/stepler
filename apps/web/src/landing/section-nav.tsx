@@ -49,7 +49,7 @@ export function useCurrentSection(): NavSection | null {
 }
 
 /**
- * The header's anchors from 1024px. The section being read is marked `aria-current="location"`
+ * The header's anchors from 1280px. The section being read is marked `aria-current="location"`
  * and drawn as the current place: ink text with a short accent bar under it (no fill, owner),
  * so it never relies on colour alone. Without JavaScript the anchors still work, unmarked.
  */
@@ -57,7 +57,7 @@ export function SectionNav({ onLanding = true }: { onLanding?: boolean }) {
   const t = useTranslations('home.nav');
   const current = useCurrentSection();
   return (
-    <nav aria-label={t('label')} className="ml-4 hidden lg:block">
+    <nav aria-label={t('label')} className="ml-4 hidden xl:block">
       <ul className="flex items-center gap-0.5">
         {NAV_SECTIONS.map((key) => {
           const active = key === current;
