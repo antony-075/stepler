@@ -155,7 +155,10 @@ export {
   type UpdateCollectionRequest,
 } from './collections.js';
 export {
+  ADMIN_CONTENT_IDS_MAX,
   adminContentDetailSchema,
+  adminContentIdsQuerySchema,
+  adminContentIdsSchema,
   adminContentItemSchema,
   adminContentListQuerySchema,
   adminContentPageSchema,
@@ -181,6 +184,8 @@ export {
   TEXT_MAX_CHARS,
   textBodySchema,
   type AdminContentDetail,
+  type AdminContentIds,
+  type AdminContentIdsQuery,
   type AdminContentItem,
   type AdminContentListQuery,
   type AdminContentPage,

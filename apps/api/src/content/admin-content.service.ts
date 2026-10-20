@@ -1,11 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-  AdminContentDetail,
-  AdminContentItem,
-  AdminContentListQuery,
-  AdminContentPage,
-  BulkDeleteContentResponse,
-  ContentCounts,
+import {
+  ADMIN_CONTENT_IDS_MAX,
+  type AdminContentDetail,
+  type AdminContentIds,
+  type AdminContentIdsQuery,
+  type AdminContentItem,
+  type AdminContentListQuery,
+  type AdminContentPage,
+  type BulkDeleteContentResponse,
+  type ContentCounts,
 } from '@stepler/contracts';
 import type { AccountPrincipal } from '../auth/principal.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -64,6 +67,21 @@ export class AdminContentService {
       ),
     );
     return { items, nextCursor };
+  }
+
+  /** «Вибрати всі» (owner 2026-10-20): the list's frames for these filters, every page. */
+  async ids(
+    a: AccountPrincipal,
+    collectionId: string,
+    query: AdminContentIdsQuery,
+  ): Promise<AdminContentIds> {
+    await this.assertOwnedCollection(a, collectionId);
+    const state = await this.stateWhere(collectionId, query.state);
+    return this.queries.ids(
+      { collectionId, ...(query.kind === undefined ? {} : { kind: query.kind }), ...state },
+      query.sort,
+      ADMIN_CONTENT_IDS_MAX,
+    );
   }
 
   async counts(a: AccountPrincipal, collectionId: string): Promise<ContentCounts> {

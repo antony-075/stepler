@@ -76,7 +76,16 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { ChevronDown, Download, ImagePlus, ListChecks, RefreshCw, Trash2, X } from 'lucide-react';
+import {
+  ChevronDown,
+  Download,
+  ImagePlus,
+  ListChecks,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { cn } from '@stepler/ui/lib/utils';
 import { focusRing } from '@stepler/ui/lib/focus';
 import { formatFrameNumber } from '@stepler/ui/lib/frame-number';
@@ -99,6 +108,7 @@ import {
   deleteContent,
   getContent,
   listContent,
+  listContentIds,
 } from '@/api/content';
 import { collectionsListKey } from '@/api/collections';
 import { guestLinksKey, listGuestLinks } from '@/api/guest-links';
@@ -165,6 +175,12 @@ export function ContentTab({
   // The frame toggled last: the start of a Shift+click range.
   const [anchor, setAnchor] = useState<string | null>(null);
   const [confirmingBulk, setConfirmingBulk] = useState(false);
+  // «Вибрати всі» across pages (owner 2026-10-20): the ids it fetched and how many match in all.
+  // A snapshot: frames guests add afterwards are not in it, so a delete never takes unseen ones.
+  const [everything, setEverything] = useState<{ count: number; total: number } | null>(null);
+  const [selectingAll, setSelectingAll] = useState(false);
+  // While a bulk delete runs: how many of how many, for the dialog's pending line.
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   // A tile's own «Видалити» (hover, with a mouse): the same question as the viewer's.
   const [deleting, setDeleting] = useState<AdminContentItem | null>(null);
   // Another type or order shows other frames: the selection does not carry over.
@@ -174,6 +190,7 @@ export function ContentTab({
     setSelectionView(view);
     setSelected(new Set());
     setAnchor(null);
+    setEverything(null);
   }
   const grid = useRef<HTMLDivElement>(null);
   const column = useColumnBox(grid, selecting);
@@ -300,6 +317,32 @@ export function ContentTab({
   function exitSelection() {
     setSelected(new Set());
     setAnchor(null);
+    setEverything(null);
+  }
+
+  /**
+   * Every frame of the current filters: the loaded ones at once when nothing more is to load,
+   * otherwise the ids of all of them from the API (one light request).
+   */
+  async function selectAll() {
+    if (!list.hasNextPage) {
+      setSelected(new Set(items.map((item) => item.id)));
+      return;
+    }
+    setSelectingAll(true);
+    try {
+      const all = await listContentIds(collection.id, {
+        ...(kind === undefined ? {} : { kind }),
+        states,
+        sort,
+      });
+      setSelected(new Set(all.ids));
+      setEverything({ count: all.ids.length, total: all.total });
+    } catch {
+      toast({ variant: 'error', title: t('select.allFailed') });
+    } finally {
+      setSelectingAll(false);
+    }
   }
 
   /** A click (Shift: the range from the last toggled frame) or `x` on a frame. */
@@ -343,14 +386,18 @@ export function ContentTab({
   async function removeSelected() {
     const gone = new Set<string>();
     const order = items.map((item) => item.id);
+    const total = selected.size;
+    setProgress({ done: 0, total });
     try {
       for (const ids of chunks([...selected])) {
         const result = await bulkDeleteContent(collection.id, ids);
         for (const id of [...result.deleted, ...result.alreadyDeleted, ...result.notFound]) {
           gone.add(id);
         }
+        setProgress({ done: gone.size, total });
       }
     } finally {
+      setProgress(null);
       if (gone.size > 0) {
         setSelected((current) => new Set([...current].filter((id) => !gone.has(id))));
         void dropFrames(gone);
@@ -380,6 +427,17 @@ export function ContentTab({
   const filter = filterOf(kind);
   const countOf = (value: KindFilter) =>
     counts.data === undefined ? undefined : counts.data[value === 'all' ? 'total' : value];
+  // How many frames the current filters show, when the counts say it (no state filter).
+  const matching = everything?.total ?? (states.length === 0 ? countOf(filter) : undefined);
+  const allSelected = everything !== null && selected.size === everything.count;
+  const everyLoadedSelected = !list.hasNextPage && selected.size === items.length;
+  const selectionCount = allSelected
+    ? everything.count < everything.total
+      ? t('select.countFirst', { count: everything.count, total: everything.total })
+      : t('select.countAll', { count: everything.count })
+    : matching !== undefined && matching > selected.size
+      ? t('select.countOf', { count: selected.size, total: matching })
+      : t('select.count', { count: selected.size });
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
@@ -661,7 +719,7 @@ export function ContentTab({
             >
               <SelectionBar
                 count={selected.size}
-                countLabel={t('select.count', { count: selected.size })}
+                countLabel={selectionCount}
                 label={t('select.barLabel')}
                 clearLabel={t('select.clear')}
                 onClear={exitSelection}
@@ -669,14 +727,27 @@ export function ContentTab({
                 actions={
                   <>
                     {/* A real button on the dark bar (owner 2026-10-16), not white words on black. */}
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelected(new Set(items.map((item) => item.id)))}
-                      className={selectionBarButtonClassName}
-                    >
-                      <ListChecks aria-hidden="true" />
-                      <span className="max-sm:sr-only">{t('select.all')}</span>
-                    </Button>
+                    {allSelected || everyLoadedSelected ? null : (
+                      <Button
+                        variant="outline"
+                        aria-disabled={selectingAll || undefined}
+                        onClick={() => {
+                          if (!selectingAll) void selectAll();
+                        }}
+                        className={selectionBarButtonClassName}
+                      >
+                        {selectingAll ? (
+                          <Loader2 aria-hidden="true" className="animate-spin" />
+                        ) : (
+                          <ListChecks aria-hidden="true" />
+                        )}
+                        <span className="max-sm:sr-only">
+                          {matching === undefined
+                            ? t('select.all')
+                            : t('select.allCount', { count: matching })}
+                        </span>
+                      </Button>
+                    )}
                     <Button
                       variant="destructive"
                       aria-disabled={selected.size === 0 || undefined}
@@ -699,7 +770,12 @@ export function ContentTab({
         onOpenChange={setConfirmingBulk}
         title={t('select.confirmTitle', { count: selected.size })}
         description={t('select.confirmText')}
-        confirmLabel={t('select.confirm')}
+        // More than one request (over 100 frames): the button counts them as they go.
+        confirmLabel={
+          progress === null || progress.total <= 100
+            ? t('select.confirm')
+            : t('select.progress', progress)
+        }
         cancelLabel={t('delete.cancel')}
         pendingLabel={t('delete.pending')}
         errorMessage={t('select.failed')}

@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import type { Server } from 'node:http';
 import type { INestApplication } from '@nestjs/common';
-import { bulkDeleteContentResponseSchema, contentCountsSchema } from '@stepler/contracts';
+import {
+  adminContentIdsSchema,
+  bulkDeleteContentResponseSchema,
+  contentCountsSchema,
+} from '@stepler/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { createApp } from '../src/create-app.js';
@@ -188,5 +192,47 @@ describe('admin bulk delete', () => {
       .send({ ids })
       .expect(403);
     expect(await prisma.contentItem.count({ where: { deletedAt: { not: null } } })).toBe(0);
+  });
+
+  describe('«Вибрати всі»: GET …/content/ids', () => {
+    const ids = (cookie: string, collectionId: string, query = '') =>
+      request(server())
+        .get(`/api/v1/collections/${collectionId}/content/ids${query}`)
+        .set('Cookie', cookie);
+
+    test('every frame past the first page, in the list order; deleted ones left out', async () => {
+      const { olena, mine } = await owners();
+      const own = await seedTexts(mine, 60);
+      await bulk(olena.cookie, mine, [own[0]!]).expect(200);
+      const byFrame = adminContentIdsSchema.parse(
+        (await ids(olena.cookie, mine, '?sort=frame').expect(200)).body,
+      );
+      expect(byFrame).toEqual({ ids: own.slice(1), total: 59 });
+      const newest = adminContentIdsSchema.parse((await ids(olena.cookie, mine).expect(200)).body);
+      expect(newest.total).toBe(59);
+      expect(sorted(newest.ids)).toEqual(sorted(own.slice(1)));
+    });
+
+    test('the kind filter applies; another kind is not selected', async () => {
+      const { olena, mine } = await owners();
+      await seedTexts(mine, 3);
+      const res = adminContentIdsSchema.parse(
+        (await ids(olena.cookie, mine, '?kind=PHOTO').expect(200)).body,
+      );
+      expect(res).toEqual({ ids: [], total: 0 });
+    });
+
+    test('admin B on A’s collection → 404; signed out → 401', async () => {
+      const { bohdan, mine } = await owners();
+      await seedTexts(mine, 2);
+      const res = await ids(bohdan.cookie, mine).expect(404);
+      expect(res.body).toMatchObject({ code: 'NOT_FOUND' });
+      await request(server()).get(`/api/v1/collections/${mine}/content/ids`).expect(401);
+    });
+
+    test('an unknown query parameter → 400', async () => {
+      const { olena, mine } = await owners();
+      await ids(olena.cookie, mine, '?limit=5').expect(400);
+    });
   });
 });

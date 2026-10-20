@@ -13,6 +13,8 @@ import { ApiCookieAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   adminContentDetailSchema,
   adminContentItemSchema,
+  adminContentIdsQuerySchema,
+  adminContentIdsSchema,
   adminContentListQuerySchema,
   adminContentPageSchema,
   bulkDeleteContentRequestSchema,
@@ -22,6 +24,8 @@ import {
   contentIdParamsSchema,
   type AdminContentDetail,
   type AdminContentItem,
+  type AdminContentIds,
+  type AdminContentIdsQuery,
   type AdminContentListQuery,
   type AdminContentPage,
   type BulkDeleteContentRequest,
@@ -63,6 +67,18 @@ export class AdminContentController {
     @Query({ schema: adminContentListQuerySchema }) query: AdminContentListQuery,
   ): Promise<AdminContentPage> {
     return this.content.list(principal, params.id, query);
+  }
+
+  /** «Вибрати всі»: every frame's id for the list's filters and order, at most 10 000. */
+  @Get('collections/:id/content/ids')
+  @ApiResponse({ status: 200, standardSchema: adminContentIdsSchema })
+  @ApiResponse(NOT_FOUND)
+  ids(
+    @CurrentPrincipal() principal: AccountPrincipal,
+    @Param({ schema: collectionIdParamsSchema }) params: IdParams,
+    @Query({ schema: adminContentIdsQuerySchema }) query: AdminContentIdsQuery,
+  ): Promise<AdminContentIds> {
+    return this.content.ids(principal, params.id, query);
   }
 
   @Get('collections/:id/content/counts')
