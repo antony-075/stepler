@@ -1,0 +1,184 @@
+# Render Blueprint: production (ADR 0014 addendum 2026-10-20). Deploys the `main` branch.
+# A separate Blueprint from staging (render.yaml): Render → New → Blueprint, Blueprint Path
+# `render.production.yaml`. Every resource, secret and bucket is its own; nothing is shared with
+# staging (rule 17). Secrets are `sync: false` and live only in the Render dashboard.
+#
+# Sizes come from the staging load test (2026-10-20: 150 guests × 4 photos on one link):
+# the 0.1-CPU database failed it, `0.5c-1g` + a `1c-2g` worker with 3 media jobs at once passed
+# with 0 errors (DB CPU peak 28 %, worker 55 % / 370 MB). Runbook: docs/deployment/production.md.
+
+databases:
+  - name: stepler-db
+    region: frankfurt
+    plan: 0.5c-1g
+    diskSizeGB: 5
+    postgresMajorVersion: '18'
+    databaseName: stepler
+    user: stepler
+    # No public access: only services on the private network connect.
+    ipAllowList: []
+
+services:
+  # The API is private: only the web service reaches it, over Render's private network.
+  - type: pserv
+    name: stepler-api
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: main
+    autoDeployTrigger: 'off'
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    preDeployCommand: node_modules/.bin/prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: '4000'
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stepler-db
+          property: connectionString
+      - key: API_TRUST_PROXY
+        value: '1'
+      - key: APP_SECRET
+        generateValue: true
+      # https://<the production domain>; must match exactly (CSRF origin, links, OAuth).
+      - key: APP_ORIGIN
+        sync: false
+      # Mail from the production domain (SPF/DKIM on the domain, launch item 1.3).
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # A Turnstile widget and a Google OAuth client for the production host only.
+      - key: TURNSTILE_SITE_KEY
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OPERATOR_EMAILS
+        sync: false
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false
+      # Live LiqPay keys. With live keys the API and the worker refuse to start unless BILLING_FISCAL_MODE is
+      # `liqpay_rro` or BILLING_FISCAL_WAIVED=true (the accountant's answer, [Q1]); the callback
+      # URL is required in production.
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
+        sync: false
+      - key: BILLING_CALLBACK_URL
+        sync: false
+      - key: BILLING_FISCAL_MODE
+        sync: false
+      - key: BILLING_FISCAL_WAIVED
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      # The production bucket (EU jurisdiction), never the staging one.
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+
+  # Background jobs (ADR 0009): media processing, purges, sweeps, billing. No port.
+  - type: worker
+    name: stepler-worker
+    runtime: docker
+    region: frankfurt
+    plan: 1c-2g
+    branch: main
+    autoDeployTrigger: 'off'
+    dockerfilePath: ./apps/api/worker.Dockerfile
+    dockerContext: .
+    maxShutdownDelaySeconds: 60
+    preDeployCommand: node_modules/.bin/prisma migrate deploy
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stepler-db
+          property: connectionString
+      # Three photos at once on 1 CPU / 2 GB (load test: 370 MB peak with JPEGs). Not yet
+      # measured with 48 MP HEIC; lower to 2 if the worker's memory approaches 1.5 GB.
+      - key: WORKER_MEDIA_CONCURRENCY
+        value: '3'
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: APP_ORIGIN
+        sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: OPERATOR_EMAILS
+        sync: false
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false
+      - key: READ_ONLY_RETENTION_DAYS
+        value: '90'
+      # Deletion after retention (ADR 0018 [P6]): on only after the owner confirms the published
+      # Terms/Privacy describe it. Warnings go out either way.
+      - key: BILLING_RETENTION_DELETE_ENABLED
+        value: 'false'
+      - key: BILLING_PROVIDER
+        sync: false
+      - key: LIQPAY_PUBLIC_KEY
+        sync: false
+      - key: LIQPAY_PRIVATE_KEY
+        sync: false
+      - key: BILLING_FISCAL_MODE
+        sync: false
+      - key: BILLING_FISCAL_WAIVED
+        sync: false
+
+  - type: web
+    name: stepler-web
+    runtime: docker
+    region: frankfurt
+    plan: 0.5c-512mb
+    branch: main
+    autoDeployTrigger: 'off'
+    dockerfilePath: ./apps/web/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    # The production domain is added in the dashboard (Settings → Custom Domains), then
+    # APP_ORIGIN is set to it.
+    envVars:
+      - key: API_INTERNAL_HOSTPORT
+        fromService:
+          type: pserv
+          name: stepler-api
+          property: hostport
+      # Render's Cloudflare sets the real client IP here, also for custom domains. Re-run the
+      # spoofing check (staging runbook step 7) on the production domain before launch.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
+      # No LEGAL_ALLOW_DRAFT: production refuses to start on draft legal texts ([C20]).
+      - key: SEARCH_INDEXING
+        value: 'on'
+      - key: LEGAL_CONTACT_EMAIL
+        sync: false

@@ -1,7 +1,8 @@
 # Render Blueprint: staging (ADR 0014). Deploys the `stage` branch after CI passes.
 # Secrets are `sync: false`: Render asks for them when the Blueprint is created and they live
-# only in the Render dashboard, never in this repository. Production gets its own Blueprint and
-# credentials later (rule 17: staging and production never share data or secrets).
+# only in the Render dashboard, never in this repository. Production is its own Blueprint,
+# render.production.yaml, with its own credentials (rule 17: staging and production never share
+# data or secrets).
 
 databases:
   - name: stepler-staging-db

@@ -69,3 +69,11 @@ On `https://stepler-staging.onrender.com`, after the `CF-Connecting-IP` fix (#14
 - **Migrations:** the worker has the same `preDeployCommand` as the API. Prisma's advisory lock makes concurrent runs safe, and whichever service deploys first finds the schema it needs. pg-boss keeps its own `pgboss` schema, which it installs and migrates itself.
 - **Connections:** about 23 at peak (API Prisma 10 + pg-boss 2, worker Prisma 5 + pg-boss 5, one migration). The `0.1c-256mb` database's connection limit is not verified; check it in the Render dashboard.
 - **Cost:** background workers have no free tier; one more `0.5c-512mb` instance (owner confirms, W1). Media processing (PR D) may need a larger plan (W4).
+
+## Addendum: production Blueprint (2026-10-20, prepared, not created)
+
+- **Separate Blueprint** `render.production.yaml` (Render allows a custom Blueprint path and several Blueprints per repository): `stepler-db`, `stepler-api`, `stepler-worker`, `stepler-web`, Frankfurt, branch `main`, manual deploys (`pnpm deploy:production`, the same ordered script as staging). This settles the open "separate Blueprint or environment" point above.
+- **Sizes from the staging load test** (150 guests × 4 photos on one link, 2026-10-19/20). The `0.1c-256mb` database hit 100 % CPU and 52 of 600 uploads failed. With `0.5c-1g` and a `1c-2g` worker at `WORKER_MEDIA_CONCURRENCY=3`, all 600 succeeded. Database CPU peaked at 28 % (22 connections), the worker at 55 % and 370 MB. Production therefore uses the database at `0.5c-1g` with 5 GB, the worker at `1c-2g` with 3 media jobs, and the API and the web at `0.5c-512mb` (the API peaked at 0.18 CPU). That is about $60 a month before bandwidth. Not measured: 48 MP HEIC at 3 at once.
+- **Production-only settings:** `SEARCH_INDEXING=on`, no `LEGAL_ALLOW_DRAFT`, and `BILLING_FISCAL_MODE`/`BILLING_FISCAL_WAIVED` prompted (live keys refuse to start without one). `BILLING_RETENTION_DELETE_ENABLED=false` until the legal texts are confirmed.
+- **Backups:** Render point-in-time recovery, 3 days on the Hobby workspace (7 on Pro), restoring into a new database; manual exports are kept 7 days. R2 originals have no second copy (open, the owner decides; see docs/deployment/production.md §6).
+- Runbook: docs/deployment/production.md. Staging keeps its cheap plans until launch (owner, 2026-10-20).
