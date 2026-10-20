@@ -429,6 +429,7 @@ Admin
   GET                 /collections/{id}/content?kind=&sort=newest|frame&cursor=&limit=   (slice 3)
   GET                 /collections/{id}/content/counts                                   (slice 3)
   GET/DELETE          /content/{id}                    (soft delete, idempotent, audited; slice 3)
+  GET                 /collections/{id}/content/ids?kind&state&sort → {ids (≤ 10 000), total}: «Вибрати всі» across pages, a snapshot of the list's filters and order (owner 2026-10-20)
   POST                /collections/{id}/content/bulk-delete   {ids} (1–100) → {deleted, alreadyDeleted, notFound} [C7] (PR E)
   POST                /content/{id}/hide | /unhide            (slice 9; unhide of an operator hide → 409 CONTENT_MODERATED)
   POST                /content/{id}/reports/dismiss           (slice 9; for the admin only, [Q1])

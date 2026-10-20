@@ -189,6 +189,23 @@ export const adminContentListQuerySchema = z
   .strict();
 export type AdminContentListQuery = z.infer<typeof adminContentListQuerySchema>;
 
+/** The most ids one «Вибрати всі» answers; past it the admin deletes in rounds. */
+export const ADMIN_CONTENT_IDS_MAX = 10_000;
+
+/**
+ * `GET /api/v1/collections/:id/content/ids`: «Вибрати всі» across pages (owner 2026-10-20). The
+ * list's filters and order without paging, so the selection is what the admin would see by
+ * scrolling to the end at that moment; frames added later are not in it.
+ */
+export const adminContentIdsQuerySchema = z
+  .object({
+    kind: contentKindSchema.optional(),
+    sort: adminContentSortSchema.default('newest'),
+    state: contentStatesSchema.optional(),
+  })
+  .strict();
+export type AdminContentIdsQuery = z.infer<typeof adminContentIdsQuerySchema>;
+
 /** `GET /api/v1/guest/collections/:collectionId/content`: always newest first [C5]. */
 export const guestContentListQuerySchema = z
   .object({ scope: z.enum(['own', 'all']), cursor, limit })
@@ -221,6 +238,15 @@ export const contentCountsSchema = z
   })
   .strict();
 export type ContentCounts = z.infer<typeof contentCountsSchema>;
+
+/**
+ * Every matching frame's id in the list's order, at most `ADMIN_CONTENT_IDS_MAX`; `total` counts
+ * them all, so `ids.length < total` says only the first ones came.
+ */
+export const adminContentIdsSchema = z
+  .object({ ids: z.array(z.uuid()).max(ADMIN_CONTENT_IDS_MAX), total: count })
+  .strict();
+export type AdminContentIds = z.infer<typeof adminContentIdsSchema>;
 
 /** `POST /api/v1/collections/:id/content/bulk-delete` [C7]. */
 export const bulkDeleteContentRequestSchema = z

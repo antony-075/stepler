@@ -1,4 +1,5 @@
 import {
+  adminContentIdsSchema,
   adminContentDetailSchema,
   adminContentItemSchema,
   adminContentPageSchema,
@@ -57,6 +58,25 @@ export function listContent(
   return apiRequest(
     `/collections/${encodeURIComponent(collectionId)}/content${search === '' ? '' : `?${search}`}`,
     { schema: adminContentPageSchema },
+  );
+}
+
+/**
+ * «Вибрати всі»: every frame's id for the list's filters and order (at most 10 000), and how
+ * many match in all.
+ */
+export function listContentIds(
+  collectionId: string,
+  query: { kind?: ContentKind; sort: AdminContentSort; states?: readonly ContentState[] },
+) {
+  const params = new URLSearchParams();
+  if (query.kind !== undefined) params.set('kind', query.kind);
+  for (const state of query.states ?? []) params.append('state', state);
+  if (query.sort !== 'newest') params.set('sort', query.sort);
+  const search = params.toString();
+  return apiRequest(
+    `/collections/${encodeURIComponent(collectionId)}/content/ids${search === '' ? '' : `?${search}`}`,
+    { schema: adminContentIdsSchema },
   );
 }
 

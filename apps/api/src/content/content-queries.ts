@@ -98,6 +98,28 @@ export class ContentQueries {
   }
 
   /**
+   * Every matching item's id in the order `page` would list them, at most `max`, and how many
+   * match in all. Ids only, so even a full collection is one light query (the same indexes).
+   */
+  async ids(
+    where: Prisma.ContentItemWhereInput,
+    sort: AdminContentSort,
+    max: number,
+  ): Promise<{ ids: string[]; total: number }> {
+    const scoped: Prisma.ContentItemWhereInput = { ...where, deletedAt: null };
+    const [rows, total] = await Promise.all([
+      this.prisma.contentItem.findMany({
+        where: scoped,
+        orderBy: sort === 'frame' ? { frameNo: 'asc' } : [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: max,
+        select: { id: true },
+      }),
+      this.prisma.contentItem.count({ where: scoped }),
+    ]);
+    return { ids: rows.map((row) => row.id), total };
+  }
+
+  /**
    * Non-deleted items by kind and the newest one's time, in one grouped query. The state counts
    * are the moderation module's (`ModerationReads.stateCounts`).
    */

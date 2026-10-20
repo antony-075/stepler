@@ -127,3 +127,28 @@ export const Phone: Story = {
 };
 
 export const Dark: Story = { ...Selected, globals: { theme: 'dark' } };
+
+/**
+ * «Вибрано 60 із 1 150» (the admin's «Вибрати всі» across pages): each number in mono with its
+ * group separator, the words around them in the text face, no wide gap after a number.
+ */
+export const OfTotal: Story = {
+  render: () => (
+    <div className="grid p-4">
+      <SelectionBar
+        count={60}
+        countLabel={'Вибрано 60 із 1 150'}
+        label="Дії з вибраними кадрами"
+        clearLabel="Скасувати вибір"
+        onClear={fn()}
+        className="static"
+        actions={null}
+      />
+    </div>
+  ),
+  play: async ({ canvas }) => {
+    const region = canvas.getByRole('region', { name: 'Дії з вибраними кадрами' });
+    const numbers = [...region.querySelectorAll('p .font-mono')].map((span) => span.textContent);
+    await expect(numbers).toEqual(['60', '1 150']);
+  },
+};
