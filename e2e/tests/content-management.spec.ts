@@ -202,7 +202,7 @@ test.describe('admin multi-select', () => {
     await expect(page.getByRole('button', { name: /^Кадр 1,/ })).toBeFocused();
   });
 
-  test('x on a focused frame selects it; Escape clears; «Вибрати все завантажене» @desktop', async ({
+  test('x on a focused frame selects it; Escape clears; «Вибрати всі» @desktop', async ({
     page,
     browser,
   }) => {
@@ -214,14 +214,47 @@ test.describe('admin multi-select', () => {
     await page.getByRole('button', { name: /^Кадр 1,/ }).focus();
     await page.keyboard.press('x');
     const bar = page.getByRole('region', { name: 'Дії з вибраними кадрами' });
-    await expect(bar).toContainText('Вибрано 1');
-    await page.getByRole('button', { name: 'Вибрати все завантажене' }).click();
+    await expect(bar).toContainText('Вибрано 1 із 2');
+    await page.getByRole('button', { name: 'Вибрати всі 2' }).click();
     await expect(bar).toContainText('Вибрано 2');
+    // Everything is selected: the button is gone.
+    await expect(bar.getByRole('button', { name: /^Вибрати всі/ })).toHaveCount(0);
     await page.keyboard.press('Escape');
     await expect(bar).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Кадр 1,/ })).not.toHaveAttribute(
       'aria-pressed',
     );
+  });
+
+  test('«Вибрати всі» takes the frames not loaded yet; the delete removes them all @desktop', async ({
+    page,
+    browser,
+  }) => {
+    test.slow();
+    // 55 frames: one page shows 48, so 7 are never loaded before «Вибрати всі».
+    const { id, path } = await setUp(page);
+    const guest = await asGuest(browser, path);
+    for (let i = 1; i <= 55; i += 1) await submitTextViaApi(guest, id, `Побажання ${i}`);
+    await guest.context().close();
+    await page.goto(`/app/collections/${id}`);
+    const frames = page.getByRole('list', { name: 'Кадри колекції' }).getByRole('button', {
+      name: /^Кадр \d+,/,
+    });
+    await expect(frames).toHaveCount(48);
+
+    await page.getByRole('button', { name: /^Кадр 55,/ }).focus();
+    await page.keyboard.press('x');
+    const bar = page.getByRole('region', { name: 'Дії з вибраними кадрами' });
+    await expect(bar).toContainText('Вибрано 1 із 55');
+    await bar.getByRole('button', { name: 'Вибрати всі 55' }).click();
+    await expect(bar).toContainText('Вибрано всі 55');
+
+    await bar.getByRole('button', { name: 'Видалити' }).click();
+    const confirm = page.getByRole('alertdialog', { name: 'Видалити 55 кадрів?' });
+    await confirm.getByRole('button', { name: 'Видалити' }).click();
+    await expect(page.getByText('Видалено 55 кадрів', { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(frames).toHaveCount(0);
   });
 
   test('phones: a long-press selects a frame; the bar does not cover the last row', async ({

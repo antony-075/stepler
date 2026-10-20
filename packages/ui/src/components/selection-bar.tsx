@@ -18,6 +18,9 @@ import { cn } from '../lib/utils';
 import { Button } from './button';
 
 /** An outline button on the inverse dock: give it `variant="outline"` too. */
+/** A number with its group separators («1 150»), never the space after it (it would be mono). */
+const NUMBER = /(\d+(?:[\s\u00a0\u202f]\d+)*)/;
+
 const selectionBarButtonClassName =
   'border-[color-mix(in_srgb,var(--inverse-foreground)_32%,transparent)] bg-[color-mix(in_srgb,var(--inverse-foreground)_8%,transparent)] text-inverse-foreground shadow-none hover:border-[color-mix(in_srgb,var(--inverse-foreground)_55%,transparent)] hover:bg-inverse-hover hover:text-inverse-foreground active:bg-inverse-hover pointer-coarse:h-11';
 
@@ -87,7 +90,7 @@ function SelectionBar({
     >
       <p aria-live="polite" className="min-w-0 flex-1 truncate text-sm font-semibold lg:mr-2">
         {/* The number in mono, the words as they are (the label stays one string to read). */}
-        {countLabel.split(/(\d[\d\s]*)/).map((part, index) =>
+        {countLabel.split(NUMBER).map((part, index) =>
           index % 2 === 1 ? (
             <span key={index} className="font-mono tabular-nums">
               {part}
