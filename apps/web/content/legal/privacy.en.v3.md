@@ -174,7 +174,7 @@ Security and audit records may be retained longer where reasonably necessary for
 
 - administrator account (e-mail, name, language, linked Google account, acceptances of these documents): until the account is deleted (by you under «Account», or on request); payment records then stay linked to an anonymous placeholder without your e-mail or name;
 - administrator sign-in session: 30 days from sign-in, or until you sign out;
-- e-mail confirmation and password reset requests (e-mail, time, hashed IP address): currently kept without a fixed period — [RETENTION PERIOD];
+- e-mail confirmation, password reset and account deletion requests (e-mail, time, hashed IP address): 30 days from the request, then deleted automatically [LAWYER TO CONFIRM];
 - collections and their content, guest names and text messages: until deleted by the administrator, by the guest (where allowed) or together with the collection or account;
 - guest sessions: deleted together with their collection; sessions that never contributed anything are deleted after about 400 days without activity;
 - unfinished uploads: expire after 24 hours and their partial files are deleted;

@@ -206,6 +206,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `WORKER_PURGE_BATCH_SIZE` | worker | no | Objects deleted per storage call and rows per sweep step, `1`–`1000`; default `500` |
 | `GUEST_SESSION_IDLE_DAYS` | worker | no | Guest sessions idle this many days that never contributed are deleted by the hourly sweep; default `400` (the guest cookie's lifetime) |
 | `REPORT_EMAIL_RETENTION_DAYS` | worker | no | A reporter's e-mail (and locale) is deleted this many days after the report at the latest, if no decision mail took it earlier; default `90` |
+| `AUTH_TOKEN_RETENTION_DAYS` | worker | no | Mailed sign-in tokens (confirmation, password reset, account deletion) and their IP hash are deleted this many days after the request, once used or expired; default `30` (Privacy v3) |
 | `READ_ONLY_RETENTION_DAYS` | worker | no | Billing (ADR 0018): read-only content of an account is kept this many days after its trial or plan ended, then deleted after warnings 30 and 7 days before; default `90` |
 | `BILLING_RETENTION_DELETE_ENABLED` | worker | no | `true` lets the daily `billing.retention` job delete due collections; default `false` until the legal texts describe retention (warnings go out either way) |
 | `BILLING_PROVIDER` | api, worker | no | Payments (ADR 0018): `liqpay` or `disabled` (default; checkout then answers 503). With `liqpay` both keys are required |
@@ -226,7 +227,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `SEARCH_INDEXING` | web | production: `on` | `on` lets search engines index the public pages. Unset or `off` (the default; local, CI, staging): every page carries `<meta name="robots" content="noindex, nofollow">`. **Production must set `on`**, or the site stays out of search |
 | `PORT`, `HOSTNAME` | web | no | Standalone Next.js server bind address |
 
-The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables, the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` / `REPORT_EMAIL_RETENTION_DAYS` rows above and, for the report mail (slice 9), the API's `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, `OPERATOR_EMAILS` and optional `LEGAL_CONTACT_EMAIL`; it needs no Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
+The api, the worker and the web app validate their env at startup and exit when it is invalid. The worker reads `NODE_ENV`, `LOG_LEVEL`, `DATABASE_URL`, the `S3_*` variables, the `WORKER_*` / `GUEST_SESSION_IDLE_DAYS` / `REPORT_EMAIL_RETENTION_DAYS` / `AUTH_TOKEN_RETENTION_DAYS` rows above and, for the report mail (slice 9), the API's `SMTP_URL`, `MAIL_FROM`, `APP_ORIGIN`, `OPERATOR_EMAILS` and optional `LEGAL_CONTACT_EMAIL`; it needs no Turnstile or `APP_SECRET`. Error messages name the variables but never print their values.
 
 ## Dependency policy
 

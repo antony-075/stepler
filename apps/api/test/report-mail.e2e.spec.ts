@@ -207,4 +207,32 @@ describe('report mail in the worker', () => {
       (await prisma.contentReport.findUniqueOrThrow({ where: { id: recent.id } })).reporterEmail,
     ).toBe('recent@stepler.test');
   });
+
+  test('the sweep deletes mailed tokens past the retention once used or expired', async () => {
+    const user = await prisma.user.create({ data: { email: `${randomUUID()}@stepler.test` } });
+    const token = (daysAgo: number, fields: Record<string, unknown> = {}) =>
+      prisma.authEmailToken.create({
+        data: {
+          userId: user.id,
+          purpose: 'RESET_PASSWORD',
+          tokenHash: randomUUID(),
+          createdAt: new Date(Date.now() - daysAgo * DAY_MS),
+          expiresAt: new Date(Date.now() - daysAgo * DAY_MS + 3600_000),
+          ...fields,
+        },
+      });
+    await token(31);
+    await token(31, { consumedAt: new Date(Date.now() - 31 * DAY_MS) });
+    const recent = await token(29);
+    // A TTL configured longer than the retention keeps a live link working.
+    const live = await token(31, { expiresAt: new Date(Date.now() + DAY_MS) });
+    await new MaintenanceSweepHandler(
+      prisma,
+      new ContentDeletion(new AuditService(), queue),
+      queue,
+      base,
+    ).handle();
+    const left = await prisma.authEmailToken.findMany({ select: { id: true } });
+    expect(left.map(({ id }) => id).sort()).toEqual([recent.id, live.id].sort());
+  });
 });
