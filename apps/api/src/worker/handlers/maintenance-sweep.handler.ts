@@ -33,6 +33,10 @@ const ENQUEUE_CHUNK = 50;
  *   behind), so nobody can come back to them;
  * - deletes reporters' addresses (and their locale) kept longer than
  *   `REPORT_EMAIL_RETENTION_DAYS` with no decision mail sent ([Q6]); logs the count only;
+ * - deletes mailed sign-in tokens (confirmation, password reset, account deletion) requested more
+ *   than `AUTH_TOKEN_RETENTION_DAYS` ago, with their IP hash, once used or expired (a TTL set
+ *   longer than the retention keeps a live link working); the hourly mail limit only counts
+ *   the last hour;
  * - ends the quarantine of frames the operator deleted once their `purgeAfter` has passed
  *   (slice 9b): each is soft-deleted through `ContentDeletion` (actor `SYSTEM`, reason
  *   `quarantine_expired`), so the usual `content.purge` removes its files. Up to
@@ -51,7 +55,10 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     @Inject(WORKER_ENV)
     private readonly env: Pick<
       WorkerEnv,
-      'WORKER_PURGE_BATCH_SIZE' | 'GUEST_SESSION_IDLE_DAYS' | 'REPORT_EMAIL_RETENTION_DAYS'
+      | 'WORKER_PURGE_BATCH_SIZE'
+      | 'GUEST_SESSION_IDLE_DAYS'
+      | 'REPORT_EMAIL_RETENTION_DAYS'
+      | 'AUTH_TOKEN_RETENTION_DAYS'
     >,
   ) {}
 
@@ -126,6 +133,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     const stalledImages = await this.failStalledImages(staleBefore);
     const idleSessions = await this.deleteIdleGuestSessions();
     const reporterEmailsDeleted = await this.deleteOldReporterEmails();
+    const authTokensDeleted = await this.deleteOldAuthTokens();
     const quarantinePurged = await this.purgeExpiredQuarantine();
     this.logger.log({
       msg: 'maintenance.sweep done',
@@ -136,6 +144,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       stalledImagesFailed: stalledImages,
       idleSessionsDeleted: idleSessions,
       reporterEmailsDeleted,
+      authTokensDeleted,
       quarantinePurged,
     });
     if (enqueueError !== undefined) throw enqueueError;
@@ -217,6 +226,23 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       UPDATE "ContentReport" SET "reporterEmail" = NULL, "reporterLocale" = NULL
       WHERE "reporterEmail" IS NOT NULL
         AND "createdAt" < now() - make_interval(days => ${this.env.REPORT_EMAIL_RETENTION_DAYS}::int)`;
+  }
+
+  /** In batches, like the guest sessions. */
+  private async deleteOldAuthTokens(): Promise<number> {
+    const before = new Date(Date.now() - this.env.AUTH_TOKEN_RETENTION_DAYS * DAY_MS);
+    const batch = this.env.WORKER_PURGE_BATCH_SIZE;
+    let total = 0;
+    for (;;) {
+      const deleted = await this.prisma.$executeRaw`
+        DELETE FROM "AuthEmailToken" WHERE "id" IN (
+          SELECT "id" FROM "AuthEmailToken"
+          WHERE "createdAt" < ${before} AND ("consumedAt" IS NOT NULL OR "expiresAt" < now())
+          LIMIT ${batch}
+        )`;
+      total += deleted;
+      if (deleted < batch) return total;
+    }
   }
 
   /** In batches, so no statement holds many row locks for long. */
