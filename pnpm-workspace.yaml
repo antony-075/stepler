@@ -19,8 +19,8 @@ catalog:
   '@types/react': 19.3.0
   '@types/react-dom': 19.3.0
   # next and @next/eslint-plugin-next must move together.
-  next: 16.3.6
-  '@next/eslint-plugin-next': 16.3.6
+  next: 16.3.8
+  '@next/eslint-plugin-next': 16.3.8
   # Tailwind packages move together.
   tailwindcss: 4.3.3
   '@tailwindcss/postcss': 4.3.3
@@ -28,9 +28,9 @@ catalog:
   playwright: 1.63.0
   '@playwright/test': 1.63.0
   # Prisma packages move together; npm `latest` for prisma is an 8.0 RC, pin stable exactly.
-  prisma: 7.10.0
-  '@prisma/client': 7.10.0
-  '@prisma/adapter-pg': 7.10.0
+  prisma: 7.10.1
+  '@prisma/client': 7.10.1
+  '@prisma/adapter-pg': 7.10.1
 
 # pnpm 11 blocks dependency build scripts unless listed here.
 allowBuilds:

@@ -1,28 +1,44 @@
 #!/usr/bin/env node
-// `pnpm deploy:staging`: deploys the `stage` branch to Render in the order the release needs
-// (docs/deployment/staging.md → Deploy flow): the API first (its pre-deploy command applies the
-// database migrations), then the worker, then the web app, each only after the one before is
-// live. Render has no deploy ordering across services, so this script chains them through the
-// Render API. A failed step stops the chain: the later services keep their current release, so
-// an old web never meets a half-migrated database.
+// `pnpm deploy:staging` / `pnpm deploy:production`: deploys the environment's branch (`stage`,
+// `main`) to Render in the order the release needs (docs/deployment/staging.md → Deploy flow):
+// the API first (its pre-deploy command applies the database migrations), then the worker, then
+// the web app, each only after the one before is live. Render has no deploy ordering across
+// services, so this script chains them through the Render API. A failed step stops the chain:
+// the later services keep their current release, so an old web never meets a half-migrated
+// database.
 //
 // Needs RENDER_API_KEY (Render → Account Settings → API Keys) in the shell or in apps/api/.env.
-// The key is never printed. Options:
-//   --commit <sha>    deploy this commit instead of the tip of origin/stage (must be on stage)
+// The key is never printed. Usage: deploy.mjs <staging|production> [options]
+//   --commit <sha>    deploy this commit instead of the branch tip (must be on the branch)
 //   --only api,web    deploy only these services, still in the fixed order
 //   --dry-run         show what would be deployed and stop
+//   --yes             production only: skip the confirmation (needed without a terminal)
 import { spawnSync } from 'node:child_process';
+import { createInterface } from 'node:readline/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
 
 const API = 'https://api.render.com/v1';
-const BRANCH = 'stage';
-/** The order is the point: migrations (API pre-deploy) → worker → web. */
-const STEPS = [
-  { key: 'api', name: 'stepler-staging-api' },
-  { key: 'worker', name: 'stepler-staging-worker' },
-  { key: 'web', name: 'stepler-staging' },
-];
+/** Per environment, in the order that is the point: migrations (API pre-deploy) → worker → web. */
+const ENVIRONMENTS = {
+  staging: {
+    branch: 'stage',
+    steps: [
+      { key: 'api', name: 'stepler-staging-api' },
+      { key: 'worker', name: 'stepler-staging-worker' },
+      { key: 'web', name: 'stepler-staging' },
+    ],
+  },
+  // render.production.yaml (docs/deployment/production.md).
+  production: {
+    branch: 'main',
+    steps: [
+      { key: 'api', name: 'stepler-api' },
+      { key: 'worker', name: 'stepler-worker' },
+      { key: 'web', name: 'stepler-web' },
+    ],
+  },
+};
 const POLL_MS = 10_000;
 /** A build plus the pre-deploy migrations; far longer than a normal deploy takes. */
 const STEP_TIMEOUT_MS = 30 * 60_000;
@@ -54,16 +70,24 @@ function apiKey() {
 }
 
 function parseArgs(argv) {
-  const args = { commit: null, only: null, dryRun: false };
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
+  const [name, ...rest] = argv;
+  const environment = ENVIRONMENTS[name];
+  if (environment === undefined)
+    fail(`The first argument is the environment: ${Object.keys(ENVIRONMENTS).join(' or ')}.`);
+  const args = { name, ...environment, commit: null, only: null, dryRun: false, yes: false };
+  for (let i = 0; i < rest.length; i += 1) {
+    const arg = rest[i];
     if (arg === '--dry-run') args.dryRun = true;
-    else if (arg === '--commit') args.commit = argv[(i += 1)] ?? fail('--commit needs a SHA');
+    else if (arg === '--yes') args.yes = true;
+    else if (arg === '--commit') args.commit = rest[(i += 1)] ?? fail('--commit needs a SHA');
     else if (arg === '--only')
-      args.only = (argv[(i += 1)] ?? fail('--only needs a list')).split(',');
-    else fail(`Unknown option ${arg}. Options: --commit <sha>, --only api,worker,web, --dry-run`);
+      args.only = (rest[(i += 1)] ?? fail('--only needs a list')).split(',');
+    else
+      fail(
+        `Unknown option ${arg}. Options: --commit <sha>, --only api,worker,web, --dry-run, --yes`,
+      );
   }
-  const keys = STEPS.map((step) => step.key);
+  const keys = args.steps.map((step) => step.key);
   for (const key of args.only ?? []) {
     if (!keys.includes(key)) fail(`--only takes ${keys.join(', ')}; got «${key}»`);
   }
@@ -76,13 +100,13 @@ function git(...args) {
   return result.stdout.trim();
 }
 
-/** The commit to deploy: the given one or the tip of origin/stage; it must be on stage. */
-function releaseCommit(requested) {
-  git('fetch', '--quiet', 'origin', BRANCH);
-  const sha = git('rev-parse', '--verify', `${requested ?? `origin/${BRANCH}`}^{commit}`);
-  const onStage = spawnSync('git', ['merge-base', '--is-ancestor', sha, `origin/${BRANCH}`]);
-  if (onStage.status !== 0)
-    fail(`${sha.slice(0, 7)} is not on origin/${BRANCH}; staging deploys ${BRANCH} only.`);
+/** The commit to deploy: the given one or the branch tip; it must be on the branch. */
+function releaseCommit(requested, name, branch) {
+  git('fetch', '--quiet', 'origin', branch);
+  const sha = git('rev-parse', '--verify', `${requested ?? `origin/${branch}`}^{commit}`);
+  const onBranch = spawnSync('git', ['merge-base', '--is-ancestor', sha, `origin/${branch}`]);
+  if (onBranch.status !== 0)
+    fail(`${sha.slice(0, 7)} is not on origin/${branch}; ${name} deploys ${branch} only.`);
   return { sha, subject: git('log', '-1', '--format=%s', sha) };
 }
 
@@ -105,11 +129,11 @@ async function render(key, path, init = {}) {
   return text === '' ? null : JSON.parse(text);
 }
 
-async function findServices(key) {
-  const query = STEPS.map((step) => `name=${encodeURIComponent(step.name)}`).join('&');
+async function findServices(key, steps) {
+  const query = steps.map((step) => `name=${encodeURIComponent(step.name)}`).join('&');
   const items = await render(key, `/services?${query}&limit=20`);
   const byName = new Map(items.map(({ service }) => [service.name, service]));
-  return STEPS.map((step) => {
+  return steps.map((step) => {
     const service = byName.get(step.name);
     if (service === undefined) fail(`Render has no service named ${step.name} for this key.`);
     return { ...step, service };
@@ -158,15 +182,26 @@ async function deploy(key, step, sha) {
   fail(`${step.name}: still not live after ${STEP_TIMEOUT_MS / 60_000} min. Check ${link}`);
 }
 
+/** Production asks first: a typo in the command must not ship a release. */
+async function confirm(args) {
+  if (args.name !== 'production' || args.yes) return;
+  if (!process.stdin.isTTY) fail('Production needs --yes when there is no terminal to confirm.');
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await prompt.question('Deploy to PRODUCTION? Type "production": ');
+  prompt.close();
+  if (answer.trim() !== 'production') fail('Not deployed.');
+}
+
 const args = parseArgs(process.argv.slice(2));
 const key = apiKey();
-const { sha, subject } = releaseCommit(args.commit);
-const steps = (await findServices(key)).filter(
+const { sha, subject } = releaseCommit(args.commit, args.name, args.branch);
+const steps = (await findServices(key, args.steps)).filter(
   (step) => args.only === null || args.only.includes(step.key),
 );
-console.log(`Staging release ${sha.slice(0, 7)} «${subject}»`);
+console.log(`${args.name} release ${sha.slice(0, 7)} «${subject}»`);
 console.log(`Order: ${steps.map((step) => step.name).join(' → ')}`);
 if (args.dryRun) process.exit(0);
+await confirm(args);
 
 process.on('SIGINT', () => {
   console.error(
@@ -175,4 +210,4 @@ process.on('SIGINT', () => {
   process.exit(130);
 });
 for (const step of steps) await deploy(key, step, sha);
-console.log('\n✓ Staging is on', sha.slice(0, 7));
+console.log(`\n✓ ${args.name} is on`, sha.slice(0, 7));
