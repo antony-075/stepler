@@ -103,7 +103,7 @@ Deleting a collection also deletes its guest links, guest sessions and all of it
 
 How long content is kept after a trial or a paid period ends, and its deletion after that, are described in sections 14 and 15. This does not limit rights to request deletion of personal data or other rights provided by law.
 
-The current version of the Service has no self-service account deletion. To close your account and delete its data, write to [LEGAL_CONTACT_EMAIL]. Before closing an account with a running subscription we stop its automatic charges; the current period is refunded only under section 13.
+You can delete your account under «Account»: we send a link to its address, and the account is deleted when you open the link and confirm. All your collections, their content, guest links and sign-in methods are deleted with it for good; a running subscription stops at once, and the current period is refunded only under section 13. Payment records are kept as described in the Privacy Policy. A deleted account cannot be restored. You can also write to [LEGAL_CONTACT_EMAIL].
 
 ## 9. Trial
 
@@ -183,7 +183,7 @@ Where reasonably possible and not prohibited by law or security considerations, 
 
 A blocked collection is unavailable to guests; its administrator sees the reason in the app. The owner of a blocked account cannot sign in, and none of their collections are available to guests. The administrator of a blocked collection may appeal the block in the app; to challenge an account block, write to [LEGAL_CONTACT_EMAIL]. Content the operator deletes is kept for 90 days in quarantine and then deleted for good unless an appeal is upheld. [LAWYER TO CONFIRM]
 
-You may stop using Stepler at any time. You can delete your collections yourself and ask us to close your account (section 8).
+You may stop using Stepler at any time. You can delete your collections and your account yourself (section 8).
 
 ## 20. Responsibility for content
 

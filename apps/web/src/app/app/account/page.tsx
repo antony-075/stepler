@@ -6,6 +6,7 @@ import type { ReactNode } from 'react';
 import { AdminPage } from '@/components/admin-page';
 import { LanguageSwitch } from '@/i18n/language-switch';
 import { ThemeSwitch } from '@/theme/theme-switch';
+import { DeleteAccount } from './delete-account';
 import { LegalStatusBlock } from './legal-status';
 import { PasswordForm } from './password-form';
 import { ProfileForm } from './profile-form';
@@ -21,7 +22,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * one line (no back link: the sidebar is the navigation), then one sheet with a section per preference: an icon, the name and what it
  * changes on the left, the control on the right from `xl` (stacked below it, so the three theme
  * cards keep room for their pictures). The theme lives in a cookie; the language is saved to
- * the profile too. Reached from the sidebar's «Акаунт», under «Колекції».
+ * the profile too. Below the sheet, the danger zone deletes the account (ADR 0020). Reached from
+ * the sidebar's «Акаунт», under «Колекції».
  */
 export default async function AccountPage() {
   const t = await getTranslations();
@@ -74,6 +76,7 @@ export default async function AccountPage() {
           <LegalStatusBlock />
         </SettingBlock>
       </Panel>
+      <DeleteAccount />
     </AdminPage>
   );
 }

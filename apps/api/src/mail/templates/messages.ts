@@ -3,7 +3,7 @@ export type MailLocale = 'uk' | 'en';
 type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 
 /** What an account mail is for (ADR 0019). */
-export type AuthMailKind = 'verify' | 'reset' | 'exists';
+export type AuthMailKind = 'verify' | 'reset' | 'exists' | 'delete';
 
 interface AuthMailCopy {
   subject: string;
@@ -53,6 +53,16 @@ export const AUTH_MAIL_COPY: Readonly<
       expiry: null,
       ignore: 'Якщо це були не ви, нічого робити не потрібно.',
     },
+    delete: {
+      subject: 'Підтвердіть видалення акаунта Stepler',
+      heading: 'Видалити акаунт?',
+      intro:
+        'Ви попросили видалити свій акаунт Stepler. Натисніть кнопку: на сторінці буде видно, що саме зникне, і остаточне підтвердження.',
+      button: 'Перейти до видалення',
+      expiry: 'Посилання діє {duration} і працює один раз.',
+      ignore:
+        'Якщо ви не просили видалення, проігноруйте цей лист і змініть пароль: акаунт залишиться як був.',
+    },
     fallback: 'Якщо кнопка не працює, відкрийте це посилання:',
     minutes: { one: 'хвилину', few: 'хвилини', many: 'хвилин', other: 'хвилини' },
     hours: { one: 'годину', few: 'години', many: 'годин', other: 'години' },
@@ -83,6 +93,16 @@ export const AUTH_MAIL_COPY: Readonly<
       button: 'Sign in',
       expiry: null,
       ignore: "If this wasn't you, there's nothing to do.",
+    },
+    delete: {
+      subject: 'Confirm deleting your Stepler account',
+      heading: 'Delete your account?',
+      intro:
+        'You asked to delete your Stepler account. Use the button: the page shows exactly what goes and asks for the final confirmation.',
+      button: 'Go to deletion',
+      expiry: 'The link is valid for {duration} and works once.',
+      ignore:
+        "If you didn't ask for this, ignore this e-mail and change your password: the account stays as it is.",
     },
     fallback: "If the button doesn't work, open this link:",
     minutes: { one: 'minute', other: 'minutes' },

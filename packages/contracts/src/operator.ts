@@ -125,12 +125,12 @@ export const operatorCollectionSchema = z
   })
   .strict();
 
-/** The owner's address and state (R5). */
+/** The owner's address and state (R5). A `DELETED` owner's address is a placeholder (ADR 0020). */
 export const operatorOwnerSchema = z
   .object({
     id: z.uuid(),
     email: z.email(),
-    status: z.enum(['ACTIVE', 'BLOCKED']),
+    status: z.enum(['ACTIVE', 'BLOCKED', 'DELETED']),
     blockedReason: z.string().nullable(),
   })
   .strict();

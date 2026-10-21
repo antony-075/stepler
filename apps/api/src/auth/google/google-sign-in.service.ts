@@ -5,6 +5,7 @@ import { constraintViolation } from '../../database/constraint-violation.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { AppError } from '../../errors/app-error.js';
 import { LegalService } from '../../legal/legal.service.js';
+import type { UserStatus } from '../../generated/prisma/enums.js';
 import type { GoogleClaims } from './google-identity.js';
 
 const MAX_DISPLAY_NAME = 80;
@@ -106,8 +107,10 @@ export class GoogleSignInService {
     });
   }
 
-  private active(user: { id: string; status: 'ACTIVE' | 'BLOCKED' }): string {
+  private active(user: { id: string; status: UserStatus }): string {
     if (user.status === 'BLOCKED') throw new AppError('ACCOUNT_BLOCKED', 403);
+    // Unreachable: a deleted account has no Google link and a placeholder address (ADR 0020).
+    if (user.status === 'DELETED') throw new AppError('OAUTH_FAILED', 400);
     return user.id;
   }
 

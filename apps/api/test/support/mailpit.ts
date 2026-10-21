@@ -39,7 +39,9 @@ export async function messageText(id: string): Promise<string> {
 /** The `token` query value of an account mail's link (verification or reset) in the text. */
 export async function mailedToken(id: string): Promise<string> {
   const text = await messageText(id);
-  const token = /\/(?:auth\/verify|reset-password)\?token=([A-Za-z0-9_-]{43})/.exec(text)?.[1];
+  const token = /\/(?:auth\/verify|reset-password|delete-account)\?token=([A-Za-z0-9_-]{43})/.exec(
+    text,
+  )?.[1];
   if (token === undefined) throw new Error('no account link in the message');
   return token;
 }

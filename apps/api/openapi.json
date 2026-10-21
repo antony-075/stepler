@@ -145,6 +145,151 @@
   },
   "openapi": "3.0.0",
   "paths": {
+    "/api/v1/auth/account-deletion/confirm": {
+      "post": {
+        "operationId": "AccountDeletionController_confirm_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "deleted"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "AUTH_TOKEN_INVALID: unknown, used or expired; 403 ACCOUNT_BLOCKED; 429 RATE_LIMITED"
+          },
+          "409": {
+            "description": "PAYMENT_PENDING: a checkout is still payable"
+          },
+          "503": {
+            "description": "PAYMENT_PROVIDER_UNAVAILABLE: LiqPay did not confirm stopping a subscription"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/v1/auth/account-deletion/preview": {
+      "post": {
+        "operationId": "AccountDeletionController_preview_v1",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "pattern": "^[A-Za-z0-9_-]{43}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "token"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "collections": {
+                      "maximum": 9007199254740991,
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "email": {
+                      "type": "string"
+                    },
+                    "subscription": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "email",
+                    "collections",
+                    "subscription"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "400": {
+            "description": "AUTH_TOKEN_INVALID: unknown, used or expired; 403 ACCOUNT_BLOCKED; 429 RATE_LIMITED"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/v1/auth/google/callback": {
       "get": {
         "operationId": "GoogleController_callback_v1",
@@ -18156,6 +18301,60 @@
         ]
       }
     },
+    "/api/v1/me/deletion": {
+      "post": {
+        "operationId": "AccountDeletionRequestController_request_v1",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "sent"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": ""
+          },
+          "403": {
+            "description": "FORBIDDEN: the operator service account"
+          },
+          "429": {
+            "description": "RATE_LIMITED: the hourly mail limit of the address"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Error (RFC 9457 problem details; `code` is stable, see ERROR_CODES)"
+          }
+        },
+        "security": [
+          {
+            "st_session": []
+          }
+        ],
+        "tags": [
+          "Me"
+        ]
+      }
+    },
     "/api/v1/me/legal-acceptances": {
       "post": {
         "operationId": "LegalAcceptancesController_accept_v1",
@@ -18964,7 +19163,8 @@
                         "status": {
                           "enum": [
                             "ACTIVE",
-                            "BLOCKED"
+                            "BLOCKED",
+                            "DELETED"
                           ],
                           "type": "string"
                         }
@@ -19475,7 +19675,8 @@
                         "status": {
                           "enum": [
                             "ACTIVE",
-                            "BLOCKED"
+                            "BLOCKED",
+                            "DELETED"
                           ],
                           "type": "string"
                         }
@@ -25117,7 +25318,8 @@
                         "status": {
                           "enum": [
                             "ACTIVE",
-                            "BLOCKED"
+                            "BLOCKED",
+                            "DELETED"
                           ],
                           "type": "string"
                         }
@@ -25559,7 +25761,8 @@
                         "status": {
                           "enum": [
                             "ACTIVE",
-                            "BLOCKED"
+                            "BLOCKED",
+                            "DELETED"
                           ],
                           "type": "string"
                         }

@@ -62,6 +62,20 @@ export class EmailTokens {
     return row?.user.email ?? null;
   }
 
+  /** Read-only: the user a live token belongs to, or `null`. */
+  async owner(token: string, purpose: AuthTokenPurpose): Promise<string | null> {
+    const row = await this.prisma.authEmailToken.findFirst({
+      where: {
+        tokenHash: hashToken(token),
+        purpose,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { userId: true },
+    });
+    return row?.userId ?? null;
+  }
+
   /**
    * Uses the token up and returns its user, or `null` when it is unknown, used or expired. One
    * conditional UPDATE: of two concurrent uses, only one sees the row.
