@@ -39,4 +39,33 @@ describe('MediaSlots', () => {
     await Promise.all([job(), job(), job(), job()]);
     expect(peak).toBe(2);
   });
+
+  test('videos leave one slot to images', async () => {
+    const slots = new MediaSlots({ WORKER_MEDIA_CONCURRENCY: 3 });
+    let videos = 0;
+    let peakVideos = 0;
+    const finish: (() => void)[] = [];
+    const video = () =>
+      slots.run(async () => {
+        videos += 1;
+        peakVideos = Math.max(peakVideos, videos);
+        await new Promise<void>((resolve) => finish.push(resolve));
+        videos -= 1;
+      }, 'video');
+    const running = [video(), video(), video()];
+    await tick();
+    expect(peakVideos).toBe(2);
+    // The third video waits, and an image behind it still starts in the free slot.
+    await expect(slots.run(() => Promise.resolve('photo'))).resolves.toBe('photo');
+    for (const done of finish.splice(0)) done();
+    await tick();
+    for (const done of finish.splice(0)) done();
+    await Promise.all(running);
+    expect(peakVideos).toBe(2);
+  });
+
+  test('with one slot a video still runs', async () => {
+    const slots = new MediaSlots({ WORKER_MEDIA_CONCURRENCY: 1 });
+    await expect(slots.run(() => Promise.resolve('poster'), 'video')).resolves.toBe('poster');
+  });
 });

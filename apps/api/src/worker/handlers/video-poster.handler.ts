@@ -74,7 +74,7 @@ export class VideoPosterHandler implements JobHandler<'media.video-poster'> {
           { THUMBNAIL: result.thumbnail, POSTER: result.large },
           { width: probe.width, height: probe.height, durationMs: probe.durationMs },
         );
-      });
+      }, 'video');
     } catch (error) {
       if (!(error instanceof PermanentMediaError)) throw error;
       this.logger.warn({ msg: 'video cannot be processed', contentItemId, reason: error.message });
