@@ -19,6 +19,8 @@ enum Locale {
 enum UserStatus {
   ACTIVE
   BLOCKED
+  /// Deleted by its owner (self-service): anonymised, kept only for its payment records.
+  DELETED
 }
 
 enum CollectionStatus {
@@ -139,6 +141,7 @@ enum AuthProvider {
 enum AuthTokenPurpose {
   VERIFY_EMAIL
   RESET_PASSWORD
+  DELETE_ACCOUNT
 }
 
 /// Why a guest reported a frame (R1; contracts `REPORT_REASONS`).
@@ -273,6 +276,8 @@ model User {
   /// When the «лише перегляд» mail went out for the current read-only episode (plan Task 6);
   /// cleared by the retention clock when access returns, so a later episode mails again.
   readOnlyNotifiedAt DateTime?         @db.Timestamptz(3)
+  /// DELETED if and only if deletedAt is set (CHECK "User_deleted_consistent").
+  deletedAt          DateTime?         @db.Timestamptz(3)
   createdAt          DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
   subscriptions      Subscription[]

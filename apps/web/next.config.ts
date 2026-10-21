@@ -49,6 +49,11 @@ const config: NextConfig = {
         headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
       },
       {
+        // And the account deletion token (ADR 0020).
+        source: '/delete-account',
+        headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }],
+      },
+      {
         // The editor's live preview (ADR 0017): framed by the editor on this origin only.
         source: '/preview/:path*',
         headers: [

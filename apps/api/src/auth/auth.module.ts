@@ -35,6 +35,6 @@ import { SessionService } from './session.service.js';
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
   ],
-  exports: [SessionService],
+  exports: [SessionService, EmailTokens],
 })
 export class AuthModule {}

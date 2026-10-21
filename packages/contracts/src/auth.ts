@@ -138,6 +138,24 @@ export type AuthTokenRequest = z.infer<typeof authTokenRequestSchema>;
 export const verificationPreviewResponseSchema = z.object({ email: z.string() }).strict();
 export type VerificationPreviewResponse = z.infer<typeof verificationPreviewResponseSchema>;
 
+/**
+ * `POST /api/v1/auth/account-deletion/preview` (ADR 0020): what the emailed deletion link
+ * deletes, shown before the final confirmation. `collections` counts every collection that is
+ * not already being deleted; `subscription` is a plan that would renew.
+ */
+export const accountDeletionPreviewResponseSchema = z
+  .object({
+    email: z.string(),
+    collections: z.number().int().nonnegative(),
+    subscription: z.boolean(),
+  })
+  .strict();
+export type AccountDeletionPreviewResponse = z.infer<typeof accountDeletionPreviewResponseSchema>;
+
+/** `POST /api/v1/auth/account-deletion/confirm`: the account is gone and signed out. */
+export const accountDeletedResponseSchema = z.object({ status: z.literal('deleted') }).strict();
+export type AccountDeletedResponse = z.infer<typeof accountDeletedResponseSchema>;
+
 /** `POST /api/v1/auth/password/reset`: the emailed token and the new password. */
 export const resetPasswordRequestSchema = z
   .object({ token: authTokenSchema, password: newPasswordSchema })

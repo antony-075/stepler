@@ -403,6 +403,9 @@ Auth / me
   POST   /auth/logout                          → 204, idempotent
   GET    /me          PATCH /me (displayName, locale)     (both return legal: {accepted, documents})
   POST   /me/legal-acceptances                 {acceptances: [{document, version}]} → MeResponse; fallback path
+  POST   /me/deletion                          → 202, mails the single-use deletion link (ADR 0020); open before acceptance
+  POST   /auth/account-deletion/preview        {token} → {email, collections, subscription}; read-only
+  POST   /auth/account-deletion/confirm        {token} → {status:'deleted'}: LiqPay first, then one transaction; clears the cookie
 
 Admin
   GET/POST            /collections

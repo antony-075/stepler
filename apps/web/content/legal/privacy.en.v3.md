@@ -172,7 +172,7 @@ Security and audit records may be retained longer where reasonably necessary for
 
 *Draft addition — retention by category* (current behaviour of the Service; periods without a value must be set and confirmed [LAWYER TO CONFIRM]):
 
-- administrator account (e-mail, name, language, linked Google account, acceptances of these documents): until the account is deleted on request;
+- administrator account (e-mail, name, language, linked Google account, acceptances of these documents): until the account is deleted (by you under «Account», or on request); payment records then stay linked to an anonymous placeholder without your e-mail or name;
 - administrator sign-in session: 30 days from sign-in, or until you sign out;
 - e-mail confirmation and password reset requests (e-mail, time, hashed IP address): currently kept without a fixed period — [RETENTION PERIOD];
 - collections and their content, guest names and text messages: until deleted by the administrator, by the guest (where allowed) or together with the collection or account;
@@ -209,7 +209,7 @@ We may request enough information to verify the requester and prevent disclosure
 
 ## 12. Deletion requests
 
-Administrators can delete their content and collections through the Service. Guests can delete their own content through their guest session when permitted by the current guest link.
+Administrators can delete their content, their collections and their account through the Service; deleting the account deletes every collection and its content, and removes the e-mail and name from the records kept for accounting. Guests can delete their own content through their guest session when permitted by the current guest link.
 
 A request to delete personal data may be sent to [LEGAL_CONTACT_EMAIL]. Deletion may be limited where retention is necessary for a legal obligation, security, fraud prevention, or the establishment, exercise or defense of legal claims.
 

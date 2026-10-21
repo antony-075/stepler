@@ -54,7 +54,9 @@ export type AuditAction =
   | 'account.register'
   | 'account.email_verify'
   | 'account.password_reset'
-  | 'account.password_change';
+  | 'account.password_change'
+  // Self-service deletion (ADR 0020).
+  | 'account.delete';
 
 /** `'system'` is the API acting on its own, e.g. creating a missing default link (G4). */
 export type AuditActor = Principal | 'system';

@@ -1774,7 +1774,8 @@
     },
     "ownerStatuses": {
       "ACTIVE": "Active",
-      "BLOCKED": "Blocked"
+      "BLOCKED": "Blocked",
+      "DELETED": "Deleted by its owner"
     },
     "detail": {
       "back": "All reports",
@@ -2865,5 +2866,38 @@
     "saved": "Password changed",
     "noPassword": "You sign in with Google. To sign in with a password too, set one through an e-mailed link.",
     "setLink": "Set a password"
+  },
+  "accountDeletion": {
+    "pageTitle": "Delete account",
+    "title": "Delete account",
+    "hint": "Permanently deletes all your collections with guests' photos and messages, your subscription and your sign-in. Payment records stay for accounting, without your e-mail.",
+    "open": "Delete account",
+    "dialogTitle": "Send the deletion e-mail?",
+    "dialogText": "We'll send a link to {email}. The account is deleted only when you open it and confirm. Until then nothing changes.",
+    "dialogConfirm": "Send e-mail",
+    "cancel": "Cancel",
+    "sending": "Sending",
+    "sent": "E-mail sent to {email}. The link is valid for 60 minutes and works once.",
+    "checking": "Checking the link",
+    "confirmTitle": "Delete your account for good?",
+    "confirmLead": "Account {email}. It cannot be restored.",
+    "goesCollections": "{count, plural, one {# collection} other {# collections}} with every photo, video, document and guest message; guest links stop working",
+    "goesNoCollections": "No collections: nothing to delete there",
+    "goesSubscription": "Your subscription stops now, with no refund for the current period",
+    "goesSignIn": "Sign-in by e-mail, password and Google",
+    "kept": "Payment records are kept as accounting requires, without your e-mail or name. You can use the same e-mail for a new account.",
+    "confirm": "Delete account for good",
+    "deleting": "Deleting…",
+    "keep": "Keep my account",
+    "pendingPayment": "A payment is still being processed. Wait up to 30 minutes for it to finish, then press again.",
+    "providerUnavailable": "LiqPay did not confirm stopping the subscription, so the account was not deleted. Try again in a few minutes.",
+    "doneTitle": "Account deleted",
+    "doneText": "Your collections are gone for guests now; their files are erased within an hour. Thank you for using Stepler.",
+    "home": "Home",
+    "invalidTitle": "The link didn't work",
+    "invalidText": "The link is invalid, already used or expired. To delete your account, sign in and send a new e-mail from «Account».",
+    "toAccount": "To my account",
+    "unavailableTitle": "Couldn't check the link",
+    "retry": "Try again"
   }
 }
