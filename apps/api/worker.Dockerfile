@@ -3,7 +3,7 @@
 # Build from the repository root: docker build -f apps/api/worker.Dockerfile .
 # Same base and build as apps/api/Dockerfile, plus the media tools (spike S5).
 # Base image pinned by multi-arch digest (node:24-slim); bump together with apps/api/Dockerfile.
-FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS base
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS base
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 # Prisma's schema engine (migrations) needs OpenSSL; installed before `pnpm install` so the
 # engine for the right OpenSSL version is downloaded.
@@ -24,7 +24,7 @@ COPY --from=pruner /repo/out/full/ .
 RUN pnpm turbo run build --filter @stepler/api \
  && pnpm deploy --filter @stepler/api --prod /prod/api
 
-FROM node:24-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS runner
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS runner
 ENV NODE_ENV=production
 # OpenSSL for Prisma's schema engine (the pre-deploy `prisma migrate deploy`).
 # ffmpeg/ffprobe for video posters; libheif-examples (heif-convert, libheif1 + libde265 on
