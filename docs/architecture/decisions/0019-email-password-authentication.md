@@ -109,6 +109,6 @@ Sessions, CSRF, `AuthAccount` linking, Turnstile (ADR 0012), legal acceptance (A
 ## Consequences
 
 - Credential stuffing becomes a threat; the rate limits and Turnstile on mail endpoints mitigate it.
-- The in-memory failure windows reset on deploy and are per instance. A second API instance needs a shared store (ADR 0014 revisit trigger).
+- The in-memory failure windows reset on deploy and are per instance. A second API instance needs a shared store (ADR 0014 revisit trigger). *2026-10-22:* the windows are in PostgreSQL now, shared and kept across deploys (ADR 0021).
 - The verification mail is on the sign-up path: mail deliverability now gates registration.
 - Existing magic-link users must take one extra step (Google or reset) on their first password sign-in.

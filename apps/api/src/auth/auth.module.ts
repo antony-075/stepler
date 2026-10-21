@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LegalModule } from '../legal/legal.module.js';
 import { LimitsService } from '../limits/limits.service.js';
+import { RateLimitStore } from '../limits/rate-limit-store.js';
 import { AuthController } from './auth.controller.js';
 import { AuthGuard } from './auth.guard.js';
 import { CsrfGuard } from './csrf.guard.js';
@@ -20,7 +21,10 @@ import { SessionService } from './session.service.js';
 @Module({
   imports: [
     LegalModule,
-    ThrottlerModule.forRootAsync({ inject: [LimitsService], useFactory: throttlerOptions }),
+    ThrottlerModule.forRootAsync({
+      inject: [LimitsService, RateLimitStore],
+      useFactory: throttlerOptions,
+    }),
   ],
   controllers: [AuthController, PasswordAuthController, GoogleController],
   providers: [

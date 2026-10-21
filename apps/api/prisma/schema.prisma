@@ -1020,3 +1020,16 @@ model Refund {
   @@unique([paymentId, idempotencyKey])
   @@index([operatorUserId])
 }
+
+/// A rate-limit or sign-in-failure counter shared by every API instance (launch checklist 4.4):
+/// one fixed window per key. `key` is an HMAC (HKDF key "rate-limit") of the route, the limit's
+/// name and the tracker, so neither an IP nor an address is stored. UNLOGGED (migration
+/// 20261022090000_rate_limit_counters): counters may be lost in a database crash, never matter
+/// for longer than their window, and are deleted by the worker's hourly sweep.
+model RateLimitCounter {
+  key          String    @id
+  hits         Int
+  windowEndsAt DateTime  @db.Timestamptz(3)
+  /// Set while the key is over its limit; requests are refused until then.
+  blockedUntil DateTime? @db.Timestamptz(3)
+}

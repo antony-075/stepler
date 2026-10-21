@@ -37,6 +37,7 @@ const ENQUEUE_CHUNK = 50;
  *   than `AUTH_TOKEN_RETENTION_DAYS` ago, with their IP hash, once used or expired (a TTL set
  *   longer than the retention keeps a live link working); the hourly mail limit only counts
  *   the last hour;
+ * - deletes rate-limit counters (`RateLimitCounter`) whose window and block have both ended;
  * - ends the quarantine of frames the operator deleted once their `purgeAfter` has passed
  *   (slice 9b): each is soft-deleted through `ContentDeletion` (actor `SYSTEM`, reason
  *   `quarantine_expired`), so the usual `content.purge` removes its files. Up to
@@ -134,6 +135,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
     const idleSessions = await this.deleteIdleGuestSessions();
     const reporterEmailsDeleted = await this.deleteOldReporterEmails();
     const authTokensDeleted = await this.deleteOldAuthTokens();
+    const rateLimitCountersDeleted = await this.deleteEndedRateLimitCounters();
     const quarantinePurged = await this.purgeExpiredQuarantine();
     this.logger.log({
       msg: 'maintenance.sweep done',
@@ -145,6 +147,7 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       idleSessionsDeleted: idleSessions,
       reporterEmailsDeleted,
       authTokensDeleted,
+      rateLimitCountersDeleted,
       quarantinePurged,
     });
     if (enqueueError !== undefined) throw enqueueError;
@@ -226,6 +229,22 @@ export class MaintenanceSweepHandler implements JobHandler<'maintenance.sweep'> 
       UPDATE "ContentReport" SET "reporterEmail" = NULL, "reporterLocale" = NULL
       WHERE "reporterEmail" IS NOT NULL
         AND "createdAt" < now() - make_interval(days => ${this.env.REPORT_EMAIL_RETENTION_DAYS}::int)`;
+  }
+
+  /** In batches, like the guest sessions. */
+  private async deleteEndedRateLimitCounters(): Promise<number> {
+    const batch = this.env.WORKER_PURGE_BATCH_SIZE;
+    let total = 0;
+    for (;;) {
+      const deleted = await this.prisma.$executeRaw`
+        DELETE FROM "RateLimitCounter" WHERE "key" IN (
+          SELECT "key" FROM "RateLimitCounter"
+          WHERE "windowEndsAt" < now() AND ("blockedUntil" IS NULL OR "blockedUntil" < now())
+          LIMIT ${batch}
+        )`;
+      total += deleted;
+      if (deleted < batch) return total;
+    }
   }
 
   /** In batches, like the guest sessions. */

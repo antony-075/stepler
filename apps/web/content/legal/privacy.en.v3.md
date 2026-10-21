@@ -66,7 +66,7 @@ If a collection administrator appeals a moderation decision in the app, we proce
 
 For security, rate limiting and abuse prevention, the Service may temporarily process an IP address and other technical request attributes. An IP address is not used as the identity of a guest or as the ownership mechanism for guest content.
 
-In particular: rate-limit counters keyed by IP address are kept only in server memory, for up to one hour; server request logs contain the IP address, browser user agent, requested address (with access tokens removed), time and a request identifier; and e-mail confirmation and password reset requests store a keyed one-way hash of the IP address for abuse investigation. Logs do not contain cookies, passwords, tokens, text messages, guest names or filenames.
+In particular: rate-limit counters keyed by IP address are kept in the Service's database only as a keyed one-way hash (the IP address itself is not stored) and are deleted automatically within a few hours after the limit ends [LAWYER TO CONFIRM]; server request logs contain the IP address, browser user agent, requested address (with access tokens removed), time and a request identifier; and e-mail confirmation and password reset requests store a keyed one-way hash of the IP address for abuse investigation. Logs do not contain cookies, passwords, tokens, text messages, guest names or filenames.
 
 ## 3. How we use data
 
@@ -181,7 +181,7 @@ Security and audit records may be retained longer where reasonably necessary for
 - deleted content and collections: hidden immediately; their files and records are then permanently deleted by a background task, normally within an hour, with automatic retries for anything left over;
 - audit records (which action was done to which collection or item, by which kind of actor, when; no content, names or filenames): currently kept without a fixed period — [RETENTION PERIOD];
 - server request logs: kept by the hosting provider for [LOG RETENTION PERIOD];
-- rate-limit counters: in memory, for up to one hour;
+- rate-limit counters: as a keyed hash in the database, up to a few hours after the limit ends;
 - reports (without the reporter's address) and administrators' appeals: [RETENTION PERIOD];
 - content deleted by moderation: 90 days in quarantine (hidden from guests and not counted in the owner's storage), then deleted for good unless an appeal is upheld;
 - the reporter's e-mail address: until the decision is sent, at most 90 days after the report;
