@@ -132,6 +132,7 @@ export function PlanCard({
     subscription !== null && !trial ? subscription.offerTitle : planName(t, access.reason);
 
   // The headline: days rounded up (`daysLeft`, the app-wide rule); the tiles below stay exact.
+  // Only the count is mono: dates in the line read as words («до 4 листопада 2026»).
   const daysNote =
     days === null ? null : (
       <span className={cn('font-medium', closeToEnd ? 'text-warning' : 'text-link')}>
@@ -216,7 +217,7 @@ export function PlanCard({
             <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.9375rem] text-foreground-soft">
               {parts.map((part, index) => (
                 <Part key={index} first={index === 0}>
-                  {typeof part === 'string' ? monoDigits(part, MONO) : part}
+                  {part}
                 </Part>
               ))}
             </p>
@@ -437,7 +438,7 @@ function subscriptionLine(
     }
     return [
       <span key="grace" className="font-medium text-warning">
-        {monoDigits(t('plan.payBy', { date: graceDate }), MONO)}
+        {t('plan.payBy', { date: graceDate })}
       </span>,
     ];
   }
