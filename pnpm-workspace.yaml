@@ -9,7 +9,7 @@ catalog:
   # Vitest packages move together.
   vitest: 4.1.11
   '@vitest/browser-playwright': 4.1.11
-  '@types/node': 24.19.0
+  '@types/node': 26.6.5
   # eslint and @eslint/js move together.
   eslint: 9.39.5
   '@eslint/js': 9.39.5
