@@ -41,6 +41,7 @@ Owner decisions (2026-10-21):
   The response clears the session cookie.
 - **Afterwards:**
   - `SessionService` already rejects any non-`ACTIVE` user;
+  - guest routes treat an owner who is not `ACTIVE` like a blocked one (`410 COLLECTION_UNAVAILABLE`), so they stay closed even without the `DELETING` collections (pre-launch security review, 2026-10-21);
   - neither the address nor the Google link can reach the old row;
   - the address is free, so registering again creates a new user with a new trial;
   - the operator console shows such an owner as «Видалений власником», with no block actions.

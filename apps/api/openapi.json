@@ -16370,6 +16370,9 @@
           "410": {
             "description": "COLLECTION_UNAVAILABLE, or LINK_REVOKED"
           },
+          "429": {
+            "description": "RATE_LIMITED: per-IP limit; see Retry-After"
+          },
           "default": {
             "content": {
               "application/problem+json": {
