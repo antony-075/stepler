@@ -65,6 +65,8 @@ describe('offerCreateSchema', () => {
     descriptionEn: null,
     rank: 3,
     highlighted: true,
+    ribbonUk: null,
+    ribbonEn: null,
     activeCollections: null,
     storageBytes: '107374182400',
     collectionStorageBytes: null,

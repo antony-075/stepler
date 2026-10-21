@@ -37,6 +37,7 @@ const offer = (over: Partial<OfferDto>, amountMinor: number | null): OfferDto =>
     limits,
     rank: n,
     highlighted: false,
+    ribbon: null,
     prices:
       amountMinor === null
         ? []

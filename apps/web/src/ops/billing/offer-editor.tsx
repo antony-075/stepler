@@ -186,7 +186,9 @@ function Editor({ back, offer }: { back: ReactNode; offer: OperatorOffer | null 
             <Badge variant={offer.active ? ON_SALE : OFF_SALE}>
               {offer.active ? t('offers.onSale') : t('offers.offSale')}
             </Badge>
-            {offer.highlighted ? <Badge variant="neutral">{t('offers.highlighted')}</Badge> : null}
+            {offer.highlighted ? (
+              <Badge variant="neutral">{offer.ribbonUk ?? t('offers.highlighted')}</Badge>
+            ) : null}
           </p>
         )}
       </header>

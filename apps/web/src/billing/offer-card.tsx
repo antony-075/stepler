@@ -62,11 +62,12 @@ const LIGHT_PLAN =
 const FEATURED_EDGE =
   'outline-2 -outline-offset-2 outline-primary shadow-[0_24px_48px_-24px_color-mix(in_srgb,var(--primary)_55%,transparent)]';
 
-function Ribbon() {
+/** The offer's own words from /ops, or «Найпопулярніший». */
+function Ribbon({ text }: { text: string | null }) {
   const t = useTranslations('billing.plans');
   return (
-    <span className="absolute -top-3.5 left-7.5 inline-flex h-7 items-center rounded-full bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-foreground">
-      {t('popular')}
+    <span className="absolute -top-3.5 left-7.5 inline-flex h-7 max-w-[calc(100%-3.75rem)] items-center truncate rounded-full bg-primary px-3.5 text-[0.8125rem] font-semibold text-primary-foreground">
+      {text ?? t('popular')}
     </span>
   );
 }
@@ -117,6 +118,7 @@ export function PlanCard({
   facts,
   action,
   highlighted = false,
+  ribbon = null,
 }: {
   testId: string;
   title: string;
@@ -133,6 +135,8 @@ export function PlanCard({
   facts: ReactNode[];
   action: ReactNode;
   highlighted?: boolean;
+  /** The ribbon's words on a highlighted card; `null` is «Найпопулярніший». */
+  ribbon?: string | null;
 }) {
   const t = useTranslations('billing.plans');
   const tone = highlighted ? TONE.featured : TONE.light;
@@ -145,7 +149,7 @@ export function PlanCard({
       data-testid={testId}
       data-highlighted={highlighted || undefined}
     >
-      {highlighted ? <Ribbon /> : null}
+      {highlighted ? <Ribbon text={ribbon} /> : null}
       <div className="grid gap-1.5">
         <h3 className="text-[1.625rem] leading-tight font-bold">{title}</h3>
         {description == null ? null : (
@@ -241,6 +245,7 @@ export function PackCard({ pack, action }: { pack: PricedOffer; action: ReactNod
       facts={facts}
       action={action}
       highlighted={pack.offer.highlighted}
+      ribbon={pack.offer.ribbon}
     />
   );
 }

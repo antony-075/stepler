@@ -1472,6 +1472,10 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "ribbon": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "title": {
                             "type": "string"
                           }
@@ -1486,6 +1490,7 @@
                           "limits",
                           "rank",
                           "highlighted",
+                          "ribbon",
                           "prices"
                         ],
                         "type": "object"
@@ -21018,6 +21023,14 @@
                             "minimum": -9007199254740991,
                             "type": "integer"
                           },
+                          "ribbonEn": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "ribbonUk": {
+                            "nullable": true,
+                            "type": "string"
+                          },
                           "rroItemId": {
                             "nullable": true,
                             "type": "string"
@@ -21045,6 +21058,8 @@
                           "descriptionEn",
                           "rank",
                           "highlighted",
+                          "ribbonUk",
+                          "ribbonEn",
                           "active",
                           "limits",
                           "durationDays",
@@ -21174,6 +21189,18 @@
                     "nullable": true,
                     "type": "integer"
                   },
+                  "ribbonEn": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ribbonUk": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "rroItemId": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -21210,6 +21237,8 @@
                   "descriptionEn",
                   "rank",
                   "highlighted",
+                  "ribbonUk",
+                  "ribbonEn",
                   "activeCollections",
                   "storageBytes",
                   "collectionStorageBytes",
@@ -21386,6 +21415,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -21413,6 +21450,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",
@@ -21529,6 +21568,18 @@
                     "nullable": true,
                     "type": "integer"
                   },
+                  "ribbonEn": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "ribbonUk": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                  },
                   "rroItemId": {
                     "maxLength": 64,
                     "minLength": 1,
@@ -21565,6 +21616,8 @@
                   "descriptionEn",
                   "rank",
                   "highlighted",
+                  "ribbonUk",
+                  "ribbonEn",
                   "activeCollections",
                   "storageBytes",
                   "collectionStorageBytes",
@@ -21738,6 +21791,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -21765,6 +21826,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",
@@ -21997,6 +22060,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -22024,6 +22095,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",
@@ -22256,6 +22329,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -22283,6 +22364,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",
@@ -22540,6 +22623,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -22567,6 +22658,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",
@@ -22817,6 +22910,14 @@
                       "minimum": -9007199254740991,
                       "type": "integer"
                     },
+                    "ribbonEn": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "ribbonUk": {
+                      "nullable": true,
+                      "type": "string"
+                    },
                     "rroItemId": {
                       "nullable": true,
                       "type": "string"
@@ -22844,6 +22945,8 @@
                     "descriptionEn",
                     "rank",
                     "highlighted",
+                    "ribbonUk",
+                    "ribbonEn",
                     "active",
                     "limits",
                     "durationDays",

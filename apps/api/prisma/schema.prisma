@@ -792,8 +792,12 @@ model BillingOffer {
   /// Set iff kind = PACK_EXTENSION.
   extension              PackExtensionKind?
   rank                   Int                @default(0)
-  /// Shown with «Найпопулярніший» on «Тарифи» and /pricing (billing page v4).
+  /// Shown with a ribbon on «Тарифи» and /pricing (billing page v4).
   highlighted            Boolean            @default(false)
+  /// The ribbon's words while highlighted; `null` shows «Найпопулярніший» / «Most popular».
+  /// 1 to 40 characters when set (CHECK "BillingOffer_ribbon_length").
+  ribbonUk               String?
+  ribbonEn               String?
   titleUk                String
   titleEn                String
   descriptionUk          String?

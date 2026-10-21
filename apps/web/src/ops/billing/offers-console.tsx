@@ -97,7 +97,9 @@ function OfferRow({ offer }: { offer: OperatorOffer }) {
         ))}
       </span>
       <span className="flex flex-wrap gap-1.5 md:justify-end">
-        {offer.highlighted ? <Badge variant="neutral">{t('highlighted')}</Badge> : null}
+        {offer.highlighted ? (
+          <Badge variant="neutral">{offer.ribbonUk ?? t('highlighted')}</Badge>
+        ) : null}
         <Badge variant={offer.active ? 'success' : 'neutral'}>
           {offer.active ? t('onSale') : t('offSale')}
         </Badge>
