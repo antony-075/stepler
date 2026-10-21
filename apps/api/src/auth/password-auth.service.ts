@@ -174,8 +174,8 @@ export class PasswordAuthService {
     const address = `login:${hashToken(input.email)}`;
     const pair = `${address}:${ip === undefined ? '-' : hashIp(this.ipKey, ip)}`;
     const wait =
-      this.failures.blockedFor(pair, limits.loginFailuresPerAddressIpPer15Min) ??
-      this.failures.blockedFor(address, limits.loginFailuresPerAddressPerHour);
+      (await this.failures.blockedFor(pair, limits.loginFailuresPerAddressIpPer15Min)) ??
+      (await this.failures.blockedFor(address, limits.loginFailuresPerAddressPerHour));
     if (wait !== null) {
       throw new AppError('RATE_LIMITED', 429, { retryable: true, retryAfterSeconds: wait });
     }
@@ -186,11 +186,11 @@ export class PasswordAuthService {
         ? await this.hasher.verifyNothing(input.password)
         : await this.hasher.verify(user.passwordHash, input.password);
     if (user === null || !matches) {
-      this.failures.record(pair, 15 * MINUTE_MS);
-      this.failures.record(address, HOUR_MS);
+      await this.failures.record(pair, 15 * MINUTE_MS);
+      await this.failures.record(address, HOUR_MS);
       throw new AppError('INVALID_CREDENTIALS', 401);
     }
-    this.failures.clear(pair);
+    await this.failures.clear(pair);
     if (user.status === 'BLOCKED') throw new AppError('ACCOUNT_BLOCKED', 403);
     if (user.emailVerifiedAt === null) throw new AppError('EMAIL_NOT_VERIFIED', 403);
     return user.id;
@@ -279,7 +279,7 @@ export class PasswordAuthService {
     requestId: string | undefined,
   ): Promise<void> {
     const key = `change:${userId}`;
-    const wait = this.failures.blockedFor(
+    const wait = await this.failures.blockedFor(
       key,
       this.limits.auth().loginFailuresPerAddressIpPer15Min,
     );
@@ -292,10 +292,10 @@ export class PasswordAuthService {
         ? await this.hasher.verifyNothing(currentPassword)
         : await this.hasher.verify(credential.passwordHash, currentPassword);
     if (!matches) {
-      this.failures.record(key, 15 * MINUTE_MS);
+      await this.failures.record(key, 15 * MINUTE_MS);
       throw new AppError('CURRENT_PASSWORD_INVALID', 400);
     }
-    this.failures.clear(key);
+    await this.failures.clear(key);
     const passwordHash = await this.hasher.hash(newPassword);
     await this.prisma.$transaction(async (tx) => {
       await tx.passwordCredential.update({ where: { userId }, data: { passwordHash } });
@@ -419,7 +419,7 @@ export class PasswordAuthService {
     }
   }
 
-  /** In memory, per instance; the key carries the address's hash, never the address. */
+  /** Shared by every instance (`RateLimitStore`); the key carries the address's hash only. */
   private async onceAnHour(key: string): Promise<boolean> {
     const record = await this.throttle.increment(key, HOUR_MS, 1, HOUR_MS, 'auth-notice');
     return !record.isBlocked;

@@ -656,7 +656,7 @@ Decision details: ADR 0010, and ADR 0018 for what is sold. Abuse and rate limits
 
 *Implemented in slice 8a (2026-10-04):* the admin's cover routes are rate limited per route, per client IP (`LIMIT_ADMIN_COVER_CALLS_PER_IP_PER_MINUTE`, 120) and per signed-in user (`LIMIT_ADMIN_COVER_CALLS_PER_USER_PER_MINUTE`, 60, keyed by the principal), plus at most 3 cover uploads open per collection (rows, `429`).
 
-*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, and from PR E `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` for guest deletes; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits are in memory, per instance. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
+*Implemented in slice 3:* the guest rows above, all env-backed through `LimitsService` (`LIMIT_GUEST_SESSIONS_PER_IP_PER_MINUTE`, `LIMIT_TEXTS_PER_GUEST_SESSION_PER_HOUR`, `LIMIT_TEXTS_PER_IP_PER_MINUTE`, `LIMIT_GUEST_READS_PER_IP_PER_MINUTE`, and from PR E `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` for guest deletes; the per-file sizes and files per batch already come from `LIMIT_FILE_BYTES_*` and `LIMIT_FILES_PER_BATCH` for the guest page). The per-IP limits were in memory, per instance, until ADR 0021 (2026-10-22) moved every counter to PostgreSQL. A text is at most 5000 code points and a name 80 (contract constants mirrored by SQL CHECKs, not quotas).
 
 *Implemented in slice 1:* "active" means `status = ACTIVE` only: archiving frees a slot, and unarchiving at the limit is refused with `409 COLLECTION_LIMIT_REACHED`. The check runs under a lock on the owner, so concurrent creates cannot exceed it. The creation limit (`LIMIT_COLLECTION_CREATIONS_PER_DAY`, `429 RATE_LIMITED`) is counted from `collection.create` audit events, so deleting a collection does not give the attempt back.
 
@@ -673,7 +673,7 @@ MVP computes usage with indexed aggregate queries under a row lock. Counter colu
 ### 13.3 Enforcement
 
 - Domain limits (per-email, per-session, concurrency, quotas) are derived from database rows — no extra store.
-- IP-based limits use `@nestjs/throttler`. Storage for multi-instance deployment is decided with hosting (in-memory is correct only for a single instance).
+- IP-based limits use `@nestjs/throttler`, counted in PostgreSQL (`RateLimitCounter`, ADR 0021) so every API instance shares the same windows.
 - `LimitsService.forUser(userId, tx?)` / `forCollection(collectionId, tx?)` is the only place limits are resolved; since ADR 0018 they are asynchronous and return the access state with the limits. `ACCOUNT` collections count against the account; a `PACK` collection only against its pack.
 - `EntitlementGate` is the one write checkpoint for access states (read-only, collecting closed); `test/entitlement-gate.e2e.spec.ts` enumerates every mutating route against it.
 
@@ -789,7 +789,7 @@ Vitest (4.1.x repo-wide) with NestJS runs through `unplugin-swc` for decorator m
 2. Email provider (EU preference). *Staging: Brevo SMTP (ADR 0014); production to be confirmed.*
 3. Error monitoring provider.
 4. ~~Auth implementation (S1)~~ — decided: in-house (ADR 0006).
-5. Rate-limit storage for multi-instance deployment (depends on 1). Phase 2 limits are in-memory per API instance.
+5. ~~Rate-limit storage for multi-instance deployment.~~ Decided 2026-10-22: PostgreSQL, ADR 0021.
 5a. ~~How deployed environments run migrations~~: the API image ships the Prisma CLI and migrations; Render runs `prisma migrate deploy` as the pre-deploy command (ADR 0014).
 6. Legal: DSA/GDPR review, reporter IP storage, evidence preservation for reported illegal content.
 7. Billing provider and pricing; transcoding provider.

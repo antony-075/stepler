@@ -56,11 +56,11 @@ INSERT INTO "BillingPrice" ("offerId", "interval", "currency", "amountMinor")
   JOIN (VALUES ${PLAN_ROWS}) AS v(code, interval, amount) ON v.code = o.code;
 UPDATE "BillingOffer" SET active = true WHERE code IN (${SOLD});`;
 
-/** Migrates the e2e database and empties it, so every run starts clean. */
+/** Migrates the e2e database and empties it, so every run starts clean (rate-limit windows too). */
 export default function globalSetup(): void {
   prisma(['migrate', 'deploy']);
   prisma(
     ['db', 'execute', '--stdin'],
-    `TRUNCATE "User", "AuthAccount", "AuthSession", "AuthEmailToken", "PasswordCredential" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}\n${E2E_CATALOGUE}`,
+    `TRUNCATE "User", "AuthAccount", "AuthSession", "AuthEmailToken", "PasswordCredential", "RateLimitCounter" RESTART IDENTITY CASCADE;\n${E2E_TRIAL_LIMITS}\n${E2E_CATALOGUE}`,
   );
 }

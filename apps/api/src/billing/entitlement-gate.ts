@@ -82,6 +82,10 @@ export const GATE_ALLOW_LIST: readonly string[] = [
   'POST /api/v1/auth/logout',
   'PATCH /api/v1/me',
   'POST /api/v1/me/legal-acceptances',
+  // Deleting the account (ADR 0020) frees everything, read-only or not.
+  'POST /api/v1/me/deletion',
+  'POST /api/v1/auth/account-deletion/preview',
+  'POST /api/v1/auth/account-deletion/confirm',
   // Collections: archive and delete free resources.
   'POST /api/v1/collections/:id/archive',
   'DELETE /api/v1/collections/:id',

@@ -8,6 +8,7 @@ import {
 import { AppError } from '../errors/app-error.js';
 import { GUEST_SESSION_COOKIE } from '../guest-access/guest-session-cookie.js';
 import type { LimitsService } from '../limits/limits.service.js';
+import type { RateLimitStore } from '../limits/rate-limit-store.js';
 import type { RequestWithPrincipal } from './principal.js';
 import { readCookie } from './session-cookie.js';
 import { hashToken } from './tokens.js';
@@ -69,10 +70,13 @@ function adminUserTracker(req: Record<string, unknown>): string {
 }
 
 /**
- * In-memory, per IP (`req.ip`, so `API_TRUST_PROXY` matters). Single-instance only; shared
- * storage is an open decision for multi-instance deployments (spec §21).
+ * Per IP (`req.ip`, so `API_TRUST_PROXY` matters) unless a tracker says otherwise, counted in
+ * PostgreSQL (`RateLimitStore`), so every API instance shares the same windows (spec §21).
  */
-export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions {
+export function throttlerOptions(
+  limits: LimitsService,
+  storage: RateLimitStore,
+): ThrottlerModuleOptions {
   const auth = limits.auth();
   const named = (name: RateLimitName, limit: number, ttl: number) => ({
     name,
@@ -118,6 +122,7 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       },
     ],
     setHeaders: false,
+    storage,
   };
 }
 
