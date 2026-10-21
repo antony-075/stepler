@@ -93,7 +93,8 @@ export class GuestSessionsController {
 
   /** The guest's optional name [O4]; `null` skips or clears it. */
   @Patch('session')
-  @UseGuards(GuestSessionGuard)
+  @UseGuards(RateLimitGuard, GuestSessionGuard)
+  @RateLimit('guest-write')
   @ApiCookieAuth(GUEST_SESSION_COOKIE_SCHEME)
   @ApiResponse({ status: 200, standardSchema: guestContextSchema })
   @ApiResponse({
@@ -105,6 +106,7 @@ export class GuestSessionsController {
     description: 'FORBIDDEN (a view-only link), COLLECTION_ARCHIVED or LINK_INACTIVE',
   })
   @ApiResponse(STATE_ERRORS[1])
+  @ApiResponse({ status: 429, description: 'RATE_LIMITED: per-IP limit; see Retry-After' })
   updateName(
     @CurrentGuest() guest: GuestPrincipal,
     @Body({ schema: updateGuestSessionRequestSchema }) body: UpdateGuestSessionRequest,

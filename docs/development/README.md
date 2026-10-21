@@ -197,7 +197,7 @@ These are names only; real values never go into the repository. Staging and prod
 | `MEDIA_URL_WINDOW_SECONDS` | api | no | Media download URLs are signed per window of this length and stay valid for two; default `3600` |
 | `LIMIT_TEXTS_PER_IP_PER_MINUTE` | api | no | Guest texts per client IP per minute, across sessions; default `60` (venue NAT) |
 | `LIMIT_GUEST_READS_PER_IP_PER_MINUTE` | api | no | Guest reads (context, content list, one item) per client IP per minute, per route; default `600` |
-| `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames per client IP per minute; default `120` |
+| `LIMIT_GUEST_WRITES_PER_IP_PER_MINUTE` | api | no | Guest deletes of their own frames and name changes per client IP per minute (per route); default `120` |
 | `LIMIT_REPORTS_PER_IP_PER_HOUR` | api | no | Guest content reports per client IP per hour, across sessions; default `60` |
 | `LIMIT_REPORTS_PER_GUEST_SESSION_PER_HOUR` | api | no | Reports one guest session may send per rolling hour; default `10` |
 | `LIMIT_APPEALS_PER_ACCOUNT_PER_DAY` | api | no | Appeals one admin account may send per rolling 24 hours (slice 9b); default `20` |
