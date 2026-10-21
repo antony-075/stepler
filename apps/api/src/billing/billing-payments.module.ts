@@ -44,6 +44,6 @@ import { SubscriptionsService } from './subscriptions.service.js';
     { provide: DEFAULT_LINK_CREATOR, useExisting: GuestLinksService },
   ],
   // For the operator console (ADR 0018, plan Task 21).
-  exports: [OperatorBillingService, RefundsService],
+  exports: [OperatorBillingService, RefundsService, SubscriptionProviderSync],
 })
 export class BillingPaymentsModule {}

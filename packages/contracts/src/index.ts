@@ -30,6 +30,8 @@ export {
   type GuestContribution,
 } from './access.js';
 export {
+  accountDeletedResponseSchema,
+  accountDeletionPreviewResponseSchema,
   authEmailRequestSchema,
   authEmailSentResponseSchema,
   authMethodsResponseSchema,
@@ -66,6 +68,8 @@ export {
   type SignedInResponse,
   type UpdateMeRequest,
   type VerificationPreviewResponse,
+  type AccountDeletedResponse,
+  type AccountDeletionPreviewResponse,
 } from './auth.js';
 export {
   accountPaymentListQuerySchema,

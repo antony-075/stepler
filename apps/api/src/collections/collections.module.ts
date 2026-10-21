@@ -11,6 +11,6 @@ import { CollectionsService } from './collections.service.js';
   imports: [GuestAccessModule, ImagesModule],
   controllers: [CollectionsController, CollectionImageController],
   providers: [CollectionsService, CollectionDeletion],
-  exports: [CollectionsService],
+  exports: [CollectionsService, CollectionDeletion],
 })
 export class CollectionsModule {}

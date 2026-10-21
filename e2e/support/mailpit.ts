@@ -17,12 +17,14 @@ async function search(to: string): Promise<MailpitSummary[]> {
  */
 export async function latestAuthLink(
   to: string,
-  kind: 'verify' | 'reset' = 'verify',
+  kind: 'verify' | 'reset' | 'delete' = 'verify',
   timeoutMs = 15_000,
   /** Messages already there before the request (a reused address): never one of them. */
   seen: ReadonlySet<string> = new Set(),
 ): Promise<string> {
-  const path = kind === 'verify' ? '/auth/verify' : '/reset-password';
+  const path = { verify: '/auth/verify', reset: '/reset-password', delete: '/delete-account' }[
+    kind
+  ];
   const pattern = new RegExp(`(https?://\\S+${path}\\?token=[A-Za-z0-9_-]+)`);
   const deadline = Date.now() + timeoutMs;
   for (;;) {

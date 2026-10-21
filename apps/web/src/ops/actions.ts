@@ -71,6 +71,9 @@ export function availableActions(detail: OperatorReportDetail): OpsAction[] {
   if (collection !== null) {
     actions.push(collection.blocked === null ? 'blockCollection' : 'unblockCollection');
   }
-  if (owner !== null) actions.push(owner.status === 'ACTIVE' ? 'blockAccount' : 'unblockAccount');
+  // A deleted account has nothing left to block.
+  if (owner !== null && owner.status !== 'DELETED') {
+    actions.push(owner.status === 'ACTIVE' ? 'blockAccount' : 'unblockAccount');
+  }
   return actions;
 }

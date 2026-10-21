@@ -159,7 +159,8 @@ Methods (owner decision 2026-10-16, ADR 0019): e-mail + password, and Google.
 - Registration asks for the e-mail and the password twice. The password has at least 8 characters, an uppercase letter, a lowercase letter, a digit and a special character. A strength meter shows what is still missing.
 - The e-mail address must be confirmed through a mailed link before the first sign-in.
 - «Забули пароль?» mails a single-use link to set a new password; signed in, the admin can change the password on «Акаунт».
-- E-mailed links are used only for the confirmation and the reset; there is no magic-link sign-in.
+- E-mailed links are used only for the confirmation, the reset and the account deletion; there is no magic-link sign-in.
+- «Акаунт» → «Видалити акаунт» mails a single-use link (60 minutes) to the account's address. The link's page lists what goes (every collection with its content, a renewing plan, the sign-in) and deletes at once on «Видалити акаунт назавжди». A plan stops without a refund for the current period. Payment records are kept for accounting without the address or name. The same address can register again as a new account with a new trial. Decision: ADR 0020.
 
 ---
 
