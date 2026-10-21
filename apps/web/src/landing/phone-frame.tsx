@@ -62,6 +62,7 @@ export function PhoneFrame({
         >
           <div
             aria-hidden="true"
+            data-slot="device-status-bar"
             className={cn(
               'relative flex h-[13.1cqw] shrink-0 items-center justify-between px-[8.25cqw] pt-[1.4cqw] text-[4.1cqw] font-semibold tabular-nums',
               BAR_TEXT[bar.foreground],

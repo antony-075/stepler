@@ -9,13 +9,14 @@
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@stepler/api": "workspace:*",
     "@stepler/config": "workspace:*",
     "@stepler/contracts": "workspace:*",
     "@stepler/templates": "workspace:*",
     "@stepler/web": "workspace:*",
-    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "axe-core": "4.13.0",
     "eslint": "catalog:",
     "typescript": "catalog:"
   }
