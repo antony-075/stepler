@@ -103,6 +103,8 @@ export function toOperatorOffer(row: BillingOffer & { prices?: BillingPrice[] })
     descriptionEn: row.descriptionEn,
     rank: row.rank,
     highlighted: row.highlighted,
+    ribbonUk: row.ribbonUk,
+    ribbonEn: row.ribbonEn,
     active: row.active,
     limits: offerLimits(row),
     durationDays: row.durationDays,

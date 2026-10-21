@@ -80,8 +80,10 @@ export const offerDtoSchema = z
     description: z.string().nullable(),
     limits: entitlementLimitsSchema,
     rank: z.int(),
-    /** Marked «Найпопулярніший» on «Тарифи» and /pricing. */
+    /** Marked with a ribbon on «Тарифи» and /pricing. */
     highlighted: z.boolean(),
+    /** The ribbon's words in the reader's language; `null` shows the default «Найпопулярніший». */
+    ribbon: z.string().nullable(),
     prices: z.array(offerPriceSchema),
   })
   .strict();

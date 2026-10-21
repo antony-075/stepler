@@ -79,6 +79,10 @@ test('the operator prices a new offer; it stays off sale until started @desktop'
   await page.getByLabel('Посилань для гостей на колекцію').fill('10');
   await page.getByLabel('Збір, днів').fill('14');
   await page.getByLabel('Зберігання, днів').fill('365');
+  // The ribbon's words appear once the offer is marked.
+  await expect(page.getByLabel('Стрічка українською')).toBeHidden();
+  await page.getByLabel('Позначати стрічкою на сторінці тарифів').check();
+  await page.getByLabel('Стрічка українською').fill('Для випускників');
   await page.getByRole('button', { name: 'Створити' }).click();
   const create = page.getByRole('dialog', { name: 'Створити пропозицію' });
   await create.getByLabel('Причина').fill('Пакет для випускних');
@@ -101,4 +105,5 @@ test('the operator prices a new offer; it stays off sale until started @desktop'
   await expect(row.getByText(/749,50.+разово/)).toBeVisible();
   await expect(row.getByText('20 ГБ на колекцію', { exact: false })).toBeVisible();
   await expect(row.getByText('Не продається')).toBeVisible();
+  await expect(row.getByText('Для випускників', { exact: true })).toBeVisible();
 });

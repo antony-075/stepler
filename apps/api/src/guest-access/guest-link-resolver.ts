@@ -26,7 +26,7 @@ export interface LinkState {
 
 /**
  * [G5] order, so the most permanent state wins:
- * collection gone, blocked by the operator or its owner blocked → 410 (slice 9 [P6]: the one
+ * collection gone, blocked by the operator or its owner blocked or deleted → 410 (slice 9 [P6]: the one
  * place every guest route passes through); link revoked → 410; collection archived → 403;
  * link paused → 403. Shared by link resolution and every guest-session request.
  */
@@ -34,7 +34,8 @@ export function assertLinkUsable({ link, collection }: LinkState): void {
   if (
     collection.status === 'DELETING' ||
     collection.blockedAt !== null ||
-    collection.owner.status === 'BLOCKED'
+    // BLOCKED, or DELETED (ADR 0020): its collections are DELETING by then; this holds anyway.
+    collection.owner.status !== 'ACTIVE'
   ) {
     throw new AppError('COLLECTION_UNAVAILABLE', 410);
   }
@@ -87,7 +88,7 @@ export class GuestLinkResolver {
       row === null ||
       row.collection.status === 'DELETING' ||
       row.collection.blockedAt !== null ||
-      row.collection.owner.status === 'BLOCKED'
+      row.collection.owner.status !== 'ACTIVE'
     ) {
       throw new AppError('NOT_FOUND', 404);
     }

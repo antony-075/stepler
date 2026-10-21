@@ -13,6 +13,8 @@ const start: OperatorOffer = {
   descriptionEn: null,
   rank: 1,
   highlighted: false,
+  ribbonUk: null,
+  ribbonEn: null,
   active: true,
   limits: {
     activeCollections: null,

@@ -29,6 +29,11 @@ const workerEnvSchema = z
     /** A reporter's address is deleted this long after the report at the latest ([Q6]). */
     REPORT_EMAIL_RETENTION_DAYS: positiveInt(90),
     /**
+     * Mailed sign-in links (confirmation, password reset, account deletion) are deleted this long
+     * after they were requested, used or not (Privacy v3 retention list).
+     */
+    AUTH_TOKEN_RETENTION_DAYS: positiveInt(30),
+    /**
      * Billing (ADR 0018 [B8]): read-only content of an account is kept this many days after its
      * trial or plan ended, then deleted (owner 2026-10-15: 90 days, was 12 months).
      */

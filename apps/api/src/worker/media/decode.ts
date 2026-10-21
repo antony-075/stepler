@@ -15,13 +15,19 @@ const JPEG_QUALITY = '92';
 /**
  * Address-space cap for the decoder (Linux `prlimit --as`). A 28 KB HEIC can declare an
  * 11000×11000 image and get the decoder OOM-killed; under the cap it fails cleanly instead.
- * Measured in the worker image (0.5 CPU, 512 MB): a 12 MP HEIC decodes under 200 MB, a 48 MP one
- * under 300 MB. With one media job at a time (`MediaSlots`) the worker stays under 512 MB.
+ * The cap counts reserved address space (threads, malloc arenas), not only memory in use:
+ * measured 2026-10-21 in the worker image (linux/arm64), a 48 MP iPhone-size HEIC (8064×6048,
+ * tiled) needs 320–340 MB of it while using about 215 MB, so the earlier 300 MB failed it at
+ * random. 512 MB still refuses the 121 MP bomb. Three 48 MP decodes at once
+ * (`WORKER_MEDIA_CONCURRENCY=3`, 1 CPU) peaked at 540 MB for the whole container.
  */
-export const HEIF_DECODE_MAX_BYTES = 300 * 1024 * 1024;
-/** Messages libheif's CLI prints for files it cannot read; anything else (disk, tool) retries. */
+export const HEIF_DECODE_MAX_BYTES = 512 * 1024 * 1024;
+/**
+ * Messages libheif's CLI prints for files it cannot read, or that need more than the cap
+ * (`std::bad_alloc`, the same on every attempt); anything else (disk, tool) retries.
+ */
 const BAD_HEIF =
-  /Could not (read|decode)|Invalid input|does not appear to start|is a (JPEG|PNG)|Unsupported|Decoder plugin generated an error|No 'ftyp'/i;
+  /Could not (read|decode)|Invalid input|does not appear to start|is a (JPEG|PNG)|Unsupported|Decoder plugin generated an error|No 'ftyp'|bad_alloc/i;
 
 const onPath = (command: string): boolean =>
   (process.env.PATH ?? '').split(delimiter).some((dir) => {

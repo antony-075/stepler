@@ -93,7 +93,7 @@ export function throttlerOptions(limits: LimitsService): ThrottlerModuleOptions 
       named('guest-text-create', limits.guestTextCreatePerIpPerMinute(), MINUTE_MS),
       // Counted per route (the throttler keys by handler): context, content list, one item.
       named('guest-read', limits.guestReadsPerIpPerMinute(), MINUTE_MS),
-      // Guest deletes of their own frames, per route [C15].
+      // Guest deletes of their own frames [C15] and name changes, per route.
       named('guest-write', limits.guestWritesPerIpPerMinute(), MINUTE_MS),
       // Guest reports (slice 9): per IP per hour, across sessions (the per-session hourly limit
       // is counted from rows by `ReportsService`).

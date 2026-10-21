@@ -312,6 +312,7 @@ describe('content quarantine', () => {
         WORKER_PURGE_BATCH_SIZE: 500,
         GUEST_SESSION_IDLE_DAYS: 400,
         REPORT_EMAIL_RETENTION_DAYS: 90,
+        AUTH_TOKEN_RETENTION_DAYS: 30,
       },
     );
     await sweep.handle();
