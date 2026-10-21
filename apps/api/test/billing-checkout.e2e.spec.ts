@@ -554,6 +554,23 @@ describe('GET /billing/offers', () => {
     const highlighted = list.items.filter((offer) => offer.highlighted).map((offer) => offer.code);
     expect(highlighted).toEqual(['sub-business']);
     expect(list.items.find((offer) => offer.code === 'pack-start')?.highlighted).toBe(false);
+    expect(list.items.find((offer) => offer.code === 'sub-business')?.ribbon).toBeNull();
+  });
+
+  test("the ribbon's own words, in the asked language", async () => {
+    await prisma.billingOffer.update({
+      where: { code: 'pack-event' },
+      data: { highlighted: true, ribbonUk: 'Вибір пар', ribbonEn: "Couples' choice" },
+    });
+    const ribbonOf = async (locale: string) =>
+      offerListSchema
+        .parse((await request(server).get(`/api/v1/billing/offers?locale=${locale}`)).body)
+        .items.find((offer) => offer.code === 'pack-event')?.ribbon;
+    expect(await ribbonOf('uk')).toBe('Вибір пар');
+    expect(await ribbonOf('en')).toBe("Couples' choice");
+    await expect(
+      prisma.billingOffer.update({ where: { code: 'pack-event' }, data: { ribbonUk: '' } }),
+    ).rejects.toThrow(/BillingOffer_ribbon_length/);
   });
 });
 

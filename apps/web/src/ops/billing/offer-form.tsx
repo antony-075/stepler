@@ -62,6 +62,7 @@ export function OfferForm({
   });
   const kind = useWatch({ control: form.control, name: 'kind' });
   const extension = useWatch({ control: form.control, name: 'extension' });
+  const highlighted = useWatch({ control: form.control, name: 'highlighted' });
   const fields = limitFieldsOf(
     offer?.kind ?? kind,
     offer === null ? (kind === 'PACK_EXTENSION' ? extension : null) : offer.extension,
@@ -185,6 +186,26 @@ export function OfferForm({
             {t('highlight')}
           </Label>
         </div>
+        {highlighted ? (
+          <>
+            <Field
+              id="offer-ribbon-uk"
+              label={t('ribbonUk')}
+              description={t('ribbonHelp', { text: t('ribbonDefaultUk') })}
+              error={errors.ribbonUk === undefined ? undefined : t('ribbonError')}
+            >
+              {(control) => <Input {...control} maxLength={40} {...form.register('ribbonUk')} />}
+            </Field>
+            <Field
+              id="offer-ribbon-en"
+              label={t('ribbonEn')}
+              description={t('ribbonHelp', { text: t('ribbonDefaultEn') })}
+              error={errors.ribbonEn === undefined ? undefined : t('ribbonError')}
+            >
+              {(control) => <Input {...control} maxLength={40} {...form.register('ribbonEn')} />}
+            </Field>
+          </>
+        ) : null}
       </div>
 
       {fields.length === 0 ? null : (

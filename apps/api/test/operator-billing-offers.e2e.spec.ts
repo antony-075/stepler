@@ -56,6 +56,8 @@ function formOf(offer: OperatorOffer, changes: Partial<OfferUpsert> = {}): Offer
     descriptionEn: offer.descriptionEn,
     rank: offer.rank,
     highlighted: offer.highlighted,
+    ribbonUk: offer.ribbonUk,
+    ribbonEn: offer.ribbonEn,
     activeCollections: offer.limits.activeCollections,
     storageBytes: offer.limits.storageBytes,
     collectionStorageBytes: offer.limits.collectionStorageBytes,
@@ -112,11 +114,22 @@ describe('editing an offer never changes what was bought', () => {
       (
         await s
           .call('patch', `/offers/${start.id}`)
-          .send(formOf(start, { collectionStorageBytes: String(20n * GiB), highlighted: true }))
+          .send(
+            formOf(start, {
+              collectionStorageBytes: String(20n * GiB),
+              highlighted: true,
+              ribbonUk: 'Вибір пар',
+              ribbonEn: "Couples' choice",
+            }),
+          )
           .expect(200)
       ).body,
     );
-    expect(edited).toMatchObject({ highlighted: true });
+    expect(edited).toMatchObject({
+      highlighted: true,
+      ribbonUk: 'Вибір пар',
+      ribbonEn: "Couples' choice",
+    });
     expect(edited.limits.collectionStorageBytes).toBe(String(20n * GiB));
 
     const pack = await prisma.collectionPack.findUniqueOrThrow({

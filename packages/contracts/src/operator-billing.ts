@@ -68,6 +68,9 @@ export const operatorOfferSchema = z
     descriptionEn: z.string().nullable(),
     rank: z.int(),
     highlighted: z.boolean(),
+    /** The ribbon's words while highlighted; `null` is «Найпопулярніший» / «Most popular». */
+    ribbonUk: z.string().nullable(),
+    ribbonEn: z.string().nullable(),
     active: z.boolean(),
     limits: entitlementLimitsSchema,
     /** TRIAL only: the trial's length in days. */
@@ -84,6 +87,7 @@ export type OperatorOfferList = z.infer<typeof operatorOfferListSchema>;
 
 const offerTitleSchema = z.string().trim().min(1).max(80);
 const offerDescriptionSchema = z.string().trim().min(1).max(500).nullable();
+const offerRibbonSchema = z.string().trim().min(1).max(40).nullable();
 const bigBytesSchema = z.string().regex(/^\d{1,20}$/);
 
 /**
@@ -99,6 +103,8 @@ export const offerUpsertSchema = z
     descriptionEn: offerDescriptionSchema,
     rank: z.int().min(0).max(1000),
     highlighted: z.boolean(),
+    ribbonUk: offerRibbonSchema,
+    ribbonEn: offerRibbonSchema,
     activeCollections: z.int().min(0).max(100_000).nullable(),
     storageBytes: bigBytesSchema.nullable(),
     collectionStorageBytes: bigBytesSchema.nullable(),

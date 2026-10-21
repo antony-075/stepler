@@ -161,6 +161,7 @@ export function SubscriptionPlanCard({ plan, action }: { plan: PricedPlan; actio
       facts={facts}
       action={action}
       highlighted={plan.offer.highlighted}
+      ribbon={plan.offer.ribbon}
     />
   );
 }

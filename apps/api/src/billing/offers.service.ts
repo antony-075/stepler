@@ -38,6 +38,8 @@ function editable(body: OfferUpsert) {
     descriptionEn: body.descriptionEn,
     rank: body.rank,
     highlighted: body.highlighted,
+    ribbonUk: body.ribbonUk,
+    ribbonEn: body.ribbonEn,
     activeCollections: body.activeCollections,
     storageBytes: bytes(body.storageBytes),
     collectionStorageBytes: bytes(body.collectionStorageBytes),
