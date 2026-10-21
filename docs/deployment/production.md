@@ -2,7 +2,7 @@
 
 Architecture and reasons: ADR 0014 (addendum 2026-10-20). Production deploys the `main` branch from its own Blueprint, `render.production.yaml`. Nothing is shared with staging: database, bucket, Turnstile widget, Google client, mail sender and every secret are new (rule 17). All secrets live in the Render dashboard; never commit or paste them into chat or issues.
 
-**Status: prepared, not created.** Nothing below has been run yet. Production is created once the launch blockers it depends on are closed.
+**Status: prepared, not created** (the backup restore is verified on staging, §6). Nothing below has been run yet. Production is created once the launch blockers it depends on are closed.
 
 ## 0. Before you start
 
@@ -95,6 +95,6 @@ Restore, when needed:
 3. Suspend `stepler-worker`. Set `DATABASE_URL` on `stepler-api` and `stepler-worker` to the new database, deploy both, resume the worker.
 4. Once it works, delete the old database. The Blueprint still names `stepler-db`: rename the new one in the dashboard, or update the Blueprint, so the next sync does not create another database.
 
-**The restore drill is still owed** (launch item 3.3): run steps 1–2 once on staging and delete the copy afterwards. It costs a few cents (one 0.1-CPU database for an hour) and needs the owner's OK.
+**Restore drill (2026-10-21, staging, launch item 3.3).** A PITR copy of `stepler-staging-db` at one hour back, through the Render API (`POST /postgres/{id}/recovery`), was ready in about 5 minutes. The copy is a new database with no network access; it was opened to one IP for the check. It had all 29 migrations up to the latest. It also had the previous day's actions, among them the owner's bulk delete of 1151 frames at 08:27 UTC. The copy was then deleted. Only aggregate counts were read; no rows left Render.
 
 **Media (R2) has no backup.** The bucket holds the only copy of every original, and R2 has no object versioning. The app deletes only on purpose (deletion, retention, purge). The risks are a mistaken bulk delete and a leaked key. They are reduced by the token being limited to this bucket and kept only in Render. A second copy (a scheduled copy to another bucket) is a post-launch decision with its own cost.
