@@ -7,26 +7,26 @@ packages:
 catalog:
   typescript: 6.0.3
   # Vitest packages move together.
-  vitest: 4.1.11
-  '@vitest/browser-playwright': 4.1.11
+  vitest: 4.1.12
+  '@vitest/browser-playwright': 4.1.12
   '@types/node': 24.19.0
   # eslint and @eslint/js move together.
   eslint: 9.39.5
   '@eslint/js': 9.39.5
-  zod: 4.6.5
-  react: 19.3.0
-  react-dom: 19.3.0
+  zod: 4.6.7
+  react: 19.3.1
+  react-dom: 19.3.1
   '@types/react': 19.3.0
   '@types/react-dom': 19.3.0
   # next and @next/eslint-plugin-next must move together.
-  next: 16.3.8
-  '@next/eslint-plugin-next': 16.3.8
+  next: 16.4.3
+  '@next/eslint-plugin-next': 16.4.3
   # Tailwind packages move together.
   tailwindcss: 4.3.3
   '@tailwindcss/postcss': 4.3.3
   '@tailwindcss/vite': 4.3.3
-  playwright: 1.63.0
-  '@playwright/test': 1.63.0
+  playwright: 1.64.1
+  '@playwright/test': 1.64.1
   # Prisma packages move together; npm `latest` for prisma is an 8.0 RC, pin stable exactly.
   prisma: 7.10.1
   '@prisma/client': 7.10.1
