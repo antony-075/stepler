@@ -17,4 +17,4 @@ Use clear commit messages.
 Branch flow (see docs/development/README.md → Branches and environments):
 - start from `dev` and open PRs against `dev`; `stage` only receives PRs from `dev`, and `main` only from `stage`;
 - merge with merge commits only;
-- never push directly to `main`, `stage` or `dev`, even though GitHub does not enforce it yet (branch protection needs GitHub Pro for this private repo).
+- never push directly to `main`, `stage` or `dev`; the GitHub ruleset «Protected branches» rejects direct pushes, force-pushes and deletions there.

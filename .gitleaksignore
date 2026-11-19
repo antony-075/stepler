@@ -6,3 +6,5 @@
 # exiftool -Keys:GPSCoordinates test coordinates written into media fixtures; not credentials.
 efb1f7beb8b1a19e9dc58ccb56caf8d268d0e0ee:docker/scripts/verify-images.sh:generic-api-key:93
 976f675235b1c8db43c088ac5d1b506db56f63bf:apps/api/test/fixtures/media/generate-location.sh:generic-api-key:49
+# The LiqPay stub key of the e2e suite (e2e/support/billing-env.ts, «sandbox_e2e_private_key_for_playwright_only»); not a real key.
+be761f34c9d56e2bd2a54787f2655b3dc90cc440:e2e/playwright.config.ts:generic-api-key:119
