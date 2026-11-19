@@ -21,8 +21,9 @@ switch the applied option, copy `out/<option>/{mark,logo,wordmark}-{light,dark}.
 `favicon.svg`, `favicon-{16,32,48}.png`, `apple-touch-icon.png`, `icon-{192,512}.png` and
 `out/letter-s-{light,dark}.svg` to `apps/web/public/brand/`.
 
-**Where they are used:** `apps/web/src/components/brand-mark.tsx` (sidebar, headers, loading
-screen; the light and dark files swap with the theme), `apps/web/src/app/layout.tsx` (favicons,
+**Where they are used:** since 2026-10-16 the logo in the UI is the «stepler» wordmark set in
+text (`font-wordmark`: `app-shell.tsx`, `site-header.tsx`, `landing/landing-header.tsx` via `SiteWordmark`,
+`brand-loading.tsx`); the generated files are the favicons and app icons: `apps/web/src/app/layout.tsx` (favicons,
 apple-touch-icon), `apps/web/src/app/manifest.ts` (`/manifest.webmanifest`).
 
 **Colours:** Stepler blue `#3657FF` (fills; white text 5.3:1), its darker step `#2A47E0` for

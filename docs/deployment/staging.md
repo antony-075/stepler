@@ -19,6 +19,7 @@ Cloudflare dashboard → Turnstile → **Add widget**: name "Stepler staging", h
 
 1. Create a Brevo account. Under **Senders, domains & dedicated IPs**, add and verify the sender address that staging mail comes from.
    Without our own domain, this is an address you own. Mail may land in spam until a domain with SPF/DKIM is set up; this is fine for staging.
+   A free-mail sender (e.g. `@gmail.com`) is rewritten by Brevo to `<name>@<account-id>.brevosend.com`, and Gmail usually files it as spam (2026-11-19: confirmation mails that «did not arrive» were **Delivered** in Brevo logs). When a confirmation mail «does not arrive», check Brevo → **Transactional → Logs** first, then the recipient's spam folder. The real fix is a domain verified in Brevo, as on production.
 2. **SMTP & API → SMTP**: note the login and create an **SMTP key**.
 3. Staging values:
    - `SMTP_URL`: `smtp://<login>:<smtp-key>@smtp-relay.brevo.com:587`, with the login and key URL-encoded (e.g. `@` → `%40`). Port 587 upgrades to TLS (STARTTLS).
