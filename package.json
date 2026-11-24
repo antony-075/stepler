@@ -35,8 +35,8 @@
   },
   "devDependencies": {
     "@stepler/config": "workspace:*",
-    "prettier": "3.9.9",
-    "turbo": "2.11.5",
+    "prettier": "3.10.1",
+    "turbo": "2.11.13",
     "typescript": "catalog:"
   }
 }
